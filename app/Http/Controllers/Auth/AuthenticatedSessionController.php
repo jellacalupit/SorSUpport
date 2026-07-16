@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,7 +29,35 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        /** @var User $user */
+        $user = Auth::user();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Force password change on first login
+        |--------------------------------------------------------------------------
+        */
+
+        if ($user->must_change_password) {
+            return redirect()->route('password.force');
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Redirect based on role
+        |--------------------------------------------------------------------------
+        */
+
+        return match ($user->role) {
+
+            User::ROLE_SDS_ADMIN => redirect()->route('admin.dashboard'),
+
+            User::ROLE_STUDENT => redirect()->route('student.dashboard'),
+
+            User::ROLE_RECIPIENT => redirect()->route('recipient.dashboard'),
+
+            default => redirect('/'),
+        };
     }
 
     /**

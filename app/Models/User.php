@@ -12,7 +12,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
+    public const ROLE_STUDENT = 'student';
+    public const ROLE_RECIPIENT = 'recipient';
+    public const ROLE_SDS_ADMIN = 'sds_admin';
+
     use HasFactory, Notifiable;
 
     /**
@@ -22,8 +25,10 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'username',
         'email',
         'password',
+        'must_change_password',
         'role',
         'is_active',
     ];
@@ -90,5 +95,29 @@ class User extends Authenticatable
     public function analyticsReports(): HasMany
     {
         return $this->hasMany(AnalyticsReport::class, 'generated_by');
+    }
+
+    /**
+     * Determine if the user is a student.
+     */
+    public function isStudent(): bool
+    {
+        return $this->role === self::ROLE_STUDENT;
+    }
+
+    /**
+     * Determine if the user is a recipient.
+     */
+    public function isRecipient(): bool
+    {
+        return $this->role === self::ROLE_RECIPIENT;
+    }
+
+    /**
+     * Determine if the user is an SDS Administrator.
+     */
+    public function isSdsAdmin(): bool
+    {
+        return $this->role === self::ROLE_SDS_ADMIN;
     }
 }
