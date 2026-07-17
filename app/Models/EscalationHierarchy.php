@@ -12,8 +12,8 @@ class EscalationHierarchy extends Model
 
     protected $fillable = [
         'complaint_category_id',
-        'current_recipient_id',
-        'next_recipient_id',
+        'level',
+        'recipient_id',
     ];
 
     /**
@@ -25,18 +25,10 @@ class EscalationHierarchy extends Model
     }
 
     /**
-     * Current recipient.
+     * Recipient configured for this escalation level.
      */
-    public function currentRecipient(): BelongsTo
+    public function recipient(): BelongsTo
     {
-        return $this->belongsTo(Recipient::class, 'current_recipient_id');
-    }
-
-    /**
-     * Next recipient after escalation.
-     */
-    public function nextRecipient(): BelongsTo
-    {
-        return $this->belongsTo(Recipient::class, 'next_recipient_id');
+        return $this->belongsTo(Recipient::class, 'recipient_id');
     }
 }

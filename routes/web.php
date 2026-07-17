@@ -115,6 +115,9 @@ Route::middleware(['auth', 'force.password', 'role:sds_admin'])
 
         Route::post('/tickets/{ticket}/close', [AdminTicketReviewController::class, 'close'])
             ->name('tickets.close');
+
+        Route::post('/tickets/{ticket}/escalate', [AdminTicketReviewController::class, 'escalate'])
+            ->name('tickets.escalate');
     });
 
 

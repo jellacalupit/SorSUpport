@@ -227,6 +227,23 @@
                         @if($ticket->classification === 'needs_resolution')
                             <div class="border border-gray-200 rounded-lg p-6">
                                 <h4 class="text-lg font-semibold text-gray-900 mb-2">Assignment & Deadline</h4>
+                                @if(in_array($ticket->status, [\App\Models\Ticket::STATUS_ASSIGNED, \App\Models\Ticket::STATUS_IN_PROGRESS, \App\Models\Ticket::STATUS_ESCALATED]))
+                                    <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                                        <p class="text-sm font-semibold text-amber-800">Escalation Options</p>
+                                        <p class="text-sm text-amber-700 mb-2">Configured targets for this category:</p>
+                                        <ul class="list-disc list-inside text-sm text-amber-700">
+                                            @foreach($ticket->complaint->category->escalationHierarchies as $hierarchy)
+                                                <li>{{ $hierarchy->recipient->user->name ?? 'Unnamed recipient' }}</li>
+                                            @endforeach
+                                        </ul>
+                                        <form action="{{ route('admin.tickets.escalate', $ticket) }}" method="POST" class="mt-3">
+                                            @csrf
+                                            <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2 rounded-lg">
+                                                Escalate Ticket
+                                            </button>
+                                        </form>
+                                    </div>
+                                @endif
                                 <p class="text-sm text-gray-600 mb-4">
                                     Assign this ticket to a recipient or keep it with SDS. The deadline will be set from the complaint category configuration.
                                 </p>

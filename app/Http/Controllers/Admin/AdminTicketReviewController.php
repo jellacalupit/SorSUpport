@@ -2,21 +2,25 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Complaint;
 use App\Models\EmailNotification;
 use App\Models\Recipient;
 use App\Models\Ticket;
 use App\Models\TicketThread;
+use App\Services\TicketEscalationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class AdminTicketReviewController extends Controller
 {
+    public function __construct(protected TicketEscalationService $escalationService)
+    {
+    }
     /**
      * Display list of pending tickets awaiting validity determination.
      */
@@ -304,6 +308,28 @@ class AdminTicketReviewController extends Controller
 
         return redirect()->route('admin.tickets.review.show', $ticket)
             ->with('success', 'Ticket acknowledged.');
+    }
+
+    /**
+     * Close a ticket (Admin-only) after resolution.
+     */
+    public function escalate(Ticket $ticket): RedirectResponse
+    {
+        abort_unless(
+            in_array($ticket->status, [Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED]),
+            404,
+            'Only active tickets can be escalated.'
+        );
+
+        $escalated = $this->escalationService->escalate($ticket, Auth::user());
+
+        if (! $escalated) {
+            return redirect()->route('admin.tickets.review.show', $ticket)
+                ->withErrors(['escalation' => 'No further escalation target is configured for this ticket.']);
+        }
+
+        return redirect()->route('admin.tickets.review.show', $ticket)
+            ->with('success', 'Ticket escalated successfully.');
     }
 
     /**

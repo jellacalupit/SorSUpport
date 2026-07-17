@@ -24,6 +24,8 @@ class Ticket extends Model
 
     public const STATUS_CLOSED = 'closed';
 
+    public const STATUS_ESCALATED = 'escalated';
+
     public const CLASSIFICATION_NEEDS_RESOLUTION = 'needs_resolution';
 
     public const CLASSIFICATION_INFORMATIONAL = 'informational';
