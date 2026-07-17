@@ -8,6 +8,7 @@ use App\Models\Complaint;
 use App\Models\Ticket;
 use App\Models\ThreadMessage;
 use App\Models\TicketThread;
+use App\Models\EmailNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -175,6 +176,57 @@ class ComplaintController extends Controller
     }
 
     /**
+     * Acknowledge an assigned ticket (Assigned -> In Progress)
+     */
+    public function acknowledge(Request $request, Complaint $complaint): RedirectResponse
+    {
+        $recipient = Auth::user()->recipient;
+
+        if (! $recipient) {
+            abort(403, 'Recipient profile not found.');
+        }
+
+        $ticket = $complaint->ticket;
+
+        if (! $ticket || $ticket->assigned_to !== Auth::id()) {
+            abort(403, 'You are not authorized to acknowledge this complaint.');
+        }
+
+        // Only acknowledge if assigned
+        if ($ticket->status !== Ticket::STATUS_ASSIGNED) {
+            return back()->withErrors(['status' => 'Ticket cannot be acknowledged in its current state.']);
+        }
+
+        DB::transaction(function () use ($ticket) {
+            $ticket->update([
+                'status' => Ticket::STATUS_IN_PROGRESS,
+                'acknowledged_at' => now(),
+                'current_handler_id' => Auth::id(),
+            ]);
+
+            AuditLog::create([
+                'ticket_id' => $ticket->id,
+                'performed_by' => Auth::id(),
+                'action' => 'ticket_acknowledged',
+                'details' => 'Ticket acknowledged by recipient.',
+            ]);
+
+            // Notify student of status update
+            if ($ticket->complaint?->student?->user?->email) {
+                EmailNotification::create([
+                    'ticket_id' => $ticket->id,
+                    'recipient_email' => $ticket->complaint->student->user->email,
+                    'type' => EmailNotification::TYPE_STUDENT_STATUS_UPDATE,
+                    'status' => EmailNotification::STATUS_PENDING,
+                ]);
+            }
+        });
+
+        return redirect()->route('recipient.complaints.show', $complaint)
+            ->with('success', 'Ticket acknowledged.');
+    }
+
+    /**
      * Update the complaint status.
      */
     public function updateStatus(Request $request, Complaint $complaint): RedirectResponse
@@ -198,6 +250,7 @@ class ComplaintController extends Controller
                 Rule::in(['pending', 'assigned', 'in_progress', 'resolved', 'rejected', 'closed']),
             ],
             'details' => 'nullable|string|max:1000',
+            'resolution_message' => 'nullable|string|max:2000',
         ]);
 
         $oldStatus = $complaint->status;
@@ -226,6 +279,48 @@ class ComplaintController extends Controller
             };
 
             $details = $validated['details'] ?? "Status changed from {$oldStatus} to {$newStatus}";
+
+            // If resolved, record resolved_at and optionally create a thread message with the resolution
+            if ($newStatus === 'resolved') {
+                $ticket->update(['resolved_at' => now()]);
+
+                if (! empty($validated['resolution_message'])) {
+                    ThreadMessage::create([
+                        'thread_id' => $ticket->thread?->id,
+                        'sender_id' => Auth::id(),
+                        'content' => $validated['resolution_message'],
+                    ]);
+                }
+
+                // Notify admin (SDS admin) that recipient resolved the ticket
+                $sdsAdminUser = \App\Models\User::query()->where('role', \App\Models\User::ROLE_SDS_ADMIN)->first();
+
+                if ($sdsAdminUser && $sdsAdminUser->email) {
+                    Log::debug('Creating EmailNotification for admin', ['ticket_id' => $ticket->id, 'email' => $sdsAdminUser->email, 'type' => EmailNotification::TYPE_STATUS_UPDATE]);
+                    try {
+                        $schema = DB::select("SELECT sql FROM sqlite_master WHERE name = 'email_notifications'");
+                        Log::debug('email_notifications schema', ['schema' => $schema]);
+                    } catch (\Exception $e) {
+                        Log::debug('Unable to read sqlite schema', ['error' => $e->getMessage()]);
+                    }
+                    EmailNotification::create([
+                        'ticket_id' => $ticket->id,
+                        'recipient_email' => $sdsAdminUser->email,
+                        'type' => EmailNotification::TYPE_RECIPIENT_RESOLVED,
+                        'status' => EmailNotification::STATUS_PENDING,
+                    ]);
+                }
+
+                // Notify student of resolution
+                if ($ticket->complaint?->student?->user?->email) {
+                    EmailNotification::create([
+                        'ticket_id' => $ticket->id,
+                        'recipient_email' => $ticket->complaint->student->user->email,
+                        'type' => EmailNotification::TYPE_STUDENT_STATUS_UPDATE,
+                        'status' => EmailNotification::STATUS_PENDING,
+                    ]);
+                }
+            }
 
             // Create audit log
             AuditLog::create([

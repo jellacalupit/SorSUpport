@@ -100,15 +100,15 @@ class Module4TicketRoutingTest extends TestCase
         $this->assertDatabaseHas('email_notifications', [
             'ticket_id' => $ticket->id,
             'recipient_email' => $recipientUser->email,
-            'type' => 'recipient_assignment',
-            'status' => 'pending',
+            'type' => \App\Models\EmailNotification::TYPE_RECIPIENT_ASSIGNMENT,
+            'status' => \App\Models\EmailNotification::STATUS_PENDING,
         ]);
 
         $this->assertDatabaseHas('email_notifications', [
             'ticket_id' => $ticket->id,
             'recipient_email' => $student->email,
-            'type' => 'student_status_update',
-            'status' => 'pending',
+            'type' => \App\Models\EmailNotification::TYPE_STUDENT_STATUS_UPDATE,
+            'status' => \App\Models\EmailNotification::STATUS_PENDING,
         ]);
 
         $this->assertDatabaseHas('audit_logs', [

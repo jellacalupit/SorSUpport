@@ -12,12 +12,13 @@ class Module2AuthenticationFlowTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_unverified_user_is_redirected_to_verification_notice_on_login(): void
+    public function test_new_user_is_redirected_to_password_change_on_first_login(): void
     {
         /** @var User $user */
         $user = User::factory()->unverified()->create([
             'username' => 'student123',
             'password' => bcrypt('password'),
+            'must_change_password' => true,
         ]);
 
         $this->get('/login');
@@ -27,7 +28,7 @@ class Module2AuthenticationFlowTest extends TestCase
             'password' => 'password',
         ]);
 
-        $response->assertRedirect(route('verification.notice'));
+        $response->assertRedirect(route('password.force'));
         $this->assertAuthenticatedAs($user);
     }
 

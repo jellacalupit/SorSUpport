@@ -110,6 +110,11 @@ Route::middleware(['auth', 'force.password', 'role:sds_admin'])
 
         Route::post('/tickets/{ticket}/assign', [AdminTicketReviewController::class, 'assign'])
             ->name('tickets.assign');
+        Route::post('/tickets/{ticket}/acknowledge', [AdminTicketReviewController::class, 'acknowledge'])
+            ->name('tickets.acknowledge');
+
+        Route::post('/tickets/{ticket}/close', [AdminTicketReviewController::class, 'close'])
+            ->name('tickets.close');
     });
 
 
@@ -157,6 +162,8 @@ Route::middleware(['auth', 'force.password', 'role:recipient'])
 
         Route::patch('/complaints/{complaint}/status', [\App\Http\Controllers\Recipient\ComplaintController::class, 'updateStatus'])
             ->name('complaints.update-status');
+        Route::post('/complaints/{complaint}/acknowledge', [\App\Http\Controllers\Recipient\ComplaintController::class, 'acknowledge'])
+            ->name('complaints.acknowledge');
     });
 
 Route::middleware(['auth', 'force.password'])->group(function () {

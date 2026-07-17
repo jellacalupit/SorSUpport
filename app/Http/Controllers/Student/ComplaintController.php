@@ -157,9 +157,8 @@ class ComplaintController extends Controller
                 EmailNotification::create([
                     'ticket_id' => $ticket->id,
                     'recipient_email' => $sdsAdminEmail,
-                    // use existing enum value; this will be updated when real mail/events are enabled
-                    'type' => 'assignment',
-                    'status' => 'pending',
+                    'type' => EmailNotification::TYPE_ASSIGNMENT,
+                    'status' => EmailNotification::STATUS_PENDING,
                 ]);
 
             }

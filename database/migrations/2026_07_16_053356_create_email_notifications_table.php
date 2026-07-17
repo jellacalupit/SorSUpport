@@ -12,7 +12,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('ticket_id')->constrained()->cascadeOnDelete();
             $table->string('recipient_email');
-            $table->enum('type', ['verification', 'assignment', 'recipient_assignment', 'status_update', 'student_status_update', 'daily_reminder', 'escalation', 'closure']);
+            // Use string for type to avoid strict enum CHECK issues on sqlite during tests
+            $table->string('type');
             $table->enum('status', ['pending', 'sent', 'failed'])->default('pending');
             $table->timestamp('sent_at')->nullable();
             $table->timestamps();

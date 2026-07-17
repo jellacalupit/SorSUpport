@@ -247,8 +247,8 @@ class AdminTicketReviewController extends Controller
                 EmailNotification::create([
                     'ticket_id' => $ticket->id,
                     'recipient_email' => $recipient->user->email,
-                    'type' => 'recipient_assignment',
-                    'status' => 'pending',
+                    'type' => EmailNotification::TYPE_RECIPIENT_ASSIGNMENT,
+                    'status' => EmailNotification::STATUS_PENDING,
                 ]);
             }
 
@@ -256,8 +256,8 @@ class AdminTicketReviewController extends Controller
                 EmailNotification::create([
                     'ticket_id' => $ticket->id,
                     'recipient_email' => $ticket->complaint->student->user->email,
-                    'type' => 'student_status_update',
-                    'status' => 'pending',
+                    'type' => EmailNotification::TYPE_STUDENT_STATUS_UPDATE,
+                    'status' => EmailNotification::STATUS_PENDING,
                 ]);
             }
         });
@@ -265,5 +265,99 @@ class AdminTicketReviewController extends Controller
         return redirect()
             ->route('admin.tickets.review.show', $ticket)
             ->with('success', $recipient ? 'Ticket assigned to recipient.' : 'Ticket assigned for direct handling.');
+    }
+
+    /**
+     * Acknowledge an assigned ticket by admin handler (Assigned -> In Progress)
+     */
+    public function acknowledge(Request $request, Ticket $ticket): RedirectResponse
+    {
+        abort_unless($ticket->status === Ticket::STATUS_ASSIGNED, 404);
+
+        // Only current handler may acknowledge
+        if ($ticket->current_handler_id !== Auth::id()) {
+            abort(403, 'You are not authorized to acknowledge this ticket.');
+        }
+
+        DB::transaction(function () use ($ticket) {
+            $ticket->update([
+                'status' => Ticket::STATUS_IN_PROGRESS,
+                'acknowledged_at' => now(),
+            ]);
+
+            AuditLog::create([
+                'ticket_id' => $ticket->id,
+                'performed_by' => Auth::id(),
+                'action' => 'ticket_acknowledged',
+                'details' => 'Ticket acknowledged by admin handler.',
+            ]);
+
+            if ($ticket->complaint?->student?->user?->email) {
+                EmailNotification::create([
+                    'ticket_id' => $ticket->id,
+                    'recipient_email' => $ticket->complaint->student->user->email,
+                    'type' => EmailNotification::TYPE_STUDENT_STATUS_UPDATE,
+                    'status' => EmailNotification::STATUS_PENDING,
+                ]);
+            }
+        });
+
+        return redirect()->route('admin.tickets.review.show', $ticket)
+            ->with('success', 'Ticket acknowledged.');
+    }
+
+    /**
+     * Close a ticket (Admin-only) after resolution.
+     */
+    public function close(Request $request, Ticket $ticket): RedirectResponse
+    {
+        // Only allow closing tickets that are resolved or in_progress
+        if (! in_array($ticket->status, [Ticket::STATUS_RESOLVED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ASSIGNED])) {
+            abort(404);
+        }
+
+        DB::transaction(function () use ($ticket) {
+            $ticket->update([
+                'status' => Ticket::STATUS_CLOSED,
+                'closed_at' => now(),
+            ]);
+
+            if ($ticket->thread) {
+                $ticket->thread->update(['is_active' => false]);
+            }
+
+            AuditLog::create([
+                'ticket_id' => $ticket->id,
+                'performed_by' => Auth::id(),
+                'action' => 'ticket_closed',
+                'details' => 'Ticket closed by admin.',
+            ]);
+
+            // Notify student
+            if ($ticket->complaint?->student?->user?->email) {
+                EmailNotification::create([
+                    'ticket_id' => $ticket->id,
+                    'recipient_email' => $ticket->complaint->student->user->email,
+                    'type' => EmailNotification::TYPE_COMPLAINT_CLOSED,
+                    'status' => EmailNotification::STATUS_PENDING,
+                ]);
+            }
+
+            // Notify recipient if assigned and is a recipient user
+            if ($ticket->assigned_to) {
+                $recipientModel = \App\Models\Recipient::query()->where('user_id', $ticket->assigned_to)->first();
+                if ($recipientModel && $recipientModel->user?->email) {
+                    EmailNotification::create([
+                        'ticket_id' => $ticket->id,
+                        'recipient_email' => $recipientModel->user->email,
+                        'type' => EmailNotification::TYPE_STATUS_UPDATE,
+                        'status' => EmailNotification::STATUS_PENDING,
+                    ]);
+                }
+            }
+        });
+
+        return redirect()->route('admin.tickets.review.show', $ticket)
+            ->with('success', 'Ticket closed successfully.');
     }
 }

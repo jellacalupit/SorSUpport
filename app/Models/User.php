@@ -59,6 +59,14 @@ class User extends Authenticatable implements MustVerifyEmailContract
     }
 
     /**
+     * Get the name of the unique identifier for the user.
+     */
+    public function getAuthIdentifierName(): string
+    {
+        return 'username';
+    }
+
+    /**
      * Student profile.
      */
     public function student(): HasOne
