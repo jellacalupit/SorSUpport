@@ -131,21 +131,8 @@ class ComplaintController extends Controller
             $ticket = Ticket::create([
 
                 'complaint_id' => $complaint->id,
-                'assigned_to' => $recipientUserId,
                 'status' => Ticket::STATUS_PENDING,
-                'deadline' => now()->addDays($category->resolution_deadline_days),
-            ]);
-
-            $thread = TicketThread::create([
-                'ticket_id' => $ticket->id,
-                'is_active' => true,
-            ]);
-
-            ThreadMessage::create([
-                'thread_id' => $thread->id,
-                'sender_id' => Auth::id(),
-                'content' => $validated['description'],
-                'file_attachment' => $attachmentPath,
+                'deadline' => null,
             ]);
 
             AuditLog::create([

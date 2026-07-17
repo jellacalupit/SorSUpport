@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\AuditLog;
 use App\Models\Complaint;
+use App\Models\EmailNotification;
 use App\Models\Recipient;
 use App\Models\Ticket;
+use App\Models\TicketThread;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class AdminTicketReviewController extends Controller
@@ -41,7 +44,8 @@ class AdminTicketReviewController extends Controller
         // Allow viewing unclassified pending tickets or classified informational tickets awaiting forward
         abort_unless(
             ($ticket->status === Ticket::STATUS_PENDING && $ticket->classification === null) ||
-            ($ticket->classification === Ticket::CLASSIFICATION_INFORMATIONAL && $ticket->jurisdiction === Ticket::JURISDICTION_RECIPIENT && $ticket->forwarded_at === null),
+            ($ticket->classification === Ticket::CLASSIFICATION_INFORMATIONAL && $ticket->jurisdiction === Ticket::JURISDICTION_RECIPIENT && $ticket->forwarded_at === null) ||
+            ($ticket->classification === Ticket::CLASSIFICATION_NEEDS_RESOLUTION),
             404
         );
 
@@ -49,6 +53,7 @@ class AdminTicketReviewController extends Controller
             'complaint.student.user',
             'complaint.category.recipient.user',
             'assignee',
+            'currentHandler',
             'forwardedRecipient',
             'auditLogs.performer',
         ]);
@@ -174,5 +179,91 @@ class AdminTicketReviewController extends Controller
         return redirect()
             ->route('admin.tickets.review.show', $ticket)
             ->with('success', 'Ticket forwarded to recipient.');
+    }
+
+    /**
+     * Assign or reassign a needs-resolution ticket to an admin or recipient handler.
+     */
+    public function assign(Request $request, Ticket $ticket): RedirectResponse
+    {
+        abort_unless(
+            $ticket->classification === Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+            404,
+            'Only needs-resolution tickets can be assigned.'
+        );
+
+        $validated = $request->validate([
+            'assignment_mode' => 'required|in:direct,recipient',
+            'recipient_id' => 'nullable|exists:recipients,id',
+        ]);
+
+        $recipient = null;
+        $assignedUserId = Auth::id();
+
+        if ($validated['assignment_mode'] === 'recipient') {
+            $recipient = Recipient::findOrFail($validated['recipient_id']);
+            $assignedUserId = $recipient->user_id;
+        }
+
+        $deadline = null;
+        $category = $ticket->complaint?->category;
+
+        if ($category) {
+            $deadline = now()->addDays((int) $category->resolution_deadline_days);
+        }
+
+        DB::transaction(function () use ($ticket, $recipient, $assignedUserId, $deadline): void {
+            $thread = $ticket->thread;
+
+            if (! $thread) {
+                $thread = TicketThread::create([
+                    'ticket_id' => $ticket->id,
+                    'is_active' => true,
+                ]);
+            } else {
+                $thread->update(['is_active' => true]);
+            }
+
+            $ticket->update([
+                'status' => Ticket::STATUS_ASSIGNED,
+                'assigned_to' => $recipient ? $assignedUserId : null,
+                'current_handler_id' => $assignedUserId,
+                'deadline' => $deadline,
+            ]);
+
+            $action = $recipient ? 'ticket_assigned' : 'ticket_assigned';
+            $details = $recipient
+                ? "Ticket assigned to {$recipient->user->name} for recipient handling."
+                : 'Ticket assigned to SDS admin for direct handling.';
+
+            AuditLog::create([
+                'ticket_id' => $ticket->id,
+                'performed_by' => Auth::id(),
+                'action' => $action,
+                'details' => $details,
+            ]);
+
+            if ($recipient && $recipient->user?->email) {
+                EmailNotification::create([
+                    'ticket_id' => $ticket->id,
+                    'recipient_email' => $recipient->user->email,
+                    'type' => 'recipient_assignment',
+                    'status' => 'pending',
+                ]);
+            }
+
+            if ($ticket->complaint?->student?->user?->email) {
+                EmailNotification::create([
+                    'ticket_id' => $ticket->id,
+                    'recipient_email' => $ticket->complaint->student->user->email,
+                    'type' => 'student_status_update',
+                    'status' => 'pending',
+                ]);
+            }
+        });
+
+        return redirect()
+            ->route('admin.tickets.review.show', $ticket)
+            ->with('success', $recipient ? 'Ticket assigned to recipient.' : 'Ticket assigned for direct handling.');
     }
 }

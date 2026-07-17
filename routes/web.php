@@ -104,6 +104,9 @@ Route::middleware(['auth', 'force.password', 'role:sds_admin'])
 
         Route::post('/tickets/{ticket}/forward', [AdminTicketReviewController::class, 'forward'])
             ->name('tickets.forward');
+
+        Route::post('/tickets/{ticket}/assign', [AdminTicketReviewController::class, 'assign'])
+            ->name('tickets.assign');
     });
 
 

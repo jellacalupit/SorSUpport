@@ -12,7 +12,7 @@ return new class extends Migration
             if (DB::getDriverName() === 'sqlite') {
                 DB::statement("UPDATE tickets SET status = 'pending' WHERE status IS NULL OR status = ''");
             } else {
-                DB::statement("ALTER TABLE tickets MODIFY status ENUM('pending', 'in_progress', 'resolved', 'rejected', 'closed') DEFAULT 'pending'");
+                DB::statement("ALTER TABLE tickets MODIFY status ENUM('pending', 'assigned', 'in_progress', 'resolved', 'rejected', 'closed') DEFAULT 'pending'");
             }
         }
 

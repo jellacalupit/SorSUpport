@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ComplaintCategory;
+use App\Models\EscalationHierarchy;
 use App\Models\Recipient;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ComplaintCategoryController extends Controller
@@ -44,14 +46,22 @@ class ComplaintCategoryController extends Controller
             'description' => 'nullable|string',
             'recipient_id' => 'nullable|exists:recipients,id',
             'resolution_deadline_days' => 'required|integer|min:1',
+            'escalation_hierarchy' => 'nullable|string',
         ]);
-        ComplaintCategory::create([
-            'name' => $validated['name'],
-            'description' => $validated['description'],
-            'recipient_id' => $validated['recipient_id'],
-            'resolution_deadline_days' => $validated['resolution_deadline_days'],
-            'is_active' => true,
-        ]);
+
+        $category = DB::transaction(function () use ($validated): ComplaintCategory {
+            $category = ComplaintCategory::create([
+                'name' => $validated['name'],
+                'description' => $validated['description'],
+                'recipient_id' => $validated['recipient_id'],
+                'resolution_deadline_days' => $validated['resolution_deadline_days'],
+                'is_active' => true,
+            ]);
+
+            $this->syncEscalationHierarchy($category, $validated['escalation_hierarchy'] ?? '');
+
+            return $category;
+        });
 
         return redirect()
             ->route('admin.categories.index')
@@ -88,19 +98,25 @@ class ComplaintCategoryController extends Controller
 
             'resolution_deadline_days' => 'required|integer|min:1',
 
-        ]);
-
-        $category->update([
-
-            'name' => $validated['name'],
-
-            'description' => $validated['description'],
-
-            'recipient_id' => $validated['recipient_id'],
-
-            'resolution_deadline_days' => $validated['resolution_deadline_days'],
+            'escalation_hierarchy' => 'nullable|string',
 
         ]);
+
+        DB::transaction(function () use ($category, $validated): void {
+            $category->update([
+
+                'name' => $validated['name'],
+
+                'description' => $validated['description'],
+
+                'recipient_id' => $validated['recipient_id'],
+
+                'resolution_deadline_days' => $validated['resolution_deadline_days'],
+
+            ]);
+
+            $this->syncEscalationHierarchy($category, $validated['escalation_hierarchy'] ?? '');
+        });
 
         return redirect()
             ->route('admin.categories.index')
@@ -124,5 +140,24 @@ class ComplaintCategoryController extends Controller
                     ? 'Complaint category activated successfully.'
                     : 'Complaint category deactivated successfully.'
             );
+    }
+
+    protected function syncEscalationHierarchy(ComplaintCategory $category, string $input): void
+    {
+        $category->escalationHierarchies()->delete();
+
+        $recipientIds = array_values(array_filter(array_map('trim', preg_split('/[\s,]+/', $input) ?: [])));
+
+        foreach ($recipientIds as $index => $recipientId) {
+            if (! Recipient::whereKey($recipientId)->exists()) {
+                continue;
+            }
+
+            EscalationHierarchy::create([
+                'complaint_category_id' => $category->id,
+                'level' => $index + 1,
+                'recipient_id' => $recipientId,
+            ]);
+        }
     }
 }

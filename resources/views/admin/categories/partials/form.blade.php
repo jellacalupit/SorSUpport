@@ -74,6 +74,24 @@
 
 </div>
 
+<div class="mb-8">
+
+    <label class="block font-semibold text-gray-900 mb-2">
+        Escalation Hierarchy (Recipient IDs, in order)
+    </label>
+
+    <textarea
+        name="escalation_hierarchy"
+        rows="4"
+        class="w-full border border-gray-300 rounded-lg p-3 text-gray-900 bg-white"
+        placeholder="Enter recipient IDs separated by commas or spaces">{{ old('escalation_hierarchy', $category ? $category->escalationHierarchies->pluck('recipient_id')->implode(', ') : '') }}</textarea>
+
+    <p class="text-sm text-gray-500 mt-2">
+        Example: 1, 2, 3
+    </p>
+
+</div>
+
 <div class="flex gap-4">
 
     <button

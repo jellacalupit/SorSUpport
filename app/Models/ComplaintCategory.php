@@ -32,4 +32,12 @@ class ComplaintCategory extends Model
     {
         return $this->hasMany(Complaint::class, 'category_id');
     }
+
+    /**
+     * Ordered escalation hierarchy for this category.
+     */
+    public function escalationHierarchies(): HasMany
+    {
+        return $this->hasMany(EscalationHierarchy::class)->orderBy('level');
+    }
 }

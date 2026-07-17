@@ -16,6 +16,10 @@ class TicketThread extends Model
         'is_active',
     ];
 
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+
     /**
      * Ticket this thread belongs to.
      */

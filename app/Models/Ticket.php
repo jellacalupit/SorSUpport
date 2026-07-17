@@ -14,6 +14,8 @@ class Ticket extends Model
 
     public const STATUS_PENDING = 'pending';
 
+    public const STATUS_ASSIGNED = 'assigned';
+
     public const STATUS_IN_PROGRESS = 'in_progress';
 
     public const STATUS_RESOLVED = 'resolved';
@@ -35,6 +37,7 @@ class Ticket extends Model
     protected $fillable = [
         'complaint_id',
         'assigned_to',
+        'current_handler_id',
         'status',
         'classification',
         'jurisdiction',
@@ -72,6 +75,14 @@ class Ticket extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    /**
+     * Current handler responsible for this ticket.
+     */
+    public function currentHandler(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'current_handler_id');
     }
 
     /**

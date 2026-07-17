@@ -179,7 +179,7 @@ class ComplaintController extends Controller
         $validated = $request->validate([
             'status' => [
                 'required',
-                Rule::in(['pending', 'in_progress', 'resolved', 'rejected', 'closed']),
+                Rule::in(['pending', 'assigned', 'in_progress', 'resolved', 'rejected', 'closed']),
             ],
             'details' => 'nullable|string|max:1000',
         ]);

@@ -11,9 +11,10 @@ return new class extends Migration
         Schema::create('tickets', function (Blueprint $table) {
             $table->id();
             $table->foreignId('complaint_id')->unique()->constrained()->cascadeOnDelete();
-            $table->enum('status', ['pending', 'in_progress', 'resolved', 'closed'])->default('pending');
+            $table->string('status')->default('pending');
             $table->enum('classification', ['informational', 'needs_resolution'])->nullable();
             $table->foreignId('assigned_to')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('current_handler_id')->nullable()->constrained('users')->nullOnDelete();
             $table->dateTime('deadline')->nullable();
             $table->timestamp('acknowledged_at')->nullable();
             $table->timestamp('resolved_at')->nullable();

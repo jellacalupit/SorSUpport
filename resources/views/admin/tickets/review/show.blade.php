@@ -217,12 +217,61 @@
                     @else
                         <!-- Classified but not forwarded (Informational + SDS, or Needs Resolution) -->
                         <h3 class="text-lg font-bold text-gray-900 mb-6">Classification Complete</h3>
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                             <p class="text-blue-800">
                                 <strong>Classification:</strong> {{ ucfirst($ticket->classification) }}<br>
                                 <strong>Jurisdiction:</strong> {{ ucfirst($ticket->jurisdiction) }}
                             </p>
                         </div>
+
+                        @if($ticket->classification === 'needs_resolution')
+                            <div class="border border-gray-200 rounded-lg p-6">
+                                <h4 class="text-lg font-semibold text-gray-900 mb-2">Assignment & Deadline</h4>
+                                <p class="text-sm text-gray-600 mb-4">
+                                    Assign this ticket to a recipient or keep it with SDS. The deadline will be set from the complaint category configuration.
+                                </p>
+
+                                <form action="{{ route('admin.tickets.assign', $ticket) }}" method="POST" class="space-y-4">
+                                    @csrf
+
+                                    <div class="space-y-2">
+                                        <label class="flex items-start gap-3 cursor-pointer">
+                                            <input type="radio" name="assignment_mode" value="direct" checked class="mt-1">
+                                            <span>
+                                                <span class="block font-semibold text-gray-900">Handle Directly</span>
+                                                <span class="block text-sm text-gray-500">Keep ownership with SDS and update the internal status only.</span>
+                                            </span>
+                                        </label>
+                                        <label class="flex items-start gap-3 cursor-pointer">
+                                            <input type="radio" name="assignment_mode" value="recipient" class="mt-1">
+                                            <span>
+                                                <span class="block font-semibold text-gray-900">Assign to Recipient</span>
+                                                <span class="block text-sm text-gray-500">Grant the recipient access to the ticket thread and notify them.</span>
+                                            </span>
+                                        </label>
+                                    </div>
+
+                                    <div>
+                                        <label for="recipient_id" class="block text-gray-700 font-semibold mb-2">
+                                            Recipient
+                                        </label>
+                                        <select id="recipient_id" name="recipient_id"
+                                                class="w-full border border-gray-300 rounded-lg p-3 text-gray-900 bg-white">
+                                            <option value="">-- Select Recipient --</option>
+                                            @foreach($recipients as $recipient)
+                                                <option value="{{ $recipient->id }}">
+                                                    {{ $recipient->user->name }} ({{ $recipient->staff_id }}) — {{ $recipient->department }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg">
+                                        Assign Ticket
+                                    </button>
+                                </form>
+                            </div>
+                        @endif
                     @endif
 
                 </div>
