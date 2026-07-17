@@ -105,23 +105,43 @@
 
                                     </a>
 
-                                    <form method="POST"
-                                        action="{{ route('admin.accounts.deactivate',$user->id) }}"
-                                        class="inline">
+                                    @if($user->is_active)
+                                        <form method="POST"
+                                            action="{{ route('admin.accounts.deactivate',$user->id) }}"
+                                            class="inline">
 
-                                        @csrf
-                                        @method('PATCH')
+                                            @csrf
+                                            @method('PATCH')
 
-                                        <button
-                                            type="submit"
-                                            class="bg-red-600 text-white px-3 py-2 rounded"
-                                            onclick="return confirm('Deactivate this account?')">
+                                            <button
+                                                type="submit"
+                                                class="bg-red-600 text-white px-3 py-2 rounded"
+                                                onclick="return confirm('Deactivate this account?')">
 
-                                            Deactivate
+                                                Deactivate
 
-                                        </button>
+                                            </button>
 
-                                    </form>
+                                        </form>
+                                    @else
+                                        <form method="POST"
+                                            action="{{ route('admin.accounts.reactivate',$user->id) }}"
+                                            class="inline">
+
+                                            @csrf
+                                            @method('PATCH')
+
+                                            <button
+                                                type="submit"
+                                                class="bg-green-600 text-white px-3 py-2 rounded"
+                                                onclick="return confirm('Reactivate this account?')">
+
+                                                Reactivate
+
+                                            </button>
+
+                                        </form>
+                                    @endif
 
                                 </td>
 

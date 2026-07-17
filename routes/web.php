@@ -18,7 +18,7 @@ Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware(['auth', 'force.password', 'role:sds_admin'])
+Route::middleware(['auth', 'verified', 'force.password', 'role:sds_admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
@@ -43,6 +43,9 @@ Route::middleware(['auth', 'force.password', 'role:sds_admin'])
 
         Route::patch('/accounts/{user}/deactivate', [AccountManagementController::class, 'deactivate'])
             ->name('accounts.deactivate');
+
+        Route::patch('/accounts/{user}/reactivate', [AccountManagementController::class, 'reactivate'])
+            ->name('accounts.reactivate');
 
         Route::get('/accounts/upload', [AccountManagementController::class, 'showUploadForm'])
             ->name('accounts.upload');
@@ -69,7 +72,7 @@ Route::middleware(['auth', 'force.password', 'role:sds_admin'])
             ->name('categories.toggle-status');
     });
 
-Route::middleware(['auth', 'force.password', 'role:student'])
+Route::middleware(['auth', 'verified', 'force.password', 'role:student'])
     ->prefix('student')
     ->name('student.')
     ->group(function () {
@@ -90,7 +93,7 @@ Route::middleware(['auth', 'force.password', 'role:student'])
             ->name('complaints.show');
     });
 
-Route::middleware(['auth', 'force.password', 'role:recipient'])
+Route::middleware(['auth', 'verified', 'force.password', 'role:recipient'])
     ->prefix('recipient')
     ->name('recipient.')
     ->group(function () {

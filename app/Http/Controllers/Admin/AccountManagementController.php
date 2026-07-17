@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Models\Student;
-use App\Models\Recipient;
 use App\Imports\AccountsImport;
+use App\Models\Recipient;
+use App\Models\Student;
+use App\Models\User as AppUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
@@ -19,7 +19,7 @@ class AccountManagementController extends Controller
      */
     public function index(): View
     {
-        $users = User::orderBy('name')->get();
+        $users = AppUser::orderBy('name')->get();
 
         return view('admin.accounts.index', compact('users'));
     }
@@ -38,54 +38,50 @@ class AccountManagementController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'  => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'role'  => 'required|in:student,recipient',
+            'role' => 'required|in:student,recipient',
         ]);
 
-        // Determine username
         $username = null;
 
-        if ($validated['role'] === User::ROLE_STUDENT) {
+        if ($validated['role'] === AppUser::ROLE_STUDENT) {
             $username = $request->student_id;
         }
 
-        if ($validated['role'] === User::ROLE_RECIPIENT) {
+        if ($validated['role'] === AppUser::ROLE_RECIPIENT) {
             $username = $request->staff_id;
         }
 
-        // Create user account
-        $user = User::create([
-            'name'                 => $validated['name'],
-            'username'             => $username,
-            'email'                => $validated['email'],
-            'password'             => Hash::make('Welcome@123'),
+        $user = AppUser::create([
+            'name' => $validated['name'],
+            'username' => $username,
+            'email' => $validated['email'],
+            'password' => Hash::make('Welcome@123'),
             'must_change_password' => true,
-            'role'                 => $validated['role'],
-            'is_active'            => true,
+            'role' => $validated['role'],
+            'is_active' => true,
         ]);
 
-        // Student profile
-        if ($validated['role'] === User::ROLE_STUDENT) {
+        if ($validated['role'] === AppUser::ROLE_STUDENT) {
 
             Student::create([
-                'user_id'     => $user->id,
-                'student_id'  => $request->student_id,
-                'department'  => $request->department,
-                'course'      => $request->course,
-                'year_level'  => $request->year_level,
-                'block'       => $request->block,
+                'user_id' => $user->id,
+                'student_id' => $request->student_id,
+                'department' => $request->department,
+                'course' => $request->course,
+                'year_level' => $request->year_level,
+                'block' => $request->block,
             ]);
 
         }
 
-        // Recipient profile
-        if ($validated['role'] === User::ROLE_RECIPIENT) {
+        if ($validated['role'] === AppUser::ROLE_RECIPIENT) {
 
             Recipient::create([
-                'user_id'     => $user->id,
-                'staff_id'    => $request->staff_id,
-                'department'  => $request->recipient_department,
+                'user_id' => $user->id,
+                'staff_id' => $request->staff_id,
+                'department' => $request->recipient_department,
                 'designation' => $request->designation,
             ]);
 
@@ -99,7 +95,7 @@ class AccountManagementController extends Controller
     /**
      * Show edit account form.
      */
-    public function edit(User $user)
+    public function edit(AppUser $user)
     {
         $user->load([
             'student',
@@ -112,21 +108,19 @@ class AccountManagementController extends Controller
     /**
      * Update an account.
      */
-    public function update(Request $request, User $user)
+    public function update(Request $request, AppUser $user)
     {
         $validated = $request->validate([
-            'name'  => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
         ]);
 
-        // Update user
         $user->update([
-            'name'  => $validated['name'],
+            'name' => $validated['name'],
             'email' => $validated['email'],
         ]);
 
-        // Student
-        if ($user->role === User::ROLE_STUDENT && $user->student) {
+        if ($user->role === AppUser::ROLE_STUDENT && $user->student) {
 
             $user->update([
                 'username' => $request->student_id,
@@ -142,8 +136,7 @@ class AccountManagementController extends Controller
 
         }
 
-        // Recipient
-        if ($user->role === User::ROLE_RECIPIENT && $user->recipient) {
+        if ($user->role === AppUser::ROLE_RECIPIENT && $user->recipient) {
 
             $user->update([
                 'username' => $request->staff_id,
@@ -165,7 +158,7 @@ class AccountManagementController extends Controller
     /**
      * Deactivate an account.
      */
-    public function deactivate(User $user)
+    public function deactivate(AppUser $user)
     {
         $user->update([
             'is_active' => false,
@@ -174,6 +167,20 @@ class AccountManagementController extends Controller
         return redirect()
             ->route('admin.accounts.index')
             ->with('success', 'Account deactivated successfully.');
+    }
+
+    /**
+     * Reactivate an account.
+     */
+    public function reactivate(AppUser $user)
+    {
+        $user->update([
+            'is_active' => true,
+        ]);
+
+        return redirect()
+            ->route('admin.accounts.index')
+            ->with('success', 'Account reactivated successfully.');
     }
 
     /**
@@ -193,10 +200,19 @@ class AccountManagementController extends Controller
             'file' => 'required|mimes:csv,xlsx,xls',
         ]);
 
-        Excel::import(new AccountsImport, $request->file('file'));
+        $import = new AccountsImport();
+
+        Excel::import($import, $request->file('file'));
+
+        $summary = $import->summary();
 
         return redirect()
             ->route('admin.accounts.index')
-            ->with('success', 'Accounts imported successfully.');
+            ->with('success', sprintf(
+                'Accounts imported. Created: %d, Updated: %d, Deactivated: %d.',
+                $summary['created'],
+                $summary['updated'],
+                $summary['deactivated']
+            ));
     }
 }

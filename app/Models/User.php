@@ -2,21 +2,21 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
+use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmailContract
 {
+    use HasFactory, Notifiable, MustVerifyEmailTrait;
     public const ROLE_STUDENT = 'student';
     public const ROLE_RECIPIENT = 'recipient';
     public const ROLE_SDS_ADMIN = 'sds_admin';
-
-    use HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
