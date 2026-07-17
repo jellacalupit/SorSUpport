@@ -13,6 +13,7 @@ class ComplaintCategory extends Model
         'description',
         'recipient_id',
         'resolution_deadline_days',
+        'default_jurisdiction',
         'is_active',
     ];
 

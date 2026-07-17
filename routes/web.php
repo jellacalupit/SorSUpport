@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\ForcePasswordController;
 use App\Http\Controllers\Admin\ComplaintCategoryController;
 use App\Http\Controllers\Admin\AdminComplaintController;
 use App\Http\Controllers\Admin\AdminAnonymousComplaintController;
+use App\Http\Controllers\Admin\AdminTicketReviewController;
 
 
 Route::get('/', function () {
@@ -87,6 +88,22 @@ Route::middleware(['auth', 'force.password', 'role:sds_admin'])
 
         Route::get('/complaints/anonymous/{complaint}', [AdminAnonymousComplaintController::class, 'show'])
             ->name('complaints.anonymous.show');
+
+        // Ticket review and classification (Module 3)
+        Route::get('/tickets/review', [AdminTicketReviewController::class, 'index'])
+            ->name('tickets.review.index');
+
+        Route::get('/tickets/review/{ticket}', [AdminTicketReviewController::class, 'show'])
+            ->name('tickets.review.show');
+
+        Route::post('/tickets/{ticket}/reject', [AdminTicketReviewController::class, 'reject'])
+            ->name('tickets.reject');
+
+        Route::post('/tickets/{ticket}/classify', [AdminTicketReviewController::class, 'classify'])
+            ->name('tickets.classify');
+
+        Route::post('/tickets/{ticket}/forward', [AdminTicketReviewController::class, 'forward'])
+            ->name('tickets.forward');
     });
 
 

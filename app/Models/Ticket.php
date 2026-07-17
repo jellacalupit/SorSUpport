@@ -22,15 +22,29 @@ class Ticket extends Model
 
     public const STATUS_CLOSED = 'closed';
 
+    public const CLASSIFICATION_NEEDS_RESOLUTION = 'needs_resolution';
+
+    public const CLASSIFICATION_INFORMATIONAL = 'informational';
+
+    public const CLASSIFICATION_INVALID = 'invalid';
+
+    public const JURISDICTION_SDS = 'sds';
+
+    public const JURISDICTION_RECIPIENT = 'recipient';
+
     protected $fillable = [
         'complaint_id',
         'assigned_to',
         'status',
         'classification',
+        'jurisdiction',
+        'closure_reason',
         'deadline',
         'acknowledged_at',
         'resolved_at',
         'closed_at',
+        'forwarded_at',
+        'forwarded_to',
     ];
 
     protected function casts(): array
@@ -40,6 +54,7 @@ class Ticket extends Model
             'acknowledged_at' => 'datetime',
             'resolved_at' => 'datetime',
             'closed_at' => 'datetime',
+            'forwarded_at' => 'datetime',
         ];
     }
 
@@ -81,5 +96,13 @@ class Ticket extends Model
     public function emailNotifications(): HasMany
     {
         return $this->hasMany(EmailNotification::class);
+    }
+
+    /**
+     * Recipient this informational ticket was forwarded to.
+     */
+    public function forwardedRecipient(): BelongsTo
+    {
+        return $this->belongsTo(Recipient::class, 'forwarded_to');
     }
 }
