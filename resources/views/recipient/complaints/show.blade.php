@@ -208,42 +208,51 @@
             <!-- Send Reply -->
             <div class="bg-white shadow-sm rounded-lg mb-6">
                 <div class="p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Send Reply</h3>
+                    @if ($thread && $thread->is_active)
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Send Reply</h3>
 
-                    <form method="POST" action="{{ route('recipient.complaints.reply', $complaint) }}" enctype="multipart/form-data" class="space-y-4">
-                        @csrf
+                        <form method="POST" action="{{ route('recipient.complaints.reply', $complaint) }}" enctype="multipart/form-data" class="space-y-4">
+                            @csrf
 
-                        <div>
-                            <label for="content" class="block text-sm font-medium text-gray-700 mb-2">
-                                Message
-                            </label>
-                            <textarea id="content"
-                                      name="content"
-                                      rows="4"
-                                      placeholder="Type your reply..."
-                                      class="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                      required></textarea>
+                            <div>
+                                <label for="content" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Message
+                                </label>
+                                <textarea id="content"
+                                          name="content"
+                                          rows="4"
+                                          placeholder="Type your reply..."
+                                          class="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                          required></textarea>
+                                <x-input-error :messages="$errors->get('content')" class="mt-2" />
+                            </div>
+
+                            <div>
+                                <label for="file_attachment" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Attachment (Optional)
+                                </label>
+                                <input type="file"
+                                       id="file_attachment"
+                                       name="file_attachment"
+                                       accept=".pdf,.jpg,.jpeg,.png"
+                                       class="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <p class="text-xs text-gray-500 mt-2">
+                                    Allowed: PDF, JPG, JPEG, PNG (Max 5 MB)
+                                </p>
+                                <x-input-error :messages="$errors->get('file_attachment')" class="mt-2" />
+                            </div>
+
+                            <button type="submit"
+                                    class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg">
+                                Send Reply
+                            </button>
+                        </form>
+                    @else
+                        <div class="bg-gray-100 rounded-lg p-4 border border-gray-300">
+                            <p class="text-gray-600 font-semibold">This conversation has been closed.</p>
+                            <p class="text-gray-500 text-sm mt-1">No new messages can be sent at this time.</p>
                         </div>
-
-                        <div>
-                            <label for="file_attachment" class="block text-sm font-medium text-gray-700 mb-2">
-                                Attachment (Optional)
-                            </label>
-                            <input type="file"
-                                   id="file_attachment"
-                                   name="file_attachment"
-                                   accept=".pdf,.jpg,.jpeg,.png"
-                                   class="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <p class="text-xs text-gray-500 mt-2">
-                                Allowed: PDF, JPG, JPEG, PNG (Max 5 MB)
-                            </p>
-                        </div>
-
-                        <button type="submit"
-                                class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg">
-                            Send Reply
-                        </button>
-                    </form>
+                    @endif
                 </div>
             </div>
 

@@ -103,11 +103,58 @@
                                                 <div class="text-sm text-gray-500">{{ $message->created_at->format('M d, Y h:i A') }}</div>
                                             </div>
                                             <div class="mt-3 text-gray-800 whitespace-pre-wrap">{{ $message->content }}</div>
+                                            @if ($message->file_attachment)
+                                                <a href="{{ asset('storage/'.$message->file_attachment) }}" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold mt-2 inline-block">View Attachment</a>
+                                            @endif
                                         </div>
                                     @endforeach
                                 </div>
                             @else
                                 <p class="text-gray-500">No conversation yet.</p>
+                            @endif
+
+                            @if ($complaint->ticket && $complaint->ticket->thread)
+                                @if ($complaint->ticket->thread->is_active)
+                                    <!-- Message Form -->
+                                    <div class="bg-gray-50 rounded-lg p-4 border mt-6">
+                                        <h4 class="font-semibold text-gray-900 mb-4">Send a Message</h4>
+                                        <form action="{{ route('admin.complaints.reply', $complaint) }}" method="POST" enctype="multipart/form-data">
+                                            @csrf
+                                            <div class="mb-4">
+                                                <label for="content" class="block text-gray-700 font-semibold mb-2">Message</label>
+                                                <textarea
+                                                    id="content"
+                                                    name="content"
+                                                    rows="4"
+                                                    required
+                                                    class="w-full border border-gray-300 rounded-lg p-3 text-gray-900 bg-white"
+                                                    placeholder="Type your message here..."></textarea>
+                                                <x-input-error :messages="$errors->get('content')" class="mt-2" />
+                                            </div>
+
+                                            <div class="mb-4">
+                                                <label for="file_attachment" class="block text-gray-700 font-semibold mb-2">Attachment (optional)</label>
+                                                <input
+                                                    type="file"
+                                                    id="file_attachment"
+                                                    name="file_attachment"
+                                                    accept=".pdf,.jpg,.jpeg,.png"
+                                                    class="w-full border border-gray-300 rounded-lg p-3 text-gray-900 bg-white">
+                                                <p class="text-xs text-gray-500 mt-1">Allowed: PDF, JPG, PNG (max 5 MB)</p>
+                                                <x-input-error :messages="$errors->get('file_attachment')" class="mt-2" />
+                                            </div>
+
+                                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg">
+                                                Send Message
+                                            </button>
+                                        </form>
+                                    </div>
+                                @else
+                                    <div class="bg-gray-100 rounded-lg p-4 border border-gray-300 mt-6">
+                                        <p class="text-gray-600 font-semibold">This conversation has been closed.</p>
+                                        <p class="text-gray-500 text-sm mt-1">No new messages can be sent at this time.</p>
+                                    </div>
+                                @endif
                             @endif
                         </div>
 

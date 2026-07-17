@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Log;
 
 class ComplaintController extends Controller
 {
@@ -110,6 +111,8 @@ class ComplaintController extends Controller
      */
     public function storeReply(Request $request, Complaint $complaint): RedirectResponse
     {
+        Log::debug('Recipient\\ComplaintController@storeReply called', ['user_id' => Auth::id(), 'complaint_id' => $complaint->id ?? null]);
+
         $recipient = Auth::user()->recipient;
 
         if (! $recipient) {
@@ -121,6 +124,17 @@ class ComplaintController extends Controller
 
         if (! $ticket || $ticket->assigned_to !== Auth::id()) {
             abort(403, 'You are not authorized to reply to this complaint.');
+        }
+
+        // Check if thread is active (not closed)
+        $thread = $ticket->thread;
+
+        if (! $thread || ! $thread->is_active) {
+            Log::debug('Recipient\\ComplaintController@storeReply returning closed error', ['user_id' => Auth::id(), 'complaint_id' => $complaint->id ?? null]);
+            return redirect()->route('recipient.complaints.show', $complaint)
+                ->withErrors([
+                    'content' => 'This conversation has been closed and no new messages can be sent.',
+                ]);
         }
 
         $validated = $request->validate([
@@ -136,15 +150,7 @@ class ComplaintController extends Controller
         }
 
         DB::transaction(function () use ($complaint, $ticket, $validated, $attachmentPath) {
-            // Get or create thread
             $thread = $ticket->thread;
-
-            if (! $thread) {
-                $thread = TicketThread::create([
-                    'ticket_id' => $ticket->id,
-                    'is_active' => true,
-                ]);
-            }
 
             // Create thread message
             ThreadMessage::create([
@@ -153,9 +159,19 @@ class ComplaintController extends Controller
                 'content' => $validated['content'],
                 'file_attachment' => $attachmentPath,
             ]);
+
+            // Log the action
+            AuditLog::create([
+                'ticket_id' => $ticket->id,
+                'performed_by' => Auth::id(),
+                'action' => 'message_posted',
+                'details' => 'Recipient posted a reply message.',
+            ]);
         });
 
-        return back()->with('success', 'Reply sent successfully.');
+        Log::debug('Recipient\\ComplaintController@storeReply returning redirect', ['user_id' => Auth::id()]);
+        return redirect()->route('recipient.complaints.show', $complaint)
+            ->with('success', 'Reply sent successfully.');
     }
 
     /**
@@ -193,6 +209,13 @@ class ComplaintController extends Controller
 
             // Update ticket status
             $ticket->update(['status' => $newStatus]);
+
+            // Close thread if ticket is being closed or resolved
+            if (in_array($newStatus, ['closed', 'resolved', 'rejected'])) {
+                if ($ticket->thread) {
+                    $ticket->thread->update(['is_active' => false]);
+                }
+            }
 
             // Determine action for audit log
             $action = match($newStatus) {

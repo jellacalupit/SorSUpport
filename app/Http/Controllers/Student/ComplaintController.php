@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use App\Models\EmailNotification;
 
 use Illuminate\Validation\Rule;
@@ -197,5 +198,73 @@ class ComplaintController extends Controller
         ]);
 
         return view('student.complaints.show', compact('complaint'));
+    }
+
+    /**
+     * Store a reply message to the complaint thread.
+     */
+    public function storeReply(Request $request, Complaint $complaint): RedirectResponse
+    {
+        Log::debug('Student\\ComplaintController@storeReply called', ['user_id' => Auth::id(), 'complaint_id' => $complaint->id ?? null]);
+
+        $student = Auth::user()->student;
+
+        if (! $student || $complaint->student_id !== $student->id) {
+            abort(403, 'You are not authorized to reply to this complaint.');
+        }
+
+        // Authorization: ensure the complaint has a ticket and thread
+        $ticket = $complaint->ticket;
+
+        if (! $ticket) {
+            abort(403, 'This complaint has no associated ticket.');
+        }
+
+        // Check if thread is active (not closed)
+        $thread = $ticket->thread;
+
+        if (! $thread || ! $thread->is_active) {
+            Log::debug('Student\\ComplaintController@storeReply returning closed error', ['user_id' => Auth::id(), 'complaint_id' => $complaint->id ?? null]);
+            return redirect()->route('student.complaints.show', $complaint)
+                ->withErrors([
+                    'content' => 'This conversation has been closed and no new messages can be sent.',
+                ]);
+        }
+
+        $validated = $request->validate([
+            'content' => 'required|string|max:5000',
+            'file_attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        ]);
+
+        $attachmentPath = null;
+
+        if ($request->hasFile('file_attachment')) {
+            $attachmentPath = $request->file('file_attachment')
+                ->store('complaints/replies', 'public');
+        }
+
+        DB::transaction(function () use ($ticket, $validated, $attachmentPath) {
+            $thread = $ticket->thread;
+
+            // Create thread message
+            ThreadMessage::create([
+                'thread_id' => $thread->id,
+                'sender_id' => Auth::id(),
+                'content' => $validated['content'],
+                'file_attachment' => $attachmentPath,
+            ]);
+
+            // Log the action
+            AuditLog::create([
+                'ticket_id' => $ticket->id,
+                'performed_by' => Auth::id(),
+                'action' => 'message_posted',
+                'details' => 'Student posted a reply message.',
+            ]);
+        });
+
+        Log::debug('Student\\ComplaintController@storeReply returning redirect', ['user_id' => Auth::id()]);
+        return redirect()->route('student.complaints.show', $complaint)
+            ->with('success', 'Your message has been posted successfully.');
     }
 }

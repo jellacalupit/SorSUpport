@@ -82,6 +82,9 @@ Route::middleware(['auth', 'force.password', 'role:sds_admin'])
         Route::get('/complaints/{complaint}', [AdminComplaintController::class, 'show'])
             ->name('complaints.show');
 
+        Route::post('/complaints/{complaint}/reply', [AdminComplaintController::class, 'storeReply'])
+            ->name('complaints.reply');
+
         // Anonymous informational complaints (no ticket tracking)
         Route::get('/complaints/anonymous', [AdminAnonymousComplaintController::class, 'index'])
             ->name('complaints.anonymous');
@@ -129,6 +132,9 @@ Route::middleware(['auth', 'force.password', 'role:student'])
 
         Route::get('/complaints/{complaint}', [ComplaintController::class, 'show'])
             ->name('complaints.show');
+
+        Route::post('/complaints/{complaint}/reply', [ComplaintController::class, 'storeReply'])
+            ->name('complaints.reply');
     });
 
 Route::middleware(['auth', 'force.password', 'role:recipient'])
