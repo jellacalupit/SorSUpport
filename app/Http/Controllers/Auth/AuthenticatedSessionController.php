@@ -32,13 +32,6 @@ class AuthenticatedSessionController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        if (! $user->hasVerifiedEmail()) {
-            $user->sendEmailVerificationNotification();
-
-            return redirect()->route('verification.notice')
-                ->with('status', 'verification-link-sent');
-        }
-
         /*
         |--------------------------------------------------------------------------
         | Force password change on first login

@@ -44,6 +44,24 @@
 
 <div class="mb-5">
 
+    <label for="personnel_involved" class="block font-semibold text-gray-900 mb-2">
+        Personnel Involved <span class="font-normal text-gray-500">(optional)</span>
+    </label>
+
+    <input
+        type="text"
+        id="personnel_involved"
+        name="personnel_involved"
+        value="{{ old('personnel_involved') }}"
+        class="w-full border border-gray-300 rounded-lg p-3 text-gray-900 bg-white"
+        placeholder="Names, department, role (if applicable)">
+
+    <x-input-error :messages="$errors->get('personnel_involved')" class="mt-2" />
+
+</div>
+
+<div class="mb-5">
+
     <label for="description" class="block font-semibold text-gray-900 mb-2">
         Complaint Description
     </label>
@@ -77,6 +95,29 @@
     </p>
 
     <x-input-error :messages="$errors->get('file_attachment')" class="mt-2" />
+
+</div>
+
+<div class="mb-8">
+
+    <label class="flex items-center gap-3 cursor-pointer select-none">
+        <input
+            type="checkbox"
+            name="is_anonymous"
+            value="1"
+            class="h-4 w-4 text-blue-600 border-gray-300 rounded"
+            @checked(old('is_anonymous'))>
+
+        <span class="font-semibold text-gray-900">
+            Submit anonymously
+        </span>
+    </label>
+
+    <p class="mt-1 text-sm text-gray-500">
+        If selected, your complaint will be submitted without creating a support ticket or sending notifications.
+    </p>
+
+    <x-input-error :messages="$errors->get('is_anonymous')" class="mt-2" />
 
 </div>
 

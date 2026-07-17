@@ -14,8 +14,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use App\Models\EmailNotification;
+
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+
 
 class ComplaintController extends Controller
 {
@@ -66,8 +69,10 @@ class ComplaintController extends Controller
                     ->whereNotNull('recipient_id'),
             ],
             'subject_title' => 'required|string|max:255',
+            'personnel_involved' => 'nullable|string|max:255',
             'description' => 'required|string|max:5000',
             'file_attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'is_anonymous' => 'nullable|boolean',
         ]);
 
         $student = Auth::user()->student;
@@ -96,24 +101,35 @@ class ComplaintController extends Controller
                 ->store('complaints', 'public');
         }
 
+        $isAnonymous = (bool) ($validated['is_anonymous'] ?? false);
+
         $complaint = DB::transaction(function () use (
             $validated,
             $student,
             $category,
             $recipientUserId,
-            $attachmentPath
+            $attachmentPath,
+            $isAnonymous
         ) {
             $complaint = Complaint::create([
                 'reference_number' => Complaint::generateReferenceNumber(),
                 'student_id' => $student->id,
                 'category_id' => $category->id,
                 'subject_title' => $validated['subject_title'],
+                'personnel_involved' => $validated['personnel_involved'] ?? null,
                 'description' => $validated['description'],
                 'file_attachment' => $attachmentPath,
+                'is_anonymous' => $isAnonymous,
                 'status' => Complaint::STATUS_PENDING,
             ]);
 
+            // Anonymous submissions should not generate tickets/threads and should not notify SDS Admin.
+            if ($isAnonymous) {
+                return $complaint;
+            }
+
             $ticket = Ticket::create([
+
                 'complaint_id' => $complaint->id,
                 'assigned_to' => $recipientUserId,
                 'status' => Ticket::STATUS_PENDING,
@@ -139,7 +155,29 @@ class ComplaintController extends Controller
                 'details' => "Complaint {$complaint->reference_number} submitted.",
             ]);
 
+            // In-app notification record for SDS Admin (no real email sending yet)
+            $sdsAdminEmail = optional(Auth::user())->email; // fallback; we resolve below from an SDS admin user
+            $sdsAdminUser = \App\Models\User::query()->whereHas('roles', function ($q) {
+                $q->where('name', 'sds_admin');
+            })->first();
+
+            if ($sdsAdminUser) {
+                $sdsAdminEmail = $sdsAdminUser->email;
+            }
+
+            if ($sdsAdminEmail) {
+                EmailNotification::create([
+                    'ticket_id' => $ticket->id,
+                    'recipient_email' => $sdsAdminEmail,
+                    // use existing enum value; this will be updated when real mail/events are enabled
+                    'type' => 'assignment',
+                    'status' => 'pending',
+                ]);
+
+            }
+
             return $complaint;
+
         });
 
         return redirect()

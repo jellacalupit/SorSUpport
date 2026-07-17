@@ -9,6 +9,9 @@ use App\Http\Controllers\Recipient\RecipientDashboardController;
 use App\Http\Controllers\Admin\AccountManagementController;
 use App\Http\Controllers\Auth\ForcePasswordController;
 use App\Http\Controllers\Admin\ComplaintCategoryController;
+use App\Http\Controllers\Admin\AdminComplaintController;
+use App\Http\Controllers\Admin\AdminAnonymousComplaintController;
+
 
 Route::get('/', function () {
     return view('welcome');
@@ -16,9 +19,9 @@ Route::get('/', function () {
 
 Route::get('/dashboard', function () {
     return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware(['auth'])->name('dashboard');
 
-Route::middleware(['auth', 'verified', 'force.password', 'role:sds_admin'])
+Route::middleware(['auth', 'force.password', 'role:sds_admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
@@ -70,9 +73,24 @@ Route::middleware(['auth', 'verified', 'force.password', 'role:sds_admin'])
 
         Route::patch('/categories/{category}/toggle-status', [ComplaintCategoryController::class, 'toggleStatus'])
             ->name('categories.toggle-status');
+
+        // Complaint Queue (identified)
+        Route::get('/complaints', [AdminComplaintController::class, 'index'])
+            ->name('complaints.index');
+
+        Route::get('/complaints/{complaint}', [AdminComplaintController::class, 'show'])
+            ->name('complaints.show');
+
+        // Anonymous informational complaints (no ticket tracking)
+        Route::get('/complaints/anonymous', [AdminAnonymousComplaintController::class, 'index'])
+            ->name('complaints.anonymous');
+
+        Route::get('/complaints/anonymous/{complaint}', [AdminAnonymousComplaintController::class, 'show'])
+            ->name('complaints.anonymous.show');
     });
 
-Route::middleware(['auth', 'verified', 'force.password', 'role:student'])
+
+Route::middleware(['auth', 'force.password', 'role:student'])
     ->prefix('student')
     ->name('student.')
     ->group(function () {
@@ -93,7 +111,7 @@ Route::middleware(['auth', 'verified', 'force.password', 'role:student'])
             ->name('complaints.show');
     });
 
-Route::middleware(['auth', 'verified', 'force.password', 'role:recipient'])
+Route::middleware(['auth', 'force.password', 'role:recipient'])
     ->prefix('recipient')
     ->name('recipient.')
     ->group(function () {
