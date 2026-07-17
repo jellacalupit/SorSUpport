@@ -12,7 +12,9 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->text('description')->nullable();
+            $table->foreignId('recipient_id')->nullable()->constrained('recipients')->nullOnDelete();
             $table->unsignedInteger('resolution_deadline_days');
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
     }

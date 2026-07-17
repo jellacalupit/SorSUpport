@@ -11,7 +11,18 @@ class Complaint extends Model
 {
     use HasFactory;
 
+    public const STATUS_PENDING = 'pending';
+
+    public const STATUS_IN_PROGRESS = 'in_progress';
+
+    public const STATUS_RESOLVED = 'resolved';
+
+    public const STATUS_REJECTED = 'rejected';
+
+    public const STATUS_CLOSED = 'closed';
+
     protected $fillable = [
+        'reference_number',
         'student_id',
         'category_id',
         'subject_title',
@@ -19,7 +30,29 @@ class Complaint extends Model
         'description',
         'file_attachment',
         'is_anonymous',
+        'status',
     ];
+
+    /**
+     * Generate the next complaint reference number (e.g. SOS-2026-000001).
+     */
+    public static function generateReferenceNumber(): string
+    {
+        $year = now()->year;
+        $prefix = "SOS-{$year}-";
+
+        $latest = static::query()
+            ->where('reference_number', 'like', "{$prefix}%")
+            ->orderByDesc('reference_number')
+            ->lockForUpdate()
+            ->value('reference_number');
+
+        $sequence = $latest
+            ? ((int) substr($latest, -6)) + 1
+            : 1;
+
+        return $prefix.str_pad((string) $sequence, 6, '0', STR_PAD_LEFT);
+    }
 
     /**
      * Student who submitted the complaint.
@@ -34,7 +67,7 @@ class Complaint extends Model
      */
     public function category(): BelongsTo
     {
-        return $this->belongsTo(ComplaintCategory::class);
+        return $this->belongsTo(ComplaintCategory::class, 'category_id');
     }
 
     /**

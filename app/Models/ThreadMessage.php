@@ -11,10 +11,10 @@ class ThreadMessage extends Model
     use HasFactory;
 
     protected $fillable = [
-        'ticket_thread_id',
+        'thread_id',
         'sender_id',
-        'message',
-        'attachment',
+        'content',
+        'file_attachment',
     ];
 
     /**
@@ -22,7 +22,7 @@ class ThreadMessage extends Model
      */
     public function thread(): BelongsTo
     {
-        return $this->belongsTo(TicketThread::class, 'ticket_thread_id');
+        return $this->belongsTo(TicketThread::class, 'thread_id');
     }
 
     /**

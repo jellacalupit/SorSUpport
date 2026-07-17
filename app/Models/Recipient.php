@@ -30,4 +30,12 @@ class Recipient extends Model
     {
         return $this->hasMany(Ticket::class, 'assigned_to');
     }
+
+    /**
+     * Complaint categories assigned to this recipient.
+     */
+    public function complaintCategories(): HasMany
+    {
+        return $this->hasMany(ComplaintCategory::class);
+    }
 }

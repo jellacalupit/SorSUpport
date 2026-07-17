@@ -19,6 +19,17 @@
                         You are logged in as a <strong>Student</strong>.
                     </p>
 
+                    <div class="mt-6 flex gap-4">
+                        <a href="{{ route('student.complaints.create') }}"
+                           class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg">
+                            Submit Complaint
+                        </a>
+                        <a href="{{ route('student.complaints.index') }}"
+                           class="inline-block bg-gray-800 hover:bg-gray-900 text-white font-semibold px-6 py-3 rounded-lg">
+                            My Complaints
+                        </a>
+                    </div>
+
                 </div>
             </div>
 

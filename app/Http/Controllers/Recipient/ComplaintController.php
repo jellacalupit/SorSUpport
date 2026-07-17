@@ -1,0 +1,218 @@
+<?php
+
+namespace App\Http\Controllers\Recipient;
+
+use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
+use App\Models\Complaint;
+use App\Models\Ticket;
+use App\Models\ThreadMessage;
+use App\Models\TicketThread;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
+
+class ComplaintController extends Controller
+{
+    /**
+     * Display all complaints assigned to the recipient.
+     */
+    public function index(Request $request): View
+    {
+        $recipient = Auth::user()->recipient;
+
+        if (! $recipient) {
+            abort(403, 'Recipient profile not found.');
+        }
+
+        $query = Ticket::query()
+            ->where('assigned_to', Auth::id())
+            ->with([
+                'complaint.student.user',
+                'complaint.category',
+                'assignee',
+            ]);
+
+        // Search by Reference Number
+        if ($request->filled('search_reference')) {
+            $query->whereHas('complaint', function ($q) {
+                $q->where('reference_number', 'like', '%' . request()->input('search_reference') . '%');
+            });
+        }
+
+        // Search by Student Name
+        if ($request->filled('search_student')) {
+            $query->whereHas('complaint.student.user', function ($q) {
+                $q->where('name', 'like', '%' . request()->input('search_student') . '%');
+            });
+        }
+
+        // Search by Subject
+        if ($request->filled('search_subject')) {
+            $query->whereHas('complaint', function ($q) {
+                $q->where('subject_title', 'like', '%' . request()->input('search_subject') . '%');
+            });
+        }
+
+        // Filter by Status
+        if ($request->filled('status_filter')) {
+            $query->where('status', $request->input('status_filter'));
+        }
+
+        // Sort newest first
+        $complaints = $query->orderByDesc('created_at')
+            ->paginate(10)
+            ->appends($request->query());
+
+        return view('recipient.complaints.index', compact('complaints'));
+    }
+
+    /**
+     * Display the complaint details page.
+     */
+    public function show(Complaint $complaint): View
+    {
+        $recipient = Auth::user()->recipient;
+
+        if (! $recipient) {
+            abort(403, 'Recipient profile not found.');
+        }
+
+        // Authorization: ensure the complaint is assigned to this recipient (user)
+        $ticket = $complaint->ticket;
+
+        if (! $ticket || $ticket->assigned_to !== Auth::id()) {
+            abort(403, 'You are not authorized to view this complaint.');
+        }
+
+        // Eager load relationships
+        $complaint->load([
+            'student.user',
+            'category.recipient.user',
+            'ticket.assignee',
+            'ticket.auditLogs.performer',
+            'ticket.thread.messages.sender',
+        ]);
+
+        $thread = $complaint->ticket->thread;
+        $messages = $thread?->messages()->orderBy('created_at')->get() ?? collect();
+        $auditLogs = $complaint->ticket->auditLogs()->orderBy('created_at')->get();
+
+        return view('recipient.complaints.show', compact('complaint', 'messages', 'auditLogs', 'thread'));
+    }
+
+    /**
+     * Store a reply to a complaint.
+     */
+    public function storeReply(Request $request, Complaint $complaint): RedirectResponse
+    {
+        $recipient = Auth::user()->recipient;
+
+        if (! $recipient) {
+            abort(403, 'Recipient profile not found.');
+        }
+
+        // Authorization: ensure the complaint is assigned to this recipient (user)
+        $ticket = $complaint->ticket;
+
+        if (! $ticket || $ticket->assigned_to !== Auth::id()) {
+            abort(403, 'You are not authorized to reply to this complaint.');
+        }
+
+        $validated = $request->validate([
+            'content' => 'required|string|max:5000',
+            'file_attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        ]);
+
+        $attachmentPath = null;
+
+        if ($request->hasFile('file_attachment')) {
+            $attachmentPath = $request->file('file_attachment')
+                ->store('complaints/replies', 'public');
+        }
+
+        DB::transaction(function () use ($complaint, $ticket, $validated, $attachmentPath) {
+            // Get or create thread
+            $thread = $ticket->thread;
+
+            if (! $thread) {
+                $thread = TicketThread::create([
+                    'ticket_id' => $ticket->id,
+                    'is_active' => true,
+                ]);
+            }
+
+            // Create thread message
+            ThreadMessage::create([
+                'thread_id' => $thread->id,
+                'sender_id' => Auth::id(),
+                'content' => $validated['content'],
+                'file_attachment' => $attachmentPath,
+            ]);
+        });
+
+        return back()->with('success', 'Reply sent successfully.');
+    }
+
+    /**
+     * Update the complaint status.
+     */
+    public function updateStatus(Request $request, Complaint $complaint): RedirectResponse
+    {
+        $recipient = Auth::user()->recipient;
+
+        if (! $recipient) {
+            abort(403, 'Recipient profile not found.');
+        }
+
+        // Authorization: ensure the complaint is assigned to this recipient (user)
+        $ticket = $complaint->ticket;
+
+        if (! $ticket || $ticket->assigned_to !== Auth::id()) {
+            abort(403, 'You are not authorized to update this complaint.');
+        }
+
+        $validated = $request->validate([
+            'status' => [
+                'required',
+                Rule::in(['pending', 'in_progress', 'resolved', 'rejected', 'closed']),
+            ],
+            'details' => 'nullable|string|max:1000',
+        ]);
+
+        $oldStatus = $complaint->status;
+        $newStatus = $validated['status'];
+
+        DB::transaction(function () use ($complaint, $ticket, $oldStatus, $newStatus, $validated) {
+            // Update complaint status
+            $complaint->update(['status' => $newStatus]);
+
+            // Update ticket status
+            $ticket->update(['status' => $newStatus]);
+
+            // Determine action for audit log
+            $action = match($newStatus) {
+                'resolved' => 'complaint_resolved',
+                'rejected' => 'complaint_rejected',
+                'closed' => 'complaint_closed',
+                default => 'status_changed',
+            };
+
+            $details = $validated['details'] ?? "Status changed from {$oldStatus} to {$newStatus}";
+
+            // Create audit log
+            AuditLog::create([
+                'ticket_id' => $ticket->id,
+                'performed_by' => Auth::id(),
+                'action' => $action,
+                'details' => $details,
+            ]);
+        });
+
+        return back()->with('success', 'Complaint status updated successfully.');
+    }
+}

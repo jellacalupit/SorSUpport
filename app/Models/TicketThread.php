@@ -29,6 +29,6 @@ class TicketThread extends Model
      */
     public function messages(): HasMany
     {
-        return $this->hasMany(ThreadMessage::class);
+        return $this->hasMany(ThreadMessage::class, 'thread_id');
     }
 }

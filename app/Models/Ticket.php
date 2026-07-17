@@ -12,9 +12,19 @@ class Ticket extends Model
 {
     use HasFactory;
 
+    public const STATUS_PENDING = 'pending';
+
+    public const STATUS_IN_PROGRESS = 'in_progress';
+
+    public const STATUS_RESOLVED = 'resolved';
+
+    public const STATUS_REJECTED = 'rejected';
+
+    public const STATUS_CLOSED = 'closed';
+
     protected $fillable = [
         'complaint_id',
-        'recipient_id',
+        'assigned_to',
         'status',
         'classification',
         'deadline',
@@ -22,6 +32,16 @@ class Ticket extends Model
         'resolved_at',
         'closed_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'deadline' => 'datetime',
+            'acknowledged_at' => 'datetime',
+            'resolved_at' => 'datetime',
+            'closed_at' => 'datetime',
+        ];
+    }
 
     /**
      * Complaint that generated this ticket.
@@ -32,11 +52,11 @@ class Ticket extends Model
     }
 
     /**
-     * Recipient currently assigned to this ticket.
+     * User currently assigned to this ticket.
      */
-    public function recipient(): BelongsTo
+    public function assignee(): BelongsTo
     {
-        return $this->belongsTo(Recipient::class);
+        return $this->belongsTo(User::class, 'assigned_to');
     }
 
     /**
