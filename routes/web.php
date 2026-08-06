@@ -8,6 +8,7 @@ use App\Http\Controllers\Student\StudentDashboardController;
 use App\Http\Controllers\Student\ComplaintController;
 use App\Http\Controllers\Recipient\RecipientDashboardController;
 use App\Http\Controllers\Admin\AccountManagementController;
+use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Auth\ForcePasswordController;
 use App\Http\Controllers\Admin\ComplaintCategoryController;
 use App\Http\Controllers\Admin\AdminComplaintController;
@@ -120,6 +121,15 @@ Route::middleware(['auth', 'force.password', 'role:sds_admin'])
 
         Route::post('/tickets/{ticket}/escalate', [AdminTicketReviewController::class, 'escalate'])
             ->name('tickets.escalate');
+
+        Route::get('/analytics', [AnalyticsController::class, 'index'])
+            ->name('analytics.index');
+
+        Route::get('/analytics/export/pdf', [AnalyticsController::class, 'exportPdf'])
+            ->name('analytics.export.pdf');
+
+        Route::get('/analytics/export/excel', [AnalyticsController::class, 'exportExcel'])
+            ->name('analytics.export.excel');
     });
 
 
