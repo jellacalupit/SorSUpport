@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('audit_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ticket_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('performed_by')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('performed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('action');
             $table->text('details')->nullable();
             $table->timestamps();

@@ -133,12 +133,12 @@ class AdminComplaintController extends Controller
                 ]);
 
                 // Log the action
-                AuditLog::create([
-                    'ticket_id' => $ticket->id,
-                    'performed_by' => Auth::id(),
-                    'action' => 'message_posted',
-                    'details' => 'Admin posted a reply message.',
-                ]);
+                AuditLog::log(
+                    $ticket->id,
+                    'message_posted',
+                    Auth::id(),
+                    'Admin posted a reply message.'
+                );
             });
         } catch (\Throwable $e) {
             Log::error('Admin\\AdminComplaintController@storeReply exception', ['exception' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);

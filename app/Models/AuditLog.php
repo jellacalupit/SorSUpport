@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Auth;
 
 class AuditLog extends Model
 {
@@ -16,6 +17,16 @@ class AuditLog extends Model
         'action',
         'details',
     ];
+
+    public static function log(int $ticketId, string $action, ?int $userId = null, ?string $details = null): self
+    {
+        return self::create([
+            'ticket_id' => $ticketId,
+            'performed_by' => $userId ?? Auth::id(),
+            'action' => $action,
+            'details' => $details,
+        ]);
+    }
 
     /**
      * Ticket associated with this log.

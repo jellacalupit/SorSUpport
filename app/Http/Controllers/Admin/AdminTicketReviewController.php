@@ -99,12 +99,12 @@ class AdminTicketReviewController extends Controller
         }
 
         // Log the action
-        AuditLog::create([
-            'ticket_id' => $ticket->id,
-            'performed_by' => Auth::id(),
-            'action' => 'ticket_closed_invalid',
-            'details' => "Ticket marked invalid. Reason: {$validated['closure_reason']}",
-        ]);
+        AuditLog::log(
+            $ticket->id,
+            'ticket_closed_invalid',
+            Auth::id(),
+            "Ticket marked invalid. Reason: {$validated['closure_reason']}"
+        );
 
         return redirect()
             ->route('admin.tickets.review.index')
@@ -142,12 +142,12 @@ class AdminTicketReviewController extends Controller
         ]);
 
         // Log the action
-        AuditLog::create([
-            'ticket_id' => $ticket->id,
-            'performed_by' => Auth::id(),
-            'action' => 'ticket_classified',
-            'details' => "Classified as {$validated['classification']} under {$validated['jurisdiction']} jurisdiction.",
-        ]);
+        AuditLog::log(
+            $ticket->id,
+            'ticket_classified',
+            Auth::id(),
+            "Classified as {$validated['classification']} under {$validated['jurisdiction']} jurisdiction."
+        );
 
         return redirect()
             ->route('admin.tickets.review.index')
@@ -180,12 +180,12 @@ class AdminTicketReviewController extends Controller
         ]);
 
         // Log the action
-        AuditLog::create([
-            'ticket_id' => $ticket->id,
-            'performed_by' => Auth::id(),
-            'action' => 'ticket_forwarded_to_recipient',
-            'details' => "Informational ticket forwarded to {$recipient->user->name} ({$recipient->user->email}).",
-        ]);
+        AuditLog::log(
+            $ticket->id,
+            'ticket_forwarded_to_recipient',
+            Auth::id(),
+            "Informational ticket forwarded to {$recipient->user->name} ({$recipient->user->email})."
+        );
 
         // TODO: Send InformationalForwardedMail to recipient (Module 4)
 
@@ -249,12 +249,12 @@ class AdminTicketReviewController extends Controller
                 ? "Ticket assigned to {$recipient->user->name} for recipient handling."
                 : 'Ticket assigned to SDS admin for direct handling.';
 
-            AuditLog::create([
-                'ticket_id' => $ticket->id,
-                'performed_by' => Auth::id(),
-                'action' => $action,
-                'details' => $details,
-            ]);
+            AuditLog::log(
+                $ticket->id,
+                $action,
+                Auth::id(),
+                $details
+            );
 
             if ($recipient && $recipient->user?->email) {
                 EmailNotification::create([
@@ -298,12 +298,12 @@ class AdminTicketReviewController extends Controller
                 'acknowledged_at' => now(),
             ]);
 
-            AuditLog::create([
-                'ticket_id' => $ticket->id,
-                'performed_by' => Auth::id(),
-                'action' => 'ticket_acknowledged',
-                'details' => 'Ticket acknowledged by admin handler.',
-            ]);
+            AuditLog::log(
+                $ticket->id,
+                'ticket_acknowledged',
+                Auth::id(),
+                'Ticket acknowledged by admin handler.'
+            );
 
             if ($ticket->complaint?->student?->user?->email) {
                 EmailNotification::create([
@@ -361,12 +361,12 @@ class AdminTicketReviewController extends Controller
                 $ticket->thread->update(['is_active' => false]);
             }
 
-            AuditLog::create([
-                'ticket_id' => $ticket->id,
-                'performed_by' => Auth::id(),
-                'action' => 'ticket_closed',
-                'details' => 'Ticket closed by admin.',
-            ]);
+            AuditLog::log(
+                $ticket->id,
+                'ticket_closed',
+                Auth::id(),
+                'Ticket closed by admin.'
+            );
 
             // Notify student
             if ($ticket->complaint?->student?->user?->email) {

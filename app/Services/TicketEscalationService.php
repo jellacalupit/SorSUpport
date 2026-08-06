@@ -83,12 +83,12 @@ class TicketEscalationService
                 ?? $ticket->current_handler_id
                 ?? $ticket->assigned_to;
 
-            AuditLog::create([
-                'ticket_id' => $ticket->id,
-                'performed_by' => $performedById,
-                'action' => 'ticket_escalated',
-                'details' => 'Ticket escalated to the next configured recipient authority.',
-            ]);
+            AuditLog::log(
+                $ticket->id,
+                'ticket_escalated',
+                $performedById,
+                'Ticket escalated to the next configured recipient authority.'
+            );
 
             $usersToNotify = $this->getUsersToNotify($ticket, $targetRecipient);
 

@@ -33,6 +33,10 @@ class Complaint extends Model
         'status',
     ];
 
+    protected $casts = [
+        'is_anonymous' => 'boolean',
+    ];
+
     /**
      * Generate the next complaint reference number (e.g. SOS-2026-000001).
      */

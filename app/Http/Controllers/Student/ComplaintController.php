@@ -136,12 +136,12 @@ class ComplaintController extends Controller
                 'deadline' => null,
             ]);
 
-            AuditLog::create([
-                'ticket_id' => $ticket->id,
-                'performed_by' => Auth::id(),
-                'action' => 'complaint_submitted',
-                'details' => "Complaint {$complaint->reference_number} submitted.",
-            ]);
+            AuditLog::log(
+                $ticket->id,
+                'complaint_submitted',
+                Auth::id(),
+                "Complaint {$complaint->reference_number} submitted."
+            );
 
             // Acknowledge complaint submission to the student.
             if (Auth::user()->email) {
@@ -264,12 +264,12 @@ class ComplaintController extends Controller
             ]);
 
             // Log the action
-            AuditLog::create([
-                'ticket_id' => $ticket->id,
-                'performed_by' => Auth::id(),
-                'action' => 'message_posted',
-                'details' => 'Student posted a reply message.',
-            ]);
+            AuditLog::log(
+                $ticket->id,
+                'message_posted',
+                Auth::id(),
+                'Student posted a reply message.'
+            );
         });
 
         Log::debug('Student\\ComplaintController@storeReply returning redirect', ['user_id' => Auth::id()]);

@@ -100,7 +100,7 @@ class Ticket extends Model
      */
     public function auditLogs(): HasMany
     {
-        return $this->hasMany(AuditLog::class);
+        return $this->hasMany(AuditLog::class)->orderBy('created_at');
     }
 
     /**

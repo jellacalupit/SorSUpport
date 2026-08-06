@@ -294,6 +294,34 @@
                 </div>
             </div>
 
+            <div class="bg-white shadow-sm rounded-lg mt-6">
+                <div class="p-6 border-t border-gray-200">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">Audit Trail</h3>
+
+                    @if ($ticket->auditLogs && $ticket->auditLogs->count())
+                        <div class="space-y-4">
+                            @foreach ($ticket->auditLogs as $log)
+                                <div class="flex items-start gap-4">
+                                    <div class="text-sm text-gray-500 w-36">
+                                        <div>{{ $log->created_at->format('M d, Y') }}</div>
+                                        <div class="mt-1">{{ $log->created_at->format('h:i A') }}</div>
+                                    </div>
+                                    <div class="flex-1 bg-gray-50 rounded-lg p-4 border">
+                                        <div class="flex items-center justify-between">
+                                            <div class="font-semibold text-gray-900">{{ str_replace('_', ' ', $log->action) }}</div>
+                                            <div class="text-sm text-gray-500">{{ $log->performer?->name ?? 'System' }}</div>
+                                        </div>
+                                        <div class="text-gray-700 text-sm mt-2">{{ $log->details }}</div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-gray-500">No audit history recorded for this ticket.</p>
+                    @endif
+                </div>
+            </div>
+
             <!-- Back Link -->
             <div class="mt-6">
                 <a href="{{ route('admin.tickets.review.index') }}"

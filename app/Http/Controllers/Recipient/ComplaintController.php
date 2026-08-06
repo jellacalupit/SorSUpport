@@ -162,12 +162,12 @@ class ComplaintController extends Controller
             ]);
 
             // Log the action
-            AuditLog::create([
-                'ticket_id' => $ticket->id,
-                'performed_by' => Auth::id(),
-                'action' => 'message_posted',
-                'details' => 'Recipient posted a reply message.',
-            ]);
+            AuditLog::log(
+                $ticket->id,
+                'message_posted',
+                Auth::id(),
+                'Recipient posted a reply message.'
+            );
         });
 
         Log::debug('Recipient\\ComplaintController@storeReply returning redirect', ['user_id' => Auth::id()]);
@@ -204,12 +204,12 @@ class ComplaintController extends Controller
                 'current_handler_id' => Auth::id(),
             ]);
 
-            AuditLog::create([
-                'ticket_id' => $ticket->id,
-                'performed_by' => Auth::id(),
-                'action' => 'ticket_acknowledged',
-                'details' => 'Ticket acknowledged by recipient.',
-            ]);
+            AuditLog::log(
+                $ticket->id,
+                'ticket_acknowledged',
+                Auth::id(),
+                'Ticket acknowledged by recipient.'
+            );
 
             // Notify student of status update
             if ($ticket->complaint?->student?->user?->email) {
@@ -323,12 +323,12 @@ class ComplaintController extends Controller
             }
 
             // Create audit log
-            AuditLog::create([
-                'ticket_id' => $ticket->id,
-                'performed_by' => Auth::id(),
-                'action' => $action,
-                'details' => $details,
-            ]);
+            AuditLog::log(
+                $ticket->id,
+                $action,
+                Auth::id(),
+                $details
+            );
         });
 
         return back()->with('success', 'Complaint status updated successfully.');
