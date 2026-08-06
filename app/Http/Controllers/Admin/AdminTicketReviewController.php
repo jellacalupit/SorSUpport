@@ -89,6 +89,15 @@ class AdminTicketReviewController extends Controller
             'closure_reason' => $validated['closure_reason'],
         ]);
 
+        if ($ticket->complaint?->student?->user?->email) {
+            EmailNotification::create([
+                'ticket_id' => $ticket->id,
+                'recipient_email' => $ticket->complaint->student->user->email,
+                'type' => EmailNotification::TYPE_INVALID_CLOSURE,
+                'status' => EmailNotification::STATUS_PENDING,
+            ]);
+        }
+
         // Log the action
         AuditLog::create([
             'ticket_id' => $ticket->id,

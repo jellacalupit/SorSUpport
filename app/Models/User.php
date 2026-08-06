@@ -67,6 +67,14 @@ class User extends Authenticatable implements MustVerifyEmailContract
     }
 
     /**
+     * Return the numeric primary key for authentication-based foreign keys.
+     */
+    public function getAuthIdentifier(): mixed
+    {
+        return $this->getKey();
+    }
+
+    /**
      * Student profile.
      */
     public function student(): HasOne

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Student\StudentDashboardController;
 use App\Http\Controllers\Student\ComplaintController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\Admin\ComplaintCategoryController;
 use App\Http\Controllers\Admin\AdminComplaintController;
 use App\Http\Controllers\Admin\AdminAnonymousComplaintController;
 use App\Http\Controllers\Admin\AdminTicketReviewController;
+
 
 
 Route::get('/', function () {

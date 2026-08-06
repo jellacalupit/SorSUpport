@@ -143,11 +143,21 @@ class ComplaintController extends Controller
                 'details' => "Complaint {$complaint->reference_number} submitted.",
             ]);
 
+            // Acknowledge complaint submission to the student.
+            if (Auth::user()->email) {
+                EmailNotification::create([
+                    'ticket_id' => $ticket->id,
+                    'recipient_email' => Auth::user()->email,
+                    'type' => EmailNotification::TYPE_SUBMISSION_ACK,
+                    'status' => EmailNotification::STATUS_PENDING,
+                ]);
+            }
+
             // In-app notification record for SDS Admin (no real email sending yet)
             $sdsAdminEmail = optional(Auth::user())->email; // fallback; we resolve below from an SDS admin user
-            $sdsAdminUser = \App\Models\User::query()->whereHas('roles', function ($q) {
-                $q->where('name', 'sds_admin');
-            })->first();
+            $sdsAdminUser = \App\Models\User::query()
+                ->where('role', \App\Models\User::ROLE_SDS_ADMIN)
+                ->first();
 
             if ($sdsAdminUser) {
                 $sdsAdminEmail = $sdsAdminUser->email;

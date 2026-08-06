@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Complaint;
 use App\Models\ComplaintCategory;
+use App\Models\EmailNotification;
 use App\Models\Recipient;
 use App\Models\Student;
 use App\Models\Ticket;
@@ -18,6 +19,7 @@ class Module3TicketReviewTest extends TestCase
 
     public function test_invalid_ticket_closes_and_records_reason(): void
     {
+        /** @var User $admin */
         $admin = User::factory()->create([
             'role' => User::ROLE_SDS_ADMIN,
             'email_verified_at' => now(),
@@ -72,10 +74,29 @@ class Module3TicketReviewTest extends TestCase
         $this->assertSame(Ticket::CLASSIFICATION_INVALID, $ticket->classification);
         $this->assertSame('Not a valid complaint.', $ticket->closure_reason);
         $this->assertNotNull($ticket->closed_at);
+
+        $this->assertDatabaseHas('email_notifications', [
+            'ticket_id' => $ticket->id,
+            'recipient_email' => $student->email,
+            'type' => EmailNotification::TYPE_INVALID_CLOSURE,
+            'status' => EmailNotification::STATUS_PENDING,
+        ]);
+
+        $notification = EmailNotification::query()
+            ->where('ticket_id', $ticket->id)
+            ->where('recipient_email', $student->email)
+            ->where('type', EmailNotification::TYPE_INVALID_CLOSURE)
+            ->firstOrFail();
+
+        $this->assertSame(EmailNotification::STATUS_PENDING, $notification->status);
+        $this->assertSame($student->email, $notification->recipient_email);
+        $this->assertSame($ticket->id, $notification->ticket_id);
+        $this->assertSame($complaint->id, $notification->ticket->complaint_id);
     }
 
     public function test_needs_resolution_classification_creates_thread(): void
     {
+        /** @var User $admin */
         $admin = User::factory()->create([
             'role' => User::ROLE_SDS_ADMIN,
             'email_verified_at' => now(),
@@ -134,6 +155,7 @@ class Module3TicketReviewTest extends TestCase
 
     public function test_informational_classification_does_not_create_thread_or_deadline(): void
     {
+        /** @var User $admin */
         $admin = User::factory()->create([
             'role' => User::ROLE_SDS_ADMIN,
             'email_verified_at' => now(),

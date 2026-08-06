@@ -31,6 +31,11 @@ class EmailNotification extends Model
     public const STATUS_PENDING = 'pending';
     public const STATUS_SENT = 'sent';
     public const STATUS_FAILED = 'failed';
+
+    protected $casts = [
+        'sent_at' => 'datetime',
+    ];
+
     protected $fillable = [
         'ticket_id',
         'recipient_email',
