@@ -325,7 +325,7 @@ class AdminTicketReviewController extends Controller
     public function escalate(Ticket $ticket): RedirectResponse
     {
         abort_unless(
-            in_array($ticket->status, [Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED]),
+            in_array($ticket->status, [Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS]),
             404,
             'Only active tickets can be escalated.'
         );

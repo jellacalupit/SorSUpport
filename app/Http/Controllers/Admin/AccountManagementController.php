@@ -61,8 +61,10 @@ class AccountManagementController extends Controller
             'must_change_password' => true,
             'role' => $validated['role'],
             'is_active' => true,
-            'email_verified_at' => now(),
+            'email_verified_at' => null,
         ]);
+
+        $user->sendEmailVerificationNotification();
 
         if ($validated['role'] === AppUser::ROLE_STUDENT) {
 

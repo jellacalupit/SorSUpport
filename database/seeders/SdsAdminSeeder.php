@@ -20,8 +20,8 @@ class SdsAdminSeeder extends Seeder
             [
                 'name' => 'SDS Administrator',
                 'username' => 'SDSAdmin',
-                'password' => Hash::make('Admin@123'),
-                'must_change_password' => true,
+                'password' => Hash::make('Welcome@123'),
+                'must_change_password' => false,
                 'role' => User::ROLE_SDS_ADMIN,
                 'is_active' => true,
                 'email_verified_at' => now(),

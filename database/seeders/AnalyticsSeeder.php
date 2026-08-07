@@ -86,7 +86,6 @@ class AnalyticsSeeder extends Seeder
             Ticket::STATUS_PENDING,
             Ticket::STATUS_ASSIGNED,
             Ticket::STATUS_IN_PROGRESS,
-            Ticket::STATUS_ESCALATED,
             Ticket::STATUS_RESOLVED,
             Ticket::STATUS_CLOSED,
         ];
@@ -131,9 +130,9 @@ class AnalyticsSeeder extends Seeder
                     $timeline->push(['status' => Ticket::STATUS_IN_PROGRESS, 'at' => $ticketCreatedAt->copy()->addDays(1)]);
                 }
 
-                if ($status === Ticket::STATUS_ESCALATED) {
+                if ($status === Ticket::STATUS_IN_PROGRESS) {
                     $timeline->push(['status' => Ticket::STATUS_ASSIGNED, 'at' => $ticketCreatedAt]);
-                    $timeline->push(['status' => Ticket::STATUS_ESCALATED, 'at' => $ticketCreatedAt->copy()->addDays(2)]);
+                    $timeline->push(['status' => Ticket::STATUS_IN_PROGRESS, 'at' => $ticketCreatedAt->copy()->addDays(1)]);
                 }
 
                 if ($status === Ticket::STATUS_RESOLVED) {

@@ -72,16 +72,15 @@ class TicketEscalationService
         $deadline = now()->addDays((int) $category->resolution_deadline_days);
 
         DB::transaction(function () use ($ticket, $targetRecipient, $performedBy, $deadline): void {
-            $ticket->update([
-                'status' => Ticket::STATUS_ESCALATED,
+            $performedById = $performedBy?->id
+                ?? $ticket->current_handler_id
+                ?? $ticket->assigned_to;
+
+        $ticket->update([
                 'assigned_to' => $targetRecipient->user_id,
                 'current_handler_id' => $targetRecipient->user_id,
                 'deadline' => $deadline,
             ]);
-
-            $performedById = $performedBy?->id
-                ?? $ticket->current_handler_id
-                ?? $ticket->assigned_to;
 
             AuditLog::log(
                 $ticket->id,

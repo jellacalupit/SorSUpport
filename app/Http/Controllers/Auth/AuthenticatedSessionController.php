@@ -29,12 +29,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        /** @var User $user */
+        /** @var User|null $user */
         $user = Auth::user();
 
         /*
         |--------------------------------------------------------------------------
-        | Force password change on first login
+        | Force Password Change
         |--------------------------------------------------------------------------
         */
 
@@ -44,18 +44,24 @@ class AuthenticatedSessionController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | Redirect based on role
+        | Email Verification
+        |--------------------------------------------------------------------------
+        */
+
+        if (! $user->hasVerifiedEmail()) {
+            return redirect()->route('verification.notice');
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Redirect Based on Role
         |--------------------------------------------------------------------------
         */
 
         return match ($user->role) {
-
             User::ROLE_SDS_ADMIN => redirect()->route('admin.dashboard'),
-
             User::ROLE_STUDENT => redirect()->route('student.dashboard'),
-
             User::ROLE_RECIPIENT => redirect()->route('recipient.dashboard'),
-
             default => redirect('/'),
         };
     }

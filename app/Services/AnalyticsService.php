@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AuditLog;
 use App\Models\Complaint;
 use App\Models\ComplaintCategory;
 use App\Models\Ticket;
@@ -29,7 +30,6 @@ class AnalyticsService
             Ticket::STATUS_PENDING,
             Ticket::STATUS_ASSIGNED,
             Ticket::STATUS_IN_PROGRESS,
-            Ticket::STATUS_ESCALATED,
             Ticket::STATUS_RESOLVED,
             Ticket::STATUS_CLOSED,
         ];
@@ -120,11 +120,20 @@ class AnalyticsService
     {
         [$start, $end] = $this->buildPeriodRange($filters, 'month');
 
-        $tickets = $this->filterTickets(Ticket::query(), $filters)
-            ->where('status', Ticket::STATUS_ESCALATED)
-            ->get(['updated_at']);
+        $events = AuditLog::query()
+            ->where('action', 'ticket_escalated');
 
-        $counts = $tickets->groupBy(fn ($ticket) => $ticket->updated_at->startOfMonth()->format('Y-m'))->map->count();
+        if (isset($filters['start_date']) && filled($filters['start_date'])) {
+            $events->where('created_at', '>=', Carbon::parse($filters['start_date'])->startOfDay());
+        }
+
+        if (isset($filters['end_date']) && filled($filters['end_date'])) {
+            $events->where('created_at', '<=', Carbon::parse($filters['end_date'])->endOfDay());
+        }
+
+        $counts = $events->get(['created_at'])
+            ->groupBy(fn ($event) => $event->created_at->startOfMonth()->format('Y-m'))
+            ->map->count();
 
         $labels = [];
         $data = [];
@@ -158,7 +167,7 @@ class AnalyticsService
                 'total_complaints' => $this->getTotalComplaints($filters),
                 'total_tickets' => $this->getTotalTickets($filters),
                 'resolution_rate' => $this->getResolutionRate($filters)['rate'],
-                'escalated_tickets' => $this->getTotalTicketsByStatus($filters)[Ticket::STATUS_ESCALATED] ?? 0,
+                'escalated_tickets' => array_sum($this->getEscalationFrequency($filters)['data']),
             ],
             'category_breakdown' => $this->getComplaintDistributionByCategory($filters),
             'resolution_chart' => $this->getResolutionRate($filters)['chart'],

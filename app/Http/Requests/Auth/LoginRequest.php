@@ -42,10 +42,16 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
+        $loginValue = (string) $this->input('username');
+
+        $credentialField = filter_var($loginValue, FILTER_VALIDATE_EMAIL)
+            ? 'email'
+            : 'username';
+
         if (! Auth::attempt(
             [
-                'username' => $this->input('username'),
-                'password' => $this->input('password'),
+                $credentialField => $loginValue,
+                'password' => (string) $this->input('password'),
                 'is_active' => true,
             ],
             $this->boolean('remember')

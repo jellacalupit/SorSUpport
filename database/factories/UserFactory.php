@@ -26,7 +26,7 @@ class UserFactory extends Factory
     {
         return [
 'name' => fake()->name(),
-            'username' => fake()->unique()->numberBetween(100000, 999999),
+            'username' => (string) fake()->unique()->numberBetween(100000, 999999),
             'must_change_password' => false,
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),

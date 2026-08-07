@@ -227,7 +227,7 @@
                         @if($ticket->classification === 'needs_resolution')
                             <div class="border border-gray-200 rounded-lg p-6">
                                 <h4 class="text-lg font-semibold text-gray-900 mb-2">Assignment & Deadline</h4>
-                                @if(in_array($ticket->status, [\App\Models\Ticket::STATUS_ASSIGNED, \App\Models\Ticket::STATUS_IN_PROGRESS, \App\Models\Ticket::STATUS_ESCALATED]))
+                                @if(in_array($ticket->status, [\App\Models\Ticket::STATUS_ASSIGNED, \App\Models\Ticket::STATUS_IN_PROGRESS]))
                                     <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
                                         <p class="text-sm font-semibold text-amber-800">Escalation Options</p>
                                         <p class="text-sm text-amber-700 mb-2">Configured targets for this category:</p>

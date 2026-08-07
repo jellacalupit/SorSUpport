@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable implements MustVerifyEmailContract
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, MustVerifyEmailTrait;
 
     public const ROLE_STUDENT = 'student';
     public const ROLE_RECIPIENT = 'recipient';
@@ -63,7 +63,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
      */
     public function getAuthIdentifierName(): string
     {
-        return 'username';
+        return $this->getKeyName();
     }
 
     /**

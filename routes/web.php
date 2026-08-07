@@ -25,7 +25,7 @@ Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth'])->name('dashboard');
 
-Route::middleware(['auth', 'force.password', 'role:sds_admin'])
+Route::middleware(['auth', 'verified', 'force.password', 'role:sds_admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
@@ -133,7 +133,7 @@ Route::middleware(['auth', 'force.password', 'role:sds_admin'])
     });
 
 
-Route::middleware(['auth', 'force.password', 'role:student'])
+Route::middleware(['auth', 'verified', 'force.password', 'role:student'])
     ->prefix('student')
     ->name('student.')
     ->group(function () {
@@ -157,7 +157,7 @@ Route::middleware(['auth', 'force.password', 'role:student'])
             ->name('complaints.reply');
     });
 
-Route::middleware(['auth', 'force.password', 'role:recipient'])
+Route::middleware(['auth', 'verified', 'force.password', 'role:recipient'])
     ->prefix('recipient')
     ->name('recipient.')
     ->group(function () {
