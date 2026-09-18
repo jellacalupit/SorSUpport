@@ -5,9 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class ComplaintCategory extends Model
 {
+    public const JURISDICTION_SDS = 'sds';
+
+    public const JURISDICTION_RECIPIENT = 'recipient';
+
     protected $fillable = [
         'name',
         'description',
@@ -39,5 +44,18 @@ class ComplaintCategory extends Model
     public function escalationHierarchies(): HasMany
     {
         return $this->hasMany(EscalationHierarchy::class)->orderBy('level');
+    }
+
+    /**
+     * Recipients suggested for this category.
+     */
+    public function suggestedRecipients(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Recipient::class,
+            'complaint_category_suggested_recipients',
+            'complaint_category_id',
+            'recipient_id'
+        )->with('user')->orderBy('department');
     }
 }

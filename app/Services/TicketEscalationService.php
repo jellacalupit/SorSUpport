@@ -69,7 +69,7 @@ class TicketEscalationService
             return false;
         }
 
-        $deadline = now()->addDays((int) $category->resolution_deadline_days);
+        $deadline = $ticket->deadline ?? $ticket->complaint?->created_at?->copy()->addDays((int) $category->resolution_deadline_days);
 
         DB::transaction(function () use ($ticket, $targetRecipient, $performedBy, $deadline): void {
             $performedById = $performedBy?->id
@@ -77,6 +77,7 @@ class TicketEscalationService
                 ?? $ticket->assigned_to;
 
         $ticket->update([
+                'status' => Ticket::STATUS_ESCALATED,
                 'assigned_to' => $targetRecipient->user_id,
                 'current_handler_id' => $targetRecipient->user_id,
                 'deadline' => $deadline,
@@ -89,7 +90,7 @@ class TicketEscalationService
                 'Ticket escalated to the next configured recipient authority.'
             );
 
-            $usersToNotify = $this->getUsersToNotify($ticket, $targetRecipient);
+            $usersToNotify = $this->getUsersToNotify($ticket, $targetRecipient, $performedBy);
 
             foreach ($usersToNotify as $user) {
                 if (! $user?->email) {
@@ -108,13 +109,12 @@ class TicketEscalationService
         return true;
     }
 
-    protected function getUsersToNotify(Ticket $ticket, Recipient $targetRecipient): Collection
+    protected function getUsersToNotify(Ticket $ticket, Recipient $targetRecipient, ?User $performedBy = null): Collection
     {
         $users = collect();
 
-        $sdsAdmins = User::query()->where('role', User::ROLE_SDS_ADMIN)->where('is_active', true)->get();
-        foreach ($sdsAdmins as $admin) {
-            $users->push($admin);
+        if ($performedBy?->isSdsAdmin()) {
+            $users->push($performedBy);
         }
 
         if ($targetRecipient->user) {

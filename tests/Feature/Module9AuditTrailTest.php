@@ -285,7 +285,7 @@ class Module9AuditTrailTest extends TestCase
         $this->assertNotNull($log->created_at);
     }
 
-    public function test_anonymous_complaint_creates_no_ticket_no_ticket_audit_logs_and_admin_anonymous_page_hides_identity(): void
+    public function test_anonymous_complaint_creates_closed_informational_ticket_and_hides_identity(): void
     {
         /** @var \App\Models\User $admin */
         $admin = User::factory()->create(['role' => User::ROLE_SDS_ADMIN, 'email_verified_at' => now()]);
@@ -331,16 +331,30 @@ class Module9AuditTrailTest extends TestCase
         /** @var \App\Models\Complaint $complaint */
         $complaint = Complaint::query()->firstOrFail();
 
-        $this->assertDatabaseMissing('tickets', ['complaint_id' => $complaint->id]);
-        $this->assertDatabaseCount('audit_logs', 0);
+        $this->assertDatabaseHas('tickets', [
+            'complaint_id' => $complaint->id,
+            'status' => Ticket::STATUS_CLOSED,
+            'classification' => Ticket::CLASSIFICATION_INFORMATIONAL,
+            'current_handler_id' => $admin->id,
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'anonymous_complaint_submitted',
+            'performed_by' => null,
+        ]);
 
-        $response = $this->actingAs($admin)
-            ->get(route('admin.complaints.anonymous.show', $complaint));
+        $myTicketsResponse = $this->actingAs($admin)
+            ->get(route('admin.tickets.my'))
+            ->assertOk()
+            ->assertSee($complaint->reference_number);
 
-        $response->assertOk();
-        $response->assertSee('This submission was marked anonymous. No ticket is generated and no student identity is displayed.');
-        $response->assertDontSee($studentUser->name);
-        $response->assertDontSee($studentUser->email);
+        $myTicketsResponse
+            ->assertDontSee($studentUser->name)
+            ->assertDontSee($studentUser->email);
+
+        $this->assertDatabaseHas('complaints', [
+            'id' => $complaint->id,
+            'status' => Complaint::STATUS_CLOSED,
+        ]);
     }
 
     public function test_admin_ticket_review_page_loads_and_displays_audit_entries_in_order(): void

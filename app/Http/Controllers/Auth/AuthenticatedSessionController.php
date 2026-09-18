@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,6 +33,8 @@ class AuthenticatedSessionController extends Controller
         /** @var User|null $user */
         $user = Auth::user();
 
+        AuditLog::activity('user_logged_in', details: sprintf('User %s logged in.', $user->name));
+
         /*
         |--------------------------------------------------------------------------
         | Force Password Change
@@ -39,24 +42,24 @@ class AuthenticatedSessionController extends Controller
         */
 
         if ($user->must_change_password) {
+            if ($user->isSdsAdmin()) {
+                return redirect()->route('profile.edit');
+            }
+
+            if (! $user->hasVerifiedEmail()) {
+                $user->sendEmailVerificationNotification();
+
+                return redirect()->route('verification.notice');
+            }
+
             return redirect()->route('password.force');
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Email Verification
-        |--------------------------------------------------------------------------
-        */
-
         if (! $user->hasVerifiedEmail()) {
+            $user->sendEmailVerificationNotification();
+
             return redirect()->route('verification.notice');
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Redirect Based on Role
-        |--------------------------------------------------------------------------
-        */
 
         return match ($user->role) {
             User::ROLE_SDS_ADMIN => redirect()->route('admin.dashboard'),
@@ -77,6 +80,6 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect()->route('login');
     }
 }

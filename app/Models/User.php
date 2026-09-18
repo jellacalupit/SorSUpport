@@ -8,6 +8,8 @@ use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Notifications\ResetPasswordNotification;
+use App\Notifications\VerifyEmailNotification;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -26,12 +28,26 @@ class User extends Authenticatable implements MustVerifyEmailContract
      */
     protected $fillable = [
         'name',
+        'first_name',
+        'middle_name',
+        'last_name',
         'username',
         'email',
+        'avatar_path',
         'password',
         'must_change_password',
         'role',
         'is_active',
+        'student_notification_read_ids',
+        'recipient_notification_read_ids',
+        'student_notification_deleted_ids',
+        'recipient_notification_deleted_ids',
+        'student_ticket_read_ids',
+        'admin_ticket_read_ids',
+        'recipient_ticket_read_ids',
+        'student_ticket_last_read_at',
+        'admin_ticket_last_read_at',
+        'recipient_ticket_last_read_at',
     ];
 
     /**
@@ -55,6 +71,16 @@ class User extends Authenticatable implements MustVerifyEmailContract
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'student_notification_read_ids' => 'array',
+            'recipient_notification_read_ids' => 'array',
+            'student_notification_deleted_ids' => 'array',
+            'recipient_notification_deleted_ids' => 'array',
+            'student_ticket_read_ids' => 'array',
+            'admin_ticket_read_ids' => 'array',
+            'recipient_ticket_read_ids' => 'array',
+            'student_ticket_last_read_at' => 'array',
+            'admin_ticket_last_read_at' => 'array',
+            'recipient_ticket_last_read_at' => 'array',
         ];
     }
 
@@ -72,6 +98,119 @@ class User extends Authenticatable implements MustVerifyEmailContract
     public function getAuthIdentifier(): mixed
     {
         return $this->getKey();
+    }
+
+    /**
+     * Send the password reset notification using the project's email design.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
+    }
+
+    /**
+     * Send the email verification notification using the project's email design.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerifyEmailNotification());
+    }
+
+    /**
+     * Display the full name from the separated name fields.
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        $nameParts = array_values(array_filter([
+            trim((string) $this->first_name),
+            trim((string) $this->middle_name),
+            trim((string) $this->last_name),
+        ], static fn ($part) => $part !== ''));
+
+        return $nameParts !== [] ? implode(' ', $nameParts) : trim((string) $this->name);
+    }
+
+    /**
+     * Display the name for compact table columns.
+     */
+    public function getTableNameAttribute(): string
+    {
+        $firstName = trim((string) $this->first_name);
+        $middleName = trim((string) $this->middle_name);
+        $lastName = trim((string) $this->last_name);
+
+        if ($firstName !== '' || $middleName !== '' || $lastName !== '') {
+            $name = $firstName;
+
+            if ($middleName !== '') {
+                $name .= ($name !== '' ? ' ' : '') . strtoupper(substr($middleName, 0, 1)) . '.';
+            }
+
+            if ($lastName !== '') {
+                $name .= ($name !== '' ? ' ' : '') . $lastName;
+            }
+
+            return $name;
+        }
+
+        $nameParts = preg_split('/\s+/', trim((string) $this->name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        if (count($nameParts) < 3) {
+            return implode(' ', $nameParts);
+        }
+
+        $givenName = count($nameParts) >= 4 ? implode(' ', array_slice($nameParts, 0, -2)) : $nameParts[0];
+        $middleInitial = strtoupper(substr($nameParts[count($nameParts) - 2], 0, 1)) . '.';
+
+        return $givenName . ' ' . $middleInitial . ' ' . $nameParts[count($nameParts) - 1];
+    }
+
+    /**
+     * Return initials based on the separated name fields.
+     */
+    public function getNameInitialsAttribute(): string
+    {
+        $firstName = trim((string) $this->first_name);
+        $lastName = trim((string) $this->last_name);
+
+        if ($firstName !== '' || $lastName !== '') {
+            return strtoupper(substr($firstName, 0, 1) . substr($lastName, 0, 1));
+        }
+
+        $initials = collect(preg_split('/\s+/', trim((string) $this->name), -1, PREG_SPLIT_NO_EMPTY))
+            ->map(fn ($part) => substr($part, 0, 1))
+            ->take(2)
+            ->join('');
+
+        return $initials !== '' ? $initials : 'A';
+    }
+
+    /**
+     * Given name(s) without middle name or surname.
+     */
+    public function getGivenNameAttribute(): string
+    {
+        if (trim((string) $this->first_name) !== '') {
+            return trim((string) $this->first_name);
+        }
+
+        $nameParts = preg_split('/\s+/', trim((string) $this->name)) ?: [];
+
+        if ($nameParts === []) {
+            return '';
+        }
+
+        if (count($nameParts) === 1) {
+            return $nameParts[0];
+        }
+
+        array_pop($nameParts);
+
+        if (count($nameParts) > 1) {
+            array_pop($nameParts);
+        }
+
+        return trim(implode(' ', $nameParts));
     }
 
     /**

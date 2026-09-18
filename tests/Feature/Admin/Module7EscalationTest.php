@@ -106,7 +106,7 @@ class Module7EscalationTest extends TestCase
 
         $ticket->refresh();
 
-        $this->assertSame(Ticket::STATUS_IN_PROGRESS, $ticket->status);
+        $this->assertSame(Ticket::STATUS_ESCALATED, $ticket->status);
         $this->assertSame($secondRecipientUser->id, $ticket->assigned_to);
         $this->assertSame($secondRecipientUser->id, $ticket->current_handler_id);
         $this->assertTrue($ticket->deadline->isFuture());
@@ -226,7 +226,7 @@ class Module7EscalationTest extends TestCase
 
         $ticket->refresh();
 
-        $this->assertSame(Ticket::STATUS_ASSIGNED, $ticket->status);
+        $this->assertSame(Ticket::STATUS_ESCALATED, $ticket->status);
         $this->assertSame($secondRecipientUser->id, $ticket->assigned_to);
         $this->assertSame($secondRecipientUser->id, $ticket->current_handler_id);
         $this->assertDatabaseHas('email_notifications', [

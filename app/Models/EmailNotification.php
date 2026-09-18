@@ -26,6 +26,7 @@ class EmailNotification extends Model
     public const TYPE_ESCALATED = 'escalated';
     public const TYPE_DAILY_REMINDER = 'daily_reminder';
     public const TYPE_INFORMATIONAL_FORWARD = 'informational_forward';
+    public const TYPE_MESSAGE_POSTED = 'message_posted';
 
     // Status constants
     public const STATUS_PENDING = 'pending';

@@ -15,7 +15,13 @@ class EmailVerificationPromptController extends Controller
      */
     public function __invoke(Request $request): RedirectResponse|View
     {
-        return view('auth.verify-email');
+        $email = (string) ($request->user()?->email ?? 'your registered email');
+        [$localPart, $domain] = array_pad(explode('@', $email, 2), 2, '');
+        $maskedEmail = $domain !== ''
+            ? substr($localPart, 0, 2) . '*****@' . $domain
+            : $email;
+
+        return view('auth.verify-email', compact('maskedEmail'));
     }
 
 

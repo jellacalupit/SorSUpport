@@ -37,13 +37,51 @@ class Complaint extends Model
         'is_anonymous' => 'boolean',
     ];
 
+    public function getAttachmentPathsAttribute(): array
+    {
+        if (! $this->file_attachment) {
+            return [];
+        }
+
+        $paths = json_decode($this->file_attachment, true);
+
+        if (! is_array($paths)) {
+            return [$this->file_attachment];
+        }
+
+        return array_map(
+            fn ($attachment) => is_array($attachment) ? $attachment['path'] : $attachment,
+            $paths,
+        );
+    }
+
+    public function getAttachmentFilesAttribute(): array
+    {
+        if (! $this->file_attachment) {
+            return [];
+        }
+
+        $attachments = json_decode($this->file_attachment, true);
+
+        if (! is_array($attachments)) {
+            $attachments = [$this->file_attachment];
+        }
+
+        return array_map(
+            fn ($attachment) => is_array($attachment)
+                ? $attachment
+                : ['path' => $attachment, 'name' => basename($attachment)],
+            $attachments,
+        );
+    }
+
     /**
-     * Generate the next complaint reference number (e.g. SOS-2026-000001).
+    * Generate the next complaint reference number (e.g. SU-2026-00001).
      */
     public static function generateReferenceNumber(): string
     {
         $year = now()->year;
-        $prefix = "SOS-{$year}-";
+        $prefix = "SU-{$year}-";
 
         $latest = static::query()
             ->where('reference_number', 'like', "{$prefix}%")
@@ -52,10 +90,10 @@ class Complaint extends Model
             ->value('reference_number');
 
         $sequence = $latest
-            ? ((int) substr($latest, -6)) + 1
+            ? ((int) substr($latest, -5)) + 1
             : 1;
 
-        return $prefix.str_pad((string) $sequence, 6, '0', STR_PAD_LEFT);
+        return $prefix.str_pad((string) $sequence, 5, '0', STR_PAD_LEFT);
     }
 
     /**

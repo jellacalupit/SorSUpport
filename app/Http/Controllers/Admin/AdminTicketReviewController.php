@@ -5,13 +5,16 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Complaint;
+use App\Models\ComplaintCategory;
 use App\Models\EmailNotification;
 use App\Models\Recipient;
 use App\Models\Ticket;
 use App\Models\TicketThread;
 use App\Services\TicketEscalationService;
+use App\Services\TicketUnreadService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -21,54 +24,158 @@ class AdminTicketReviewController extends Controller
     public function __construct(protected TicketEscalationService $escalationService)
     {
     }
-    /**
-     * Display list of pending tickets awaiting validity determination.
-     */
-    public function index(): View
-    {
-        $tickets = Ticket::query()
-            ->where('status', Ticket::STATUS_PENDING)
-            ->whereNull('classification')
-            ->with([
-                'complaint.student.user',
-                'complaint.category.recipient.user',
-                'assignee',
-            ])
-            ->orderByDesc('created_at')
-            ->paginate(10);
 
-        return view('admin.tickets.review.index', compact('tickets'));
+    public function markRead(Ticket $ticket, TicketUnreadService $unreadService): Response
+    {
+        $unreadService->markTicketsViewed(Auth::user(), [(string) $ticket->complaint_id]);
+
+        return response()->noContent();
+    }
+
+    public function notYetResolved(Ticket $ticket): RedirectResponse
+    {
+        abort_unless($ticket->status === Ticket::STATUS_RESOLVED, 404);
+
+        DB::transaction(function () use ($ticket) {
+            $ticket->update([
+                'status' => Ticket::STATUS_IN_PROGRESS,
+                'resolved_at' => null,
+                'closed_at' => null,
+            ]);
+
+            if ($ticket->thread) {
+                $ticket->thread->update(['is_active' => true]);
+            }
+
+            AuditLog::log(
+                $ticket->id,
+                'ticket_reopened_from_resolved',
+                Auth::id(),
+                'Ticket reopened from resolved by admin and moved back to in-progress.'
+            );
+        });
+
+        return redirect()->route('admin.complaints.show', $ticket->complaint)
+            ->with('success', 'Ticket moved back to in-progress.');
     }
 
     /**
-     * Show ticket details for review.
+     * Display list of pending tickets awaiting validity determination.
      */
-    public function show(Ticket $ticket): View
+    public function index(Request $request): Response
     {
-        // Allow viewing unclassified pending tickets or classified informational tickets awaiting forward
-        abort_unless(
-            ($ticket->status === Ticket::STATUS_PENDING && $ticket->classification === null) ||
-            ($ticket->classification === Ticket::CLASSIFICATION_INFORMATIONAL && $ticket->jurisdiction === Ticket::JURISDICTION_RECIPIENT && $ticket->forwarded_at === null) ||
-            ($ticket->classification === Ticket::CLASSIFICATION_NEEDS_RESOLUTION),
-            404
-        );
+        $tickets = Ticket::query()
+            ->whereIn('status', [Ticket::STATUS_PENDING, Ticket::STATUS_RESOLVED])
+            ->with([
+                'complaint.student.user',
+                'complaint.category.recipient.user',
+                'complaint.category.suggestedRecipients.user',
+                'complaint.category.escalationHierarchies.recipient.user',
+                'assignee',
+                'currentHandler.recipient',
+            ])
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = trim($request->input('search'));
 
-        $ticket->load([
-            'complaint.student.user',
-            'complaint.category.recipient.user',
-            'assignee',
-            'currentHandler',
-            'forwardedRecipient',
-            'auditLogs.performer',
-        ]);
+                $query->where(function ($query) use ($search) {
+                    $query->whereHas('complaint', function ($complaintQuery) use ($search) {
+                            $complaintQuery->where('subject_title', 'like', '%' . $search . '%')
+                                ->orWhere('reference_number', 'like', '%' . $search . '%');
+                        })
+                        ->orWhereHas('complaint.student.user', fn ($userQuery) => $userQuery->where('name', 'like', '%' . $search . '%'));
+                });
+            })
+            ->when($request->filled('category_filter'), function ($query) use ($request) {
+                $query->whereHas('complaint', function ($complaints) use ($request) {
+                    $complaints->where('category_id', $request->input('category_filter'));
+                });
+            })
+            ->orderBy('updated_at', $request->input('sort', 'newest') === 'oldest' ? 'asc' : 'desc')
+            ->paginate(10)
+            ->appends($request->query());
 
-        // Get category default jurisdiction if available
-        $defaultJurisdiction = $ticket->complaint->category?->default_jurisdiction;
+        $categories = ComplaintCategory::query()->where('is_active', true)->orderBy('name')->get();
+        $recipients = Recipient::query()
+            ->with('user')
+            ->whereHas('user', fn ($query) => $query
+                ->where('is_active', true)
+                ->whereNotNull('email_verified_at'))
+            ->orderBy('department')
+            ->get();
 
-        // Get all recipients for forward option
-        $recipients = Recipient::with('user')->orderBy('id')->get();
+        return response()
+            ->view('admin.tickets.review.index', compact('tickets', 'categories', 'recipients'))
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
+    }
 
-        return view('admin.tickets.review.show', compact('ticket', 'defaultJurisdiction', 'recipients'));
+    /**
+     * Display needs-resolution tickets currently held by the signed-in admin.
+     */
+    public function myTickets(Request $request): Response
+    {
+        $status = $request->input('status_filter');
+        $classification = $request->input('classification_filter');
+        $sort = $request->input('sort', 'newest');
+        $categories = ComplaintCategory::query()->where('is_active', true)->orderBy('name')->get();
+
+        $baseQuery = Ticket::query()
+            ->where('current_handler_id', Auth::id())
+            ->whereIn('status', [
+                Ticket::STATUS_ASSIGNED,
+                Ticket::STATUS_IN_PROGRESS,
+                Ticket::STATUS_ESCALATED,
+                Ticket::STATUS_RESOLVED,
+                Ticket::STATUS_CLOSED,
+            ])
+            ->with(['complaint.student.user', 'complaint.category', 'currentHandler', 'thread', 'auditLogs'])
+            ->when($classification !== null && $classification !== '', function ($query) use ($classification) {
+                $query->where('classification', $classification);
+            })
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = trim($request->input('search'));
+
+                $query->where(function ($query) use ($search) {
+                    $query->whereHas('complaint', function ($complaintQuery) use ($search) {
+                            $complaintQuery->where('subject_title', 'like', '%' . $search . '%')
+                                ->orWhere('reference_number', 'like', '%' . $search . '%');
+                        })
+                        ->orWhereHas('complaint.student.user', fn ($userQuery) => $userQuery->where('name', 'like', '%' . $search . '%'));
+                });
+            })
+            ->when($request->filled('category_filter'), function ($query) use ($request) {
+                $query->whereHas('complaint', function ($complaints) use ($request) {
+                    $complaints->where('category_id', $request->input('category_filter'));
+                });
+            });
+
+        $statusCounts = [
+            '' => (clone $baseQuery)->count(),
+            'in_progress' => (clone $baseQuery)->whereIn('status', [Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS])->count(),
+            'escalated' => (clone $baseQuery)->where('status', Ticket::STATUS_ESCALATED)->count(),
+            'closed' => (clone $baseQuery)->where('status', Ticket::STATUS_CLOSED)->count(),
+        ];
+
+        $tickets = (clone $baseQuery)
+            ->when($classification !== null && $classification !== '', fn ($query) => $query->where('classification', $classification))
+            ->when($status === 'in_progress', fn ($query) => $query->whereIn('status', [Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS]))
+            ->when($status && $status !== 'in_progress', fn ($query) => $query->where('status', $status))
+            ->when($sort === 'oldest', fn ($query) => $query->orderBy('updated_at', 'asc'))
+            ->when($sort === 'deadline_urgency', function ($query) {
+                $query->orderByRaw('CASE WHEN deadline IS NULL THEN 1 ELSE 0 END ASC')
+                    ->orderBy('deadline', 'asc')
+                    ->orderByDesc('updated_at');
+            })
+            ->when($sort === 'newest', fn ($query) => $query->orderByDesc('updated_at'))
+            ->paginate(10)
+            ->appends($request->query());
+
+        return response()
+            ->view('admin.tickets.my-index', compact('tickets', 'status', 'classification', 'statusCounts', 'categories'))
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     /**
@@ -149,6 +256,15 @@ class AdminTicketReviewController extends Controller
             "Classified as {$validated['classification']} under {$validated['jurisdiction']} jurisdiction."
         );
 
+        if ($ticket->complaint?->student?->user?->email) {
+            EmailNotification::create([
+                'ticket_id' => $ticket->id,
+                'recipient_email' => $ticket->complaint->student->user->email,
+                'type' => EmailNotification::TYPE_STUDENT_STATUS_UPDATE,
+                'status' => EmailNotification::STATUS_PENDING,
+            ]);
+        }
+
         return redirect()
             ->route('admin.tickets.review.index')
             ->with('success', 'Ticket classified successfully.');
@@ -187,11 +303,83 @@ class AdminTicketReviewController extends Controller
             "Informational ticket forwarded to {$recipient->user->name} ({$recipient->user->email})."
         );
 
+        if ($recipient->user?->email) {
+            EmailNotification::create([
+                'ticket_id' => $ticket->id,
+                'recipient_email' => $recipient->user->email,
+                'type' => EmailNotification::TYPE_INFORMATIONAL_FORWARD,
+                'status' => EmailNotification::STATUS_PENDING,
+            ]);
+        }
+
         // TODO: Send InformationalForwardedMail to recipient (Module 4)
 
         return redirect()
-            ->route('admin.tickets.review.show', $ticket)
+            ->route('admin.tickets.review.index')
             ->with('success', 'Ticket forwarded to recipient.');
+    }
+
+    /**
+     * Retain an informational ticket in SDS records and close it.
+     */
+    public function retainInformational(Ticket $ticket): RedirectResponse
+    {
+        abort_unless($ticket->status === Ticket::STATUS_PENDING && $ticket->classification === null, 404);
+
+        $ticket->update([
+            'classification' => Ticket::CLASSIFICATION_INFORMATIONAL,
+            'jurisdiction' => Ticket::JURISDICTION_SDS,
+            'current_handler_id' => Auth::id(),
+            'status' => Ticket::STATUS_CLOSED,
+            'closed_at' => now(),
+        ]);
+
+        AuditLog::log($ticket->id, 'ticket_retained_in_sds_records', Auth::id(), 'Informational ticket retained in SDS records and closed.');
+
+        if ($ticket->complaint?->student?->user?->email) {
+            EmailNotification::create([
+                'ticket_id' => $ticket->id,
+                'recipient_email' => $ticket->complaint->student->user->email,
+                'type' => EmailNotification::TYPE_COMPLAINT_CLOSED,
+                'status' => EmailNotification::STATUS_PENDING,
+            ]);
+        }
+
+        return redirect()->route('admin.tickets.review.index')->with('success', 'Informational ticket saved and closed.');
+    }
+
+    /**
+     * Forward an informational ticket to a recipient and close it.
+     */
+    public function forwardInformationalAndClose(Request $request, Ticket $ticket): RedirectResponse
+    {
+        abort_unless($ticket->status === Ticket::STATUS_PENDING && $ticket->classification === null, 404);
+
+        $validated = $request->validate(['recipient_id' => 'required|exists:recipients,id']);
+        $recipient = Recipient::with('user')->findOrFail($validated['recipient_id']);
+        abort_unless($this->recipientIsConfiguredForTicketCategory($ticket, $recipient), 422, 'This recipient is not configured for the ticket category.');
+
+        $ticket->update([
+            'classification' => Ticket::CLASSIFICATION_INFORMATIONAL,
+            'jurisdiction' => Ticket::JURISDICTION_RECIPIENT,
+            'forwarded_to' => $recipient->id,
+            'forwarded_at' => now(),
+            'status' => Ticket::STATUS_CLOSED,
+            'closed_at' => now(),
+        ]);
+
+        AuditLog::log($ticket->id, 'ticket_forwarded_and_closed', Auth::id(), "Informational ticket forwarded to {$recipient->user->name} and closed.");
+
+        if ($recipient->user?->email) {
+            EmailNotification::create([
+                'ticket_id' => $ticket->id,
+                'recipient_email' => $recipient->user->email,
+                'type' => EmailNotification::TYPE_INFORMATIONAL_FORWARD,
+                'status' => EmailNotification::STATUS_PENDING,
+            ]);
+        }
+
+        return redirect()->route('admin.tickets.review.index')->with('success', 'Ticket forwarded and closed.');
     }
 
     /**
@@ -200,14 +388,16 @@ class AdminTicketReviewController extends Controller
     public function assign(Request $request, Ticket $ticket): RedirectResponse
     {
         abort_unless(
-            $ticket->classification === Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+            $ticket->classification === Ticket::CLASSIFICATION_NEEDS_RESOLUTION ||
+            ($ticket->status === Ticket::STATUS_PENDING && $ticket->classification === null),
             404,
             'Only needs-resolution tickets can be assigned.'
         );
 
         $validated = $request->validate([
             'assignment_mode' => 'required|in:direct,recipient',
-            'recipient_id' => 'nullable|exists:recipients,id',
+            'recipient_id' => 'required_if:assignment_mode,recipient|nullable|exists:recipients,id',
+            'resolution_time' => 'required|integer|between:1,15',
         ]);
 
         $recipient = null;
@@ -215,17 +405,15 @@ class AdminTicketReviewController extends Controller
 
         if ($validated['assignment_mode'] === 'recipient') {
             $recipient = Recipient::findOrFail($validated['recipient_id']);
+            if ($ticket->classification === null) {
+                abort_unless($this->recipientIsConfiguredForTicketCategory($ticket, $recipient), 422, 'This recipient is not configured for the ticket category.');
+            }
             $assignedUserId = $recipient->user_id;
         }
 
-        $deadline = null;
-        $category = $ticket->complaint?->category;
+        $deadline = $ticket->complaint?->created_at?->copy()->addDays((int) $validated['resolution_time']);
 
-        if ($category) {
-            $deadline = now()->addDays((int) $category->resolution_deadline_days);
-        }
-
-        DB::transaction(function () use ($ticket, $recipient, $assignedUserId, $deadline): void {
+        DB::transaction(function () use ($ticket, $recipient, $assignedUserId, $deadline, $validated): void {
             $thread = $ticket->thread;
 
             if (! $thread) {
@@ -238,7 +426,9 @@ class AdminTicketReviewController extends Controller
             }
 
             $ticket->update([
-                'status' => Ticket::STATUS_ASSIGNED,
+                'status' => $recipient ? Ticket::STATUS_IN_PROGRESS : Ticket::STATUS_ASSIGNED,
+                'classification' => $ticket->classification ?? Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+                'jurisdiction' => $ticket->jurisdiction ?? Ticket::JURISDICTION_RECIPIENT,
                 'assigned_to' => $recipient ? $assignedUserId : null,
                 'current_handler_id' => $assignedUserId,
                 'deadline' => $deadline,
@@ -246,7 +436,7 @@ class AdminTicketReviewController extends Controller
 
             $action = $recipient ? 'ticket_assigned' : 'ticket_assigned';
             $details = $recipient
-                ? "Ticket assigned to {$recipient->user->name} for recipient handling."
+                ? "SDS Admin assigned the ticket {$ticket->complaint->reference_number} to {$recipient->user->display_name} for handling."
                 : 'Ticket assigned to SDS admin for direct handling.';
 
             AuditLog::log(
@@ -276,8 +466,26 @@ class AdminTicketReviewController extends Controller
         });
 
         return redirect()
-            ->route('admin.tickets.review.show', $ticket)
+            ->route('admin.tickets.review.index')
             ->with('success', $recipient ? 'Ticket assigned to recipient.' : 'Ticket assigned for direct handling.');
+    }
+
+    protected function recipientIsConfiguredForTicketCategory(Ticket $ticket, Recipient $recipient): bool
+    {
+        $category = $ticket->complaint?->category;
+
+        if (! $category) {
+            return false;
+        }
+
+        $configuredRecipientIds = collect([$category->recipient_id])
+            ->merge($category->suggestedRecipients()->pluck('recipients.id'))
+            ->merge($category->escalationHierarchies()->pluck('recipient_id'))
+            ->filter()
+            ->unique()
+            ->values();
+
+        return $configuredRecipientIds->contains((int) $recipient->id);
     }
 
     /**
@@ -285,16 +493,32 @@ class AdminTicketReviewController extends Controller
      */
     public function acknowledge(Request $request, Ticket $ticket): RedirectResponse
     {
-        abort_unless($ticket->status === Ticket::STATUS_ASSIGNED, 404);
+        abort_unless(
+            ($ticket->status === Ticket::STATUS_PENDING && $ticket->classification === null) ||
+            ($ticket->status === Ticket::STATUS_ASSIGNED && $ticket->current_handler_id === Auth::id()),
+            404
+        );
 
-        // Only current handler may acknowledge
-        if ($ticket->current_handler_id !== Auth::id()) {
-            abort(403, 'You are not authorized to acknowledge this ticket.');
-        }
+        $validated = $request->validate([
+            'resolution_time' => 'required|integer|between:1,15',
+        ]);
+        $deadline = $ticket->complaint?->created_at?->copy()->addDays((int) $validated['resolution_time']);
 
-        DB::transaction(function () use ($ticket) {
+        DB::transaction(function () use ($ticket, $deadline) {
+            $thread = $ticket->thread;
+            if (! $thread) {
+                $ticket->thread()->create(['is_active' => true]);
+            } else {
+                $thread->update(['is_active' => true]);
+            }
+
             $ticket->update([
                 'status' => Ticket::STATUS_IN_PROGRESS,
+                'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+                'jurisdiction' => Ticket::JURISDICTION_SDS,
+                'assigned_to' => null,
+                'current_handler_id' => Auth::id(),
+                'deadline' => $deadline,
                 'acknowledged_at' => now(),
             ]);
 
@@ -315,8 +539,55 @@ class AdminTicketReviewController extends Controller
             }
         });
 
-        return redirect()->route('admin.tickets.review.show', $ticket)
+        return redirect()->route('admin.tickets.review.index')
             ->with('success', 'Ticket acknowledged.');
+    }
+
+    /**
+     * Mark an SDS-owned ticket as resolved.
+     */
+    public function resolve(Request $request, Ticket $ticket): RedirectResponse
+    {
+        abort_unless(
+            $ticket->current_handler_id === Auth::id() &&
+            $ticket->classification === Ticket::CLASSIFICATION_NEEDS_RESOLUTION &&
+            $ticket->status === Ticket::STATUS_IN_PROGRESS,
+            403,
+            'You are not authorized to resolve this ticket.'
+        );
+
+        $validated = $request->validate([
+            'resolution_message' => 'required|string|max:2000',
+        ]);
+
+        DB::transaction(function () use ($ticket, $validated): void {
+            $ticket->update([
+                'status' => Ticket::STATUS_RESOLVED,
+                'resolved_at' => now(),
+            ]);
+
+            if ($ticket->thread) {
+                $ticket->thread->update(['is_active' => false]);
+                $ticket->thread->messages()->create([
+                    'sender_id' => Auth::id(),
+                    'content' => $validated['resolution_message'],
+                ]);
+            }
+
+            AuditLog::log($ticket->id, 'complaint_resolved', Auth::id(), $validated['resolution_message']);
+
+            if ($ticket->complaint?->student?->user?->email) {
+                EmailNotification::create([
+                    'ticket_id' => $ticket->id,
+                    'recipient_email' => $ticket->complaint->student->user->email,
+                    'type' => EmailNotification::TYPE_STUDENT_STATUS_UPDATE,
+                    'status' => EmailNotification::STATUS_PENDING,
+                ]);
+            }
+        });
+
+        return redirect()->route('admin.complaints.show', $ticket->complaint)
+            ->with('success', 'Ticket marked as resolved.');
     }
 
     /**
@@ -333,11 +604,11 @@ class AdminTicketReviewController extends Controller
         $escalated = $this->escalationService->escalate($ticket, Auth::user());
 
         if (! $escalated) {
-            return redirect()->route('admin.tickets.review.show', $ticket)
+            return redirect()->route('admin.tickets.review.index')
                 ->withErrors(['escalation' => 'No further escalation target is configured for this ticket.']);
         }
 
-        return redirect()->route('admin.tickets.review.show', $ticket)
+        return redirect()->route('admin.tickets.review.index')
             ->with('success', 'Ticket escalated successfully.');
     }
 
@@ -347,7 +618,7 @@ class AdminTicketReviewController extends Controller
     public function close(Request $request, Ticket $ticket): RedirectResponse
     {
         // Only allow closing tickets that are resolved or in_progress
-        if (! in_array($ticket->status, [Ticket::STATUS_RESOLVED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ASSIGNED])) {
+        if (! in_array($ticket->status, [Ticket::STATUS_RESOLVED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ASSIGNED, Ticket::STATUS_ESCALATED])) {
             abort(404);
         }
 
@@ -392,7 +663,7 @@ class AdminTicketReviewController extends Controller
             }
         });
 
-        return redirect()->route('admin.tickets.review.show', $ticket)
+        return redirect()->route('admin.tickets.review.index')
             ->with('success', 'Ticket closed successfully.');
     }
 }

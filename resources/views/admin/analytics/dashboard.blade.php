@@ -1,142 +1,47 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Analytics Dashboard
-        </h2>
-    </x-slot>
-
-    <div class="py-6">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="bg-white shadow-sm sm:rounded-lg p-6">
-                <form method="GET" action="{{ route('admin.analytics.index') }}" class="grid gap-4 sm:grid-cols-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Start Date</label>
-                        <input type="date" name="start_date" value="{{ $filters['start_date'] ?? '' }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">End Date</label>
-                        <input type="date" name="end_date" value="{{ $filters['end_date'] ?? '' }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Category</label>
-                        <select name="category_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                            <option value="">All categories</option>
-                            @foreach ($categoryOptions as $category)
-                                <option value="{{ $category->id }}" @selected(($filters['category_id'] ?? '') == $category->id)>{{ $category->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="flex items-end space-x-2">
-                        <button type="submit" class="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">Filter</button>
-                        <a href="{{ route('admin.analytics.index') }}" class="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">Reset</a>
-                    </div>
-                </form>
-            </div>
-
-            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <h3 class="text-sm font-semibold text-gray-500">Total Complaints</h3>
-                    <p class="mt-4 text-3xl font-bold text-gray-900">{{ $totalComplaints }}</p>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <h3 class="text-sm font-semibold text-gray-500">Total Tickets</h3>
-                    <p class="mt-4 text-3xl font-bold text-gray-900">{{ $totalTickets }}</p>
-                </div>
-                @foreach ($statusCounts as $status => $count)
-                    <div class="bg-white p-6 rounded-lg shadow-sm">
-                        <h3 class="text-sm font-semibold text-gray-500">{{ ucfirst(str_replace('_', ' ', $status)) }}</h3>
-                        <p class="mt-4 text-3xl font-bold text-gray-900">{{ $count }}</p>
-                    </div>
-                @endforeach
-            </div>
-
-            <div class="grid gap-4 lg:grid-cols-2">
-                <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-800">Complaint Volume (Daily)</h3>
-                    <canvas id="complaintVolumeDaily"></canvas>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-800">Complaint Volume (Weekly)</h3>
-                    <canvas id="complaintVolumeWeekly"></canvas>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-800">Complaint Volume (Monthly)</h3>
-                    <canvas id="complaintVolumeMonthly"></canvas>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-800">Complaint Distribution by Category</h3>
-                    <canvas id="categoryDistribution"></canvas>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-800">Resolution Rate</h3>
-                    <canvas id="resolutionRate"></canvas>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-800">Average Resolution Time</h3>
-                    <canvas id="averageResolutionTime"></canvas>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-800">Escalation Frequency</h3>
-                    <canvas id="escalationFrequency"></canvas>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-800">Active Ticket Statuses</h3>
-                    <canvas id="activeTicketStatuses"></canvas>
-                </div>
-            </div>
-
-            <div class="bg-white p-6 rounded-lg shadow-sm">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <h3 class="text-lg font-semibold text-gray-800">Report Exports</h3>
-                    <div class="flex flex-wrap gap-2">
-                        <a href="{{ route('admin.analytics.export.pdf', request()->query()) }}" class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Download PDF</a>
-                        <a href="{{ route('admin.analytics.export.excel', request()->query()) }}" class="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Download Excel</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        const charts = [
-            { id: 'complaintVolumeDaily', data: @json($complaintVolumeDaily), label: 'Daily Volume', color: 'rgba(59, 130, 246, 0.7)' },
-            { id: 'complaintVolumeWeekly', data: @json($complaintVolumeWeekly), label: 'Weekly Volume', color: 'rgba(16, 185, 129, 0.7)' },
-            { id: 'complaintVolumeMonthly', data: @json($complaintVolumeMonthly), label: 'Monthly Volume', color: 'rgba(251, 191, 36, 0.7)' },
-            { id: 'categoryDistribution', data: @json($categoryDistribution), label: 'Distribution', color: 'rgba(236, 72, 153, 0.7)', type: 'doughnut' },
-            { id: 'resolutionRate', data: @json($resolutionRate['chart']), label: 'Resolution Rate', color: 'rgba(14, 165, 233, 0.7)' },
-            { id: 'averageResolutionTime', data: @json($averageResolutionTime), label: 'Avg Resolution Time', color: 'rgba(249, 115, 22, 0.7)' },
-            { id: 'escalationFrequency', data: @json($escalationFrequency), label: 'Escalation Count', color: 'rgba(109, 40, 217, 0.7)' },
-            { id: 'activeTicketStatuses', data: @json($activeTicketStatuses), label: 'Status Distribution', color: 'rgba(20, 184, 166, 0.7)', type: 'doughnut' },
+<x-app-layout :role="'admin'" title="Analytics">
+    @php
+        $data = $dashboard;
+        $categoryLabels = array_keys($data['categoryCounts']);
+        $categoryValues = array_values($data['categoryCounts']);
+        $statusLabels = array_keys($data['statusCounts']);
+        $statusValues = array_values($data['statusCounts']);
+        $analyticsPayload = [
+            'volume' => $data['volume'],
+            'categories' => ['labels' => $categoryLabels, 'data' => $categoryValues],
+            'status' => ['labels' => $statusLabels, 'data' => $statusValues],
+            'resolution' => ['labels' => array_keys($data['resolutionByCategory']), 'data' => array_values($data['resolutionByCategory'])],
+            'escalation' => ['labels' => array_keys($data['escalations']['byCategory']), 'data' => array_values($data['escalations']['byCategory'])],
         ];
-
-        charts.forEach(({ id, data, label, color, type }) => {
-            const ctx = document.getElementById(id);
-            if (!ctx) {
-                return;
-            }
-
-            new Chart(ctx, {
-                type: type ?? 'bar',
-                data: {
-                    labels: data.labels,
-                    datasets: [{
-                        label,
-                        data: data.data,
-                        backgroundColor: Array(data.data.length).fill(color),
-                        borderColor: Array(data.data.length).fill(color),
-                        borderWidth: 1,
-                    }],
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                        },
-                    },
-                },
-            });
-        });
+    @endphp
+    <div class="space-y-6 pb-10">
+        <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><h1 class="font-display text-2xl font-bold text-foreground sm:text-3xl">Analytics</h1><p class="mt-1 text-sm text-muted-foreground">Monitor ticket trends, resolution performance, SLA compliance, and student concerns.</p></div><a href="{{ route('admin.analytics.export.pdf', request()->query()) }}" class="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90"><x-icons.download class="h-4 w-4" /> Export Report</a></div>
+        <form method="GET" class="surface grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div><label class="mb-1 block text-xs font-semibold text-muted-foreground">Date Range</label><select name="date_range" class="h-9 w-full rounded-md border border-input bg-white px-2 text-sm"><option value="">Custom Range</option><option value="today">Today</option><option value="week">This Week</option><option value="month">This Month</option><option value="year">This Year</option></select><div class="mt-2 grid grid-cols-2 gap-2"><input type="date" name="start_date" value="{{ $filters['start_date'] ?? '' }}" aria-label="Start date" class="h-8 w-full rounded-md border border-input bg-white px-2 text-xs"><input type="date" name="end_date" value="{{ $filters['end_date'] ?? '' }}" aria-label="End date" class="h-8 w-full rounded-md border border-input bg-white px-2 text-xs"></div></div>
+            <div><label class="mb-1 block text-xs font-semibold text-muted-foreground">Category</label><select name="category_id" class="h-9 w-full rounded-md border border-input bg-white px-2 text-sm"><option value="">All Categories</option>@foreach ($categoryOptions as $category)<option value="{{ $category->id }}" @selected(($filters['category_id'] ?? '') == $category->id)>{{ $category->name }}</option>@endforeach</select></div>
+            <div><label class="mb-1 block text-xs font-semibold text-muted-foreground">Status</label><select name="status" class="h-9 w-full rounded-md border border-input bg-white px-2 text-sm"><option value="">All Statuses</option>@foreach (['pending' => 'Pending', 'in_progress' => 'In Progress', 'escalated' => 'Escalated', 'resolved' => 'Resolved', 'closed' => 'Closed'] as $value => $label)<option value="{{ $value }}" @selected(($filters['status'] ?? '') === $value)>{{ $label }}</option>@endforeach</select></div>
+            <div><label class="mb-1 block text-xs font-semibold text-muted-foreground">Recipient</label><select name="recipient_id" class="h-9 w-full rounded-md border border-input bg-white px-2 text-sm"><option value="">All Recipients</option>@foreach ($recipientOptions as $recipient)<option value="{{ $recipient->id }}" @selected(($filters['recipient_id'] ?? '') == $recipient->id)>{{ $recipient->table_name }}</option>@endforeach</select></div>
+            <div class="flex items-end gap-2"><button class="inline-flex h-9 flex-1 items-center justify-center rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground">Apply Filters</button><a href="{{ route('admin.analytics.index') }}" class="inline-flex h-9 items-center justify-center rounded-md border border-border px-3 text-sm font-semibold hover:bg-muted">Reset</a></div>
+            <div class="flex gap-2 sm:col-span-2 lg:col-span-5"><span class="self-center text-xs font-semibold text-muted-foreground">Volume period</span>@foreach (['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly'] as $value => $label)<a href="{{ route('admin.analytics.index', array_merge(request()->query(), ['period' => $value])) }}" class="rounded-full border px-3 py-1 text-xs font-semibold {{ ($filters['period'] ?? 'daily') === $value ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-white text-muted-foreground hover:bg-muted' }}">{{ $label }}</a>@endforeach</div>
+        </form>
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5"><x-stat-card label="Total Tickets" :value="$data['total']" hint="Selected period" /><x-stat-card label="Resolved Tickets" :value="$data['resolved']" hint="Resolved or closed" valueTone="green" /><x-stat-card label="Resolution Rate" :value="$data['resolutionRate'] . '%'" hint="Resolved of total" /><x-stat-card label="Average Resolution Time" :value="$data['averageHours'] . 'h'" hint="Created to resolved" valueTone="blue" /><x-stat-card label="SLA Compliance" :value="$data['sla']['rate'] . '%'" hint="Resolved within deadline" valueTone="green" /></div>
+        <x-page-section title="Ticket Volume Over Time" class="min-h-[24rem]"><p class="-mt-2 mb-4 text-xs text-muted-foreground">Track submitted and resolved tickets across the selected period.</p><div class="h-80"><canvas id="volumeChart"></canvas></div></x-page-section>
+        <div class="grid gap-6 xl:grid-cols-2"><x-page-section title="Tickets by Category"><div class="h-80"><canvas id="categoryChart"></canvas></div></x-page-section><x-page-section title="Ticket Status Distribution"><div class="h-64"><canvas id="statusChart"></canvas></div><div class="mt-3 grid gap-1 text-xs">@foreach ($data['statusCounts'] as $label => $count)<div class="flex justify-between"><span class="text-muted-foreground">{{ $label }}</span><strong>{{ $count }} ({{ $data['total'] ? round($count / $data['total'] * 100) : 0 }}%)</strong></div>@endforeach</div></x-page-section></div>
+        <x-page-section title="Resolution Performance"><div class="grid gap-4 sm:grid-cols-3"><x-stat-card label="Average Resolution Time" :value="$data['averageHours'] . 'h'" /><x-stat-card label="Fastest Resolution" :value="$data['fastestHours'] . 'h'" valueTone="green" /><x-stat-card label="Longest Resolution" :value="$data['longestHours'] . 'h'" valueTone="red" /></div><h3 class="mt-6 text-sm font-bold">Average Resolution Time by Category</h3><div class="mt-3 h-72"><canvas id="resolutionChart"></canvas></div></x-page-section>
+        <div class="grid gap-6 xl:grid-cols-2"><x-page-section title="SLA Performance"><div class="grid gap-3 sm:grid-cols-3"><div class="rounded-md border p-3"><p class="text-xs text-muted-foreground">Within SLA</p><p class="mt-1 text-xl font-bold text-green-700">{{ $data['sla']['within'] }}</p><p class="text-xs text-muted-foreground">{{ $data['sla']['assigned'] ? round($data['sla']['within'] / $data['sla']['assigned'] * 100) : 0 }}%</p></div><div class="rounded-md border p-3"><p class="text-xs text-muted-foreground">Approaching SLA</p><p class="mt-1 text-xl font-bold text-yellow-700">{{ $data['sla']['approaching'] }}</p><p class="text-xs text-muted-foreground">{{ $data['sla']['assigned'] ? round($data['sla']['approaching'] / $data['sla']['assigned'] * 100) : 0 }}%</p></div><div class="rounded-md border p-3"><p class="text-xs text-muted-foreground">SLA Breached</p><p class="mt-1 text-xl font-bold text-red-700">{{ $data['sla']['breached'] }}</p><p class="text-xs text-muted-foreground">{{ $data['sla']['assigned'] ? round($data['sla']['breached'] / $data['sla']['assigned'] * 100) : 0 }}%</p></div></div></x-page-section><x-page-section title="SLA Summary"><dl class="grid gap-3 text-sm"><div class="flex justify-between border-b pb-2"><dt class="text-muted-foreground">Tickets with assigned deadlines</dt><dd class="font-bold">{{ $data['sla']['assigned'] }}</dd></div><div class="flex justify-between border-b pb-2"><dt class="text-muted-foreground">Resolved within deadline</dt><dd class="font-bold">{{ $data['sla']['within'] }}</dd></div><div class="flex justify-between"><dt class="text-muted-foreground">SLA compliance</dt><dd class="font-bold text-primary">{{ $data['sla']['rate'] }}%</dd></div></dl></x-page-section></div>
+        <x-page-section title="Escalation Overview"><div class="grid gap-4 sm:grid-cols-3"><x-stat-card label="Total Escalated Tickets" :value="$data['escalations']['total']" /><x-stat-card label="Escalation Rate" :value="$data['escalations']['rate'] . '%'" /><x-stat-card label="Average Escalation Level" :value="round($data['escalations']['averageLevel'], 1)" /></div><div class="mt-6 h-72"><canvas id="escalationChart"></canvas></div><div class="mt-5 overflow-x-auto rounded-lg border"><table class="w-full min-w-[34rem] text-sm"><thead class="bg-muted"><tr class="text-left"><th class="px-3 py-2">Category</th><th class="px-3 py-2">Escalated Tickets</th><th class="px-3 py-2">Escalation Rate</th></tr></thead><tbody class="divide-y">@foreach ($data['categoryCounts'] as $category => $count)<tr><td class="px-3 py-2">{{ $category }}</td><td class="px-3 py-2">{{ $data['escalations']['byCategory'][$category] ?? 0 }}</td><td class="px-3 py-2">{{ $count ? round(($data['escalations']['byCategory'][$category] ?? 0) / $count * 100) : 0 }}%</td></tr>@endforeach</tbody></table></div></x-page-section>
+        <x-page-section title="Recipient Performance"><div class="overflow-x-auto"><table class="w-full min-w-[44rem] text-sm"><thead class="border-b bg-muted"><tr class="text-left"><th class="px-3 py-3">Recipient</th><th class="px-3 py-3">Assigned</th><th class="px-3 py-3">Resolved</th><th class="px-3 py-3">Average Resolution Time</th><th class="px-3 py-3">SLA Compliance</th></tr></thead><tbody class="divide-y">@forelse ($data['recipients'] as $recipient)<tr><td class="px-3 py-3 font-semibold">{{ $recipient['name'] }}</td><td class="px-3 py-3">{{ $recipient['assigned'] }}</td><td class="px-3 py-3">{{ $recipient['resolved'] }}</td><td class="px-3 py-3">{{ $recipient['average'] }} days</td><td class="px-3 py-3">{{ $recipient['sla'] }}%</td></tr>@empty<tr><td colspan="5" class="px-3 py-8 text-center text-muted-foreground">No recipient workload data.</td></tr>@endforelse</tbody></table></div></x-page-section>
+        <div class="grid gap-6 xl:grid-cols-2"><x-page-section title="Ticket Classification"><div class="grid gap-2">@foreach ($data['classification'] as $label => $count)<div class="flex items-center justify-between rounded-md bg-muted/60 px-3 py-2 text-sm"><span>{{ $label }}</span><strong>{{ $count }} ({{ $data['total'] ? round($count / $data['total'] * 100) : 0 }}%)</strong></div>@endforeach</div></x-page-section><x-page-section title="Submission Type"><div class="grid gap-2">@foreach ($data['submission'] as $label => $count)<div class="flex items-center justify-between rounded-md bg-muted/60 px-3 py-2 text-sm"><span>{{ $label }}</span><strong>{{ $count }} ({{ $data['total'] ? round($count / $data['total'] * 100) : 0 }}%)</strong></div>@endforeach</div></x-page-section></div>
+        <x-page-section title="Most Common Complaint Subjects"><div class="overflow-x-auto"><table class="w-full min-w-[36rem] text-sm"><thead class="border-b bg-muted"><tr class="text-left"><th class="px-3 py-3">Rank</th><th class="px-3 py-3">Subject</th><th class="px-3 py-3">Category</th><th class="px-3 py-3">Ticket Count</th></tr></thead><tbody class="divide-y">@foreach ($data['subjects'] as $subject => $count)<tr><td class="px-3 py-2">{{ $loop->iteration }}</td><td class="px-3 py-2 font-semibold">{{ $subject }}</td><td class="px-3 py-2 text-muted-foreground">{{ $data['tickets']->firstWhere('complaint.subject_title', $subject)?->complaint?->category?->name ?? '—' }}</td><td class="px-3 py-2">{{ $count }}</td></tr>@endforeach</tbody></table></div></x-page-section>
+        <x-page-section title="Key Insights"><div class="grid gap-3 sm:grid-cols-2">@foreach ($data['insights'] as $insight)<div class="border-l-4 border-primary bg-primary-soft/50 p-4 text-sm">{{ $insight }}</div>@endforeach</div></x-page-section>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script><script>
+        const analyticsPayload = @json($analyticsPayload);
+        const chartBase = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#4b5563', boxWidth: 12 } } }, scales: { x: { ticks: { color: '#6b7280' }, grid: { display: false } }, y: { beginAtZero: true, ticks: { color: '#6b7280' }, grid: { color: '#e5e7eb' } } } };
+        const makeChart = (id, config) => { const canvas = document.getElementById(id); if (!canvas) return; new Chart(canvas, { ...config, options: { ...chartBase, ...config.options } }); };
+        makeChart('volumeChart', { type: 'line', data: { labels: analyticsPayload.volume.labels, datasets: [{ label: 'Tickets Submitted', data: analyticsPayload.volume.submitted, borderColor: '#7a1d2a', backgroundColor: '#7a1d2a20', fill: true, tension: .3 }, { label: 'Tickets Resolved', data: analyticsPayload.volume.resolved, borderColor: '#16a34a', backgroundColor: '#16a34a15', fill: true, tension: .3 }] } });
+        makeChart('categoryChart', { type: 'bar', data: { labels: analyticsPayload.categories.labels, datasets: [{ label: 'Tickets', data: analyticsPayload.categories.data, backgroundColor: '#7a1d2a' }] }, options: { indexAxis: 'y' } });
+        makeChart('statusChart', { type: 'doughnut', data: { labels: analyticsPayload.status.labels, datasets: [{ data: analyticsPayload.status.data, backgroundColor: ['#facc15','#2563eb','#dc2626','#16a34a','#9ca3af'] }] }, options: { scales: {} } });
+        makeChart('resolutionChart', { type: 'bar', data: { labels: analyticsPayload.resolution.labels, datasets: [{ label: 'Average days', data: analyticsPayload.resolution.data, backgroundColor: '#2563eb' }] }, options: { indexAxis: 'y' } });
+        makeChart('escalationChart', { type: 'bar', data: { labels: analyticsPayload.escalation.labels, datasets: [{ label: 'Escalated tickets', data: analyticsPayload.escalation.data, backgroundColor: '#dc2626' }] } });
     </script>
 </x-app-layout>

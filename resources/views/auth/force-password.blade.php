@@ -1,23 +1,19 @@
 <x-guest-layout>
 
-    <div class="mb-6">
-
-        <h2 class="text-2xl font-bold text-gray-900">
-            Change Your Password
-        </h2>
-
-        <p class="mt-2 text-sm text-gray-700">
-            This is your first login.
-            For security reasons, you must create a new password before continuing.
+    <!-- Page Title -->
+    <div class="text-center mb-8">
+        <h1 class="text-2xl font-semibold text-foreground mb-2">{{ __('Change Your Password') }}</h1>
+        <p class="text-sm text-muted-foreground">
+            {{ __('This is your first login. For security, please create a new password before continuing.') }}
         </p>
-
     </div>
 
-    <form method="POST" action="{{ route('password.force.update') }}">
+    <form method="POST" action="{{ route('password.force.update') }}" class="space-y-6">
 
         @csrf
 
-        <div class="mt-4">
+        <!-- New Password -->
+        <div>
 
             <x-input-label
                 for="password"
@@ -25,19 +21,20 @@
 
             <x-text-input
                 id="password"
-                class="block mt-1 w-full"
+                class="block mt-1.5 w-full"
                 type="password"
                 name="password"
                 required
-                autofocus />
+                autofocus
+                placeholder="••••••••" />
 
             <x-input-error
-                :messages="$errors->get('password')"
-                class="mt-2" />
+                :messages="$errors->get('password')" />
 
         </div>
 
-        <div class="mt-4">
+        <!-- Confirm Password -->
+        <div>
 
             <x-input-label
                 for="password_confirmation"
@@ -45,17 +42,18 @@
 
             <x-text-input
                 id="password_confirmation"
-                class="block mt-1 w-full"
+                class="block mt-1.5 w-full"
                 type="password"
                 name="password_confirmation"
-                required />
+                required
+                placeholder="••••••••" />
 
         </div>
 
-        <div class="flex justify-end mt-6">
+        <div class="flex justify-end pt-2">
 
             <x-primary-button>
-                Save Password
+                {{ __('Save Password') }}
             </x-primary-button>
 
         </div>

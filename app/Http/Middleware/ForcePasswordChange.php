@@ -28,8 +28,16 @@ class ForcePasswordChange
             $user->must_change_password &&
             ! $request->routeIs('password.force') &&
             ! $request->routeIs('password.force.update') &&
+            ! $request->routeIs('profile.edit') &&
+            ! $request->routeIs('profile.update') &&
+            ! $request->routeIs('profile.photo') &&
+            ! $request->routeIs('password.update') &&
             ! $request->routeIs('logout')
         ) {
+            if ($user->isSdsAdmin()) {
+                return redirect()->route('profile.edit');
+            }
+
             return redirect()->route('password.force');
         }
 

@@ -1,18 +1,9 @@
-<x-app-layout>
+<x-app-layout :role="'admin'" title="Create Account">
 
-    <x-slot name="header">
-        <h2 class="text-2xl font-bold text-gray-900">
-            Create Account
-        </h2>
-    </x-slot>
+    <div class="mx-auto w-full max-w-4xl">
+            <div class="surface p-4 sm:p-6">
 
-    <div class="py-10">
-
-        <div class="max-w-4xl mx-auto">
-
-            <div class="bg-white shadow rounded-lg p-8">
-
-                <form action="{{ route('admin.accounts.store') }}" method="POST">
+                <form action="{{ route('admin.accounts.store') }}" method="POST" class="admin-account-form">
 
                     @csrf
 
@@ -148,10 +139,10 @@
                                     class="w-full border border-gray-300 rounded-lg p-3 text-gray-900 bg-white">
 
                                     <option value="">Select Year</option>
-                                    <option>1st Year</option>
-                                    <option>2nd Year</option>
-                                    <option>3rd Year</option>
-                                    <option>4th Year</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
                                 </select>
                             </div>
 
@@ -161,8 +152,9 @@
                                 </label>
 
                                 <input
-                                    type="text"
+                                    type="number"
                                     name="block"
+                                    min="1"
                                     class="w-full border border-gray-300 rounded-lg p-3 text-gray-900 bg-white">
                             </div>
 
@@ -198,10 +190,27 @@
                                     Department
                                 </label>
 
-                                <input
-                                    type="text"
-                                    name="recipient_department"
-                                    class="w-full border border-gray-300 rounded-lg p-3 text-gray-900 bg-white">
+                                <div x-data="{ selected: '{{ old('recipient_department', '') }}', options: ['Administrative', 'Maintenance', 'CICT', 'CBME', 'Student Organization'] }" class="relative">
+                                    <input type="hidden" name="recipient_department" :value="selected" />
+                                    <details x-data="{}" class="group relative w-full" x-on:click.outside="$el.removeAttribute('open')">
+                                        <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted/80 [&::-webkit-details-marker]:hidden">
+                                            <span class="truncate" x-text="selected || 'Select department'" :class="selected ? '' : 'text-muted-foreground'"></span>
+                                            <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                                        </summary>
+                                        <div class="absolute top-full z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                                            <button type="button" @click="selected = ''; $event.target.closest('details').removeAttribute('open')" class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="!selected ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">
+                                                <svg x-show="!selected" class="absolute right-2 h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 10 3 3 7-7" /></svg>
+                                                <span>Select department</span>
+                                            </button>
+                                            <template x-for="option in options" :key="option">
+                                                <button type="button" @click="selected = option; $event.target.closest('details').removeAttribute('open')" class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="selected === option ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">
+                                                    <svg x-show="selected === option" class="absolute right-2 h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 10 3 3 7-7" /></svg>
+                                                    <span x-text="option"></span>
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </details>
+                                </div>
 
                             </div>
 
@@ -227,7 +236,7 @@
 
                         <button
                             type="submit"
-                            class="bg-blue-600 hover:bg-blue-700 text-black font-semibold px-6 py-3 rounded-lg">
+                            class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">
 
                             Create Account
 
@@ -236,10 +245,6 @@
                     </div>
 
                 </form>
-
-            </div>
-
-        </div>
 
     </div>
 

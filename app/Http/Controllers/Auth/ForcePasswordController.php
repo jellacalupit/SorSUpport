@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\AuditLog;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
@@ -15,7 +16,7 @@ class ForcePasswordController extends Controller
      */
     public function show()
     {
-        return view('auth.force-password');
+        return view('auth.set-password');
     }
 
     /**
@@ -38,6 +39,8 @@ class ForcePasswordController extends Controller
             'password' => Hash::make($request->password),
             'must_change_password' => false,
         ]);
+
+        AuditLog::activity('password_changed', $user->id, 'Changed password during initial account setup.');
 
         // Redirect based on role
         return match ($user->role) {

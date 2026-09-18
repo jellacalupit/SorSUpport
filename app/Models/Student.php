@@ -17,6 +17,7 @@ class Student extends Model
         'block',
     ];
 
+
     /**
      * Student belongs to a User.
      */

@@ -1,15 +1,9 @@
-<x-app-layout>
+<x-app-layout :role="'admin'" title="Bulk Upload">
     <div class="max-w-4xl mx-auto py-8">
 
         <h1 class="text-2xl font-bold mb-6 text-black">
             Bulk Upload Accounts
         </h1>
-
-        @if(session('success'))
-            <div class="bg-green-100 border border-green-400 text-green-700 p-3 rounded mb-4">
-                {{ session('success') }}
-            </div>
-        @endif
 
         <form
             action="{{ route('admin.accounts.upload.store') }}"
@@ -22,7 +16,7 @@
             <div>
 
                 <label class="block font-semibold text-black mb-2">
-                    CSV / Excel File
+                    CSV or Excel File Only
                 </label>
 
                 <input

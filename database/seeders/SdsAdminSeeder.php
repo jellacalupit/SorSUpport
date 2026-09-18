@@ -15,14 +15,14 @@ class SdsAdminSeeder extends Seeder
     {
         User::updateOrCreate(
             [
-                'email' => 'sdsadmin@sorsu.edu.ph',
+                'username' => '12345',
+                'role' => User::ROLE_SDS_ADMIN,
             ],
             [
-                'name' => 'SDS Administrator',
-                'username' => 'SDSAdmin',
-                'password' => Hash::make('Welcome@123'),
+                'name' => '',
+                'email' => 'sorsu.support@gmail.com',
+                'password' => Hash::make('12345'),
                 'must_change_password' => false,
-                'role' => User::ROLE_SDS_ADMIN,
                 'is_active' => true,
                 'email_verified_at' => now(),
             ]

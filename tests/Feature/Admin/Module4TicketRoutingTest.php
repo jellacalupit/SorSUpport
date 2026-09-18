@@ -91,7 +91,7 @@ class Module4TicketRoutingTest extends TestCase
 
         $ticket->refresh();
 
-        $this->assertSame(Ticket::STATUS_ASSIGNED, $ticket->status);
+        $this->assertSame(Ticket::STATUS_IN_PROGRESS, $ticket->status);
         $this->assertSame($recipient->user_id, $ticket->current_handler_id);
         $this->assertSame($recipient->user_id, $ticket->assigned_to);
         $this->assertSame(now()->addDays(3)->toDateString(), $ticket->deadline->toDateString());

@@ -15,6 +15,7 @@ class ThreadMessage extends Model
         'sender_id',
         'content',
         'file_attachment',
+        'file_attachment_name',
     ];
 
     /**

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Recipient;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Complaint;
+use App\Models\ComplaintCategory;
 use App\Models\Ticket;
 use App\Models\ThreadMessage;
 use App\Models\TicketThread;
@@ -17,13 +18,14 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Log;
+use App\Services\TicketUnreadService;
 
 class ComplaintController extends Controller
 {
     /**
      * Display all complaints assigned to the recipient.
      */
-    public function index(Request $request): View
+    public function index(Request $request)
     {
         $recipient = Auth::user()->recipient;
 
@@ -37,46 +39,49 @@ class ComplaintController extends Controller
                 'complaint.student.user',
                 'complaint.category',
                 'assignee',
+                'auditLogs',
             ]);
 
-        // Search by Reference Number
-        if ($request->filled('search_reference')) {
-            $query->whereHas('complaint', function ($q) {
-                $q->where('reference_number', 'like', '%' . request()->input('search_reference') . '%');
+        if ($request->filled('search')) {
+            $search = trim($request->input('search'));
+
+            $query->where(function ($query) use ($search) {
+                $query->whereHas('complaint', function ($complaintQuery) use ($search) {
+                    $complaintQuery->where('reference_number', 'like', '%' . $search . '%')
+                        ->orWhere('subject_title', 'like', '%' . $search . '%');
+                });
             });
         }
 
-        // Search by Student Name
-        if ($request->filled('search_student')) {
-            $query->whereHas('complaint.student.user', function ($q) {
-                $q->where('name', 'like', '%' . request()->input('search_student') . '%');
-            });
-        }
-
-        // Search by Subject
-        if ($request->filled('search_subject')) {
-            $query->whereHas('complaint', function ($q) {
-                $q->where('subject_title', 'like', '%' . request()->input('search_subject') . '%');
-            });
-        }
-
-        // Filter by Status
         if ($request->filled('status_filter')) {
-            $query->where('status', $request->input('status_filter'));
+            $status = $request->input('status_filter');
+            $query->whereIn('status', $status === 'in_progress' ? ['assigned', 'in_progress'] : [$status]);
         }
 
-        // Sort newest first
-        $complaints = $query->orderByDesc('created_at')
+        $sort = $request->input('sort', 'newest');
+
+        $complaints = $query
+            ->when($sort === 'deadline_urgency', function ($query) {
+                $query->orderByRaw('CASE WHEN deadline IS NULL THEN 1 ELSE 0 END ASC')
+                    ->orderBy('deadline', 'asc')
+                    ->orderByDesc('updated_at');
+            })
+            ->when($sort === 'newest', fn ($query) => $query->orderByDesc('updated_at'))
+            ->when($sort === 'oldest', fn ($query) => $query->orderBy('updated_at', 'asc'))
             ->paginate(10)
             ->appends($request->query());
 
-        return view('recipient.complaints.index', compact('complaints'));
+        return response()
+            ->view('recipient.complaints.index', compact('complaints'))
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     /**
      * Display the complaint details page.
      */
-    public function show(Complaint $complaint): View
+    public function show(Complaint $complaint)
     {
         $recipient = Auth::user()->recipient;
 
@@ -100,11 +105,22 @@ class ComplaintController extends Controller
             'ticket.thread.messages.sender',
         ]);
 
+        $unreadService = app(TicketUnreadService::class);
+        $unreadService->markTicketsViewed(
+            Auth::user(),
+            [(string) $complaint->id],
+            $unreadService->notificationIdsForTicket(Auth::user(), $complaint->ticket)
+        );
+
         $thread = $complaint->ticket->thread;
         $messages = $thread?->messages()->orderBy('created_at')->get() ?? collect();
         $auditLogs = $complaint->ticket->auditLogs()->orderBy('created_at')->get();
 
-        return view('recipient.complaints.show', compact('complaint', 'messages', 'auditLogs', 'thread'));
+        return response()
+            ->view('recipient.complaints.show', compact('complaint', 'messages', 'auditLogs', 'thread'))
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     /**
@@ -139,27 +155,32 @@ class ComplaintController extends Controller
         }
 
         $validated = $request->validate([
-            'content' => 'required|string|max:5000',
-            'file_attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'content' => 'nullable|string|max:5000|required_without:file_attachment',
+            'file_attachment' => 'nullable|file|mimes:pdf,docx,jpg,jpeg,png,heic|max:10240',
         ]);
 
         $attachmentPath = null;
+        $attachmentName = null;
 
         if ($request->hasFile('file_attachment')) {
-            $attachmentPath = $request->file('file_attachment')
-                ->store('complaints/replies', 'public');
+            $attachment = $request->file('file_attachment');
+            $attachmentPath = $attachment->store('complaints/replies', 'public');
+            $attachmentName = $attachment->getClientOriginalName();
         }
 
-        DB::transaction(function () use ($complaint, $ticket, $validated, $attachmentPath) {
+        DB::transaction(function () use ($complaint, $ticket, $validated, $attachmentPath, $attachmentName) {
             $thread = $ticket->thread;
 
             // Create thread message
             ThreadMessage::create([
                 'thread_id' => $thread->id,
                 'sender_id' => Auth::id(),
-                'content' => $validated['content'],
+                'content' => $validated['content'] ?? '',
                 'file_attachment' => $attachmentPath,
+                'file_attachment_name' => $attachmentName,
             ]);
+
+            $ticket->touch();
 
             // Log the action
             AuditLog::log(
@@ -168,11 +189,20 @@ class ComplaintController extends Controller
                 Auth::id(),
                 'Recipient posted a reply message.'
             );
+
+            $studentUser = $ticket->complaint?->student?->user;
+            if ($studentUser?->email) {
+                EmailNotification::create([
+                    'ticket_id' => $ticket->id,
+                    'recipient_email' => $studentUser->email,
+                    'type' => EmailNotification::TYPE_MESSAGE_POSTED,
+                    'status' => EmailNotification::STATUS_PENDING,
+                ]);
+            }
         });
 
         Log::debug('Recipient\\ComplaintController@storeReply returning redirect', ['user_id' => Auth::id()]);
-        return redirect()->route('recipient.complaints.show', $complaint)
-            ->with('success', 'Reply sent successfully.');
+        return redirect()->route('recipient.complaints.show', $complaint);
     }
 
     /**
@@ -247,7 +277,7 @@ class ComplaintController extends Controller
         $validated = $request->validate([
             'status' => [
                 'required',
-                Rule::in(['pending', 'assigned', 'in_progress', 'resolved', 'rejected', 'closed']),
+                Rule::in(['assigned', 'in_progress', 'resolved', 'rejected', 'closed']),
             ],
             'details' => 'nullable|string|max:1000',
             'resolution_message' => 'nullable|string|max:2000',
@@ -320,6 +350,15 @@ class ComplaintController extends Controller
                         'status' => EmailNotification::STATUS_PENDING,
                     ]);
                 }
+            }
+
+            if ($newStatus !== 'resolved' && $ticket->complaint?->student?->user?->email) {
+                EmailNotification::create([
+                    'ticket_id' => $ticket->id,
+                    'recipient_email' => $ticket->complaint->student->user->email,
+                    'type' => EmailNotification::TYPE_STUDENT_STATUS_UPDATE,
+                    'status' => EmailNotification::STATUS_PENDING,
+                ]);
             }
 
             // Create audit log

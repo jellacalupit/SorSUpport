@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\ComplaintCategory;
 use App\Models\EscalationHierarchy;
 use App\Models\Recipient;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -19,7 +21,7 @@ class ComplaintCategoryController extends Controller
     {
         $categories = ComplaintCategory::with('recipient.user')
             ->orderBy('name')
-            ->get();
+            ->paginate(10);
 
         return view('admin.categories.index', compact('categories'));
     }
@@ -27,13 +29,9 @@ class ComplaintCategoryController extends Controller
     /**
      * Show create category form.
      */
-    public function create(): View
+    public function create(): RedirectResponse
     {
-        $recipients = Recipient::with('user')
-            ->orderBy('department')
-            ->get();
-
-        return view('admin.categories.create', compact('recipients'));
+        return redirect()->route('admin.settings', ['add_category' => 1]);
     }
 
     /**
@@ -45,8 +43,10 @@ class ComplaintCategoryController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'recipient_id' => 'nullable|exists:recipients,id',
-            'resolution_deadline_days' => 'required|integer|min:1',
+            'resolution_deadline_days' => 'nullable|integer|min:1',
             'escalation_hierarchy' => 'nullable|string',
+            'suggested_recipient_ids' => 'nullable|array',
+            'suggested_recipient_ids.*' => 'integer|exists:recipients,id',
         ]);
 
         $category = DB::transaction(function () use ($validated): ComplaintCategory {
@@ -54,17 +54,21 @@ class ComplaintCategoryController extends Controller
                 'name' => $validated['name'],
                 'description' => $validated['description'],
                 'recipient_id' => $validated['recipient_id'],
-                'resolution_deadline_days' => $validated['resolution_deadline_days'],
+                'resolution_deadline_days' => $validated['resolution_deadline_days'] ?? 1,
                 'is_active' => true,
             ]);
 
-            $this->syncEscalationHierarchy($category, $validated['escalation_hierarchy'] ?? '');
+            $suggestedRecipientIds = $validated['suggested_recipient_ids'] ?? [];
+            $this->syncEscalationHierarchy($category, $validated['escalation_hierarchy'] ?? implode(', ', $suggestedRecipientIds));
+            $category->suggestedRecipients()->sync($suggestedRecipientIds);
 
             return $category;
         });
 
+        AuditLog::activity('category_created', details: sprintf('Created complaint category "%s".', $category->name));
+
         return redirect()
-            ->route('admin.categories.index')
+            ->route('admin.settings')
             ->with('success', 'Complaint category created successfully.');
     }
 
@@ -73,7 +77,9 @@ class ComplaintCategoryController extends Controller
      */
     public function edit(ComplaintCategory $category): View
     {
-        $recipients = Recipient::with('user')
+        $recipients = Recipient::query()
+            ->activeVerified()
+            ->with('user')
             ->orderBy('department')
             ->get();
 
@@ -96,9 +102,13 @@ class ComplaintCategoryController extends Controller
 
             'recipient_id' => 'nullable|exists:recipients,id',
 
-            'resolution_deadline_days' => 'required|integer|min:1',
+            'resolution_deadline_days' => 'nullable|integer|min:1',
 
             'escalation_hierarchy' => 'nullable|string',
+
+            'suggested_recipient_ids' => 'nullable|array',
+
+            'suggested_recipient_ids.*' => 'integer|exists:recipients,id',
 
         ]);
 
@@ -111,15 +121,24 @@ class ComplaintCategoryController extends Controller
 
                 'recipient_id' => $validated['recipient_id'],
 
-                'resolution_deadline_days' => $validated['resolution_deadline_days'],
+                ...array_key_exists('resolution_deadline_days', $validated) && $validated['resolution_deadline_days'] !== null
+                    ? ['resolution_deadline_days' => $validated['resolution_deadline_days']]
+                    : [],
 
             ]);
 
-            $this->syncEscalationHierarchy($category, $validated['escalation_hierarchy'] ?? '');
+            $suggestedRecipientIds = $validated['suggested_recipient_ids'] ?? [];
+            $hierarchyInput = empty($suggestedRecipientIds)
+                ? ($validated['escalation_hierarchy'] ?? '')
+                : implode(', ', $suggestedRecipientIds);
+            $this->syncEscalationHierarchy($category, $hierarchyInput);
+            $category->suggestedRecipients()->sync($suggestedRecipientIds);
         });
 
+        AuditLog::activity('category_updated', details: sprintf('Updated complaint category "%s".', $category->name));
+
         return redirect()
-            ->route('admin.categories.index')
+            ->route('admin.settings')
             ->with('success', 'Complaint category updated successfully.');
     }
 
@@ -132,6 +151,11 @@ class ComplaintCategoryController extends Controller
             'is_active' => ! $category->is_active,
         ]);
 
+        AuditLog::activity(
+            $category->is_active ? 'category_activated' : 'category_deactivated',
+            details: sprintf('%s complaint category "%s".', $category->is_active ? 'Activated' : 'Deactivated', $category->name)
+        );
+
         return redirect()
             ->route('admin.categories.index')
             ->with(
@@ -140,6 +164,20 @@ class ComplaintCategoryController extends Controller
                     ? 'Complaint category activated successfully.'
                     : 'Complaint category deactivated successfully.'
             );
+    }
+
+    /**
+     * Delete a complaint category and its related records.
+     */
+    public function destroy(ComplaintCategory $category)
+    {
+        $category->delete();
+
+        AuditLog::activity('category_deleted', details: sprintf('Deleted complaint category "%s".', $category->name));
+
+        return redirect()
+            ->route('admin.settings')
+            ->with('success', 'Complaint category deleted successfully.');
     }
 
     protected function syncEscalationHierarchy(ComplaintCategory $category, string $input): void

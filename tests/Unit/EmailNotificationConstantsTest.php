@@ -3,6 +3,10 @@
 namespace Tests\Unit;
 
 use App\Models\EmailNotification;
+use App\Models\User;
+use App\Notifications\AccountUpdateNotification;
+use App\Notifications\VerifyEmailNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -20,5 +24,25 @@ class EmailNotificationConstantsTest extends TestCase
         $this->assertSame('pending', EmailNotification::STATUS_PENDING);
         $this->assertSame('sent', EmailNotification::STATUS_SENT);
         $this->assertSame('failed', EmailNotification::STATUS_FAILED);
+    }
+
+    #[Test]
+    public function verification_notification_is_sent_immediately_but_account_update_notification_stays_queueable(): void
+    {
+        $this->assertNotContains(ShouldQueue::class, class_implements(VerifyEmailNotification::class));
+        $this->assertContains(ShouldQueue::class, class_implements(AccountUpdateNotification::class));
+    }
+
+    #[Test]
+    public function blank_name_users_still_have_a_fallback_initial_for_the_avatar(): void
+    {
+        $user = new User([
+            'first_name' => '',
+            'middle_name' => '',
+            'last_name' => '',
+            'name' => '',
+        ]);
+
+        $this->assertSame('A', $user->name_initials);
     }
 }

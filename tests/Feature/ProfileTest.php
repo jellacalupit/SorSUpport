@@ -43,6 +43,52 @@ class ProfileTest extends TestCase
         $this->assertNull($user->email_verified_at);
     }
 
+    public function test_sds_admin_can_edit_the_admin_profile_details(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_SDS_ADMIN,
+            'username' => '1001',
+        ]);
+
+        $this->actingAs($user)
+            ->get('/profile')
+            ->assertOk()
+            ->assertSee('profile-username')
+            ->assertSee('First Name *')
+            ->assertSee('Last Name *')
+            ->assertSee('Email *')
+            ->assertSee('Staff ID *')
+            ->assertSee('Department *')
+            ->assertSee('Position *');
+
+        $response = $this
+            ->actingAs($user)
+            ->patch('/profile', [
+                'first_name' => 'Updated',
+                'middle_name' => 'SDS',
+                'last_name' => 'Admin',
+                'extension' => 'Sr.',
+                'email' => 'updated-admin@example.com',
+                'username' => '1002',
+                'department' => 'Student Development Services',
+                'designation' => 'Administrator',
+                'role' => User::ROLE_SDS_ADMIN,
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/profile');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'name' => 'Updated S. Admin Sr.',
+            'email' => 'updated-admin@example.com',
+            'username' => '1002',
+            'department' => 'Student Development Services',
+            'designation' => 'Administrator',
+        ]);
+    }
+
     public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void
     {
         $user = User::factory()->create();
@@ -64,6 +110,7 @@ class ProfileTest extends TestCase
     public function test_user_can_delete_their_account(): void
     {
         $user = User::factory()->create();
+        $deletedUserName = $user->name;
 
         $response = $this
             ->actingAs($user)
@@ -77,6 +124,11 @@ class ProfileTest extends TestCase
 
         $this->assertGuest();
         $this->assertNull($user->fresh());
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'account_deleted',
+            'performed_by' => null,
+            'details' => 'Deleted account for ' . $deletedUserName . '.',
+        ]);
     }
 
     public function test_correct_password_must_be_provided_to_delete_account(): void

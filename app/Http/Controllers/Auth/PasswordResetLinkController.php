@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -20,6 +21,14 @@ class PasswordResetLinkController extends Controller
     }
 
     /**
+     * Display the password reset email confirmation view.
+     */
+    public function sent(): View
+    {
+        return view('auth.password-email-sent');
+    }
+
+    /**
      * Handle an incoming password reset link request.
      *
      * @throws ValidationException
@@ -27,19 +36,36 @@ class PasswordResetLinkController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'email' => ['required', 'email'],
+            'username' => ['required', 'string'],
+        ], [
+            'username.required' => 'Student or Staff ID is required.',
         ]);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
+        $user = User::where('username', (string) $request->input('username'))->first();
+
+        if (! $user || ! $user->email) {
+            return back()
+                ->withInput($request->only('username'))
+                ->withErrors(['username' => 'Incorrect ID. Try again.']);
+        }
+
         $status = Password::sendResetLink(
-            $request->only('email')
+            ['email' => $user->email]
         );
 
         return $status == Password::RESET_LINK_SENT
-                    ? back()->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                        ->withErrors(['email' => __($status)]);
+                    ? redirect()->route('password.sent')->with('reset_email', $this->maskEmail($user->email))
+                    : back()->withInput($request->only('username'))
+                        ->withErrors(['username' => __($status)]);
+    }
+
+    /**
+     * Mask the email address for display on the confirmation page.
+     */
+    private function maskEmail(string $email): string
+    {
+        [$localPart, $domain] = explode('@', $email, 2);
+
+        return substr($localPart, 0, 2).'*****@'.$domain;
     }
 }

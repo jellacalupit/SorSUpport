@@ -28,6 +28,16 @@ class AuditLog extends Model
         ]);
     }
 
+    public static function activity(string $action, ?int $userId = null, ?string $details = null): self
+    {
+        return self::create([
+            'ticket_id' => null,
+            'performed_by' => $userId ?? Auth::id(),
+            'action' => $action,
+            'details' => $details,
+        ]);
+    }
+
     /**
      * Ticket associated with this log.
      */

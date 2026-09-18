@@ -2,13 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\Complaint;
 use App\Models\ComplaintCategory;
 use App\Models\Recipient;
 use App\Models\Student;
+use App\Models\ThreadMessage;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
@@ -158,6 +161,330 @@ class Module5InTicketCommunicationTest extends TestCase
             'content' => 'Recipient response',
             'sender_id' => $recipientUser->id,
         ]);
+    }
+
+    public function test_ticket_deadline_starts_on_submission_for_15_day_policy(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 8, 29, 12, 0, 0, 'Asia/Manila'));
+
+        $studentUser = User::factory()->create([
+            'role' => User::ROLE_STUDENT,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+
+        $studentProfile = Student::create([
+            'user_id' => $studentUser->id,
+            'student_id' => 'S2030',
+            'department' => 'IT',
+            'course' => 'BSIT',
+            'year_level' => '2nd Year',
+            'block' => 'A',
+        ]);
+
+        $category = ComplaintCategory::create([
+            'name' => 'Academic Concern',
+            'resolution_deadline_days' => 15,
+            'is_active' => true,
+        ]);
+
+        $complaint = Complaint::create([
+            'reference_number' => Complaint::generateReferenceNumber(),
+            'student_id' => $studentProfile->id,
+            'category_id' => $category->id,
+            'subject_title' => 'Fifteen day policy check',
+            'description' => 'Deadline should start at submission.',
+            'is_anonymous' => false,
+            'status' => Complaint::STATUS_PENDING,
+        ]);
+
+        $ticket = Ticket::create([
+            'complaint_id' => $complaint->id,
+            'status' => Ticket::STATUS_PENDING,
+            'deadline' => now()->addDays(15),
+        ]);
+
+        $this->assertNotNull($ticket->deadline);
+        $this->assertSame(15, $ticket->remainingDays());
+        $this->assertSame(
+            now()->copy()->addDays(15)->startOfDay()->format('Y-m-d'),
+            $ticket->deadline->copy()->startOfDay()->format('Y-m-d')
+        );
+
+        Carbon::setTestNow();
+    }
+
+    public function test_ticket_card_badge_counts_other_user_messages(): void
+    {
+        $studentUser = User::factory()->create([
+            'role' => User::ROLE_STUDENT,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+
+        $studentProfile = Student::create([
+            'user_id' => $studentUser->id,
+            'student_id' => 'S2004',
+            'department' => 'IT',
+            'course' => 'BSIT',
+            'year_level' => '2nd Year',
+            'block' => 'A',
+        ]);
+
+        $otherUser = User::factory()->create([
+            'role' => User::ROLE_RECIPIENT,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+
+        $category = ComplaintCategory::create([
+            'name' => 'Academic Concern',
+            'resolution_deadline_days' => 3,
+            'is_active' => true,
+        ]);
+
+        $complaint = Complaint::create([
+            'reference_number' => Complaint::generateReferenceNumber(),
+            'student_id' => $studentProfile->id,
+            'category_id' => $category->id,
+            'subject_title' => 'Unread activity count',
+            'description' => 'Should show five new messages from others.',
+            'is_anonymous' => false,
+            'status' => Complaint::STATUS_PENDING,
+        ]);
+
+        $ticket = Ticket::create([
+            'complaint_id' => $complaint->id,
+            'status' => Ticket::STATUS_PENDING,
+        ]);
+
+        $thread = $ticket->thread()->create(['is_active' => true]);
+
+        for ($i = 0; $i < 5; $i++) {
+            ThreadMessage::create([
+                'thread_id' => $thread->id,
+                'sender_id' => $otherUser->id,
+                'content' => "Message {$i}",
+            ]);
+            AuditLog::log($ticket->id, 'message_posted', $otherUser->id, "Recipient posted a reply message.");
+        }
+
+        $this->actingAs($studentUser)
+            ->get(route('student.complaints.index'))
+            ->assertOk()
+            ->assertSee('5');
+    }
+
+    public function test_recipient_ticket_badge_clears_when_ticket_is_explicitly_marked_read(): void
+    {
+        $studentUser = User::factory()->create([
+            'role' => User::ROLE_STUDENT,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+
+        $studentProfile = Student::create([
+            'user_id' => $studentUser->id,
+            'student_id' => 'S2007',
+            'department' => 'IT',
+            'course' => 'BSIT',
+            'year_level' => '2nd Year',
+            'block' => 'A',
+        ]);
+
+        $recipientUser = User::factory()->create([
+            'role' => User::ROLE_RECIPIENT,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+
+        $recipient = Recipient::create([
+            'user_id' => $recipientUser->id,
+            'staff_id' => 'R1007',
+            'department' => 'Student Affairs',
+            'designation' => 'Officer',
+        ]);
+
+        $category = ComplaintCategory::create([
+            'name' => 'Academic Concern',
+            'resolution_deadline_days' => 3,
+            'is_active' => true,
+        ]);
+
+        $complaint = Complaint::create([
+            'reference_number' => Complaint::generateReferenceNumber(),
+            'student_id' => $studentProfile->id,
+            'category_id' => $category->id,
+            'subject_title' => 'Explicitly marked read',
+            'description' => 'The ticket should stay clear if it was already marked read.',
+            'is_anonymous' => false,
+            'status' => Complaint::STATUS_PENDING,
+        ]);
+
+        $ticket = Ticket::create([
+            'complaint_id' => $complaint->id,
+            'status' => Ticket::STATUS_PENDING,
+            'assigned_to' => $recipientUser->id,
+        ]);
+
+        $thread = $ticket->thread()->create(['is_active' => true]);
+
+        ThreadMessage::create([
+            'thread_id' => $thread->id,
+            'sender_id' => $studentUser->id,
+            'content' => 'This message was read previously',
+        ]);
+
+        $recipientUser->update([
+            'recipient_ticket_read_ids' => [(string) $complaint->id],
+            'recipient_ticket_last_read_at' => [],
+        ]);
+
+        $this->actingAs($recipientUser)
+            ->get(route('recipient.tickets.index'))
+            ->assertOk()
+            ->assertDontSee('>1<');
+    }
+
+    public function test_recipient_ticket_badge_clears_after_opening_ticket(): void
+    {
+        $studentUser = User::factory()->create([
+            'role' => User::ROLE_STUDENT,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+
+        $studentProfile = Student::create([
+            'user_id' => $studentUser->id,
+            'student_id' => 'S2006',
+            'department' => 'IT',
+            'course' => 'BSIT',
+            'year_level' => '2nd Year',
+            'block' => 'A',
+        ]);
+
+        $recipientUser = User::factory()->create([
+            'role' => User::ROLE_RECIPIENT,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+
+        $recipient = Recipient::create([
+            'user_id' => $recipientUser->id,
+            'staff_id' => 'R1006',
+            'department' => 'Student Affairs',
+            'designation' => 'Officer',
+        ]);
+
+        $category = ComplaintCategory::create([
+            'name' => 'Academic Concern',
+            'resolution_deadline_days' => 3,
+            'is_active' => true,
+        ]);
+
+        $complaint = Complaint::create([
+            'reference_number' => Complaint::generateReferenceNumber(),
+            'student_id' => $studentProfile->id,
+            'category_id' => $category->id,
+            'subject_title' => 'Badge clears after open',
+            'description' => 'Should clear once opened.',
+            'is_anonymous' => false,
+            'status' => Complaint::STATUS_PENDING,
+        ]);
+
+        $ticket = Ticket::create([
+            'complaint_id' => $complaint->id,
+            'status' => Ticket::STATUS_PENDING,
+            'assigned_to' => $recipientUser->id,
+        ]);
+
+        $thread = $ticket->thread()->create(['is_active' => true]);
+
+        ThreadMessage::create([
+            'thread_id' => $thread->id,
+            'sender_id' => $studentUser->id,
+            'content' => 'Unread message for recipient',
+        ]);
+
+        $this->actingAs($recipientUser)
+            ->get(route('recipient.tickets.index'))
+            ->assertOk()
+            ->assertSee('1');
+
+        $this->actingAs($recipientUser)
+            ->get(route('recipient.tickets.show', $complaint))
+            ->assertOk();
+
+        $this->actingAs($recipientUser)
+            ->get(route('recipient.tickets.index'))
+            ->assertOk()
+            ->assertDontSee('>1<');
+    }
+
+    public function test_new_message_updates_ticket_recency(): void
+    {
+        /** @var User $admin */
+        $admin = User::factory()->create([
+            'role' => User::ROLE_SDS_ADMIN,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+
+        /** @var User $studentUser */
+        $studentUser = User::factory()->create([
+            'role' => User::ROLE_STUDENT,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+
+        $studentProfile = Student::create([
+            'user_id' => $studentUser->id,
+            'student_id' => 'S2003',
+            'department' => 'IT',
+            'course' => 'BSIT',
+            'year_level' => '2nd Year',
+            'block' => 'A',
+        ]);
+
+        $category = ComplaintCategory::create([
+            'name' => 'Academic Concern',
+            'resolution_deadline_days' => 3,
+            'is_active' => true,
+        ]);
+
+        $complaint = Complaint::create([
+            'reference_number' => Complaint::generateReferenceNumber(),
+            'student_id' => $studentProfile->id,
+            'category_id' => $category->id,
+            'subject_title' => 'Recency test',
+            'description' => 'This should update ticket time.',
+            'is_anonymous' => false,
+            'status' => Complaint::STATUS_PENDING,
+        ]);
+
+        $ticket = Ticket::create([
+            'complaint_id' => $complaint->id,
+            'status' => Ticket::STATUS_PENDING,
+            'assigned_to' => null,
+        ]);
+
+        $ticket->thread()->create(['is_active' => true]);
+
+        $olderUpdatedAt = Carbon::parse('2026-01-01 08:00:00');
+        Carbon::setTestNow($olderUpdatedAt);
+        $ticket->touch();
+        $before = $ticket->fresh()->updated_at;
+
+        Carbon::setTestNow(Carbon::parse('2026-01-01 08:10:00'));
+        $this->actingAs($studentUser)
+            ->post(route('student.complaints.reply', $complaint), [
+                'content' => 'This message should bump the ticket to the top.',
+            ]);
+
+        Carbon::setTestNow();
+        $ticket->refresh();
+
+        $this->assertTrue($ticket->updated_at->greaterThan($before));
     }
 
     public function test_thread_becomes_read_only_after_ticket_closure(): void

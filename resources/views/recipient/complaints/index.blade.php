@@ -1,198 +1,74 @@
-<x-app-layout>
+<x-app-layout :role="'recipient'" title="Assigned Tickets">
+    <section>
+        <form method="GET" action="{{ route('recipient.tickets.index') }}" data-ticket-filter-form>
+            <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div class="relative min-w-0 flex-1">
+                    <x-icons.search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <label for="ticket-search" class="sr-only">Search tickets</label>
+                    <input id="ticket-search" name="search" value="{{ request('search') }}" autocomplete="off" placeholder="Search ticket ID or subject title" class="h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 text-sm shadow-sm outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-ring" />
+                </div>
 
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Assigned Complaints
-        </h2>
-    </x-slot>
-
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-
-            <!-- Filters Section -->
-            <div class="bg-white shadow-sm rounded-lg mb-6">
-                <div class="p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Search & Filter</h3>
-
-                    <form method="GET" action="{{ route('recipient.complaints.index') }}" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <!-- Search Reference Number -->
-                            <div>
-                                <label for="search_reference" class="block text-sm font-medium text-gray-700 mb-2">
-                                    Reference Number
-                                </label>
-                                <input type="text"
-                                       id="search_reference"
-                                       name="search_reference"
-                                       value="{{ request()->input('search_reference') }}"
-                                       placeholder="e.g. SOS-2026-000001"
-                                       class="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            </div>
-
-                            <!-- Search Student Name -->
-                            <div>
-                                <label for="search_student" class="block text-sm font-medium text-gray-700 mb-2">
-                                    Student Name
-                                </label>
-                                <input type="text"
-                                       id="search_student"
-                                       name="search_student"
-                                       value="{{ request()->input('search_student') }}"
-                                       placeholder="Enter student name"
-                                       class="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            </div>
-
-                            <!-- Search Subject -->
-                            <div>
-                                <label for="search_subject" class="block text-sm font-medium text-gray-700 mb-2">
-                                    Subject
-                                </label>
-                                <input type="text"
-                                       id="search_subject"
-                                       name="search_subject"
-                                       value="{{ request()->input('search_subject') }}"
-                                       placeholder="Enter subject"
-                                       class="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            </div>
-
-                            <!-- Filter by Status -->
-                            <div>
-                                <label for="status_filter" class="block text-sm font-medium text-gray-700 mb-2">
-                                    Status
-                                </label>
-                                <select id="status_filter"
-                                        name="status_filter"
-                                        class="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">All Statuses</option>
-                                    <option value="pending" {{ request()->input('status_filter') === 'pending' ? 'selected' : '' }}>
-                                        Pending
-                                    </option>
-                                    <option value="in_progress" {{ request()->input('status_filter') === 'in_progress' ? 'selected' : '' }}>
-                                        In Progress
-                                    </option>
-                                    <option value="resolved" {{ request()->input('status_filter') === 'resolved' ? 'selected' : '' }}>
-                                        Resolved
-                                    </option>
-                                    <option value="rejected" {{ request()->input('status_filter') === 'rejected' ? 'selected' : '' }}>
-                                        Rejected
-                                    </option>
-                                    <option value="closed" {{ request()->input('status_filter') === 'closed' ? 'selected' : '' }}>
-                                        Closed
-                                    </option>
-                                </select>
-                            </div>
+                @php
+                    $statusLabels = ['' => 'All status', 'in_progress' => 'In Progress', 'escalated' => 'Escalated', 'resolved' => 'Resolved', 'closed' => 'Closed'];
+                    $sortLabels = ['newest' => 'Sort by newest date', 'oldest' => 'Sort by oldest date', 'deadline_urgency' => 'Sort by deadline urgency'];
+                    $selectedStatus = request('status_filter', '');
+                    $selectedSort = request('sort', 'newest');
+                @endphp
+                <div class="flex flex-row items-center gap-2">
+                    <details x-data="{}" class="group relative w-56 shrink-0" x-on:click.outside="$el.removeAttribute('open')">
+                        <summary id="sort-filter" class="flex h-9 w-full cursor-pointer list-none items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none ring-offset-background transition-colors hover:bg-muted focus:ring-1 focus:ring-ring [&::-webkit-details-marker]:hidden">
+                            <span class="truncate">{{ $sortLabels[$selectedSort] ?? 'Sort by newest date' }}</span>
+                            <svg class="h-4 w-4 shrink-0 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                        </summary>
+                        <div class="absolute top-full right-0 z-50 mt-1 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95">
+                            @foreach ($sortLabels as $value => $label)
+                                <a data-ticket-filter-link href="{{ route('recipient.tickets.index', array_filter(['search' => request('search'), 'status_filter' => request('status_filter'), 'sort' => $value])) }}" class="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-xs outline-none transition-colors {{ $selectedSort === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
+                                    @if ($selectedSort === $value)
+                                        <x-icons.check class="absolute right-2 h-4 w-4 text-primary" />
+                                    @endif
+                                    {{ $label }}
+                                </a>
+                            @endforeach
                         </div>
+                    </details>
 
-                        <div class="flex gap-2">
-                            <button type="submit"
-                                    class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg">
-                                Search
-                            </button>
-                            <a href="{{ route('recipient.complaints.index') }}"
-                               class="inline-block bg-gray-300 hover:bg-gray-400 text-gray-900 font-semibold px-6 py-2 rounded-lg">
-                                Clear
-                            </a>
+                    <details x-data="{}" class="group relative w-32 shrink-0" x-on:click.outside="$el.removeAttribute('open')">
+                        <summary id="status-filter" class="flex h-9 w-full cursor-pointer list-none items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none ring-offset-background transition-colors hover:bg-muted focus:ring-1 focus:ring-ring [&::-webkit-details-marker]:hidden">
+                            <span class="truncate">{{ $statusLabels[$selectedStatus] ?? 'All statuses' }}</span>
+                            <svg class="h-4 w-4 shrink-0 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                        </summary>
+                        <div class="absolute top-full right-0 z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95">
+                            @foreach ($statusLabels as $value => $label)
+                                <a data-ticket-filter-link href="{{ route('recipient.tickets.index', array_filter(['search' => request('search'), 'status_filter' => $value, 'sort' => request('sort', 'newest')])) }}" class="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-xs outline-none transition-colors {{ $selectedStatus === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
+                                    @if ($selectedStatus === $value)
+                                        <x-icons.check class="absolute right-2 h-4 w-4 text-primary" />
+                                    @endif
+                                    {{ $label }}
+                                </a>
+                            @endforeach
                         </div>
-                    </form>
+                    </details>
                 </div>
             </div>
+        </form>
 
-            <!-- Complaints Table -->
-            @if ($complaints->count() > 0)
-                <div class="bg-white shadow-sm rounded-lg overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead>
-                                <tr class="border-b border-gray-200 bg-gray-50">
-                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                                        Reference Number
-                                    </th>
-                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                                        Student
-                                    </th>
-                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                                        Category
-                                    </th>
-                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                                        Subject
-                                    </th>
-                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                                        Status
-                                    </th>
-                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                                        Deadline
-                                    </th>
-                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                                        Submitted Date
-                                    </th>
-                                    <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                                        Actions
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200">
-                                @foreach ($complaints as $ticket)
-                                    <tr class="hover:bg-gray-50 transition-colors">
-                                        <td class="px-6 py-4 text-sm font-mono font-semibold text-gray-900">
-                                            {{ $ticket->complaint->reference_number }}
-                                        </td>
-                                        <td class="px-6 py-4 text-sm text-gray-900">
-                                            {{ $ticket->complaint->student->user->name }}
-                                        </td>
-                                        <td class="px-6 py-4 text-sm text-gray-900">
-                                            {{ $ticket->complaint->category->name }}
-                                        </td>
-                                        <td class="px-6 py-4 text-sm text-gray-900">
-                                            {{ Str::limit($ticket->complaint->subject_title, 40) }}
-                                        </td>
-                                        <td class="px-6 py-4 text-sm">
-                                            @php
-                                                $statusBadges = [
-                                                    'pending' => 'bg-yellow-100 text-yellow-800 border border-yellow-300',
-                                                    'in_progress' => 'bg-blue-100 text-blue-800 border border-blue-300',
-                                                    'resolved' => 'bg-green-100 text-green-800 border border-green-300',
-                                                    'rejected' => 'bg-red-100 text-red-800 border border-red-300',
-                                                    'closed' => 'bg-gray-100 text-gray-800 border border-gray-300',
-                                                ];
-                                                $badgeClass = $statusBadges[$ticket->status] ?? 'bg-gray-100 text-gray-800 border border-gray-300';
-                                            @endphp
-                                            <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold {{ $badgeClass }}">
-                                                {{ str_replace('_', ' ', $ticket->status) }}
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4 text-sm text-gray-900">
-                                            @if ($ticket->deadline)
-                                                {{ $ticket->deadline->format('M d, Y') }}
-                                            @else
-                                                <span class="text-gray-400">N/A</span>
-                                            @endif
-                                        </td>
-                                        <td class="px-6 py-4 text-sm text-gray-900">
-                                            {{ $ticket->complaint->created_at->format('M d, Y') }}
-                                        </td>
-                                        <td class="px-6 py-4 text-sm">
-                                            <a href="{{ route('recipient.complaints.show', $ticket->complaint) }}"
-                                               class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg text-xs">
-                                                View
-                                            </a>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
+        <div data-ticket-results>
+    <p class="mb-2 text-xs text-muted-foreground">{{ $complaints->total() }} ticket(s)</p>
+        @if ($complaints->count() > 0)
+            <ul class="grid gap-0.5">
+                @foreach ($complaints as $ticket)
+                    <li>
+                        <x-ticket-card :item="$ticket" role="recipient" :first="$loop->first" :last="$loop->last" />
+                    </li>
+                @endforeach
+            </ul>
 
-                    <!-- Pagination -->
-                    <div class="border-t border-gray-200 px-6 py-4">
-                        {{ $complaints->links() }}
-                    </div>
-                </div>
-            @else
-                <div class="bg-white shadow-sm rounded-lg p-6 text-center">
-                    <p class="text-gray-500">No complaints found.</p>
-                </div>
+            @if ($complaints->hasPages())
+                <div class="mt-6">{{ $complaints->links() }}</div>
             @endif
-
+        @else
+            <p class="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">No tickets are currently routed to your office.</p>
+        @endif
         </div>
-    </div>
+    </section>
 </x-app-layout>

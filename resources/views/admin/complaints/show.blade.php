@@ -1,203 +1,66 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Complaint Details — {{ $complaint->reference_number }}
-        </h2>
-    </x-slot>
+<x-app-layout :role="'admin'" title="Ticket Details">
+    @if ($errors->any())
+        <div class="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+            <ul class="list-inside list-disc space-y-1">
+                @foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach
+            </ul>
+        </div>
+    @endif
 
-    <div class="py-12">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            @if (session('success'))
-                <div class="mb-6 rounded-lg bg-green-100 border border-green-300 text-green-800 px-4 py-3">
-                    {{ session('success') }}
+    <div class="mb-4 flex items-center justify-between gap-3">
+        <a href="{{ route('admin.tickets.my') }}" aria-label="Back" onclick="event.preventDefault(); if (window.history.length > 1) { window.history.back(); } else { window.location.href = '{{ route('admin.tickets.my') }}'; }" class="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:text-base"><span aria-hidden="true" class="scale-y-150 text-lg leading-none">&lt;</span> Back</a>
+    </div>
+
+    @if ($complaint->ticket)
+        <div class="grid gap-5">
+            <div class="grid content-start gap-3"><x-ticket-info-panel :ticket="$complaint->ticket" :show-filed-by="true" :show-closed-at="true" /></div>
+
+            @if ($complaint->ticket->classification === 'needs_resolution' && $complaint->ticket->current_handler_id === Auth::id())
+                <div class="surface p-4 sm:p-6">
+                    <h3 class="mb-4 font-display text-base font-bold">My ticket actions</h3>
+                    @if ($complaint->ticket->status === 'assigned')
+                        <form method="POST" action="{{ route('admin.tickets.acknowledge', $complaint->ticket) }}" class="grid gap-3">
+                            @csrf
+                            <div>
+                                <label for="admin-resolution-time" class="text-sm font-semibold text-foreground">Resolution Time / SLA</label>
+                                <div class="mt-2 flex items-center gap-2">
+                                    <input id="admin-resolution-time" name="resolution_time" type="number" min="1" max="15" step="1" inputmode="numeric" required class="h-9 w-24 rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring">
+                                    <span class="text-sm text-muted-foreground">days</span>
+                                </div>
+                            </div>
+                            <button type="submit" class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-green-800 px-4 text-sm font-semibold text-white transition-colors hover:bg-green-900"><x-icons.check class="h-4 w-4" /> Acknowledge Ticket</button>
+                        </form>
+                    @elseif ($complaint->ticket->status === 'in_progress')
+                        <form method="POST" action="{{ route('admin.tickets.resolve', $complaint->ticket) }}" class="grid gap-3">@csrf<textarea name="resolution_message" rows="4" required placeholder="Describe the resolution provided to the student." class="w-full rounded-xl border border-input bg-muted px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"></textarea><button type="submit" class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Mark as Resolved</button></form>
+                    @elseif ($complaint->ticket->status === 'resolved')
+                        <div class="grid gap-2 sm:grid-cols-2">
+                            <form method="POST" action="{{ route('admin.tickets.not-yet-resolved', $complaint->ticket) }}">@csrf<button type="submit" class="inline-flex h-10 w-full items-center justify-center rounded-md border border-primary px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary-soft">Not yet Resolved</button></form>
+                            <form method="POST" action="{{ route('admin.tickets.close', $complaint->ticket) }}">@csrf<button type="submit" class="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Close Ticket</button></form>
+                        </div>
+                    @else
+                        <p class="text-sm text-muted-foreground">This ticket is closed. No further action is available.</p>
+                    @endif
                 </div>
             @endif
 
-            <div class="bg-white shadow-sm rounded-lg">
-                <div class="p-6 space-y-6">
-                    <div>
-                        <p class="text-sm text-gray-500">Reference Number</p>
-                        <p class="text-2xl font-bold text-gray-900 font-mono">{{ $complaint->reference_number }}</p>
+            @if ($complaint->ticket->classification === 'needs_resolution')
+                <div class="grid content-start gap-3"><x-ticket-thread :ticket="$complaint->ticket" viewerRole="admin" /></div>
+            @endif
+
+            <div class="surface p-4 sm:p-6">
+                <h3 class="mb-4 font-display text-lg font-bold">Audit Trail</h3>
+                @if ($complaint->ticket->auditLogs && $complaint->ticket->auditLogs->count())
+                    <div class="space-y-3">
+                        @foreach ($complaint->ticket->auditLogs as $log)
+                            <div class="flex items-start gap-4"><div class="w-36 text-sm text-gray-500"><div>{{ $log->created_at->copy()->setTimezone('Asia/Manila')->format('M d, Y') }}</div><div class="mt-1">{{ $log->created_at->copy()->setTimezone('Asia/Manila')->format('h:i A') }}</div></div><div class="flex-1 rounded-lg border bg-gray-50 p-3"><div class="flex items-center justify-between"><div class="font-semibold text-gray-900">{{ str_replace('_', ' ', $log->action) }}</div><div class="text-sm text-gray-500">{{ $log->performer?->display_name ?? 'System' }}</div></div><div class="mt-2 text-sm text-gray-700">{{ $log->details }}</div></div></div>
+                        @endforeach
                     </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div>
-                            <p class="text-sm text-gray-500">Status</p>
-                            <p class="font-semibold text-gray-900 capitalize mt-2">{{ str_replace('_', ' ', $complaint->status) }}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Submitted On</p>
-                            <p class="font-semibold text-gray-900 mt-2">{{ $complaint->created_at->format('M d, Y \a\t h:i A') }}</p>
-                        </div>
-                    </div>
-
-                    <div>
-                        <p class="text-sm text-gray-500">Student</p>
-                        <p class="font-semibold text-gray-900 mt-2">{{ $complaint->student?->user?->name ?? '—' }}</p>
-                        @if ($complaint->student)
-                            <p class="text-sm text-gray-600">Student ID: {{ $complaint->student->student_id }}</p>
-                        @endif
-                    </div>
-
-                    <div>
-                        <p class="text-sm text-gray-500">Category</p>
-                        <p class="font-semibold text-gray-900 mt-2">{{ $complaint->category?->name ?? '—' }}</p>
-                    </div>
-
-                    <div>
-                        <p class="text-sm text-gray-500">Subject</p>
-                        <p class="text-gray-900 mt-2">{{ $complaint->subject_title }}</p>
-                    </div>
-
-                    <div>
-                        <p class="text-sm text-gray-500">Description</p>
-                        <p class="text-gray-900 whitespace-pre-wrap mt-2">{{ $complaint->description }}</p>
-                    </div>
-
-                    @if ($complaint->file_attachment)
-                        <div>
-                            <p class="text-sm text-gray-500">Attachment</p>
-                            <a href="{{ asset('storage/'.$complaint->file_attachment) }}" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold mt-2 inline-block">
-                                View Attachment
-                            </a>
-                        </div>
-                    @endif
-
-                    @if ($complaint->ticket)
-                        <div class="border-t pt-6 space-y-4">
-                            <h3 class="text-lg font-bold text-gray-900">Ticket Information</h3>
-
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                <div>
-                                    <p class="text-sm text-gray-500">Ticket Status</p>
-                                    <p class="font-semibold text-gray-900 mt-2 capitalize">{{ str_replace('_', ' ', $complaint->ticket->status) }}</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-gray-500">Assigned To</p>
-                                    <p class="font-semibold text-gray-900 mt-2">{{ $complaint->ticket->assignee?->name ?? '—' }}</p>
-                                </div>
-                            </div>
-
-                            <div>
-                                <p class="text-sm text-gray-500">Deadline</p>
-                                <p class="font-semibold text-gray-900 mt-2">{{ $complaint->ticket->deadline?->format('M d, Y \a\t h:i A') ?? 'N/A' }}</p>
-                            </div>
-                        </div>
-
-                        <div class="border-t pt-6 space-y-4">
-                            <h3 class="text-lg font-bold text-gray-900">Conversation Preview</h3>
-
-                            @php
-                                $messages = $complaint->ticket->thread?->messages ?? collect();
-                            @endphp
-
-                            @if ($messages->count() > 0)
-                                <div class="space-y-4">
-                                    @foreach ($messages as $message)
-                                        <div class="bg-gray-50 rounded-lg p-4 border">
-                                            <div class="flex items-start justify-between gap-4">
-                                                <div>
-                                                    <p class="font-semibold text-gray-900">{{ $message->sender?->name ?? 'Unknown' }}</p>
-                                                    <p class="text-sm text-gray-500">{{ $message->sender?->role ?? 'user' }}</p>
-                                                </div>
-                                                <div class="text-sm text-gray-500">{{ $message->created_at->format('M d, Y h:i A') }}</div>
-                                            </div>
-                                            <div class="mt-3 text-gray-800 whitespace-pre-wrap">{{ $message->content }}</div>
-                                            @if ($message->file_attachment)
-                                                <a href="{{ asset('storage/'.$message->file_attachment) }}" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold mt-2 inline-block">View Attachment</a>
-                                            @endif
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @else
-                                <p class="text-gray-500">No conversation yet.</p>
-                            @endif
-
-                            @if ($complaint->ticket && $complaint->ticket->thread)
-                                @if ($complaint->ticket->thread->is_active)
-                                    <!-- Message Form -->
-                                    <div class="bg-gray-50 rounded-lg p-4 border mt-6">
-                                        <h4 class="font-semibold text-gray-900 mb-4">Send a Message</h4>
-                                        <form action="{{ route('admin.complaints.reply', $complaint) }}" method="POST" enctype="multipart/form-data">
-                                            @csrf
-                                            <div class="mb-4">
-                                                <label for="content" class="block text-gray-700 font-semibold mb-2">Message</label>
-                                                <textarea
-                                                    id="content"
-                                                    name="content"
-                                                    rows="4"
-                                                    required
-                                                    class="w-full border border-gray-300 rounded-lg p-3 text-gray-900 bg-white"
-                                                    placeholder="Type your message here..."></textarea>
-                                                <x-input-error :messages="$errors->get('content')" class="mt-2" />
-                                            </div>
-
-                                            <div class="mb-4">
-                                                <label for="file_attachment" class="block text-gray-700 font-semibold mb-2">Attachment (optional)</label>
-                                                <input
-                                                    type="file"
-                                                    id="file_attachment"
-                                                    name="file_attachment"
-                                                    accept=".pdf,.jpg,.jpeg,.png"
-                                                    class="w-full border border-gray-300 rounded-lg p-3 text-gray-900 bg-white">
-                                                <p class="text-xs text-gray-500 mt-1">Allowed: PDF, JPG, PNG (max 5 MB)</p>
-                                                <x-input-error :messages="$errors->get('file_attachment')" class="mt-2" />
-                                            </div>
-
-                                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg">
-                                                Send Message
-                                            </button>
-                                        </form>
-                                    </div>
-                                @else
-                                    <div class="bg-gray-100 rounded-lg p-4 border border-gray-300 mt-6">
-                                        <p class="text-gray-600 font-semibold">This conversation has been closed.</p>
-                                        <p class="text-gray-500 text-sm mt-1">No new messages can be sent at this time.</p>
-                                    </div>
-                                @endif
-                            @endif
-                        </div>
-
-
-                        <div class="border-t pt-6 space-y-4">
-                            <h3 class="text-lg font-bold text-gray-900">Audit Trail</h3>
-
-                            @if ($complaint->ticket->auditLogs && $complaint->ticket->auditLogs->count())
-                                <div class="space-y-3">
-                                    @foreach ($complaint->ticket->auditLogs as $log)
-                                        <div class="flex items-start gap-4">
-                                            <div class="text-sm text-gray-500 w-36">
-                                                <div>{{ $log->created_at->format('M d, Y') }}</div>
-                                                <div class="mt-1">{{ $log->created_at->format('h:i A') }}</div>
-                                            </div>
-                                            <div class="flex-1 bg-gray-50 rounded-lg p-3 border">
-                                                <div class="flex items-center justify-between">
-                                                    <div class="font-semibold text-gray-900">{{ str_replace('_', ' ', $log->action) }}</div>
-                                                    <div class="text-sm text-gray-500">{{ $log->performer?->name ?? 'System' }}</div>
-                                                </div>
-                                                <div class="text-gray-700 text-sm mt-2">{{ $log->details }}</div>
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @else
-                                <p class="text-gray-500">No activity recorded.</p>
-                            @endif
-                        </div>
-                    @else
-                        <div class="border-t pt-6">
-                            <p class="text-gray-500">No ticket has been generated for this complaint yet.</p>
-                        </div>
-                    @endif
-
-                    <div class="flex gap-4 pt-2">
-                        <a href="{{ route('admin.complaints.index') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold">
-                            Back to Queue
-                        </a>
-                    </div>
-                </div>
+                @else
+                    <p class="text-gray-500">No activity recorded.</p>
+                @endif
             </div>
         </div>
-    </div>
+    @else
+        <div class="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">No ticket has been generated for this complaint yet.</div>
+    @endif
 </x-app-layout>
-

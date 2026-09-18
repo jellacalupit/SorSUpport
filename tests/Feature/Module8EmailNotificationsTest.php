@@ -8,6 +8,7 @@ use App\Models\EmailNotification;
 use App\Models\Student;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Notifications\AccountUpdateNotification;
 use App\Services\EmailNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
@@ -83,6 +84,26 @@ class Module8EmailNotificationsTest extends TestCase
 
             $this->assertNotNull($notification->sent_at);
         }
+    }
+
+    public function test_account_update_notification_uses_a_safe_view_data_key(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'student@example.com',
+            'role' => User::ROLE_STUDENT,
+        ]);
+
+        $mailMessage = (new AccountUpdateNotification(
+            'Account update',
+            'Your account settings were updated successfully.'
+        ))->toMail($user);
+
+        $this->assertSame('emails.account-update', $mailMessage->view);
+        $this->assertSame(
+            'Your account settings were updated successfully.',
+            $mailMessage->viewData['email_message'] ?? null,
+        );
+        $this->assertArrayNotHasKey('message', $mailMessage->viewData);
     }
 
     public function test_daily_reminders_are_sent_to_current_handler_for_tickets_nearing_deadline(): void

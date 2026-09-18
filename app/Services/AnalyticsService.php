@@ -160,6 +160,81 @@ class AnalyticsService
         ];
     }
 
+    public function getDashboardData(array $filters = []): array
+    {
+        $tickets = $this->filterTickets(Ticket::query(), $filters)
+            ->with(['complaint.category', 'assignee.recipient', 'currentHandler.recipient', 'auditLogs'])
+            ->get();
+        $categories = ComplaintCategory::query()->orderBy('name')->get();
+        $categoryNames = $categories->pluck('name')->values();
+        $resolvedStatuses = [Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED];
+        $resolved = $tickets->whereIn('status', $resolvedStatuses);
+        $resolutionHours = $resolved->filter(fn ($ticket) => $ticket->resolved_at && $ticket->complaint?->created_at)
+            ->map(fn ($ticket) => $ticket->complaint->created_at->floatDiffInHours($ticket->resolved_at));
+        $assignedDeadlines = $tickets->filter(fn ($ticket) => $ticket->deadline);
+        $withinSla = $assignedDeadlines->filter(fn ($ticket) => $ticket->resolved_at && $ticket->resolved_at->lte($ticket->deadline))->count();
+        $breached = $assignedDeadlines->filter(fn ($ticket) => ($ticket->resolved_at && $ticket->resolved_at->gt($ticket->deadline)) || (! $ticket->resolved_at && now()->gt($ticket->deadline)))->count();
+        $approaching = $assignedDeadlines->filter(fn ($ticket) => ! $ticket->resolved_at && now()->lte($ticket->deadline) && now()->diffInDays($ticket->deadline, false) <= 2)->count();
+        $escalationEvents = $tickets->flatMap->auditLogs->where('action', 'ticket_escalated');
+        $categoryCounts = $tickets->groupBy(fn ($ticket) => $ticket->complaint?->category?->name ?? 'Uncategorized')->map->count();
+        $statusCounts = $tickets->groupBy('status')->map->count();
+        $period = $filters['period'] ?? 'daily';
+        [$start, $end] = $this->buildPeriodRange($filters, $period === 'monthly' ? 'month' : ($period === 'weekly' ? 'week' : 'day'));
+        $submittedSeries = $this->seriesForTickets($tickets, 'complaint.created_at', $period, $start, $end);
+        $resolvedSeries = $this->seriesForTickets($resolved, 'resolved_at', $period, $start, $end);
+        $recipientRows = $tickets->filter(fn ($ticket) => $ticket->assignee?->isRecipient() || $ticket->currentHandler?->isRecipient())
+            ->groupBy(fn ($ticket) => ($ticket->assignee ?? $ticket->currentHandler)?->id)
+            ->map(function ($group) use ($resolvedStatuses) {
+                $user = $group->first()->assignee ?? $group->first()->currentHandler;
+                $resolved = $group->whereIn('status', $resolvedStatuses);
+                $durations = $resolved->filter(fn ($ticket) => $ticket->resolved_at && $ticket->complaint?->created_at)->map(fn ($ticket) => $ticket->complaint->created_at->floatDiffInHours($ticket->resolved_at));
+                $withDeadline = $group->filter(fn ($ticket) => $ticket->deadline);
+                $within = $withDeadline->filter(fn ($ticket) => $ticket->resolved_at && $ticket->resolved_at->lte($ticket->deadline))->count();
+                return ['name' => $user?->table_name ?? 'Unassigned', 'assigned' => $group->count(), 'resolved' => $resolved->count(), 'average' => $durations->isNotEmpty() ? round($durations->avg() / 24, 1) : 0, 'sla' => $withDeadline->count() ? round($within / $withDeadline->count() * 100) : 0];
+            })->values();
+        $classificationCounts = $tickets->groupBy(fn ($ticket) => $ticket->classification ?: 'unclassified')->map->count();
+        $identified = $tickets->filter(fn ($ticket) => ! $ticket->complaint?->is_anonymous)->count();
+        $subjects = $tickets->groupBy(fn ($ticket) => $ticket->complaint?->subject_title ?: 'Untitled')->map->count()->sortDesc()->take(10);
+
+        return [
+            'tickets' => $tickets, 'categories' => $categories, 'categoryNames' => $categoryNames,
+            'total' => $tickets->count(), 'resolved' => $resolved->count(), 'resolutionRate' => $tickets->count() ? round($resolved->count() / $tickets->count() * 100) : 0,
+            'averageHours' => $resolutionHours->isNotEmpty() ? round($resolutionHours->avg(), 1) : 0, 'fastestHours' => $resolutionHours->min() ?? 0, 'longestHours' => $resolutionHours->max() ?? 0,
+            'sla' => ['assigned' => $assignedDeadlines->count(), 'within' => $withinSla, 'approaching' => $approaching, 'breached' => $breached, 'rate' => $assignedDeadlines->count() ? round($withinSla / $assignedDeadlines->count() * 100) : 0],
+            'volume' => ['labels' => $submittedSeries['labels'], 'submitted' => $submittedSeries['data'], 'resolved' => $resolvedSeries['data']],
+            'categoryCounts' => $categoryNames->mapWithKeys(fn ($name) => [$name => $categoryCounts[$name] ?? 0])->toArray(),
+            'statusCounts' => collect(['pending' => 'Pending', 'assigned' => 'In Progress', 'in_progress' => 'In Progress', 'escalated' => 'Escalated', 'resolved' => 'Resolved', 'closed' => 'Closed'])->mapWithKeys(fn ($label, $key) => [$label => ($statusCounts[$key] ?? 0)])->groupBy(fn ($count, $label) => $label)->map(fn ($values) => $values->sum())->toArray(),
+            'resolutionByCategory' => $this->resolutionByCategory($tickets, $categoryNames),
+            'escalations' => ['total' => $escalationEvents->count(), 'rate' => $tickets->count() ? round($escalationEvents->pluck('ticket_id')->unique()->count() / $tickets->count() * 100) : 0, 'averageLevel' => $escalationEvents->groupBy('ticket_id')->avg(fn ($events) => $events->count()) ?: 0, 'byCategory' => $escalationEvents->groupBy(fn ($log) => $tickets->firstWhere('id', $log->ticket_id)?->complaint?->category?->name ?? 'Uncategorized')->map->count()->toArray()],
+            'recipients' => $recipientRows, 'classification' => ['Needs Resolution' => $classificationCounts['needs_resolution'] ?? 0, 'Informational' => $classificationCounts['informational'] ?? 0, 'Invalid' => $classificationCounts['invalid'] ?? 0], 'submission' => ['Identified' => $identified, 'Anonymous' => $tickets->count() - $identified],
+            'subjects' => $subjects, 'insights' => $this->buildInsights($categoryCounts, $resolutionHours, $escalationEvents, $tickets, $identified),
+        ];
+    }
+
+    protected function seriesForTickets(Collection $tickets, string $field, string $period, Carbon $start, Carbon $end): array
+    {
+        $format = $period === 'monthly' ? 'Y-m' : ($period === 'weekly' ? 'o-W' : 'Y-m-d');
+        $values = $tickets->map(fn ($ticket) => data_get($ticket, $field))->filter()->groupBy(fn ($date) => $date->format($format))->map->count();
+        $labels = [];
+        $data = [];
+        $cursor = $start->copy();
+        $step = $period === 'monthly' ? 'addMonth' : ($period === 'weekly' ? 'addWeek' : 'addDay');
+        while ($cursor->lte($end)) { $labels[] = $cursor->format($format); $data[] = $values[$cursor->format($format)] ?? 0; $cursor->{$step}(); }
+        return ['labels' => $labels, 'data' => $data];
+    }
+
+    protected function resolutionByCategory(Collection $tickets, Collection $categoryNames): array
+    {
+        return $categoryNames->mapWithKeys(function ($name) use ($tickets) { $values = $tickets->filter(fn ($ticket) => ($ticket->complaint?->category?->name ?? 'Uncategorized') === $name && $ticket->resolved_at && $ticket->complaint?->created_at)->map(fn ($ticket) => $ticket->complaint->created_at->floatDiffInHours($ticket->resolved_at) / 24); return [$name => $values->isNotEmpty() ? round($values->avg(), 1) : 0]; })->toArray();
+    }
+
+    protected function buildInsights(Collection $categoryCounts, Collection $durations, Collection $escalations, Collection $tickets, int $identified): array
+    {
+        $topCategory = $categoryCounts->sortDesc()->keys()->first() ?? 'No category';
+        $anonymousRate = $tickets->count() ? round(($tickets->count() - $identified) / $tickets->count() * 100) : 0;
+        return [$topCategory . ' generated the highest number of tickets.', $durations->isNotEmpty() ? 'Resolved tickets averaged ' . round($durations->avg() / 24, 1) . ' days.' : 'Resolution timing will appear after tickets are resolved.', $escalations->isNotEmpty() ? $escalations->pluck('ticket_id')->unique()->count() . ' tickets required escalation.' : 'No escalated tickets in this period.', 'Anonymous submissions account for ' . $anonymousRate . '% of total tickets.'];
+    }
+
     public function getReportData(array $filters = []): array
     {
         return [
@@ -259,7 +334,19 @@ class AnalyticsService
 
     protected function filterTickets(Builder $query, array $filters): Builder
     {
-        return $query->whereHas('complaint', fn ($complaint) => $this->applyComplaintFilters($complaint, $filters));
+        $query->whereHas('complaint', fn ($complaint) => $this->applyComplaintFilters($complaint, $filters));
+
+        if (filled($filters['status'] ?? null)) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (filled($filters['recipient_id'] ?? null)) {
+            $query->where(function ($tickets) use ($filters) {
+                $tickets->where('assigned_to', $filters['recipient_id'])->orWhere('current_handler_id', $filters['recipient_id']);
+            });
+        }
+
+        return $query;
     }
 
     protected function applyComplaintFilters(Builder $query, array $filters): Builder

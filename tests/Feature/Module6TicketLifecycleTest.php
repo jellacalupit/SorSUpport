@@ -75,17 +75,12 @@ class Module6TicketLifecycleTest extends TestCase
             ]);
 
         $ticket->refresh();
-        $this->assertEquals(Ticket::STATUS_ASSIGNED, $ticket->status);
-
-        // Recipient acknowledges
-        $this->actingAs($recipientUser)
-            ->post(route('recipient.complaints.acknowledge', $complaint))
-            ->assertRedirect();
-
-        $ticket->refresh();
         $this->assertEquals(Ticket::STATUS_IN_PROGRESS, $ticket->status);
-        $this->assertNotNull($ticket->acknowledged_at);
-        $this->assertDatabaseHas('audit_logs', ['ticket_id' => $ticket->id, 'action' => 'ticket_acknowledged']);
+        $this->assertDatabaseHas('audit_logs', [
+            'ticket_id' => $ticket->id,
+            'action' => 'ticket_assigned',
+            'details' => "SDS Admin assigned the ticket {$complaint->reference_number} to {$recipientUser->display_name} for handling.",
+        ]);
 
         // Recipient resolves with a resolution message
         $this->actingAs($recipientUser)
@@ -113,5 +108,60 @@ class Module6TicketLifecycleTest extends TestCase
         $this->assertNotNull($ticket->closed_at);
         $this->assertFalse($ticket->thread->is_active);
         $this->assertDatabaseHas('email_notifications', ['ticket_id' => $ticket->id, 'type' => \App\Models\EmailNotification::TYPE_COMPLAINT_CLOSED]);
+    }
+
+    public function test_recipient_status_update_rejects_pending_state(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_SDS_ADMIN, 'email_verified_at' => now()]);
+        $studentUser = User::factory()->create(['role' => User::ROLE_STUDENT, 'email_verified_at' => now()]);
+        $recipientUser = User::factory()->create(['role' => User::ROLE_RECIPIENT, 'email_verified_at' => now()]);
+
+        $studentProfile = Student::create([
+            'user_id' => $studentUser->id,
+            'student_id' => 'S3002',
+            'department' => 'IT',
+            'course' => 'BSCS',
+            'year_level' => '3rd Year',
+            'block' => 'A',
+        ]);
+
+        $recipient = Recipient::create([
+            'user_id' => $recipientUser->id,
+            'staff_id' => 'R3002',
+            'department' => 'Student Affairs',
+            'designation' => 'Officer',
+        ]);
+
+        $category = ComplaintCategory::create([
+            'name' => 'General',
+            'resolution_deadline_days' => 5,
+            'is_active' => true,
+        ]);
+
+        $complaint = Complaint::create([
+            'reference_number' => Complaint::generateReferenceNumber(),
+            'student_id' => $studentProfile->id,
+            'category_id' => $category->id,
+            'subject_title' => 'Pending status test',
+            'description' => 'Attempting invalid recipient status.',
+            'is_anonymous' => false,
+            'status' => Complaint::STATUS_PENDING,
+        ]);
+
+        $ticket = Ticket::create([
+            'complaint_id' => $complaint->id,
+            'status' => Ticket::STATUS_ASSIGNED,
+            'assigned_to' => $recipient->id,
+        ]);
+
+        $this->actingAs($recipientUser)
+            ->patch(route('recipient.complaints.update-status', $complaint), [
+                'status' => 'pending',
+                'details' => 'This should be rejected.',
+            ])
+            ->assertSessionHasErrors('status');
+
+        $ticket->refresh();
+        $this->assertSame(Ticket::STATUS_ASSIGNED, $ticket->status);
     }
 }

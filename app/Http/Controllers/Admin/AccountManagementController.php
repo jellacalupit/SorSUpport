@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Imports\AccountsImport;
 use App\Models\Recipient;
 use App\Models\Student;
+use App\Models\AuditLog;
 use App\Models\User as AppUser;
+use App\Notifications\AccountUpdateNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
@@ -14,22 +16,101 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class AccountManagementController extends Controller
 {
-    /**
-     * Display all accounts.
-     */
-    public function index(): View
+    protected function normalizeMiddleName(mixed $middleName): string
     {
-        $users = AppUser::orderBy('name')->get();
+        $middleName = trim((string) $middleName);
+        $middleName = rtrim($middleName, '.');
 
-        return view('admin.accounts.index', compact('users'));
+        if ($middleName === '') {
+            return '';
+        }
+
+        return preg_match('/^[A-Za-z]$/', $middleName) === 1 ? '' : $middleName;
+    }
+
+    protected function buildFullName(Request $request, ?string $fallback = null): string
+    {
+        $firstName = trim((string) $request->input('first_name', ''));
+        $middleName = $this->normalizeMiddleName($request->input('middle_name', ''));
+        $lastName = trim((string) $request->input('last_name', ''));
+
+        $candidate = implode(' ', array_filter([$firstName, $middleName, $lastName], fn ($value) => $value !== ''));
+
+        return $candidate !== '' ? $candidate : trim((string) ($fallback ?? $request->input('name', '')));
     }
 
     /**
-     * Show create account form.
+     * Display all accounts.
      */
-    public function create(): View
+    public function index(Request $request): View
     {
-        return view('admin.accounts.create');
+        $applyFilters = function ($query) use ($request) {
+            if ($request->filled('search')) {
+                $search = trim($request->input('search'));
+
+                $query->where(function ($query) use ($search) {
+                    $query->where('name', 'like', '%' . $search . '%')
+                        ->orWhere('email', 'like', '%' . $search . '%')
+                        ->orWhereHas('student', fn ($studentQuery) => $studentQuery->where('student_id', 'like', '%' . $search . '%'))
+                        ->orWhereHas('recipient', fn ($recipientQuery) => $recipientQuery->where('staff_id', 'like', '%' . $search . '%'));
+                });
+            }
+
+            if ($request->filled('status_filter')) {
+                $query->where('is_active', $request->input('status_filter') === 'active');
+            }
+
+            if ($request->filled('department_filter')) {
+                $department = $request->input('department_filter');
+
+                if ($request->input('category_filter', 'students') === 'recipients') {
+                    $query->whereHas('recipient', fn ($recipientQuery) => $recipientQuery->where('department', $department));
+                } else {
+                    $query->whereHas('student', fn ($studentQuery) => $studentQuery->where('department', $department));
+                }
+            }
+
+            if ($request->filled('course_filter')) {
+                $query->whereHas('student', fn ($studentQuery) => $studentQuery->where('course', $request->input('course_filter')));
+            }
+
+            if ($request->filled('year_filter')) {
+                $query->whereHas('student', fn ($studentQuery) => $studentQuery->where('year_level', $request->input('year_filter')));
+            }
+
+            if ($request->filled('block_filter')) {
+                $query->whereHas('student', fn ($studentQuery) => $studentQuery->where('block', $request->input('block_filter')));
+            }
+
+            return $query;
+        };
+
+        $studentUsers = $applyFilters(AppUser::with(['student', 'recipient'])
+            ->where('role', AppUser::ROLE_STUDENT));
+
+        $direction = $request->input('sort_id', 'asc') === 'asc' ? 'asc' : 'desc';
+        $studentUsers = $studentUsers
+            ->leftJoin('students', 'students.user_id', '=', 'users.id')
+            ->orderByRaw("CAST(students.student_id AS INTEGER) {$direction}")
+            ->orderBy('users.id', $direction)
+            ->select('users.*');
+
+        $studentUsers = $studentUsers->paginate(10, ['*'], 'students_page')->appends($request->query());
+
+        $recipientUsers = $applyFilters(AppUser::with(['student', 'recipient'])
+            ->where('role', AppUser::ROLE_RECIPIENT));
+
+        $recipientUsers = $recipientUsers
+            ->leftJoin('recipients', 'recipients.user_id', '=', 'users.id')
+            ->orderBy('recipients.staff_id', $direction)
+            ->orderBy('users.id', $direction)
+            ->select('users.*');
+
+        $recipientUsers = $recipientUsers
+            ->paginate(10, ['*'], 'recipients_page')
+            ->appends($request->query());
+
+        return view('admin.accounts.index', compact('studentUsers', 'recipientUsers'));
     }
 
     /**
@@ -38,14 +119,24 @@ class AccountManagementController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
             'email' => 'required|email|unique:users,email',
             'role' => 'required|in:student,recipient',
         ]);
 
+        $fullName = $this->buildFullName($request);
         $username = null;
 
         if ($validated['role'] === AppUser::ROLE_STUDENT) {
+            $studentData = $request->validate([
+                'student_id' => ['required', 'regex:/^\d{8}$/'],
+                'department' => 'required|string|max:255',
+                'course' => 'required|string|max:255',
+                'year_level' => 'required|integer|between:1,4',
+                'block' => 'nullable|integer|min:1',
+            ]);
             $username = $request->student_id;
         }
 
@@ -53,28 +144,31 @@ class AccountManagementController extends Controller
             $username = $request->staff_id;
         }
 
+        $defaultPassword = $username ?? $validated['email'];
+
         $user = AppUser::create([
-            'name' => $validated['name'],
+            'name' => $fullName,
+            'first_name' => $request->input('first_name'),
+            'middle_name' => $request->input('middle_name'),
+            'last_name' => $request->input('last_name'),
             'username' => $username,
             'email' => $validated['email'],
-            'password' => Hash::make('Welcome@123'),
+            'password' => Hash::make($defaultPassword),
             'must_change_password' => true,
             'role' => $validated['role'],
-            'is_active' => true,
+            'is_active' => false,
             'email_verified_at' => null,
         ]);
-
-        $user->sendEmailVerificationNotification();
 
         if ($validated['role'] === AppUser::ROLE_STUDENT) {
 
             Student::create([
                 'user_id' => $user->id,
-                'student_id' => $request->student_id,
-                'department' => $request->department,
-                'course' => $request->course,
-                'year_level' => $request->year_level,
-                'block' => $request->block,
+                'student_id' => $studentData['student_id'],
+                'department' => $studentData['department'],
+                'course' => $studentData['course'],
+                'year_level' => $studentData['year_level'],
+                'block' => $studentData['block'] ?? null,
             ]);
 
         }
@@ -90,22 +184,15 @@ class AccountManagementController extends Controller
 
         }
 
+        $category = $validated['role'] === AppUser::ROLE_RECIPIENT ? 'recipients' : 'students';
+
+        AuditLog::activity(
+            'account_created',
+            details: sprintf('Created %s account for %s.', $validated['role'], $user->name)
+        );
+
         return redirect()
-            ->route('admin.accounts.index')
-            ->with('success', 'Account created successfully. Initial password: Welcome@123');
-    }
-
-    /**
-     * Show edit account form.
-     */
-    public function edit(AppUser $user)
-    {
-        $user->load([
-            'student',
-            'recipient',
-        ]);
-
-        return view('admin.accounts.edit', compact('user'));
+            ->route('admin.accounts.index', ['category_filter' => $category]);
     }
 
     /**
@@ -114,48 +201,90 @@ class AccountManagementController extends Controller
     public function update(Request $request, AppUser $user)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
         ]);
 
+        $fullName = $this->buildFullName($request, $user->name);
+
         $user->update([
-            'name' => $validated['name'],
+            'name' => $fullName,
+            'first_name' => $request->input('first_name'),
+            'middle_name' => $request->input('middle_name'),
+            'last_name' => $request->input('last_name'),
             'email' => $validated['email'],
         ]);
 
-        if ($user->role === AppUser::ROLE_STUDENT && $user->student) {
+        if ($user->role === AppUser::ROLE_STUDENT) {
+            $studentData = $request->validate([
+                'student_id' => ['required', 'regex:/^\d{8}$/'],
+                'department' => 'required|string|max:255',
+                'course' => 'required|string|max:255',
+                'year_level' => 'required|integer|between:1,4',
+                'block' => 'nullable|integer|min:1',
+            ]);
 
             $user->update([
-                'username' => $request->student_id,
+                'username' => $studentData['student_id'],
             ]);
 
-            $user->student->update([
-                'student_id' => $request->student_id,
-                'department' => $request->department,
-                'course' => $request->course,
-                'year_level' => $request->year_level,
-                'block' => $request->block,
-            ]);
-
+            if ($user->student) {
+                $user->student->update([
+                    'student_id' => $studentData['student_id'],
+                    'department' => $studentData['department'],
+                    'course' => $studentData['course'],
+                    'year_level' => $studentData['year_level'],
+                    'block' => $studentData['block'] ?? null,
+                ]);
+            } else {
+                $user->student()->create([
+                    'student_id' => $studentData['student_id'],
+                    'department' => $studentData['department'],
+                    'course' => $studentData['course'],
+                    'year_level' => $studentData['year_level'],
+                    'block' => $studentData['block'] ?? null,
+                ]);
+            }
         }
 
-        if ($user->role === AppUser::ROLE_RECIPIENT && $user->recipient) {
-
+        if ($user->role === AppUser::ROLE_RECIPIENT) {
             $user->update([
                 'username' => $request->staff_id,
             ]);
 
-            $user->recipient->update([
-                'staff_id' => $request->staff_id,
-                'department' => $request->recipient_department,
-                'designation' => $request->designation,
-            ]);
+            if ($user->recipient) {
+                $user->recipient->update([
+                    'staff_id' => $request->staff_id,
+                    'department' => $request->recipient_department,
+                    'designation' => $request->designation,
+                ]);
+            } else {
+                $user->recipient()->create([
+                    'staff_id' => $request->staff_id,
+                    'department' => $request->recipient_department,
+                    'designation' => $request->designation,
+                ]);
+            }
+        }
 
+        $category = $user->role === AppUser::ROLE_RECIPIENT ? 'recipients' : 'students';
+
+        AuditLog::activity(
+            'account_updated',
+            details: sprintf('Updated %s account for %s.', $user->role, $user->name)
+        );
+
+        if ($user->email) {
+            $user->notify(new AccountUpdateNotification(
+                'Your SORSUPPORT account was updated',
+                'An administrator updated your account information.'
+            ));
         }
 
         return redirect()
-            ->route('admin.accounts.index')
-            ->with('success', 'Account updated successfully.');
+            ->route('admin.accounts.index', ['category_filter' => $category]);
     }
 
     /**
@@ -167,9 +296,22 @@ class AccountManagementController extends Controller
             'is_active' => false,
         ]);
 
+        $category = $user->role === AppUser::ROLE_RECIPIENT ? 'recipients' : 'students';
+
+        AuditLog::activity(
+            'account_deactivated',
+            details: sprintf('Deactivated %s account for %s.', $user->role, $user->name)
+        );
+
+        if ($user->email) {
+            $user->notify(new AccountUpdateNotification(
+                'Your SORSUPPORT account was deactivated',
+                'Your account has been deactivated by an administrator. Contact Student Development Services if you need assistance.'
+            ));
+        }
+
         return redirect()
-            ->route('admin.accounts.index')
-            ->with('success', 'Account deactivated successfully.');
+            ->route('admin.accounts.index', ['category_filter' => $category]);
     }
 
     /**
@@ -181,9 +323,22 @@ class AccountManagementController extends Controller
             'is_active' => true,
         ]);
 
+        $category = $user->role === AppUser::ROLE_RECIPIENT ? 'recipients' : 'students';
+
+        AuditLog::activity(
+            'account_reactivated',
+            details: sprintf('Reactivated %s account for %s.', $user->role, $user->name)
+        );
+
+        if ($user->email) {
+            $user->notify(new AccountUpdateNotification(
+                'Your SORSUPPORT account was reactivated',
+                'Your account has been reactivated and is available for use.'
+            ));
+        }
+
         return redirect()
-            ->route('admin.accounts.index')
-            ->with('success', 'Account reactivated successfully.');
+            ->route('admin.accounts.index', ['category_filter' => $category]);
     }
 
     /**
@@ -199,23 +354,54 @@ class AccountManagementController extends Controller
      */
     public function upload(Request $request)
     {
-        $request->validate([
-            'file' => 'required|mimes:csv,xlsx,xls',
+        $validated = $request->validate([
+            'account_type' => 'nullable|in:student,recipient',
+            'file' => 'required|file|mimes:csv,xlsx,xls|max:10240',
         ]);
+        $explicitAccountType = $request->filled('account_type');
+        $validated['account_type'] ??= AppUser::ROLE_STUDENT;
 
-        $import = new AccountsImport();
+        $import = new AccountsImport($validated['account_type']);
 
-        Excel::import($import, $request->file('file'));
+        try {
+            Excel::import($import, $request->file('file'));
+            $summary = $import->summary();
+        } catch (\Throwable $exception) {
+            return back()->withErrors(['file' => 'The uploaded file could not be read. Use the provided template and try again.']);
+        }
 
-        $summary = $import->summary();
+        $redirectParameters = $explicitAccountType
+            ? ['category_filter' => $validated['account_type'] === AppUser::ROLE_RECIPIENT ? 'recipients' : 'students']
+            : [];
+
+        AuditLog::activity(
+            'accounts_imported',
+            details: sprintf(
+                'Imported %d %s account(s); %d row(s) failed.',
+                $summary['imported'],
+                $validated['account_type'],
+                count($summary['errors'] ?? [])
+            )
+        );
 
         return redirect()
-            ->route('admin.accounts.index')
-            ->with('success', sprintf(
-                'Accounts imported. Created: %d, Updated: %d, Deactivated: %d.',
-                $summary['created'],
-                $summary['updated'],
-                $summary['deactivated']
-            ));
+            ->route('admin.accounts.index', $redirectParameters)
+            ->with('upload_summary', $summary)
+            ->with('upload_account_type', $validated['account_type']);
+    }
+
+    public function downloadUploadErrors(Request $request)
+    {
+        $summary = $request->session()->get('upload_summary');
+        abort_unless(is_array($summary) && ! empty($summary['errors']), 404);
+
+        return response()->streamDownload(function () use ($summary): void {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Row', 'Error']);
+            foreach ($summary['errors'] as $error) {
+                fputcsv($handle, [$error['row'], implode(' ', $error['messages'])]);
+            }
+            fclose($handle);
+        }, 'bulk-upload-errors.csv', ['Content-Type' => 'text/csv']);
     }
 }

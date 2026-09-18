@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -34,6 +35,19 @@ class LoginRequest extends FormRequest
     }
 
     /**
+     * Get custom validation messages for the login form.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'username.required' => 'Student or Staff ID is required.',
+            'password.required' => 'Password is required.',
+        ];
+    }
+
+    /**
      * Attempt to authenticate the request's credentials.
      *
      * @throws ValidationException
@@ -44,23 +58,26 @@ class LoginRequest extends FormRequest
 
         $loginValue = (string) $this->input('username');
 
-        $credentialField = filter_var($loginValue, FILTER_VALIDATE_EMAIL)
-            ? 'email'
-            : 'username';
+        $user = User::where('username', $loginValue)->first();
 
-        if (! Auth::attempt(
-            [
-                $credentialField => $loginValue,
-                'password' => (string) $this->input('password'),
-                'is_active' => true,
-            ],
-            $this->boolean('remember')
-        )) {
+        if ($user && ! $user->is_active && $user->hasVerifiedEmail()) {
+            throw ValidationException::withMessages([
+                'username' => 'This account is inactive. Please contact Student Development Services.',
+            ]);
+        }
+
+        $initialLogin = $user?->must_change_password && ! $user->hasVerifiedEmail();
+        $credentials = [
+            'username' => $loginValue,
+            'password' => (string) $this->input('password'),
+        ];
+
+        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
 
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'username' => trans('auth.failed'),
+                'password' => 'Incorrrect ID or password. Try again.',
             ]);
         }
 

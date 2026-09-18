@@ -84,7 +84,7 @@
         name="escalation_hierarchy"
         rows="4"
         class="w-full border border-gray-300 rounded-lg p-3 text-gray-900 bg-white"
-        placeholder="Enter recipient IDs separated by commas or spaces">{{ old('escalation_hierarchy', $category ? $category->escalationHierarchies->pluck('recipient_id')->implode(', ') : '') }}</textarea>
+        placeholder="Enter recipient IDs separated by commas or spaces">{{ old('escalation_hierarchy', isset($category) ? $category->escalationHierarchies->pluck('recipient_id')->implode(', ') : '') }}</textarea>
 
     <p class="text-sm text-gray-500 mt-2">
         Example: 1, 2, 3

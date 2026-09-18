@@ -18,6 +18,8 @@ class Ticket extends Model
 
     public const STATUS_IN_PROGRESS = 'in_progress';
 
+    public const STATUS_ESCALATED = 'escalated';
+
     public const STATUS_RESOLVED = 'resolved';
 
     public const STATUS_REJECTED = 'rejected';
@@ -99,6 +101,26 @@ class Ticket extends Model
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class)->orderBy('created_at');
+    }
+
+    public function remainingDays(): ?int
+    {
+        if (! $this->deadline) {
+            return null;
+        }
+
+        if (in_array($this->status, [self::STATUS_CLOSED, self::STATUS_REJECTED], true)) {
+            return null;
+        }
+
+        $today = now()->copy()->setTimezone('Asia/Manila')->startOfDay();
+        $deadline = $this->deadline->copy()->setTimezone('Asia/Manila')->startOfDay();
+
+        if ($today->greaterThanOrEqualTo($deadline)) {
+            return 0;
+        }
+
+        return max(0, (int) $today->diffInDays($deadline, false));
     }
 
     /**

@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             SdsAdminSeeder::class,
+            DemoAccountSeeder::class,
             AnalyticsSeeder::class,
         ]);
     }

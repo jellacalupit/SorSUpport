@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,6 +15,16 @@ class Recipient extends Model
         'department',
         'designation',
     ];
+
+    /**
+     * Only recipients whose backing user is both active and verified may be surfaced in category workflows.
+     */
+    public function scopeActiveVerified(Builder $query): Builder
+    {
+        return $query->whereHas('user', fn ($user) => $user
+            ->where('is_active', true)
+            ->whereNotNull('email_verified_at'));
+    }
 
     /**
      * Recipient belongs to a User.
