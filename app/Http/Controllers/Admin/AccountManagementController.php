@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Imports\AccountsImport;
 use App\Models\Recipient;
+use App\Models\Department;
 use App\Models\Student;
 use App\Models\AuditLog;
 use App\Models\User as AppUser;
@@ -98,7 +99,7 @@ class AccountManagementController extends Controller
         $studentUsers = $studentUsers->paginate(10, ['*'], 'students_page')->appends($request->query());
 
         $recipientUsers = $applyFilters(AppUser::with(['student', 'recipient'])
-            ->where('role', AppUser::ROLE_RECIPIENT));
+            ->whereIn('role', [AppUser::ROLE_RECIPIENT, AppUser::ROLE_SDS_ADMIN]));
 
         $recipientUsers = $recipientUsers
             ->leftJoin('recipients', 'recipients.user_id', '=', 'users.id')
@@ -110,7 +111,9 @@ class AccountManagementController extends Controller
             ->paginate(10, ['*'], 'recipients_page')
             ->appends($request->query());
 
-        return view('admin.accounts.index', compact('studentUsers', 'recipientUsers'));
+        $departments = Department::query()->orderBy('name')->pluck('name');
+
+        return view('admin.accounts.index', compact('studentUsers', 'recipientUsers', 'departments'));
     }
 
     /**

@@ -7,195 +7,161 @@ use App\Models\AuditLog;
 use App\Models\ComplaintCategory;
 use App\Models\EscalationHierarchy;
 use App\Models\Recipient;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ComplaintCategoryController extends Controller
 {
-    /**
-     * Display all complaint categories.
-     */
     public function index(): View
     {
-        $categories = ComplaintCategory::with('recipient.user')
-            ->orderBy('name')
-            ->paginate(10);
+        $categories = ComplaintCategory::with('recipient.user')->orderBy('name')->paginate(10);
 
         return view('admin.categories.index', compact('categories'));
     }
 
-    /**
-     * Show create category form.
-     */
     public function create(): RedirectResponse
     {
         return redirect()->route('admin.settings', ['add_category' => 1]);
     }
 
-    /**
-     * Store a new category.
-     */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'recipient_id' => 'nullable|exists:recipients,id',
-            'resolution_deadline_days' => 'nullable|integer|min:1',
-            'escalation_hierarchy' => 'nullable|string',
-            'suggested_recipient_ids' => 'nullable|array',
-            'suggested_recipient_ids.*' => 'integer|exists:recipients,id',
-        ]);
+        $validated = $this->validatedCategory($request);
 
         $category = DB::transaction(function () use ($validated): ComplaintCategory {
             $category = ComplaintCategory::create([
                 'name' => $validated['name'],
-                'description' => $validated['description'],
-                'recipient_id' => $validated['recipient_id'],
+                'description' => $validated['description'] ?? null,
+                'recipient_id' => $validated['recipient_id'] ?? null,
                 'resolution_deadline_days' => $validated['resolution_deadline_days'] ?? 1,
                 'is_active' => true,
             ]);
 
-            $suggestedRecipientIds = $validated['suggested_recipient_ids'] ?? [];
-            $this->syncEscalationHierarchy($category, $validated['escalation_hierarchy'] ?? implode(', ', $suggestedRecipientIds));
-            $category->suggestedRecipients()->sync($suggestedRecipientIds);
+            $category->suggestedRecipients()->sync($validated['suggested_recipient_ids'] ?? []);
+            $this->syncEscalationHierarchy($category, $validated['hierarchy_levels'] ?? []);
 
             return $category;
         });
 
         AuditLog::activity('category_created', details: sprintf('Created complaint category "%s".', $category->name));
 
-        return redirect()
-            ->route('admin.settings')
-            ->with('success', 'Complaint category created successfully.');
+        return redirect()->route('admin.settings')->with('success', 'Complaint category created successfully.');
     }
 
-    /**
-     * Show edit category form.
-     */
     public function edit(ComplaintCategory $category): View
     {
-        $recipients = Recipient::query()
-            ->activeVerified()
-            ->with('user')
-            ->orderBy('department')
-            ->get();
+        $recipients = Recipient::query()->activeVerified()->with('user')->orderBy('department')->get();
 
-        return view('admin.categories.edit', compact(
-            'category',
-            'recipients'
-        ));
+        return view('admin.categories.edit', compact('category', 'recipients'));
     }
 
-    /**
-     * Update category.
-     */
-    public function update(Request $request, ComplaintCategory $category)
+    public function update(Request $request, ComplaintCategory $category): RedirectResponse
     {
-        $validated = $request->validate([
-
-            'name' => 'required|string|max:255',
-
-            'description' => 'nullable|string',
-
-            'recipient_id' => 'nullable|exists:recipients,id',
-
-            'resolution_deadline_days' => 'nullable|integer|min:1',
-
-            'escalation_hierarchy' => 'nullable|string',
-
-            'suggested_recipient_ids' => 'nullable|array',
-
-            'suggested_recipient_ids.*' => 'integer|exists:recipients,id',
-
-        ]);
+        $validated = $this->validatedCategory($request);
 
         DB::transaction(function () use ($category, $validated): void {
             $category->update([
-
                 'name' => $validated['name'],
-
-                'description' => $validated['description'],
-
-                'recipient_id' => $validated['recipient_id'],
-
+                'description' => $validated['description'] ?? null,
+                'recipient_id' => $validated['recipient_id'] ?? null,
                 ...array_key_exists('resolution_deadline_days', $validated) && $validated['resolution_deadline_days'] !== null
                     ? ['resolution_deadline_days' => $validated['resolution_deadline_days']]
                     : [],
-
             ]);
 
-            $suggestedRecipientIds = $validated['suggested_recipient_ids'] ?? [];
-            $hierarchyInput = empty($suggestedRecipientIds)
-                ? ($validated['escalation_hierarchy'] ?? '')
-                : implode(', ', $suggestedRecipientIds);
-            $this->syncEscalationHierarchy($category, $hierarchyInput);
-            $category->suggestedRecipients()->sync($suggestedRecipientIds);
+            $category->suggestedRecipients()->sync($validated['suggested_recipient_ids'] ?? []);
+            $this->syncEscalationHierarchy($category, $validated['hierarchy_levels'] ?? []);
         });
 
         AuditLog::activity('category_updated', details: sprintf('Updated complaint category "%s".', $category->name));
 
-        return redirect()
-            ->route('admin.settings')
-            ->with('success', 'Complaint category updated successfully.');
+        return redirect()->route('admin.settings')->with('success', 'Complaint category updated successfully.');
     }
 
-    /**
-     * Deactivate category.
-     */
-    public function toggleStatus(ComplaintCategory $category)
+    public function toggleStatus(ComplaintCategory $category): RedirectResponse
     {
-        $category->update([
-            'is_active' => ! $category->is_active,
-        ]);
+        $category->update(['is_active' => ! $category->is_active]);
 
         AuditLog::activity(
             $category->is_active ? 'category_activated' : 'category_deactivated',
             details: sprintf('%s complaint category "%s".', $category->is_active ? 'Activated' : 'Deactivated', $category->name)
         );
 
-        return redirect()
-            ->route('admin.categories.index')
-            ->with(
-                'success',
-                $category->is_active
-                    ? 'Complaint category activated successfully.'
-                    : 'Complaint category deactivated successfully.'
-            );
+        return redirect()->route('admin.categories.index')->with(
+            'success',
+            $category->is_active ? 'Complaint category activated successfully.' : 'Complaint category deactivated successfully.'
+        );
     }
 
-    /**
-     * Delete a complaint category and its related records.
-     */
-    public function destroy(ComplaintCategory $category)
+    public function destroy(ComplaintCategory $category): RedirectResponse
     {
         $category->delete();
 
         AuditLog::activity('category_deleted', details: sprintf('Deleted complaint category "%s".', $category->name));
 
-        return redirect()
-            ->route('admin.settings')
-            ->with('success', 'Complaint category deleted successfully.');
+        return redirect()->route('admin.settings')->with('success', 'Complaint category deleted successfully.');
     }
 
-    protected function syncEscalationHierarchy(ComplaintCategory $category, string $input): void
+    protected function validatedCategory(Request $request): array
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'recipient_id' => 'nullable|exists:recipients,id',
+            'resolution_deadline_days' => 'nullable|integer|min:1',
+            'suggested_recipient_ids' => 'nullable|array',
+            'suggested_recipient_ids.*' => 'integer|distinct|exists:recipients,id',
+            'hierarchy_levels' => 'nullable|array',
+            'hierarchy_levels.*.level' => 'required|integer|min:1',
+            'hierarchy_levels.*.recipient_ids' => 'nullable|array',
+            'hierarchy_levels.*.recipient_ids.*' => 'integer|distinct|exists:recipients,id',
+        ]);
+
+        $levels = $validated['hierarchy_levels'] ?? [];
+        $levelNumbers = array_map(fn (array $level): int => (int) $level['level'], $levels);
+
+        if (count($levelNumbers) !== count(array_unique($levelNumbers))) {
+            throw ValidationException::withMessages([
+                'hierarchy_levels' => 'Each escalation level may only be configured once per category.',
+            ]);
+        }
+
+        $recipientIds = collect($validated['suggested_recipient_ids'] ?? [])
+            ->merge(collect($levels)->flatMap(fn (array $level): array => $level['recipient_ids'] ?? []))
+            ->unique()
+            ->values();
+
+        if ($recipientIds->isNotEmpty()) {
+            $activeVerifiedCount = Recipient::query()
+                ->activeVerified()
+                ->whereIn('id', $recipientIds)
+                ->count();
+
+            if ($activeVerifiedCount !== $recipientIds->count()) {
+                throw ValidationException::withMessages([
+                    'suggested_recipient_ids' => 'Only active and verified recipients can be selected.',
+                ]);
+            }
+        }
+
+        return $validated;
+    }
+
+    protected function syncEscalationHierarchy(ComplaintCategory $category, array $levels): void
     {
         $category->escalationHierarchies()->delete();
 
-        $recipientIds = array_values(array_filter(array_map('trim', preg_split('/[\s,]+/', $input) ?: [])));
-
-        foreach ($recipientIds as $index => $recipientId) {
-            if (! Recipient::whereKey($recipientId)->exists()) {
-                continue;
+        foreach ($levels as $level) {
+            foreach ($level['recipient_ids'] ?? [] as $recipientId) {
+                EscalationHierarchy::create([
+                    'complaint_category_id' => $category->id,
+                    'level' => (int) $level['level'],
+                    'recipient_id' => (int) $recipientId,
+                ]);
             }
-
-            EscalationHierarchy::create([
-                'complaint_category_id' => $category->id,
-                'level' => $index + 1,
-                'recipient_id' => $recipientId,
-            ]);
         }
     }
 }

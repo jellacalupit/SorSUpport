@@ -4,11 +4,13 @@
     $profileExtensionOptions = ['' => 'None', 'Jr.' => 'Jr.', 'Sr.' => 'Sr.', 'II' => 'II', 'III' => 'III', 'IV' => 'IV', 'V' => 'V'];
     $hasAdminProfileDetails = $editable
         && filled($user->first_name)
+        && filled($user->last_name)
         && filled($user->email)
         && filled($user->username)
         && ($user->role === 'sds_admin' || $user->recipient?->exists());
     $isInitialAdminSetup = $editable && $user->must_change_password && ! $hasAdminProfileDetails;
     $showAdminPasswordPrompt = $editable && $user->must_change_password && $hasAdminProfileDetails;
+    $adminSetupHasNoDeptOrPosition = $editable && $user->role === 'sds_admin' && $user->must_change_password && blank($user->first_name) && blank($user->last_name) && blank($user->name);
     $savedNameParts = is_array($savedNameParts ?? null) ? ($savedNameParts ?? []) : [];
     $profileFirstName = trim((string) ($savedNameParts['first_name'] ?? ($user->first_name ?? '')));
     $profileMiddleName = trim((string) ($savedNameParts['middle_name'] ?? ($user->middle_name ?? '')));
@@ -60,17 +62,20 @@
     $profileStatus = $user->is_active ? 'Active' : 'Inactive';
     $profileStatusClass = $user->is_active ? 'text-emerald-600' : 'text-red-600';
     $showMinimalAdminProfile = $user->role === 'sds_admin' && blank($user->first_name) && blank($user->last_name) && blank($user->recipient?->department) && blank($user->recipient?->designation);
-    $profileId = $isInitialAdminSetup ? ($user->username ?? '—') : ($recipient?->staff_id ?? $user->recipient?->staff_id ?? $user->username ?? 'Not assigned');
-    $profileDepartment = $isInitialAdminSetup
-        ? '—'
-        : ($recipient?->department ?? $user->recipient?->department ?? ($user->department ?? '—'));
-    $profileDesignation = $isInitialAdminSetup
-        ? '—'
-        : ($recipient?->designation ?? $user->recipient?->designation ?? ($user->designation ?? '—'));
+    $adminIsInSetupPlaceholderState = $user->role === 'sds_admin'
+        && $user->must_change_password
+        && blank($user->recipient?->staff_id)
+        && blank($user->recipient?->department)
+        && blank($user->recipient?->designation);
+    $profileId = $adminIsInSetupPlaceholderState ? '—' : ($recipient?->staff_id ?? $user->recipient?->staff_id ?? $user->username ?? 'Not assigned');
+    $profileDepartment = $adminIsInSetupPlaceholderState ? '—' : ($recipient?->department ?? $user->recipient?->department ?? ($user->department ?? '—'));
+    $profileDesignation = $adminIsInSetupPlaceholderState ? '—' : ($recipient?->designation ?? $user->recipient?->designation ?? ($user->designation ?? '—'));
     $profileFullName = $isInitialAdminSetup || $adminHasEmptyProfile ? $profileFirstName : $user->name;
-    $profileEmail = $isInitialAdminSetup ? ($user->email ?? '—') : $user->email;
+    $profileEmail = filled($user->email) ? $user->email : ($isInitialAdminSetup ? 'sorsu.support@gmail.com' : '—');
     $isRecipient = $user->role === 'recipient';
     $passwordUpdateHasErrors = $errors->getBag('updatePassword')->any();
+    $currentPasswordServerError = $errors->getBag('updatePassword')->first('current_password');
+    $currentPasswordServerErrorIsRequired = $currentPasswordServerError && str_contains(strtolower($currentPasswordServerError), 'required');
 @endphp
 
 <x-app-layout :role="$user->role === 'sds_admin' ? 'admin' : ($user->role === 'student' ? 'student' : 'recipient')" title="My Profile">
@@ -126,6 +131,8 @@
                                         ['Full Name', $profileFullName],
                                         ['Email', $profileEmail],
                                         ['Staff ID', $profileId],
+                                        ['Department', $profileDepartment],
+                                        ['Position', $profileDesignation],
                                         ['Account Type', $profileRole],
                                         ['Status', '<span class="text-[11px] font-semibold ' . $profileStatusClass . '">' . $profileStatus . '</span>'],
                                     ]
@@ -176,11 +183,11 @@
                                 @csrf
                                 @method('PATCH')
 
-                                <div class="grid gap-1.5 md:grid-cols-[1.5fr_1.5fr_1.5fr_0.7fr]">
+                                <div class="grid items-start gap-1.5 md:grid-cols-[1.5fr_1.5fr_1.5fr_0.7fr]">
                                     <div class="grid gap-0.5">
                                         <label for="profile-first-name" class="text-[11px] font-medium text-muted-foreground">First Name <span class="text-destructive">*</span></label>
                                         <input id="profile-first-name" name="first_name" value="{{ old('first_name', $profileFirstName) }}" pattern="[A-Za-zÑñÁÉÍÓÚáéíóúüÇç\- ]+" title="Letters, spaces, and hyphen only" data-required="true" aria-describedby="profile-first-name-empty-error" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
-                                        <p id="profile-first-name-empty-error" class="hidden text-[11px] font-medium text-destructive">This field is required.</p>
+                                        <div data-error-slot class="{{ $errors->has('first_name') ? 'min-h-4' : 'hidden' }}"><p id="profile-first-name-empty-error" class="hidden text-[11px] font-medium text-destructive">This field is required.</p></div>
                                     </div>
                                     <div class="grid gap-0.5">
                                         <label for="profile-middle-name" class="text-[11px] font-medium text-muted-foreground">Middle Name</label>
@@ -189,7 +196,7 @@
                                     <div class="grid gap-0.5">
                                         <label for="profile-last-name" class="text-[11px] font-medium text-muted-foreground">Last Name <span class="text-destructive">*</span></label>
                                         <input id="profile-last-name" name="last_name" value="{{ old('last_name', $profileLastName) }}" pattern="[A-Za-zÑñÁÉÍÓÚáéíóúüÇç\- ]+" title="Letters, spaces, and hyphen only" data-required="true" aria-describedby="profile-last-name-empty-error" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
-                                        <p id="profile-last-name-empty-error" class="hidden text-[11px] font-medium text-destructive">This field is required.</p>
+                                        <div data-error-slot class="{{ $errors->has('last_name') ? 'min-h-4' : 'hidden' }}"><p id="profile-last-name-empty-error" class="hidden text-[11px] font-medium text-destructive">This field is required.</p></div>
                                     </div>
                                     <div class="grid gap-0.5">
                                         <label for="profile-extension" class="text-[11px] font-medium text-muted-foreground">Ext.</label>
@@ -210,33 +217,37 @@
                                     </div>
                                 </div>
 
-                                <div class="grid gap-1.5 md:grid-cols-2">
+                                <div class="grid items-start gap-1.5 md:grid-cols-2">
                                     <div class="grid gap-0.5">
                                         <label for="profile-email" class="text-[11px] font-medium text-muted-foreground">Email <span class="text-destructive">*</span></label>
-                                        <input id="profile-email" name="email" type="email" value="{{ old('email', $isInitialAdminSetup ? '' : $user->email) }}" data-required="true" aria-describedby="profile-email-empty-error" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
-                                        <p id="profile-email-empty-error" class="hidden text-[11px] font-medium text-destructive">This field is required.</p>
-                                        @error('email') <p class="text-[11px] text-destructive">{{ $message }}</p> @enderror
+                                        <input id="profile-email" name="email" type="email" value="{{ old('email', $user->email ?? '') }}" data-required="true" aria-describedby="profile-email-empty-error" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                                        <div data-error-slot class="{{ $errors->has('email') ? 'min-h-4' : 'hidden' }}">
+                                            <p id="profile-email-empty-error" class="hidden text-[11px] font-medium text-destructive">This field is required.</p>
+                                            @error('email') <p data-server-error class="text-[11px] text-destructive">{{ $message }}</p> @enderror
+                                        </div>
                                     </div>
 
                                     <div class="grid gap-0.5">
                                         <label for="profile-username" class="text-[11px] font-medium text-muted-foreground">Staff ID <span class="text-destructive">*</span></label>
-                                        <input id="profile-username" name="username" inputmode="numeric" pattern="[0-9]+" value="{{ old('username', $isInitialAdminSetup ? '' : $user->username) }}" data-required="true" aria-describedby="profile-username-empty-error" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
-                                        <p id="profile-username-empty-error" class="hidden text-[11px] font-medium text-destructive">This field is required.</p>
-                                        @error('username') <p class="text-[11px] text-destructive">{{ $message }}</p> @enderror
+                                        <input id="profile-username" name="username" inputmode="numeric" pattern="[0-9]+" value="{{ old('username', $isInitialAdminSetup ? '' : ($recipient?->staff_id ?? $user->username)) }}" data-required="true" aria-describedby="profile-username-empty-error" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                                        <div data-error-slot class="{{ $errors->has('username') ? 'min-h-4' : 'hidden' }}">
+                                            <p id="profile-username-empty-error" class="hidden text-[11px] font-medium text-destructive">This field is required.</p>
+                                            @error('username') <p data-server-error class="text-[11px] text-destructive">{{ $message }}</p> @enderror
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div class="grid gap-1.5 md:grid-cols-2">
+                                <div class="grid items-start gap-1.5 md:grid-cols-2">
                                     <div class="grid gap-0.5">
                                         <label for="profile-department" class="text-[11px] font-medium text-muted-foreground">Department</label>
-                                        <input id="profile-department" name="department" value="{{ old('department', $user->recipient?->department ?? '') }}" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
-                                        @error('department') <p class="text-[11px] text-destructive">{{ $message }}</p> @enderror
+                                        <input id="profile-department" name="department" value="{{ old('department', $isInitialAdminSetup ? '' : ($profileDepartment !== '—' ? $profileDepartment : '')) }}" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                                        <div data-error-slot class="{{ $errors->has('department') ? 'min-h-4' : 'hidden' }}">@error('department') <p data-server-error class="text-[11px] text-destructive">{{ $message }}</p> @enderror</div>
                                     </div>
 
                                     <div class="grid gap-0.5">
                                         <label for="profile-designation" class="text-[11px] font-medium text-muted-foreground">Position</label>
-                                        <input id="profile-designation" name="designation" value="{{ old('designation', $user->recipient?->designation ?? '') }}" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
-                                        @error('designation') <p class="text-[11px] text-destructive">{{ $message }}</p> @enderror
+                                        <input id="profile-designation" name="designation" value="{{ old('designation', $isInitialAdminSetup ? '' : ($profileDesignation !== '—' ? $profileDesignation : '')) }}" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                                        <div data-error-slot class="{{ $errors->has('designation') ? 'min-h-4' : 'hidden' }}">@error('designation') <p data-server-error class="text-[11px] text-destructive">{{ $message }}</p> @enderror</div>
                                     </div>
                                 </div>
 
@@ -269,14 +280,12 @@
                             <div id="recipient-current-password-field" class="grid gap-0.5">
                                 <label for="recipient-current-password" class="text-[11px] font-semibold">Old Password</label>
                                 <div class="relative">
-                                    <input id="recipient-current-password" name="current_password" type="password" aria-describedby="recipient-current-password-empty-error" placeholder="Enter current password" class="h-8 w-full rounded-lg border border-input bg-muted px-2.5 pr-9 text-[12px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                                    <input id="recipient-current-password" name="current_password" type="password" aria-describedby="recipient-current-password-empty-error recipient-current-password-error recipient-current-password-match" placeholder="Enter current password" class="h-8 w-full rounded-lg border border-input bg-muted px-2.5 pr-9 text-[12px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
                                     <button type="button" data-toggle-password="recipient-current-password" aria-label="Show password" class="absolute inset-y-0 right-2.5 grid place-items-center text-muted-foreground"><svg data-eye-icon class="hidden h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0Z"/><circle cx="12" cy="12" r="3"/></svg><svg data-eye-off-icon class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0Z"/><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="m4 4 16 16"/></svg></button>
                                 </div>
-                                <p id="recipient-current-password-empty-error" class="hidden text-[11px] font-medium text-destructive">This field is required.</p>
-                                <p id="recipient-current-password-error" class="hidden text-[11px] font-medium text-destructive">Incorrect password. Try again.</p>
-                                @error('current_password', 'updatePassword')
-                                    <p class="text-[11px] font-medium text-destructive">{{ $message }}</p>
-                                @enderror
+                                <p id="recipient-current-password-empty-error" class="{{ $currentPasswordServerErrorIsRequired ? '' : 'hidden' }} text-[11px] font-medium text-destructive">This field is required.</p>
+                                <p id="recipient-current-password-error" class="{{ $currentPasswordServerError && ! $currentPasswordServerErrorIsRequired ? '' : 'hidden' }} text-[11px] font-medium text-destructive">{{ $currentPasswordServerError && ! $currentPasswordServerErrorIsRequired ? $currentPasswordServerError : 'Incorrect password. Try again.' }}</p>
+                                <p id="recipient-current-password-match" class="hidden text-[11px] font-medium text-success">Password matches.</p>
                             </div>
                             <div id="recipient-password-field" class="grid gap-0.5">
                                 <label for="recipient-password" class="text-[11px] font-semibold">New Password</label>
@@ -354,6 +363,10 @@
         input?.classList.toggle('border-destructive', isEmpty);
         input?.classList.toggle('!border-destructive', isEmpty);
         error?.classList.toggle('hidden', !isEmpty);
+        const errorSlot = error?.closest('[data-error-slot]');
+        const hasServerError = errorSlot?.querySelector('[data-server-error]');
+        errorSlot?.classList.toggle('hidden', !isEmpty && !hasServerError);
+        errorSlot?.classList.toggle('min-h-4', isEmpty || !!hasServerError);
     };
     profileRequiredFields.forEach(({ input, error }) => {
         input?.addEventListener('input', () => setProfileRequiredFieldState(input, error, !input.value.trim()));
@@ -451,9 +464,13 @@
     const currentPassword = document.getElementById('recipient-current-password');
     const currentPasswordEmptyError = document.getElementById('recipient-current-password-empty-error');
     const currentPasswordError = document.getElementById('recipient-current-password-error');
+    const currentPasswordMatch = document.getElementById('recipient-current-password-match');
     const profilePasswordEmptyError = document.getElementById('recipient-password-empty-error');
     const profileConfirmationEmptyError = document.getElementById('recipient-password-confirmation-empty-error');
     const profilePasswordMismatchError = document.getElementById('recipient-password-mismatch-error');
+    let currentPasswordCheckTimer;
+    let currentPasswordCheckController;
+    let currentPasswordIsValid = false;
     const checksFor = (value) => ({ length: value.length >= 8, uppercase: /[A-Z]/.test(value), number: /[\d\W_]/.test(value) });
     const renderRules = (checks) => Object.entries(checks).forEach(([name, passed]) => {
         const rule = profileRules?.querySelector(`[data-rule="${name}"]`);
@@ -477,6 +494,41 @@
         input?.classList.toggle('password-error-border', isEmpty);
         error?.classList.toggle('hidden', !isEmpty);
     };
+    const setCurrentPasswordMatchState = (isMatch) => {
+        currentPasswordIsValid = isMatch;
+        currentPassword?.classList.toggle('border-success', isMatch);
+        currentPassword?.classList.toggle('!border-success', isMatch);
+        currentPassword?.classList.toggle('border-destructive', !isMatch);
+        currentPassword?.classList.toggle('!border-destructive', !isMatch);
+        currentPassword?.classList.toggle('password-error-border', !isMatch);
+        currentPasswordError?.classList.toggle('hidden', isMatch);
+        currentPasswordMatch?.classList.toggle('hidden', !isMatch);
+    };
+    const checkCurrentPassword = async () => {
+        if (!currentPassword?.value) return false;
+
+        currentPasswordCheckController?.abort();
+        currentPasswordCheckController = new AbortController();
+
+        let response;
+        try {
+            response = await fetch('{{ route('password.check-current') }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                    'Accept': 'application/json',
+                },
+                body: new URLSearchParams({ current_password: currentPassword.value }),
+                signal: currentPasswordCheckController.signal,
+            });
+        } catch (error) {
+            if (error.name === 'AbortError') return false;
+            throw error;
+        }
+
+        setCurrentPasswordMatchState(response.ok);
+        return response.ok;
+    };
     const updateProfilePasswordMatchState = () => {
         const hasMismatch = Boolean(profilePassword?.value && profileConfirmation?.value && profilePassword.value !== profileConfirmation.value);
         setProfileMismatchState(hasMismatch);
@@ -488,7 +540,23 @@
         setProfileEmptyState(profilePassword, profilePasswordEmptyError, profilePassword.value.length === 0);
         updateProfilePasswordMatchState();
     });
-    currentPassword?.addEventListener('input', () => setProfileEmptyState(currentPassword, currentPasswordEmptyError, currentPassword.value.length === 0));
+    currentPassword?.addEventListener('input', () => {
+        currentPasswordIsValid = false;
+        setProfileEmptyState(currentPassword, currentPasswordEmptyError, currentPassword.value.length === 0);
+        currentPasswordError?.classList.add('hidden');
+        currentPasswordMatch?.classList.add('hidden');
+        currentPassword?.classList.remove('border-success', '!border-success', 'border-destructive', '!border-destructive', 'password-error-border');
+        clearTimeout(currentPasswordCheckTimer);
+        currentPasswordCheckController?.abort();
+        if (currentPassword.value) {
+            currentPasswordCheckTimer = setTimeout(() => checkCurrentPassword(), 150);
+        }
+    });
+    profilePassword?.addEventListener('focus', () => {
+        if (!currentPasswordIsValid) return;
+        currentPasswordMatch?.classList.add('hidden');
+        currentPassword?.classList.remove('border-success', '!border-success');
+    });
     profileConfirmation?.addEventListener('input', () => {
         setProfileEmptyState(profileConfirmation, profileConfirmationEmptyError, profileConfirmation.value.length === 0);
         updateProfilePasswordMatchState();
@@ -503,6 +571,11 @@
         const passwordIsEmpty = !profilePassword?.value;
         const confirmationIsEmpty = !profileConfirmation?.value;
         setProfileMismatchState(false);
+        if (currentPasswordIsEmpty) {
+            currentPasswordError?.classList.add('hidden');
+            currentPasswordMatch?.classList.add('hidden');
+            currentPassword?.classList.remove('border-success', '!border-success', 'border-destructive', '!border-destructive', 'password-error-border');
+        }
         setProfileEmptyState(currentPassword, currentPasswordEmptyError, currentPasswordIsEmpty);
         setProfileEmptyState(profilePassword, profilePasswordEmptyError, passwordIsEmpty);
         setProfileEmptyState(profileConfirmation, profileConfirmationEmptyError, confirmationIsEmpty);
@@ -517,21 +590,8 @@
         }
 
         event.preventDefault();
-        fetch('{{ route('password.check-current') }}', {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
-                'Accept': 'application/json',
-            },
-            body: new URLSearchParams({ current_password: currentPassword.value }),
-        }).then(async (response) => {
-            if (! response.ok) {
-                currentPasswordError?.classList.remove('hidden');
-                setProfileEmptyState(currentPassword, currentPasswordEmptyError, false);
-                currentPassword?.classList.add('border-destructive', '!border-destructive', 'password-error-border');
-                return;
-            }
-
+        checkCurrentPassword().then((isValid) => {
+            if (! isValid) return;
             recipientPasswordForm.dataset.passwordVerified = 'true';
             recipientPasswordForm.submit();
         });

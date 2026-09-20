@@ -158,6 +158,7 @@ class AdminDashboardController extends Controller
                 ->where('is_active', true)
                 ->whereNotNull('email_verified_at')
                 ->count(),
+            'totalCategories' => ComplaintCategory::query()->where('is_active', true)->count(),
             'recentTickets' => $recentTickets,
             'categoryVolume' => $categoryVolume,
             'recentActivity' => $recentActivity,

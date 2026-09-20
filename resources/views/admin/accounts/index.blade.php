@@ -174,15 +174,13 @@
         }"
          x-init="if (!courseOptions[department]) { department = ''; selectedCourse = ''; }">
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div class="relative inline-flex h-10 min-w-[220px] items-center gap-1 rounded-xl border border-border bg-muted/60 p-1">
-                <span class="absolute top-1 bottom-1 left-1 w-[calc(50%-0.25rem)] rounded-lg bg-[#7a1d2a] shadow-sm transition-transform duration-300 ease-out"
-                      :class="tab === 'recipients' ? 'translate-x-full' : 'translate-x-0'"></span>
+            <div class="inline-flex items-center gap-6 border-b border-border">
                 <button type="button"
                     data-account-tab="students"
                     @click="tab = 'students'; document.getElementById('account-search').value = ''"
                     :aria-selected="tab === 'students'"
-                        class="relative z-10 inline-flex h-8 flex-1 items-center justify-center rounded-lg px-4 text-sm transition-colors"
-                        :class="tab === 'students' ? 'font-semibold text-white' : 'font-medium text-muted-foreground hover:text-foreground'">
+                    class="inline-flex items-center border-b-2 px-1 pb-2 text-sm transition-colors"
+                    :class="tab === 'students' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">
                     Students
                 </button>
 
@@ -190,8 +188,8 @@
                     data-account-tab="recipients"
                     @click="tab = 'recipients'; document.getElementById('account-search').value = ''"
                     :aria-selected="tab === 'recipients'"
-                        class="relative z-10 inline-flex h-8 flex-1 items-center justify-center rounded-lg px-4 text-sm transition-colors"
-                        :class="tab === 'recipients' ? 'font-semibold text-white' : 'font-medium text-muted-foreground hover:text-foreground'">
+                    class="inline-flex items-center border-b-2 px-1 pb-2 text-sm transition-colors"
+                    :class="tab === 'recipients' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">
                     Recipients
                 </button>
             </div>
@@ -365,7 +363,7 @@
             </div>
         </form>
 
-        <div data-account-table="students" x-show="tab === 'students'" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="translate-x-2 opacity-0" x-transition:enter-end="translate-x-0 opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0 opacity-100" x-transition:leave-end="-translate-x-2 opacity-0" class="mx-auto mt-4 w-full overflow-x-auto rounded-lg border">
+        <div data-account-table="students" x-show="tab === 'students'" x-cloak class="mx-auto mt-4 w-full overflow-x-auto rounded-lg border">
             <table class="w-full text-[13px]">
                 <thead class="border-b bg-primary text-white">
                     <tr class="text-left">
@@ -743,18 +741,16 @@
                                 </summary>
                                 <div class="absolute top-full z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                                     <button type="button" @click="editRecipientDepartment = ''; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="editRecipientDepartment === '' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">Select department</button>
-                                    <button type="button" @click="editRecipientDepartment = 'Administrative'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="editRecipientDepartment === 'Administrative' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">Administrative</button>
-                                    <button type="button" @click="editRecipientDepartment = 'Maintenance'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="editRecipientDepartment === 'Maintenance' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">Maintenance</button>
-                                    <button type="button" @click="editRecipientDepartment = 'CICT'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="editRecipientDepartment === 'CICT' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">CICT</button>
-                                    <button type="button" @click="editRecipientDepartment = 'CBME'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="editRecipientDepartment === 'CBME' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">CBME</button>
-                                    <button type="button" @click="editRecipientDepartment = 'Student Organization'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="editRecipientDepartment === 'Student Organization' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">Student Organization</button>
+                                    @foreach ($departments as $department)
+                                        <button type="button" @click="editRecipientDepartment = @js($department); $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="editRecipientDepartment === @js($department) ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">{{ $department }}</button>
+                                    @endforeach
                                 </div>
                             </details>
                             <p id="edit-recipient-department-empty-error" class="invisible min-h-[14px] text-[11px] font-medium text-destructive opacity-0">Please select an option.</p>
                         </div>
                         <div class="grid min-h-[74px] gap-0.5">
                             <label for="edit-recipient-designation" class="text-[11px] font-medium text-muted-foreground">Position / Designation <span class="text-destructive">*</span></label>
-                            <input id="edit-recipient-designation" x-model="editRecipientDesignation" name="designation" aria-describedby="edit-recipient-designation-empty-error" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                            <input id="edit-recipient-designation" x-model="editRecipientDesignation" name="designation" list="configured-position-options" aria-describedby="edit-recipient-designation-empty-error" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
                             <p id="edit-recipient-designation-empty-error" class="invisible min-h-[14px] text-[11px] font-medium text-destructive opacity-0">This field is required.</p>
                         </div>
                     </div>
@@ -830,8 +826,8 @@
                                             <svg x-show="!recipientDepartment" class="absolute right-2 h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 10 3 3 7-7" /></svg>
                                             <span>Select department</span>
                                         </button>
-                                        @foreach (['Administrative', 'Maintenance', 'CICT', 'CBME', 'Student Organization'] as $department)
-                                            <button type="button" @click="recipientDepartment = '{{ $department }}'; $event.target.closest('details').removeAttribute('open')" class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="recipientDepartment === '{{ $department }}' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">
+                                        @foreach ($departments as $department)
+                                            <button type="button" @click="recipientDepartment = @js($department); $event.target.closest('details').removeAttribute('open')" class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="recipientDepartment === @js($department) ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">
                                                 <svg x-show="recipientDepartment === '{{ $department }}'" class="absolute right-2 h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 10 3 3 7-7" /></svg>
                                                 {{ $department }}
                                             </button>
@@ -843,10 +839,18 @@
                         </div>
                         <div class="grid min-h-[74px] gap-0.5">
                             <label for="new-recipient-designation" class="text-[11px] font-medium text-muted-foreground">Position / Designation <span class="text-destructive">*</span></label>
-                            <input id="new-recipient-designation" x-model="recipientDesignation" name="designation" aria-describedby="new-recipient-designation-empty-error" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                            <input id="new-recipient-designation" x-model="recipientDesignation" name="designation" list="configured-position-options" aria-describedby="new-recipient-designation-empty-error" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
                             <p id="new-recipient-designation-empty-error" class="invisible min-h-[14px] text-[11px] font-medium text-destructive opacity-0">This field is required.</p>
                         </div>
                     </div>
+
+                    <datalist id="configured-position-options">
+                        @foreach ($departments as $department)
+                            @foreach ($department->positions as $position)
+                                <option value="{{ $position->name }}">{{ $department->name }}</option>
+                            @endforeach
+                        @endforeach
+                    </datalist>
 
                     <div class="flex justify-end gap-2 pt-2">
                         <button type="button" @click="resetRecipientForm()" class="inline-flex h-8 items-center justify-center rounded-full border border-border bg-white px-4 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted">Cancel</button>
@@ -856,7 +860,7 @@
             </div>
         </div>
 
-        <div data-account-table="recipients" x-show="tab === 'recipients'" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="translate-x-2 opacity-0" x-transition:enter-end="translate-x-0 opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0 opacity-100" x-transition:leave-end="-translate-x-2 opacity-0" class="mx-auto mt-4 w-full overflow-x-auto rounded-lg border">
+        <div data-account-table="recipients" x-show="tab === 'recipients'" x-cloak class="mx-auto mt-4 w-full overflow-x-auto rounded-lg border">
             <table class="w-full text-[13px]">
                 <thead class="border-b bg-primary text-white">
                     <tr class="text-left">
@@ -891,10 +895,14 @@
                             </td>
                             <td class="w-24 min-w-24 whitespace-nowrap py-1.5 pl-2 pr-4 text-left">
                                 <div class="flex items-center gap-2">
-                                    <button type="button" @click="openEditRecipient({ id: {{ $user->id }}, name: @js($user->name), first_name: @js($user->first_name), middle_name: @js($user->middle_name), last_name: @js($user->last_name), email: @js($user->email), staff_id: @js($user->recipient?->staff_id ?? ''), department: @js($user->recipient?->department ?? ''), designation: @js($user->recipient?->designation ?? ''), recipient: { staff_id: @js($user->recipient?->staff_id ?? ''), department: @js($user->recipient?->department ?? ''), designation: @js($user->recipient?->designation ?? '') } })" class="inline-flex h-6 items-center justify-center rounded-md bg-[#7a1d2a] px-2 text-[11px] font-semibold text-white transition-colors hover:bg-[#651923]" aria-label="Edit account">
-                                        Edit
-                                    </button>
-                                    @include('admin.accounts.partials.status-action', ['user' => $user])
+                                    @if ($user->role === \App\Models\User::ROLE_SDS_ADMIN)
+                                        <span class="text-[11px] font-semibold text-muted-foreground">Administrator</span>
+                                    @else
+                                        <button type="button" @click="openEditRecipient({ id: {{ $user->id }}, name: @js($user->name), first_name: @js($user->first_name), middle_name: @js($user->middle_name), last_name: @js($user->last_name), email: @js($user->email), staff_id: @js($user->recipient?->staff_id ?? ''), department: @js($user->recipient?->department ?? ''), designation: @js($user->recipient?->designation ?? ''), recipient: { staff_id: @js($user->recipient?->staff_id ?? ''), department: @js($user->recipient?->department ?? ''), designation: @js($user->recipient?->designation ?? '') } })" class="inline-flex h-6 items-center justify-center rounded-md bg-[#7a1d2a] px-2 text-[11px] font-semibold text-white transition-colors hover:bg-[#651923]" aria-label="Edit account">
+                                            Edit
+                                        </button>
+                                        @include('admin.accounts.partials.status-action', ['user' => $user])
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -1056,10 +1064,8 @@
             document.querySelectorAll(tableSelector).forEach((currentTable) => {
                 const nextTable = nextDocument.querySelector(`${tableSelector}[data-account-table="${currentTable.dataset.accountTable}"]`);
                 if (nextTable) {
-                    nextTable.removeAttribute('x-cloak');
-                    nextTable.style.display = currentTable.style.display;
-                    currentTable.replaceWith(nextTable);
-                    window.Alpine?.initTree(nextTable);
+                    currentTable.innerHTML = nextTable.innerHTML;
+                    window.Alpine?.initTree(currentTable);
                 }
             });
         };
@@ -1068,7 +1074,7 @@
             const requestId = ++searchRequest;
             abortController?.abort();
             abortController = new AbortController();
-            document.querySelectorAll(tableSelector).forEach((table) => table.classList.add('pointer-events-none', 'opacity-60'));
+            document.querySelectorAll(tableSelector).forEach((table) => table.classList.add('pointer-events-none'));
 
             try {
                 const response = await fetch(url, {
@@ -1084,7 +1090,7 @@
                 if (error.name !== 'AbortError') window.location.assign(url);
             } finally {
                 if (requestId === searchRequest) {
-                    document.querySelectorAll(tableSelector).forEach((table) => table.classList.remove('pointer-events-none', 'opacity-60'));
+                    document.querySelectorAll(tableSelector).forEach((table) => table.classList.remove('pointer-events-none'));
                 }
             }
         };

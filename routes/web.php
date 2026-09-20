@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\AccountManagementController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Auth\ForcePasswordController;
 use App\Http\Controllers\Admin\ComplaintCategoryController;
+use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\AdminComplaintController;
 use App\Http\Controllers\Admin\AdminTicketReviewController;
 use App\Http\Controllers\Student\NotificationController;
@@ -194,6 +195,9 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
         Route::delete('/categories/{category}', [ComplaintCategoryController::class, 'destroy'])
             ->name('categories.destroy');
 
+        Route::post('/departments', [DepartmentController::class, 'store'])
+            ->name('departments.store');
+
         // Complaint Queue (identified)
         Route::get('/complaints', [AdminComplaintController::class, 'index'])
             ->name('complaints.index');
@@ -299,6 +303,10 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
                     ->activeVerified()
                     ->with('user')
                     ->orderBy('department')
+                    ->get(),
+                'departments' => \App\Models\Department::query()
+                    ->with('positions')
+                    ->orderBy('name')
                     ->get(),
             ]);
         })->name('settings');

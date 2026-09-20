@@ -32,27 +32,19 @@ class TicketEscalationService
             return $hierarchy->first()?->recipient;
         }
 
-        $recipients = $hierarchy->map(function ($entry) {
-            return $entry->recipient;
+        $levels = $hierarchy->groupBy('level')->sortKeys();
+        $currentLevel = $levels->first(function ($entries) use ($currentHandlerUserId): bool {
+            return $entries->contains(fn ($entry): bool => (int) $entry->recipient?->user_id === (int) $currentHandlerUserId);
         });
 
-        $foundCurrent = false;
+        if ($currentLevel) {
+            $currentLevelNumber = (int) $currentLevel->first()->level;
+            $nextLevel = $levels->first(fn ($entries, $level): bool => (int) $level > $currentLevelNumber);
 
-        foreach ($recipients as $recipient) {
-            if (! $recipient) {
-                continue;
-            }
-
-            if ($foundCurrent) {
-                return $recipient;
-            }
-
-            if ((int) $recipient->user_id === (int) $currentHandlerUserId) {
-                $foundCurrent = true;
-            }
+            return $nextLevel?->first()?->recipient;
         }
 
-        return null;
+        return $levels->first()?->first()?->recipient;
     }
 
     public function escalate(Ticket $ticket, ?User $performedBy = null): bool
@@ -69,7 +61,9 @@ class TicketEscalationService
             return false;
         }
 
-        $deadline = $ticket->deadline ?? $ticket->complaint?->created_at?->copy()->addDays((int) $category->resolution_deadline_days);
+        $deadline = $ticket->deadline?->isFuture()
+            ? $ticket->deadline
+            : now()->addDays((int) $category->resolution_deadline_days);
 
         DB::transaction(function () use ($ticket, $targetRecipient, $performedBy, $deadline): void {
             $performedById = $performedBy?->id
@@ -115,6 +109,10 @@ class TicketEscalationService
 
         if ($performedBy?->isSdsAdmin()) {
             $users->push($performedBy);
+        }
+
+        if (! $performedBy) {
+            $users->push(User::query()->where('role', User::ROLE_SDS_ADMIN)->first());
         }
 
         if ($targetRecipient->user) {

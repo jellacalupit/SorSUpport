@@ -79,8 +79,10 @@
     $adminAvatarInitials = Auth::user()->must_change_password
         ? 'A'
         : (Auth::user()?->name_initials ?: 'A');
-    $adminIdentityDepartment = blank(Auth::user()->recipient?->department) ? '—' : Auth::user()->recipient?->department;
-    $adminIdentityDesignation = blank(Auth::user()->recipient?->designation) ? '—' : Auth::user()->recipient?->designation;
+    $adminInSetupMode = Auth::check() && Auth::user()->role === 'sds_admin' && Auth::user()->must_change_password;
+    $adminIdentityDepartment = $adminInSetupMode ? '—' : (blank(Auth::user()->recipient?->department) ? '—' : Auth::user()->recipient?->department);
+    $adminIdentityDesignation = $adminInSetupMode ? '—' : (blank(Auth::user()->recipient?->designation) ? '—' : Auth::user()->recipient?->designation);
+    $adminIdentityId = $adminInSetupMode ? '—' : (Auth::user()->username ?? Auth::user()->id);
     $adminHeaderGreeting = Auth::user()->must_change_password
         ? 'Welcome, Admin!'
         : ((blank(Auth::user()?->name) && blank(Auth::user()?->first_name)) ? 'Welcome back, Administrator!' : 'Welcome back, ' . $adminFirstName . '!');
@@ -394,7 +396,7 @@
 
                                                 @unless (Auth::user()->must_change_password)
                                                     <span class="block max-w-72 truncate text-[11px] text-muted-foreground">
-                                                        ID {{ Auth::user()->username ?? Auth::user()->id }} · {{ $adminIdentityDepartment }} · {{ $adminIdentityDesignation }}
+                                                        ID {{ $adminIdentityId }} · {{ $adminIdentityDepartment }} · {{ $adminIdentityDesignation }}
                                                     </span>
                                                 @endunless
 

@@ -1,15 +1,18 @@
 <x-app-layout :role="'admin'" title="Dashboard">
     <div class="flex items-stretch gap-2 pt-0">
         <div class="self-start flex flex-col gap-2">
-            <div class="flex w-[526px] items-stretch gap-2">
-                <div class="w-[170px] shrink-0">
-                    <x-stat-card compact label="Total Tickets" :value="$totalTickets" tone="primary" />
+            <div class="grid w-[526px] grid-cols-4 items-stretch gap-2">
+                <div>
+                    <x-stat-card compact label="Tickets" :value="$totalTickets" tone="primary" />
                 </div>
-                <div class="w-[170px] shrink-0">
-                    <x-stat-card compact label="Total Students" :value="$totalStudents" />
+                <div>
+                    <x-stat-card compact label="Students" :value="$totalStudents" />
                 </div>
-                <div class="w-[170px] shrink-0">
-                    <x-stat-card compact label="Total Recipients" :value="$totalRecipients" tone="danger" />
+                <div>
+                    <x-stat-card compact label="Recipients" :value="$totalRecipients" tone="danger" />
+                </div>
+                <div>
+                    <x-stat-card compact label="Categories" :value="$totalCategories" />
                 </div>
             </div>
 
@@ -25,23 +28,37 @@
                         ];
                         $statusSegments = collect($statusLegend)->values()->all();
                         $statusTotal = array_sum(array_column($statusSegments, 'count')) ?: 0;
-                        $statusGradient = '';
-                        $segmentStart = 0;
-                        foreach ($statusSegments as $segment) {
-                            $segmentEnd = $segmentStart + ($statusTotal > 0 ? ($segment['count'] / $statusTotal) * 100 : 0);
-                            $statusGradient .= ($statusGradient === '' ? '' : ', ') . $segment['color'] . ' ' . number_format($segmentStart, 2, '.', '') . '% ' . number_format($segmentEnd, 2, '.', '') . '%';
-                            $segmentStart = $segmentEnd;
-                        }
+                        $statusCircumference = 2 * pi() * 38;
+                        $statusOffset = 0;
                     @endphp
 
-                    <div class="mt-0 h-[128px] rounded-[20px] border border-border bg-white p-2.5 shadow-sm sm:h-[134px]">
-                        <div class="flex items-start gap-2 pl-1 sm:gap-2.5 sm:pl-2">
-                            <div class="shrink-0 pt-2">
-                                <div
-                                    class="relative h-20 w-20 rounded-full shadow-inner sm:h-24 sm:w-24"
-                                    style="background: conic-gradient({{ $statusGradient ?: '#e5e7eb 0% 100%' }});"
-                                >
-                                    <div class="absolute inset-[14px] rounded-full bg-white sm:inset-[16px]"></div>
+                    <div class="mt-0 h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:h-[134px]">
+                        <div class="flex items-start gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
+                            <div class="shrink-0">
+                                <div class="relative h-28 w-28 sm:h-30 sm:w-30">
+                                    <svg viewBox="0 0 100 100" class="h-full w-full drop-shadow-sm" aria-hidden="true">
+                                        <circle cx="50" cy="50" r="38" fill="none" stroke="#eef2f7" stroke-width="12" />
+                                        @foreach ($statusSegments as $segment)
+                                            @php
+                                                $segmentRatio = $statusTotal > 0 ? $segment['count'] / $statusTotal : 0;
+                                                $segmentLength = max(0, ($segmentRatio * $statusCircumference) - 3.5);
+                                                $segmentDashOffset = -$statusOffset;
+                                                $statusOffset += $segmentRatio * $statusCircumference;
+                                            @endphp
+                                            <circle
+                                                cx="50"
+                                                cy="50"
+                                                r="38"
+                                                fill="none"
+                                                stroke="{{ $segment['color'] }}"
+                                                stroke-width="12"
+                                                stroke-linecap="round"
+                                                stroke-dasharray="{{ $segmentLength }} {{ $statusCircumference - $segmentLength }}"
+                                                stroke-dashoffset="{{ $segmentDashOffset }}"
+                                                transform="rotate(-90 50 50)"
+                                            />
+                                        @endforeach
+                                    </svg>
                                     <div class="absolute inset-0 flex flex-col items-center justify-center">
                                         <span class="text-lg font-bold text-foreground sm:text-xl">{{ $statusTotal }}</span>
                                         <span class="text-[8px] text-muted-foreground">Tickets</span>
@@ -54,7 +71,7 @@
                                 <div class="mt-1.5 flex flex-col gap-0.5 text-[9px] text-foreground sm:text-[10px]">
                                     @foreach ($statusSegments as $segment)
                                         <div class="flex items-center gap-1.5">
-                                            <span class="h-2 w-2 rounded-sm" style="background-color: {{ $segment['color'] }};"></span>
+                                            <span class="h-2.5 w-2.5 rounded-sm" style="background-color: {{ $segment['color'] }};"></span>
                                             <span>{{ $segment['label'] }}</span>
                                         </div>
                                     @endforeach
@@ -73,20 +90,37 @@
                         ];
                         $classificationSegments = collect($classificationLegend)->values()->all();
                         $classificationTotal = array_sum(array_column($classificationSegments, 'count')) ?: 0;
-                        $classificationGradient = '';
-                        $classificationStart = 0;
-                        foreach ($classificationSegments as $segment) {
-                            $segmentEnd = $classificationStart + ($classificationTotal > 0 ? ($segment['count'] / $classificationTotal) * 100 : 0);
-                            $classificationGradient .= ($classificationGradient === '' ? '' : ', ') . $segment['color'] . ' ' . number_format($classificationStart, 2, '.', '') . '% ' . number_format($segmentEnd, 2, '.', '') . '%';
-                            $classificationStart = $segmentEnd;
-                        }
+                        $classificationCircumference = 2 * pi() * 38;
+                        $classificationOffset = 0;
                     @endphp
 
-                    <div class="mt-0 h-[128px] rounded-[20px] border border-border bg-white p-2.5 shadow-sm sm:h-[134px]">
-                        <div class="flex items-start gap-2 pl-1 sm:gap-2.5 sm:pl-2">
-                            <div class="shrink-0 pt-2">
-                                <div class="relative h-20 w-20 rounded-full shadow-inner sm:h-24 sm:w-24" style="background: conic-gradient({{ $classificationGradient ?: '#e5e7eb 0% 100%' }});">
-                                    <div class="absolute inset-[14px] rounded-full bg-white sm:inset-[16px]"></div>
+                    <div class="mt-0 h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:h-[134px]">
+                        <div class="flex items-start gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
+                            <div class="shrink-0">
+                                <div class="relative h-28 w-28 sm:h-30 sm:w-30">
+                                    <svg viewBox="0 0 100 100" class="h-full w-full drop-shadow-sm" aria-hidden="true">
+                                        <circle cx="50" cy="50" r="38" fill="none" stroke="#eef2f7" stroke-width="12" />
+                                        @foreach ($classificationSegments as $segment)
+                                            @php
+                                                $segmentRatio = $classificationTotal > 0 ? $segment['count'] / $classificationTotal : 0;
+                                                $segmentLength = max(0, ($segmentRatio * $classificationCircumference) - 3.5);
+                                                $segmentDashOffset = -$classificationOffset;
+                                                $classificationOffset += $segmentRatio * $classificationCircumference;
+                                            @endphp
+                                            <circle
+                                                cx="50"
+                                                cy="50"
+                                                r="38"
+                                                fill="none"
+                                                stroke="{{ $segment['color'] }}"
+                                                stroke-width="12"
+                                                stroke-linecap="round"
+                                                stroke-dasharray="{{ $segmentLength }} {{ $classificationCircumference - $segmentLength }}"
+                                                stroke-dashoffset="{{ $segmentDashOffset }}"
+                                                transform="rotate(-90 50 50)"
+                                            />
+                                        @endforeach
+                                    </svg>
                                     <div class="absolute inset-0 flex flex-col items-center justify-center">
                                         <span class="text-lg font-bold text-foreground sm:text-xl">{{ $classificationTotal }}</span>
                                         <span class="text-[8px] text-muted-foreground">Tickets</span>
@@ -99,7 +133,7 @@
                                 <div class="mt-1.5 flex flex-col gap-0.5 text-[9px] text-foreground sm:text-[10px]">
                                     @foreach ($classificationSegments as $segment)
                                         <div class="flex items-center gap-1.5">
-                                            <span class="h-2 w-2 rounded-sm" style="background-color: {{ $segment['color'] }};"></span>
+                                            <span class="h-2.5 w-2.5 rounded-sm" style="background-color: {{ $segment['color'] }};"></span>
                                             <span>{{ $segment['label'] }}</span>
                                         </div>
                                     @endforeach
@@ -300,7 +334,8 @@
                         <a data-admin-page-nav href="{{ route('admin.audit') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
-                    <ol class="mt-2 grid min-h-0 flex-1 grid-rows-5 gap-2.5 overflow-hidden">
+                    <ol class="relative mt-2 grid min-h-0 flex-1 grid-rows-5 gap-2.5 overflow-hidden">
+                        <span class="absolute top-4 bottom-4 left-[calc(25%+1.5rem)] w-px bg-[#7a1d2a]/20" aria-hidden="true"></span>
                         @forelse ($recentActivity as $log)
                             @php
                                 $activityLabel = match ($log->action) {
@@ -309,65 +344,51 @@
                                     default => ucfirst(str_replace('_', ' ', (string) $log->action)),
                                 };
                                 $referenceNumber = $log->ticket?->complaint?->reference_number;
-                                $complaintId = $log->ticket?->complaint_id;
+                                $activityIcon = match ($log->action) {
+                                    'complaint_submitted' => 'plus',
+                                    'message_posted' => 'message',
+                                    'ticket_escalated' => 'alert',
+                                    'ticket_resolved', 'ticket_closed' => 'check',
+                                    default => 'activity',
+                                };
                             @endphp
-                            <li class="flex min-w-0 gap-2">
-                                <span class="mt-0.5 h-12 w-0.5 shrink-0 rounded-full" style="background-color: #800000;"></span>
-                                <div class="min-w-0 flex-1 mt-1">
+                            <li class="relative z-10 grid min-w-0 grid-cols-[25%_2rem_minmax(0,1fr)] items-start gap-2">
+                                <span class="flex h-8 items-center text-[11px] text-black">{{ $log->created_at?->diffForHumans() ?? 'Recently' }}</span>
+                                <span class="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-[#7a1d2a] text-white shadow-sm ring-2 ring-[#7a1d2a]/10">
+                                    @if ($log->performer?->avatar_path)
+                                        <img src="{{ asset('storage/' . $log->performer->avatar_path) }}" alt="{{ $log->performer->name }}" class="h-full w-full object-cover">
+                                    @else
+                                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            @if ($activityIcon === 'plus')
+                                                <path d="M12 5v14M5 12h14" />
+                                            @elseif ($activityIcon === 'message')
+                                                <path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.4 8.4 0 0 1-3.5-.8L4 20l1.8-3.7A7.3 7.3 0 0 1 4.5 12 7.5 7.5 0 0 1 12 4.5a7.5 7.5 0 0 1 8 7Z" />
+                                            @elseif ($activityIcon === 'alert')
+                                                <path d="m12 4 8 15H4L12 4Z" /><path d="M12 9v4M12 16h.01" />
+                                            @elseif ($activityIcon === 'check')
+                                                <path d="m5 12 4 4L19 6" />
+                                            @else
+                                                <path d="M8 6h8M8 12h8M8 18h8" /><circle cx="4" cy="6" r="1" fill="currentColor" stroke="none" /><circle cx="4" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="4" cy="18" r="1" fill="currentColor" stroke="none" />
+                                            @endif
+                                        </svg>
+                                    @endif
+                                </span>
+                                <div class="min-w-0 pt-0.5">
                                     <p class="truncate text-[11px] font-semibold leading-tight text-foreground">{{ $activityLabel }}</p>
                                     <p class="mt-0.5 truncate text-[10px] leading-snug text-muted-foreground">
+                                        <span>{{ $log->performer?->given_name ?: 'System' }} updated activity</span>
                                         @if ($referenceNumber)
-                                            <span class="font-mono font-semibold text-primary">{{ $referenceNumber }}</span>
-                                            @if ($log->ticket?->complaint?->category?->name)
-                                                <span class="text-border"> (</span>
-                                                <span>{{ $log->ticket->complaint->category->name }}</span>
-                                                <span class="text-border">)</span>
-                                            @endif
+                                            <span class="text-border"> · </span>
+                                            <span class="font-mono font-semibold text-[#7a1d2a]">{{ $referenceNumber }}</span>
                                         @endif
                                     </p>
-                                    <p class="mt-0.5 truncate text-[10px] leading-snug text-muted-foreground">
-                                        @php
-                                            $performerName = $log->performer?->name ?? 'System';
-                                            
-                                            // Parse name like profile page does
-                                            $parsedNameParts = array_values(array_filter(preg_split('/\s+/', trim((string) $performerName)) ?: [], static fn ($part) => $part !== ''));
-                                            
-                                            $profileFirstName = '';
-                                            $profileMiddleName = '';
-                                            $profileLastName = '';
-                                            
-                                            if (!empty($parsedNameParts)) {
-                                                if (count($parsedNameParts) >= 3) {
-                                                    $profileFirstName = implode(' ', array_slice($parsedNameParts, 0, -2));
-                                                    $profileMiddleName = $parsedNameParts[count($parsedNameParts) - 2] ?? '';
-                                                    $profileLastName = $parsedNameParts[count($parsedNameParts) - 1] ?? '';
-                                                } elseif (count($parsedNameParts) === 2) {
-                                                    $profileFirstName = $parsedNameParts[0] ?? '';
-                                                    $profileLastName = $parsedNameParts[1] ?? '';
-                                                } else {
-                                                    $profileFirstName = $parsedNameParts[0] ?? '';
-                                                }
-                                            }
-                                            
-                                            $profileDisplayMiddleInitial = $profileMiddleName !== '' ? strtoupper(substr($profileMiddleName, 0, 1)) . '.' : '';
-                                            $formattedPerformerName = trim(implode(' ', array_filter([
-                                                $profileFirstName,
-                                                $profileDisplayMiddleInitial,
-                                                $profileLastName,
-                                            ], static fn ($part) => $part !== null && $part !== '')));
-                                            
-                                            if ($formattedPerformerName === '') {
-                                                $formattedPerformerName = $performerName;
-                                            }
-                                        @endphp
-                                        <span>{{ $formattedPerformerName }}</span>
-                                        <span class="text-border"> · </span>
-                                        <span>{{ $log->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y') }} · {{ $log->updated_at?->copy()->setTimezone('Asia/Manila')->format('g:i A') }}</span>
+                                    <p class="mt-0.5 truncate text-[9px] leading-snug text-muted-foreground">
+                                        {{ $log->created_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y g:i A') }}
                                     </p>
                                 </div>
                             </li>
                         @empty
-                            <li class="py-4 text-center text-[11px] text-muted-foreground">No recent audit activity.</li>
+                            <li class="grid place-items-center text-center text-[11px] text-muted-foreground">No recent activity.</li>
                         @endforelse
                     </ol>
                 </div>

@@ -206,8 +206,6 @@
             $categoryRecipients = collect();
             if ($category) {
                 $categoryRecipients = $category->suggestedRecipients
-                    ->map(fn ($recipient) => $recipient)
-                    ->merge($category->escalationHierarchies->map(fn ($hierarchy) => $hierarchy->recipient)->filter())
                     ->filter(fn ($recipient) => $recipient && $recipient->user && $recipient->user->is_active && ! empty($recipient->user->email_verified_at));
 
                 if ($category->recipient) {

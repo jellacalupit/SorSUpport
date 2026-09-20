@@ -22,7 +22,7 @@ class SdsAdminSeeder extends Seeder
                 'name' => '',
                 'email' => 'sorsu.support@gmail.com',
                 'password' => Hash::make('12345'),
-                'must_change_password' => false,
+                'must_change_password' => true,
                 'is_active' => true,
                 'email_verified_at' => now(),
             ]

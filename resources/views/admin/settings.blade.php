@@ -1,15 +1,21 @@
 <x-app-layout :role="'admin'" title="System Settings">
-    <div x-data="{ settingsTab: 'category', deleteModalOpen: false, deleteCategoryName: '', deleteCategoryUrl: '', addCategoryOpen: @js(request()->boolean('add_category')), editCategoryOpen: false, editCategory: { id: null, name: '', description: '', recipientId: '', hierarchy: '' }, suggestedRecipientsOpen: false, recipientSearch: '', selectedRecipientIds: [], recipientDraftIds: [], recipientOptions: @js($recipients->map(fn ($recipient) => ['id' => $recipient->id, 'first_name' => $recipient->user?->first_name ?: $recipient->user?->name, 'name' => $recipient->user?->display_name, 'department' => $recipient->department, 'avatar' => $recipient->user?->avatar_path ? asset('storage/' . $recipient->user->avatar_path) : null])->values()), categoryOptions: @js($categories->map(fn ($category) => ['id' => $category->id, 'name' => $category->name, 'description' => $category->description, 'recipientId' => $category->recipient_id, 'hierarchy' => $category->escalationHierarchies->pluck('recipient_id')->implode(', ')])->values()), openEditCategory(categoryId) { const category = this.categoryOptions.find(item => item.id === categoryId); if (!category) return; this.selectedRecipientIds = category.hierarchy ? category.hierarchy.split(',').map(id => Number(id.trim())).filter(Boolean) : []; this.recipientDraftIds = []; this.recipientSearch = ''; this.editCategory = { ...category }; this.editCategoryOpen = true; }, resetEditCategory() { this.editCategory = { id: null, name: '', description: '', recipientId: '', hierarchy: '' }; }, closeEditCategory() { this.resetEditCategory(); this.selectedRecipientIds = []; this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; this.editCategoryOpen = false; }, openSuggestedRecipients() { this.recipientDraftIds = [...this.selectedRecipientIds]; this.recipientSearch = ''; this.suggestedRecipientsOpen = true; }, selectSuggestedRecipients() { this.selectedRecipientIds = [...this.recipientDraftIds]; this.suggestedRecipientsOpen = false; this.recipientSearch = ''; }, closeSuggestedRecipients() { this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; }, resetCategoryForm() { this.$refs.categoryForm?.reset(); this.selectedRecipientIds = []; this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; }, closeCategoryModal() { this.resetCategoryForm(); this.addCategoryOpen = false; } }" class="grid gap-6">
+    <div class="-mt-1 sm:-mt-2">
+    <div x-data="{ settingsTab: 'category', deleteModalOpen: false, deleteCategoryName: '', deleteCategoryUrl: '', addCategoryOpen: @js(request()->boolean('add_category')), editCategoryOpen: false, editCategory: { id: null, name: '', description: '', recipientId: '' }, suggestedRecipientsOpen: false, recipientSearch: '', selectedRecipientIds: [], recipientDraftIds: [], hierarchyLevels: [{ level: 1, recipientIds: [] }], recipientOptions: @js($recipients->map(fn ($recipient) => ['id' => $recipient->id, 'first_name' => $recipient->user?->first_name ?: $recipient->user?->name, 'name' => $recipient->user?->display_name, 'department' => $recipient->department, 'avatar' => $recipient->user?->avatar_path ? asset('storage/' . $recipient->user->avatar_path) : null])->values()), categoryOptions: @js($categories->map(fn ($category) => ['id' => $category->id, 'name' => $category->name, 'description' => $category->description, 'recipientId' => $category->recipient_id, 'suggestedRecipientIds' => $category->suggestedRecipients->pluck('id')->values(), 'hierarchyLevels' => $category->escalationHierarchies->groupBy('level')->map(fn ($items, $level) => ['level' => (int) $level, 'recipientIds' => $items->pluck('recipient_id')->values()])->values()])->values()), openEditCategory(categoryId) { const category = this.categoryOptions.find(item => item.id === categoryId); if (!category) return; this.selectedRecipientIds = [...(category.suggestedRecipientIds || [])]; this.hierarchyLevels = (category.hierarchyLevels?.length ? category.hierarchyLevels : [{ level: 1, recipientIds: [] }]).map(level => ({ level: level.level, recipientIds: [...level.recipientIds] })); this.recipientDraftIds = []; this.recipientSearch = ''; this.editCategory = { id: category.id, name: category.name, description: category.description || '', recipientId: category.recipientId || '' }; this.editCategoryOpen = true; }, resetEditCategory() { this.editCategory = { id: null, name: '', description: '', recipientId: '' }; this.hierarchyLevels = [{ level: 1, recipientIds: [] }]; }, closeEditCategory() { this.resetEditCategory(); this.selectedRecipientIds = []; this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; this.editCategoryOpen = false; }, addHierarchyLevel() { const highest = this.hierarchyLevels.reduce((max, level) => Math.max(max, Number(level.level) || 0), 0); this.hierarchyLevels.push({ level: highest + 1, recipientIds: [] }); }, removeHierarchyLevel(index) { if (this.hierarchyLevels.length > 1) this.hierarchyLevels.splice(index, 1); }, openSuggestedRecipients() { this.recipientDraftIds = [...this.selectedRecipientIds]; this.recipientSearch = ''; this.suggestedRecipientsOpen = true; }, selectSuggestedRecipients() { this.selectedRecipientIds = [...new Set(this.recipientDraftIds)]; this.suggestedRecipientsOpen = false; this.recipientSearch = ''; }, closeSuggestedRecipients() { this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; }, resetCategoryForm() { this.$refs.categoryForm?.reset(); this.selectedRecipientIds = []; this.hierarchyLevels = [{ level: 1, recipientIds: [] }]; this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; }, closeCategoryModal() { this.resetCategoryForm(); this.addCategoryOpen = false; } }" class="grid gap-6">
+        <span x-init="settingsTab = @js(request('settings_tab', 'category'))" class="hidden"></span>
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="relative inline-flex h-10 w-full max-w-md items-center gap-1 rounded-xl border border-border bg-muted/60 p-1">
-            <span class="absolute top-1 bottom-1 left-1 w-[calc(50%-0.25rem)] rounded-lg bg-[#7a1d2a] shadow-sm transition-transform duration-300 ease-out" :class="settingsTab === 'escalation' ? 'translate-x-full' : 'translate-x-0'"></span>
-                <button type="button" @click="settingsTab = 'category'" :aria-selected="settingsTab === 'category'" class="relative z-10 inline-flex h-8 flex-1 items-center justify-center rounded-lg px-4 text-sm transition-colors" :class="settingsTab === 'category' ? 'font-semibold text-white' : 'font-medium text-muted-foreground hover:text-foreground'">Category</button>
-                <button type="button" @click="settingsTab = 'escalation'" :aria-selected="settingsTab === 'escalation'" class="relative z-10 inline-flex h-8 flex-1 items-center justify-center rounded-lg px-4 text-sm transition-colors" :class="settingsTab === 'escalation' ? 'font-semibold text-white' : 'font-medium text-muted-foreground hover:text-foreground'">Escalation Hierarchy</button>
+            <div class="inline-flex items-center gap-6 border-b border-border">
+                <button type="button" @click="settingsTab = 'category'" :aria-selected="settingsTab === 'category'" class="inline-flex items-center border-b-2 px-1 pb-2 text-sm transition-colors" :class="settingsTab === 'category' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Category</button>
+                <button type="button" @click="settingsTab = 'escalation'" :aria-selected="settingsTab === 'escalation'" class="inline-flex items-center border-b-2 px-1 pb-2 text-sm transition-colors" :class="settingsTab === 'escalation' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Escalation Hierarchy</button>
+                <button type="button" @click="settingsTab = 'department'" :aria-selected="settingsTab === 'department'" class="inline-flex items-center border-b-2 px-1 pb-2 text-sm transition-colors" :class="settingsTab === 'department' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Department</button>
             </div>
-            <button type="button" x-show="settingsTab === 'category'" x-on:click.prevent.stop="addCategoryOpen = true" class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90"><x-icons.plus class="h-4 w-4" /> Add category</button>
+            <div class="relative h-9 min-w-[150px]">
+                <button type="button" x-show="settingsTab === 'category'" x-cloak x-on:click.prevent.stop="addCategoryOpen = true" class="absolute top-0 right-0 inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition-opacity duration-150 hover:bg-primary/90"><x-icons.plus class="h-4 w-4" /> Add category</button>
+                <button type="button" x-show="settingsTab === 'department'" x-cloak x-on:click.prevent.stop="$dispatch('open-department-modal')" class="absolute top-0 right-0 inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition-opacity duration-150 hover:bg-primary/90"><x-icons.plus class="h-4 w-4" /> Add department</button>
+            </div>
         </div>
 
-        <div x-show="settingsTab === 'category'" x-cloak>
+        <div class="grid min-h-[28rem]">
+        <div x-cloak x-bind:class="settingsTab === 'category' ? 'opacity-100' : 'pointer-events-none opacity-0'" class="col-start-1 row-start-1 transition-opacity duration-150 ease-out">
             <ul class="grid gap-2 lg:grid-cols-2">
                 @forelse ($categories as $category)
                     <li class="rounded-lg border p-3.5 transition-colors hover:border-primary hover:bg-primary-soft">
@@ -22,30 +28,30 @@
                         </div>
                         <p class="mt-0 text-xs text-muted-foreground">{{ $category->description ?: 'No category description provided.' }}</p>
                         <div class="mt-3 flex items-center gap-1.5">
-                            @forelse ($category->escalationHierarchies as $hierarchy)
+                            @forelse ($category->suggestedRecipients as $recipient)
                                 <span class="group relative">
-                                    <span class="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-white bg-primary-soft text-[10px] font-bold text-primary shadow-sm" title="{{ $hierarchy->recipient?->user?->table_name ?? 'Recipient' }}">
-                                        @if ($hierarchy->recipient?->user?->avatar_path)
-                                            <img src="{{ asset('storage/' . $hierarchy->recipient->user->avatar_path) }}" alt="{{ $hierarchy->recipient->user->display_name }}" class="h-full w-full object-cover">
+                                    <span class="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-white bg-primary-soft text-[10px] font-bold text-primary shadow-sm" title="{{ $recipient->user?->table_name ?? 'Recipient' }}">
+                                        @if ($recipient->user?->avatar_path)
+                                            <img src="{{ asset('storage/' . $recipient->user->avatar_path) }}" alt="{{ $recipient->user?->display_name }}" class="h-full w-full object-cover">
                                         @else
-                                            {{ $hierarchy->recipient?->user?->name_initials ?? '?' }}
+                                            {{ $recipient->user?->name_initials ?? '?' }}
                                         @endif
                                     </span>
                                     <span class="absolute top-10 left-0 z-30 hidden w-72 max-w-[calc(100vw-2rem)] rounded-xl brand-gradient p-4 text-left text-primary-foreground shadow-lg group-hover:block">
                                         <span class="flex items-center gap-3">
                                             <span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">
-                                                @if ($hierarchy->recipient?->user?->avatar_path)
-                                                    <img src="{{ asset('storage/' . $hierarchy->recipient->user->avatar_path) }}" alt="{{ $hierarchy->recipient->user->table_name }}" class="h-full w-full object-cover">
+                                                @if ($recipient->user?->avatar_path)
+                                                    <img src="{{ asset('storage/' . $recipient->user->avatar_path) }}" alt="{{ $recipient->user?->table_name }}" class="h-full w-full object-cover">
                                                 @else
-                                                    {{ $hierarchy->recipient?->user?->name_initials ?? '?' }}
+                                                    {{ $recipient->user?->name_initials ?? '?' }}
                                                 @endif
                                             </span>
                                             <span class="min-w-0">
-                                                <span class="block wrap-break-word text-sm font-bold">{{ $hierarchy->recipient?->user?->table_name ?? 'Recipient' }}</span>
-                                                <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $hierarchy->recipient?->staff_id ?? $hierarchy->recipient?->user?->username ?? $hierarchy->recipient?->user?->id }} · {{ $hierarchy->recipient?->department ?? 'Department not specified' }} · {{ $hierarchy->recipient?->designation ?? 'Designation not specified' }}</span>
+                                                <span class="block wrap-break-word text-sm font-bold">{{ $recipient->user?->table_name ?? 'Recipient' }}</span>
+                                                <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $recipient->staff_id ?? $recipient->user?->username ?? $recipient->user?->id }} · {{ $recipient->department ?? 'Department not specified' }} · {{ $recipient->designation ?? 'Designation not specified' }}</span>
                                             </span>
                                         </span>
-                                        <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">{{ $hierarchy->recipient?->user?->role === \App\Models\User::ROLE_SDS_ADMIN ? 'Admin' : 'Recipient' }}</span>
+                                        <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">{{ $recipient->user?->role === \App\Models\User::ROLE_SDS_ADMIN ? 'Admin' : 'Recipient' }}</span>
                                     </span>
                                 </span>
                             @empty
@@ -59,7 +65,7 @@
             </ul>
         </div>
 
-        <div x-show="settingsTab === 'escalation'" x-cloak class="grid gap-3">
+        <div x-cloak x-bind:class="settingsTab === 'escalation' ? 'opacity-100' : 'pointer-events-none opacity-0'" class="col-start-1 row-start-1 grid gap-3 transition-opacity duration-150 ease-out">
             <ul class="grid gap-3">
                 @forelse ($categories as $category)
                     <li class="rounded-lg border border-border bg-card p-4">
@@ -72,10 +78,10 @@
                         </div>
                         @if ($category->escalationHierarchies->isNotEmpty())
                             <ol class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                                @foreach ($category->escalationHierarchies as $hierarchy)
-                                    <li class="flex min-w-0 items-center gap-2 rounded-md bg-muted/60 px-3 py-2 text-xs">
-                                        <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">{{ $hierarchy->level }}</span>
-                                        <span class="min-w-0 truncate text-foreground">{{ $hierarchy->recipient?->department ?? 'Recipient not assigned' }}<span class="block truncate text-[11px] text-muted-foreground">{{ $hierarchy->recipient?->user?->table_name ?? 'Unknown recipient' }}</span></span>
+                                @foreach ($category->escalationHierarchies->groupBy('level') as $level => $hierarchies)
+                                    <li class="flex min-w-0 items-start gap-2 rounded-md bg-muted/60 px-3 py-2 text-xs">
+                                        <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">{{ $level }}</span>
+                                        <span class="min-w-0">@foreach ($hierarchies as $hierarchy)<span class="block truncate text-foreground">{{ $hierarchy->recipient?->department ?? 'Recipient not assigned' }} · {{ $hierarchy->recipient?->user?->table_name ?? 'Unknown recipient' }}</span>@endforeach</span>
                                     </li>
                                 @endforeach
                             </ol>
@@ -87,6 +93,56 @@
                     <li class="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">No complaint categories configured.</li>
                 @endforelse
             </ul>
+        </div>
+
+        <div x-data="{ addDepartmentOpen: false, departmentName: '', departmentNameError: '', departmentPositions: [], departmentPositionDraft: '', positionDraftOpen: false, positionDraftError: '', addPosition() { const position = this.departmentPositionDraft.trim(); if (position === '') { this.positionDraftError = 'Input position name'; return; } this.departmentPositions.push(position); this.departmentPositionDraft = ''; this.positionDraftError = ''; this.positionDraftOpen = false; }, saveDepartment(event) { if (this.departmentName.trim() === '') { event.preventDefault(); this.departmentNameError = 'Input department name'; return; } this.departmentNameError = ''; }, removePosition(index) { this.departmentPositions.splice(index, 1); }, resetDepartmentForm() { this.departmentName = ''; this.departmentNameError = ''; this.departmentPositions = []; this.departmentPositionDraft = ''; this.positionDraftError = ''; this.positionDraftOpen = false; this.addDepartmentOpen = false; } }" @open-department-modal.window="addDepartmentOpen = true; positionDraftError = ''; departmentNameError = ''" x-cloak x-bind:class="settingsTab === 'department' ? 'opacity-100' : 'pointer-events-none opacity-0'" class="col-start-1 row-start-1 transition-opacity duration-150 ease-out">
+            <ul class="grid gap-2 lg:grid-cols-2">
+                @forelse ($departments as $department)
+                    <li class="rounded-lg border p-3.5">
+                        <p class="text-sm font-bold text-primary">{{ $department->name }}</p>
+                        <div class="mt-2 flex flex-wrap gap-1.5">
+                            @forelse ($department->positions as $position)
+                                <span class="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs text-foreground">{{ $position->name }}</span>
+                            @empty
+                                <span class="text-xs text-muted-foreground">No positions configured.</span>
+                            @endforelse
+                        </div>
+                    </li>
+                @empty
+                    <li class="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">No departments configured.</li>
+                @endforelse
+            </ul>
+
+            <div x-show="addDepartmentOpen" x-cloak x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                <div @click.outside="resetDepartmentForm()" class="w-full max-w-xl rounded-2xl border border-border bg-white shadow-2xl" role="dialog" aria-modal="true" aria-label="Add department">
+                    <div class="flex items-start justify-between border-b border-border px-5 py-4">
+                        <div><p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Department Management</p><h2 class="mt-1 text-lg font-bold text-foreground">Add Department</h2></div>
+                        <button type="button" @click="resetDepartmentForm()" class="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Close add department form"><x-icons.x class="h-4 w-4" /></button>
+                    </div>
+                    <form action="{{ route('admin.departments.store') }}" method="POST" @submit="saveDepartment($event)" class="grid gap-4 p-5">
+                        @csrf
+                        <div>
+                            <label for="settings-department-name" class="mb-1.5 block text-sm font-semibold text-foreground">Department Name</label>
+                            <input id="settings-department-name" name="name" type="text" x-model="departmentName" @input="departmentNameError = ''" class="h-8 w-full rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring">
+                            <p x-show="departmentNameError" x-text="departmentNameError" class="mt-1 text-xs text-destructive"></p>
+                        </div>
+                        <div>
+                            <div class="mb-1.5 flex items-center gap-2"><p class="text-sm font-semibold text-foreground">Position</p><button type="button" @click="positionDraftOpen = true; positionDraftError = ''; $nextTick(() => $refs.positionInput?.focus())" class="grid h-6 w-6 place-items-center rounded-md border border-gray-300 bg-white text-primary transition-colors hover:bg-primary-soft" aria-label="Add position" title="Add position"><x-icons.plus class="h-3.5 w-3.5" /></button></div>
+                            <div class="grid gap-2" x-show="positionDraftOpen">
+                                <div class="flex items-center gap-2">
+                                    <input x-ref="positionInput" type="text" x-model="departmentPositionDraft" @input="positionDraftError = ''" @keydown.enter.prevent="addPosition()" class="h-8 min-w-0 flex-1 rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring">
+                                    <button type="button" @click="addPosition()" class="grid h-8 w-8 shrink-0 place-items-center rounded-md text-primary transition-colors hover:bg-primary-soft" aria-label="Confirm position" title="Confirm position"><x-icons.check class="h-4 w-4" /></button>
+                                    <button type="button" @click="departmentPositionDraft = ''; positionDraftError = ''; positionDraftOpen = false" class="grid h-8 w-8 shrink-0 place-items-center rounded-md text-primary transition-colors hover:bg-primary-soft" aria-label="Cancel position" title="Cancel position"><x-icons.x class="h-4 w-4" /></button>
+                                </div>
+                                <p x-show="positionDraftError" x-text="positionDraftError" class="text-xs text-destructive"></p>
+                            </div>
+                            <div class="mt-2 grid gap-2"><template x-for="(position, index) in departmentPositions" :key="`${position}-${index}`"><div class="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm"><input type="hidden" name="positions[]" :value="position"><span x-text="position"></span><button type="button" @click="removePosition(index)" class="text-muted-foreground hover:text-destructive" aria-label="Remove position"><x-icons.x class="h-4 w-4" /></button></div></template></div>
+                        </div>
+                        <div class="flex justify-end gap-2 pt-2"><button type="button" @click="resetDepartmentForm()" class="inline-flex h-8 items-center justify-center rounded-full border border-border bg-white px-4 text-[11px] font-semibold text-foreground hover:bg-muted">Cancel</button><button type="submit" class="inline-flex h-8 items-center justify-center rounded-full bg-primary px-4 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90">Save Department</button></div>
+                    </form>
+                </div>
+            </div>
+        </div>
         </div>
 
         <div x-show="deleteModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -158,6 +214,31 @@
                             <button type="button" x-show="selectedRecipientIds.length > 0" x-cloak @click="openSuggestedRecipients()" class="grid h-9 w-9 place-items-center self-center rounded-full border border-input text-primary transition-colors hover:bg-primary-soft" aria-label="Add suggested recipient" title="Add suggested recipient"><x-icons.plus class="h-4 w-4" /></button>
                         </div>
                     </div>
+                    <div>
+                        <div class="mb-1.5 flex items-center justify-between gap-2">
+                            <p class="text-sm font-semibold text-foreground">Escalation Hierarchy</p>
+                            <button type="button" @click="addHierarchyLevel()" class="text-xs font-semibold text-primary hover:underline">Add level</button>
+                        </div>
+                        <div class="grid gap-2">
+                            <template x-for="(level, levelIndex) in hierarchyLevels" :key="`new-level-${levelIndex}`">
+                                <div class="rounded-lg border border-border bg-muted/30 p-3">
+                                    <div class="mb-2 flex items-center justify-between gap-2">
+                                        <span class="text-xs font-semibold text-foreground" x-text="`Level ${level.level}`"></span>
+                                        <button type="button" x-show="hierarchyLevels.length > 1" @click="removeHierarchyLevel(levelIndex)" class="text-[11px] font-semibold text-destructive hover:underline">Remove</button>
+                                    </div>
+                                    <input type="hidden" :name="`hierarchy_levels[${levelIndex}][level]`" :value="level.level">
+                                    <div class="grid max-h-36 gap-1 overflow-y-auto sm:grid-cols-2">
+                                        <template x-for="recipient in recipientOptions" :key="`new-level-${levelIndex}-${recipient.id}`">
+                                            <label class="flex items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-primary-soft">
+                                                <input type="checkbox" :name="`hierarchy_levels[${levelIndex}][recipient_ids][]`" :value="recipient.id" x-model="level.recipientIds" class="rounded border-input text-primary focus:ring-primary">
+                                                <span class="min-w-0 truncate" x-text="recipient.name"></span>
+                                            </label>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
                     <div class="flex justify-end gap-2 pt-2">
                         <button type="button" @click="closeCategoryModal()" class="inline-flex h-8 items-center justify-center rounded-full border border-border bg-white px-4 text-[11px] font-semibold text-foreground hover:bg-muted">Cancel</button>
                         <button type="submit" class="inline-flex h-8 items-center justify-center rounded-full bg-primary px-4 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90">Save Category</button>
@@ -190,7 +271,6 @@
                         <textarea id="edit-settings-category-description" x-model="editCategory.description" name="description" rows="4" class="w-full rounded-md border border-input bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"></textarea>
                     </div>
                     <input type="hidden" name="recipient_id" :value="editCategory.recipientId || ''">
-                    <input type="hidden" name="escalation_hierarchy" :value="editCategory.hierarchy || ''">
                     <div>
                         <p class="mb-1.5 text-sm font-semibold text-foreground">Suggested Recipients</p>
                         <div class="flex flex-wrap items-center gap-2">
@@ -211,6 +291,31 @@
                             </template>
                             <button type="button" x-show="selectedRecipientIds.length === 0" @click="openSuggestedRecipients()" class="inline-flex h-8 items-center gap-1.5 rounded-md border border-input px-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary-soft"><x-icons.plus class="h-3.5 w-3.5" /> Add recipient</button>
                             <button type="button" x-show="selectedRecipientIds.length > 0" x-cloak @click="openSuggestedRecipients()" class="grid h-9 w-9 place-items-center self-center rounded-full border border-input text-primary transition-colors hover:bg-primary-soft" aria-label="Add suggested recipient" title="Add suggested recipient"><x-icons.plus class="h-4 w-4" /></button>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="mb-1.5 flex items-center justify-between gap-2">
+                            <p class="text-sm font-semibold text-foreground">Escalation Hierarchy</p>
+                            <button type="button" @click="addHierarchyLevel()" class="text-xs font-semibold text-primary hover:underline">Add level</button>
+                        </div>
+                        <div class="grid gap-2">
+                            <template x-for="(level, levelIndex) in hierarchyLevels" :key="`edit-level-${levelIndex}`">
+                                <div class="rounded-lg border border-border bg-muted/30 p-3">
+                                    <div class="mb-2 flex items-center justify-between gap-2">
+                                        <span class="text-xs font-semibold text-foreground" x-text="`Level ${level.level}`"></span>
+                                        <button type="button" x-show="hierarchyLevels.length > 1" @click="removeHierarchyLevel(levelIndex)" class="text-[11px] font-semibold text-destructive hover:underline">Remove</button>
+                                    </div>
+                                    <input type="hidden" :name="`hierarchy_levels[${levelIndex}][level]`" :value="level.level">
+                                    <div class="grid max-h-36 gap-1 overflow-y-auto sm:grid-cols-2">
+                                        <template x-for="recipient in recipientOptions" :key="`edit-level-${levelIndex}-${recipient.id}`">
+                                            <label class="flex items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-primary-soft">
+                                                <input type="checkbox" :name="`hierarchy_levels[${levelIndex}][recipient_ids][]`" :value="recipient.id" x-model="level.recipientIds" class="rounded border-input text-primary focus:ring-primary">
+                                                <span class="min-w-0 truncate" x-text="recipient.name"></span>
+                                            </label>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
                     </div>
                     <div class="flex justify-end gap-2 pt-2">
@@ -273,4 +378,5 @@
             </div>
         </div>
     </div>
+</div>
 </x-app-layout>

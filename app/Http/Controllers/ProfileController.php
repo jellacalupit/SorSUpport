@@ -107,11 +107,11 @@ class ProfileController extends Controller
             }
 
             if (empty($recipientData['department'])) {
-                $recipientData['department'] = null;
+                $recipientData['department'] = '';
             }
 
             if (empty($recipientData['designation'])) {
-                $recipientData['designation'] = null;
+                $recipientData['designation'] = '';
             }
 
             $user->recipient()->updateOrCreate([
