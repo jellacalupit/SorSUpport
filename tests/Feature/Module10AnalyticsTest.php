@@ -30,7 +30,9 @@ class Module10AnalyticsTest extends TestCase
         $response = $this->actingAs($admin)->get(route('admin.analytics.index'));
 
         $response->assertStatus(200);
-        $response->assertSee('Analytics Dashboard');
+        $response->assertSee('Analytics & Reports');
+        $response->assertSee('Report Generation');
+        $response->assertSee('Export Report');
     }
 
     public function test_analytics_service_returns_expected_values()

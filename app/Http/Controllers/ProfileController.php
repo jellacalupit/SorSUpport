@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\AuditLog;
+use App\Models\Department;
 use App\Notifications\AccountUpdateNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,17 +23,19 @@ class ProfileController extends Controller
         $user = $request->user()->load('recipient');
         $savedNameParts = $request->session()->get('profile_name_parts', []);
 
+        $recipientDepartments = Department::query()
+            ->forRecipients()
+            ->with('positions')
+            ->orderBy('name')
+            ->get();
+
         return view('profile.edit', [
             'user' => $user,
             'recipient' => $user->recipient,
             'editable' => $user->isSdsAdmin(),
             'nameParts' => array_pad(explode(' ', trim($user->name), 3), 3, ''),
             'savedNameParts' => $savedNameParts,
-            'departments' => [
-                'Student Development Services', 'Registrar Office', 'Guidance Office',
-                'College of Education', 'College of Information and Computing Technology',
-                'College of Arts and Sciences', 'Supreme Student Council', 'Bulan Campus',
-            ],
+            'departments' => $recipientDepartments,
         ]);
     }
 

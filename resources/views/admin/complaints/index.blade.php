@@ -98,7 +98,7 @@
             <table class="w-full table-fixed text-[11px]">
                 <colgroup>
                     <col style="width: 7.5%;">
-                    <col style="width: 22.5%;">
+                    <col style="width: 20.5%;">
                     <col style="width: 7%;">
                     <col style="width: 10.5%;">
                     <col style="width: 7%;">
@@ -106,12 +106,12 @@
                     <col style="width: 13%;">
                     <col style="width: 9%;">
                     <col style="width: 8%;">
-                    <col style="width: 7.5%;">
+                    <col style="width: 9.5%;">
                 </colgroup>
                 <thead class="border-b bg-primary text-white">
                     <tr class="text-left">
                         <th class="whitespace-nowrap rounded-tl-lg px-2 py-2 font-semibold" style="width: 7.5%;">Ticket ID</th>
-                        <th class="px-2 py-2 font-semibold" style="width: 22.5%;">Subject Title</th>
+                        <th class="px-2 py-2 font-semibold" style="width: 20.5%;">Subject Title</th>
                         <th class="py-2 pl-1.5 pr-2 font-semibold" style="width: 13%;">Category</th>
                         <th class="px-2 py-2 font-semibold" style="width: 9%;">Classification</th>
                         <th class="py-2 pl-1.5 pr-2 font-semibold" style="width: 7%;">Status</th>
@@ -119,7 +119,7 @@
                         <th class="px-2 py-2 font-semibold" style="width: 7%;">Current Holder</th>
                         <th class="px-2 py-2 font-semibold" style="width: 10.5%;">Filed By</th>
                         <th class="px-2 py-2 font-semibold" style="width: 8%;">Date Submitted</th>
-                        <th class="whitespace-nowrap rounded-tr-lg px-2 py-2 font-semibold" style="width: 7.5%;">Last Updated</th>
+                        <th class="whitespace-nowrap rounded-tr-lg px-2 py-2 font-semibold" style="width: 9.5%;">Last Updated</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y">
@@ -208,13 +208,15 @@
                         </div>
                         <h3 class="mt-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $complaint->subject_title ?? 'Untitled' }}</h3>
                         <div class="mt-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                            <span class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
-                                @if ($studentUser?->avatar_path && ! $complaint->is_anonymous)
-                                    <img src="{{ asset('storage/' . $studentUser->avatar_path) }}" alt="{{ $studentDisplayName }}" class="h-full w-full object-cover">
-                                @else
-                                    {{ $studentUser?->name_initials ?: 'A' }}
-                                @endif
-                            </span>
+                            @if (! $complaint->is_anonymous)
+                                <span class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                                    @if ($studentUser?->avatar_path)
+                                        <img src="{{ asset('storage/' . $studentUser->avatar_path) }}" alt="{{ $studentDisplayName }}" class="h-full w-full object-cover">
+                                    @else
+                                        {{ $studentUser?->name_initials ?: 'A' }}
+                                    @endif
+                                </span>
+                            @endif
                             <span class="relative min-w-0" x-data="{ studentProfileOpen: false }" x-on:mouseenter="studentProfileOpen = true" x-on:mouseleave="studentProfileOpen = false">
                                 <span class="{{ $complaint->is_anonymous ? '' : 'cursor-pointer truncate font-semibold text-foreground hover:text-primary hover:underline' }}">{{ $studentDisplayName }}</span>
                                 @if ($studentUser && ! $complaint->is_anonymous)

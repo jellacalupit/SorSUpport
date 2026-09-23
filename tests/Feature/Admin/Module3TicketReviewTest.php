@@ -263,6 +263,66 @@ class Module3TicketReviewTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_acknowledge_a_classified_needs_resolution_ticket(): void
+    {
+        /** @var User $admin */
+        $admin = User::factory()->create([
+            'role' => User::ROLE_SDS_ADMIN,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+
+        $student = User::factory()->create([
+            'role' => User::ROLE_STUDENT,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+
+        $studentProfile = Student::create([
+            'user_id' => $student->id,
+            'student_id' => 'S1002',
+            'department' => 'IT',
+            'course' => 'BSIT',
+            'year_level' => '2nd Year',
+            'block' => 'A',
+        ]);
+
+        $category = ComplaintCategory::create([
+            'name' => 'Service Concern',
+            'resolution_deadline_days' => 5,
+            'is_active' => true,
+        ]);
+
+        $complaint = Complaint::create([
+            'reference_number' => Complaint::generateReferenceNumber(),
+            'student_id' => $studentProfile->id,
+            'category_id' => $category->id,
+            'subject_title' => 'Needs resolution',
+            'description' => 'Needs resolution description',
+            'is_anonymous' => false,
+            'status' => Complaint::STATUS_PENDING,
+        ]);
+
+        $ticket = Ticket::create([
+            'complaint_id' => $complaint->id,
+            'status' => Ticket::STATUS_PENDING,
+            'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+            'jurisdiction' => Ticket::JURISDICTION_SDS,
+            'assigned_to' => null,
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->post(route('admin.tickets.acknowledge', $ticket), [
+                'resolution_time' => 5,
+            ]);
+
+        $response->assertRedirect(route('admin.tickets.review.index'));
+        $ticket->refresh();
+        $this->assertSame(Ticket::STATUS_IN_PROGRESS, $ticket->status);
+        $this->assertSame(Ticket::CLASSIFICATION_NEEDS_RESOLUTION, $ticket->classification);
+        $this->assertSame($admin->id, $ticket->current_handler_id);
+    }
+
     public function test_needs_resolution_classification_creates_thread(): void
     {
         /** @var User $admin */

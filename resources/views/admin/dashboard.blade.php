@@ -274,7 +274,7 @@
             <div class="grid min-h-95 grid-cols-2 gap-2">
                 <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-[20px] border border-border bg-white p-2 shadow-sm">
                     <div class="flex items-center justify-between gap-2 px-1">
-                        <h3 class="font-display text-sm font-semibold leading-tight text-foreground">Top Performing Recipients</h3>
+                        <h3 class="font-display text-sm font-semibold leading-tight text-foreground">Recipient Performance</h3>
                         <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 

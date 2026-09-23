@@ -117,7 +117,7 @@ class AuthenticationTest extends TestCase
             ->assertSessionHasErrors(['password' => 'Incorrrect ID or password. Try again.']);
     }
 
-    public function test_admin_settings_only_exposes_verified_active_recipients_for_category_workflows(): void
+    public function test_admin_settings_only_exposes_active_recipients_for_category_workflows(): void
     {
         $admin = User::factory()->create([
             'role' => User::ROLE_SDS_ADMIN,
@@ -170,7 +170,7 @@ class AuthenticationTest extends TestCase
         $response->assertOk()
             ->assertSee('Active Recipient')
             ->assertDontSee('Inactive Recipient')
-            ->assertDontSee('Unverified Recipient');
+            ->assertSee('Unverified Recipient');
     }
 
     public function test_users_can_logout(): void

@@ -135,14 +135,14 @@ class ComplaintCategoryController extends Controller
             ->values();
 
         if ($recipientIds->isNotEmpty()) {
-            $activeVerifiedCount = Recipient::query()
-                ->activeVerified()
+            $activeRecipientCount = Recipient::query()
+                ->active()
                 ->whereIn('id', $recipientIds)
                 ->count();
 
-            if ($activeVerifiedCount !== $recipientIds->count()) {
+            if ($activeRecipientCount !== $recipientIds->count()) {
                 throw ValidationException::withMessages([
-                    'suggested_recipient_ids' => 'Only active and verified recipients can be selected.',
+                    'suggested_recipient_ids' => 'Only active recipients can be selected.',
                 ]);
             }
         }

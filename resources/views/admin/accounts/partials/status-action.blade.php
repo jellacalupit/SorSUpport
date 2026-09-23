@@ -33,16 +33,22 @@
     </div>
 @else
     <div x-data="{ reactivateModalOpen: false }" class="inline-block">
-        <button type="button" @click="reactivateModalOpen = true" class="inline-flex h-6 items-center justify-center rounded-md bg-green-700 px-2 text-[11px] font-semibold text-white transition-colors hover:bg-green-800" aria-label="Activate account">
-            Activate
-        </button>
+        @if ($user->hasCompleteProfile())
+            <button type="button" @click="reactivateModalOpen = true" class="inline-flex h-6 items-center justify-center rounded-md bg-green-700 px-2 text-[11px] font-semibold text-white transition-colors hover:bg-green-800" aria-label="Activate account">
+                Activate
+            </button>
+        @else
+            <button type="button" disabled class="inline-flex h-6 cursor-not-allowed items-center justify-center rounded-md bg-gray-300 px-2 text-[11px] font-semibold text-gray-500" aria-label="Activate account" title="Complete the account information before activating it">
+                Activate
+            </button>
+        @endif
 
         <div x-show="reactivateModalOpen" x-cloak class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
             <div @click.outside="reactivateModalOpen = false" class="w-full max-w-xl min-w-0 rounded-2xl border border-border bg-white shadow-2xl">
                 <div class="flex items-start justify-between border-b border-border px-5 py-4">
                     <div class="min-w-0 max-w-full flex-1">
                         <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Account Status</p>
-                        <h3 class="mt-1 max-w-full whitespace-normal wrap-break-word text-lg font-bold text-foreground">Reactivate Account</h3>
+                        <h3 class="mt-1 max-w-full whitespace-normal wrap-break-word text-lg font-bold text-foreground">Activate Account</h3>
                     </div>
                     <button type="button" @click="reactivateModalOpen = false" class="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Close confirmation">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-4 w-4"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -50,7 +56,7 @@
                 </div>
 
                 <p class="max-w-full whitespace-normal wrap-break-word px-5 pt-4 text-sm leading-6 text-muted-foreground">
-                    Are you sure you want to reactivate this account? The user will regain access to the system.
+                    Are you sure you want to activate this account? The user will regain access to the system.
                 </p>
 
                 <form method="POST" action="{{ route('admin.accounts.reactivate', $user) }}" class="p-5 pt-4">
@@ -58,7 +64,7 @@
                     @method('PATCH')
                     <div class="flex flex-wrap justify-end gap-2">
                         <button type="button" @click="reactivateModalOpen = false" class="inline-flex h-8 items-center justify-center rounded-full border border-border bg-white px-4 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted">Cancel</button>
-                        <button type="submit" class="inline-flex h-8 items-center justify-center rounded-full bg-primary px-4 text-[11px] font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Reactivate</button>
+                        <button type="submit" class="inline-flex h-8 items-center justify-center rounded-full bg-primary px-4 text-[11px] font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Activate</button>
                     </div>
                 </form>
             </div>

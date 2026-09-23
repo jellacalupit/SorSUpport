@@ -494,7 +494,9 @@ class AdminTicketReviewController extends Controller
     public function acknowledge(Request $request, Ticket $ticket): RedirectResponse
     {
         abort_unless(
-            ($ticket->status === Ticket::STATUS_PENDING && $ticket->classification === null) ||
+            ($ticket->status === Ticket::STATUS_PENDING &&
+                in_array($ticket->classification, [null, Ticket::CLASSIFICATION_NEEDS_RESOLUTION], true) &&
+                ($ticket->classification === null || $ticket->jurisdiction === Ticket::JURISDICTION_SDS)) ||
             ($ticket->status === Ticket::STATUS_ASSIGNED && $ticket->current_handler_id === Auth::id()),
             404
         );

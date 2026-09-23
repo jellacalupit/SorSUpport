@@ -205,14 +205,12 @@
             $category = $ticket->complaint->category;
             $categoryRecipients = collect();
             if ($category) {
-                $categoryRecipients = $category->suggestedRecipients
-                    ->filter(fn ($recipient) => $recipient && $recipient->user && $recipient->user->is_active && ! empty($recipient->user->email_verified_at));
-
-                if ($category->recipient) {
-                    $categoryRecipients->push($category->recipient);
-                }
-
-                $categoryRecipients = $categoryRecipients->unique('id')->values();
+                $categoryRecipients = collect([$category->recipient])
+                    ->merge($category->suggestedRecipients)
+                    ->merge($category->escalationHierarchies->pluck('recipient'))
+                    ->filter(fn ($recipient) => $recipient && $recipient->user && $recipient->user->is_active)
+                    ->unique('id')
+                    ->values();
             }
 
             $availableRecipients = $categoryRecipients;
@@ -229,13 +227,15 @@
                         </div>
                         <h3 class="mt-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $ticket->complaint->subject_title }}</h3>
                         <div class="mt-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                            <span class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
-                                @if ($ticket->complaint->student?->user?->avatar_path && ! $ticket->complaint->is_anonymous)
-                                    <img src="{{ asset('storage/' . $ticket->complaint->student->user->avatar_path) }}" alt="{{ $ticket->complaint->student->user->table_name ?? 'Student' }}" class="h-full w-full object-cover">
-                                @else
-                                    {{ $ticket->complaint->student?->user?->name_initials ?: 'A' }}
-                                @endif
-                            </span>
+                            @if (! $ticket->complaint->is_anonymous)
+                                <span class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                                    @if ($ticket->complaint->student?->user?->avatar_path)
+                                        <img src="{{ asset('storage/' . $ticket->complaint->student->user->avatar_path) }}" alt="{{ $ticket->complaint->student->user->table_name ?? 'Student' }}" class="h-full w-full object-cover">
+                                    @else
+                                        {{ $ticket->complaint->student?->user?->name_initials ?: 'A' }}
+                                    @endif
+                                </span>
+                            @endif
                             <span class="relative min-w-0" x-data="{ studentProfileOpen: false }" x-on:mouseenter="studentProfileOpen = true" x-on:mouseleave="studentProfileOpen = false">
                                 <span class="{{ $ticket->complaint->is_anonymous ? '' : 'cursor-pointer truncate font-semibold text-foreground hover:text-primary hover:underline' }}">{{ $ticket->complaint->is_anonymous ? 'Anonymous' : ($ticket->complaint->student?->user?->table_name ?? 'Anonymous') }}</span>
                             </span>

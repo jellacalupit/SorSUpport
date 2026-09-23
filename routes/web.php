@@ -197,6 +197,10 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
 
         Route::post('/departments', [DepartmentController::class, 'store'])
             ->name('departments.store');
+        Route::put('/departments/{department}', [DepartmentController::class, 'update'])
+            ->name('departments.update');
+        Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])
+            ->name('departments.destroy');
 
         // Complaint Queue (identified)
         Route::get('/complaints', [AdminComplaintController::class, 'index'])
@@ -300,12 +304,12 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
                     ->orderBy('name')
                     ->get(),
                 'recipients' => \App\Models\Recipient::query()
-                    ->activeVerified()
+                    ->active()
                     ->with('user')
                     ->orderBy('department')
                     ->get(),
                 'departments' => \App\Models\Department::query()
-                    ->with('positions')
+                    ->with(['positions', 'courses'])
                     ->orderBy('name')
                     ->get(),
             ]);

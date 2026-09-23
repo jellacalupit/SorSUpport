@@ -32,6 +32,23 @@
                     <th>Category</th>
                     <td>{{ optional(App\Models\ComplaintCategory::find($filters['category_id'] ?? null))->name ?? 'All' }}</td>
                 </tr>
+                <tr>
+                    <th>Classification</th>
+                    <td>{{ match ($filters['classification'] ?? null) {
+                        'needs_resolution' => 'Needs Resolution',
+                        'informational' => 'Informational',
+                        'invalid' => 'Invalid',
+                        default => 'All',
+                    } }}</td>
+                </tr>
+                <tr>
+                    <th>Status</th>
+                    <td>{{ ucfirst(str_replace('_', ' ', $filters['status'] ?? 'All')) }}</td>
+                </tr>
+                <tr>
+                    <th>Department</th>
+                    <td>{{ $filters['department'] ?? 'All' }}</td>
+                </tr>
             </tbody>
         </table>
     </div>

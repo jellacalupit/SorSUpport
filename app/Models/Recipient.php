@@ -17,8 +17,13 @@ class Recipient extends Model
     ];
 
     /**
-     * Only recipients whose backing user is both active and verified may be surfaced in category workflows.
+     * Only recipients whose backing user is active may be surfaced in category workflows.
      */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->whereHas('user', fn ($user) => $user->where('is_active', true));
+    }
+
     public function scopeActiveVerified(Builder $query): Builder
     {
         return $query->whereHas('user', fn ($user) => $user

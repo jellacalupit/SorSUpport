@@ -247,6 +247,7 @@ class ComplaintController extends Controller
                 'id' => $complaint->id,
                 'reference_number' => $complaint->reference_number,
                 'subject_title' => $complaint->subject_title,
+                'category_name' => $category->name,
                 'status' => 'Pending',
             ]);
     }

@@ -118,16 +118,21 @@ class AccountsImport implements ToCollection, WithHeadingRow
                     } else {
                         Recipient::updateOrCreate(['user_id' => $user->id], [
                             'staff_id' => $row['staff_id'],
-                            'department' => $row['department'],
-                            'designation' => $row['designation'],
+                            'department' => $row['department'] ?? '',
+                            'designation' => $row['designation'] ?? '',
                         ]);
                     }
                 });
 
                 $this->imported++;
             } catch (\Throwable $exception) {
+                $message = $exception instanceof \RuntimeException
+                    ? $exception->getMessage()
+                    : (str_contains(strtolower($exception->getMessage()), 'unique')
+                        ? 'Staff ID or email already exists.'
+                        : 'This account could not be imported.');
                 $this->recordFailure($rowNumber, [
-                    $identifierField => ['This account could not be imported.'],
+                    $identifierField => [$message],
                 ]);
             }
         }
@@ -151,12 +156,21 @@ class AccountsImport implements ToCollection, WithHeadingRow
             }
         }
         $name = trim((string) ($row['name'] ?? ''));
+        if ($name === '') {
+            $name = trim((string) ($row['full_name'] ?? ''));
+        }
 
         if ($name !== '') {
             $parts = preg_split('/\s+/', $name, -1, PREG_SPLIT_NO_EMPTY) ?: [];
-            $row['first_name'] ??= array_shift($parts) ?: '';
-            $row['last_name'] ??= array_pop($parts) ?: '';
-            $row['middle_name'] ??= implode(' ', $parts);
+            if (trim((string) ($row['first_name'] ?? '')) === '') {
+                $row['first_name'] = array_shift($parts) ?: '';
+            }
+            if (trim((string) ($row['last_name'] ?? '')) === '') {
+                $row['last_name'] = array_pop($parts) ?: '';
+            }
+            if (trim((string) ($row['middle_name'] ?? '')) === '') {
+                $row['middle_name'] = implode(' ', $parts) ?: null;
+            }
         }
 
         $row['department'] = $row['department'] ?? $row['recipient_department'] ?? null;
@@ -193,7 +207,7 @@ class AccountsImport implements ToCollection, WithHeadingRow
             'last_name' => ['required', 'string', 'max:255'],
             'middle_name' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
-            'department' => ['required', 'string', 'max:255'],
+            'department' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'in:active,inactive,1,0'],
         ];
 
@@ -208,7 +222,7 @@ class AccountsImport implements ToCollection, WithHeadingRow
 
         return array_merge($rules, [
             'staff_id' => ['required', 'string', 'max:50'],
-            'designation' => ['required', 'string', 'max:255'],
+            'designation' => ['nullable', 'string', 'max:255'],
         ]);
     }
 

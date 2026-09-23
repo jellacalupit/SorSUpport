@@ -9,10 +9,14 @@
             editStudentModalOpen: false,
             editRecipientModalOpen: false,
             department: '',
-            courseOptions: {
-                CICT: ['BSCS', 'BSIT', 'BSIS', 'BTVTED'],
-                CBME: ['BSA', 'BSAIS', 'BPA', 'BSE']
-            },
+            courseOptions: @js($studentDepartments->mapWithKeys(fn ($department) => [$department->name => $department->courses->pluck('course')->unique()->values()])->all()),
+            studentCourseDetails: @js($studentDepartments->mapWithKeys(fn ($department) => [
+                $department->name => $department->courses->groupBy('course')->mapWithKeys(fn ($courses, $course) => [$course => [
+                    'years' => collect(($maxYear = (int) $courses->max('year_level')) > 0 ? range(1, $maxYear) : [])->map(fn ($year) => (string) $year)->values(),
+                    'blocks' => collect(($maxBlock = (int) $courses->max('block')) > 0 ? range(1, $maxBlock) : [])->map(fn ($block) => (string) $block)->values(),
+                ]])->all(),
+            ])->all()),
+            recipientDepartmentOptions: @js($recipientDepartments->mapWithKeys(fn ($department) => [$department->name => $department->positions->pluck('name')->values()])->all()),
             selectedCourse: '',
             yearValue: '',
             blockValue: '',
@@ -115,7 +119,18 @@
                 this.recipientDepartment = '';
                 this.recipientDesignation = '';
                 this.recipientModalOpen = false;
+                document.getElementById('new-recipient-department-field')?.removeAttribute('open');
+                document.getElementById('new-recipient-designation-field')?.removeAttribute('open');
+                const newPositionInput = document.getElementById('new-recipient-designation');
+                const newPositionLabel = document.getElementById('new-recipient-designation-field')?.querySelector('[data-position-label]');
+                if (newPositionInput) newPositionInput.value = '';
+                if (newPositionLabel) newPositionLabel.textContent = 'Select position';
+                document.getElementById('admin-recipient-account-form')?.reset();
                 this.clearAccountValidationErrors();
+            },
+            openRecipientForm() {
+                this.resetRecipientForm();
+                this.recipientModalOpen = true;
             },
             closeEditStudentForm() {
                 this.editStudentModalOpen = false;
@@ -141,6 +156,8 @@
                 this.editRecipientStaffId = '';
                 this.editRecipientDepartment = '';
                 this.editRecipientDesignation = '';
+                document.getElementById('edit-recipient-department-field')?.removeAttribute('open');
+                document.getElementById('edit-recipient-designation-field')?.removeAttribute('open');
                 this.clearAccountValidationErrors();
             },
             openEditStudent(user) {
@@ -204,7 +221,7 @@
                 <button type="button" id="bulk-upload-trigger" class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-semibold transition-colors hover:bg-muted">
                     <x-icons.upload class="h-4 w-4" /> Bulk Upload
                 </button>
-                <button type="button" @click="tab === 'students' ? accountModalOpen = true : recipientModalOpen = true" class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">
+                <button type="button" @click="tab === 'students' ? accountModalOpen = true : openRecipientForm()" class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">
                     <x-icons.plus class="h-4 w-4" /> Add Account Manually
                 </button>
             </div>
@@ -214,25 +231,30 @@
             $accountCategories = ['students' => 'Students', 'recipients' => 'Recipients'];
             $statusOptions = ['' => 'All Status', 'active' => 'Active', 'inactive' => 'Inactive'];
             $sortOptions = ['asc' => 'Ascending', 'desc' => 'Descending'];
-            $yearOptions = ['' => 'All Year', '1' => '1', '2' => '2', '3' => '3', '4' => '4'];
-            $blockOptions = ['' => 'All Block', '1' => '1', '2' => '2', '3' => '3', '4' => '4', '5' => '5'];
             $selectedCategory = request('category_filter', 'students');
-            $departmentOptions = $selectedCategory === 'recipients'
-                ? ['' => 'All Department', 'Administrative' => 'Administrative', 'Maintenance' => 'Maintenance', 'CICT' => 'CICT', 'CBME' => 'CBME', 'Student Organization' => 'Student Organization']
-                : ['' => 'All Department', 'CICT' => 'CICT', 'CBME' => 'CBME'];
+            $configuredDepartmentOptions = ($selectedCategory === 'recipients' ? $recipientDepartments : $studentDepartments)->pluck('name')->mapWithKeys(fn ($name) => [$name => $name])->all();
+            $departmentOptions = ['' => 'All Department'] + $configuredDepartmentOptions;
+            $selectedCourse = request('course_filter', '');
             $selectedStatus = request('status_filter', '');
             $selectedSort = request('sort_id', 'asc');
-            $courseDepartmentMap = [
-                'BSCS' => 'CICT', 'BSIT' => 'CICT', 'BSIS' => 'CICT', 'BTVTED' => 'CICT',
-                'BSA' => 'CBME', 'BSAIS' => 'CBME', 'BPA' => 'CBME', 'BSE' => 'CBME',
-            ];
-            $selectedCourse = request('course_filter', '');
+            $courseDepartmentMap = $studentDepartments
+                ->flatMap(fn ($department) => $department->courses
+                    ->pluck('course')
+                    ->unique()
+                    ->mapWithKeys(fn ($course) => [$course => $department->name]))
+                ->all();
             $selectedDepartment = request('department_filter', '') ?: ($courseDepartmentMap[$selectedCourse] ?? '');
-            $courseOptions = match ($selectedDepartment) {
-                'CICT' => ['' => 'All Course', 'BSCS' => 'BSCS', 'BSIT' => 'BSIT', 'BSIS' => 'BSIS', 'BTVTED' => 'BTVTED'],
-                'CBME' => ['' => 'All Course', 'BSA' => 'BSA', 'BSAIS' => 'BSAIS', 'BPA' => 'BPA', 'BSE' => 'BSE'],
-                default => ['' => 'All Course', 'BSCS' => 'BSCS', 'BSIT' => 'BSIT', 'BSIS' => 'BSIS', 'BTVTED' => 'BTVTED', 'BSA' => 'BSA', 'BSAIS' => 'BSAIS', 'BPA' => 'BPA', 'BSE' => 'BSE'],
-            };
+            $selectedStudentDepartment = $studentDepartments->firstWhere('name', $selectedDepartment);
+            $selectedStudentCourses = $selectedStudentDepartment?->courses ?? $studentDepartments->flatMap(fn ($department) => $department->courses);
+            $selectedCourseRows = $selectedStudentCourses->when($selectedCourse !== '', fn ($courses) => $courses->where('course', $selectedCourse));
+            $configuredYears = collect(($maxConfiguredYear = (int) $selectedCourseRows->max('year_level')) > 0 ? range(1, $maxConfiguredYear) : [])->map(fn ($year) => (string) $year)->values();
+            $configuredBlocks = collect(($maxConfiguredBlock = (int) $selectedCourseRows->max('block')) > 0 ? range(1, $maxConfiguredBlock) : [])->map(fn ($block) => (string) $block)->values();
+            $yearOptions = ['' => 'All Year'] + $configuredYears->mapWithKeys(fn ($year) => [$year => $year])->all();
+            $blockOptions = ['' => 'All Block'] + $configuredBlocks->mapWithKeys(fn ($block) => [$block => $block])->all();
+            $configuredCourses = $selectedDepartment !== ''
+                ? ($studentDepartments->firstWhere('name', $selectedDepartment)?->courses->pluck('course')->unique()->values() ?? collect())
+                : $studentDepartments->flatMap(fn ($department) => $department->courses->pluck('course'))->unique()->sort()->values();
+            $courseOptions = ['' => 'All Course'] + $configuredCourses->mapWithKeys(fn ($course) => [$course => $course])->all();
             $selectedYear = request('year_filter', '');
             $selectedBlock = request('block_filter', '');
             $splitAccountName = function ($name, $user = null): array {
@@ -275,12 +297,12 @@
                     </details>
                 </div>
 
-                <details x-data="{}" class="group relative w-full sm:w-[150px] sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
+                <details x-data="{}" class="group relative w-full {{ $selectedCategory === 'recipients' ? 'sm:w-[320px]' : 'sm:w-[150px]' }} sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
                     <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
-                        <span class="truncate">{{ $departmentOptions[$selectedDepartment] ?? 'All Department' }}</span>
+                        <span class="whitespace-nowrap">{{ $departmentOptions[$selectedDepartment] ?? 'All Department' }}</span>
                         <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                     </summary>
-                    <div class="absolute top-full left-0 z-50 mt-1 w-full min-w-28 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                    <div class="absolute top-full left-0 z-50 mt-1 w-full min-w-28 max-w-[calc(100vw-2rem)] whitespace-nowrap rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                         @foreach ($departmentOptions as $value => $label)
                             <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'department_filter' => $value, 'course_filter' => '', 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedDepartment === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                 @if ($selectedDepartment === $value)
@@ -415,7 +437,29 @@
                 </tbody>
             </table>
             @if ($studentUsers->hasPages())
-                <div class="mt-4">{{ $studentUsers->links() }}</div>
+                <nav class="mt-5 flex justify-end" aria-label="Student accounts pagination">
+                    <div class="flex items-center gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
+                        @if ($studentUsers->onFirstPage())
+                            <span class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground/50" aria-disabled="true">Previous</span>
+                        @else
+                            <a href="{{ $studentUsers->previousPageUrl() }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Previous</a>
+                        @endif
+
+                        @foreach ($studentUsers->getUrlRange(1, $studentUsers->lastPage()) as $page => $url)
+                            @if ($page === $studentUsers->currentPage())
+                                <span class="inline-flex h-8 min-w-8 items-center justify-center rounded bg-primary px-2 text-xs font-semibold text-primary-foreground" aria-current="page">{{ $page }}</span>
+                            @else
+                                <a href="{{ $url }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded border border-transparent px-2 text-xs text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground">{{ $page }}</a>
+                            @endif
+                        @endforeach
+
+                        @if ($studentUsers->hasMorePages())
+                            <a href="{{ $studentUsers->nextPageUrl() }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Next</a>
+                        @else
+                            <span class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground/50" aria-disabled="true">Next</span>
+                        @endif
+                    </div>
+                </nav>
             @endif
         </div>
 
@@ -468,7 +512,7 @@
                     </div>
 
                     <div class="grid gap-3 md:grid-cols-2">
-                        <div class="grid min-h-[74px] gap-0.5">
+                            <div class="grid min-h-[74px] gap-0.5">
                             <label class="text-[11px] font-medium text-muted-foreground">Department <span class="text-destructive">*</span></label>
                             <input type="hidden" name="department" x-model="department">
                             <details id="new-student-department-field" x-data="{}" class="group relative w-full" x-on:click.outside="$el.removeAttribute('open')">
@@ -477,8 +521,9 @@
                                     <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                                 </summary>
                                 <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                                    <button type="button" @click="department = 'CICT'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="department === 'CICT' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">CICT</button>
-                                    <button type="button" @click="department = 'CBME'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="department === 'CBME' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">CBME</button>
+                                    <template x-for="option in Object.keys(courseOptions)" :key="option">
+                                        <button type="button" @click="department = option; selectedCourse = ''; yearValue = ''; blockValue = ''; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground" x-text="option"></button>
+                                    </template>
                                 </div>
                             </details>
                             <p id="new-student-department-empty-error" class="invisible min-h-[14px] text-[11px] font-medium text-destructive opacity-0">Please select an option.</p>
@@ -494,7 +539,7 @@
                                 <div class="absolute top-full z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                                     <template x-if="department">
                                         <template x-for="option in courseOptions[department]" :key="option">
-                                            <button type="button" @click="selectedCourse = option; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground" x-text="option"></button>
+                                            <button type="button" @click="selectedCourse = option; yearValue = ''; blockValue = ''; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground" x-text="option"></button>
                                         </template>
                                     </template>
                                 </div>
@@ -513,10 +558,9 @@
                                     <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                                 </summary>
                                 <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                                    <button type="button" @click="yearValue = '1'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">1</button>
-                                    <button type="button" @click="yearValue = '2'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">2</button>
-                                    <button type="button" @click="yearValue = '3'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">3</button>
-                                    <button type="button" @click="yearValue = '4'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">4</button>
+                                    <template x-for="year in (studentCourseDetails[department]?.[selectedCourse]?.years || [])" :key="year">
+                                        <button type="button" @click="yearValue = year; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground" x-text="year"></button>
+                                    </template>
                                 </div>
                             </details>
                             <p id="new-student-year-empty-error" class="invisible min-h-[14px] text-[11px] font-medium text-destructive opacity-0">Please select an option.</p>
@@ -530,11 +574,9 @@
                                     <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                                 </summary>
                                 <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                                    <button type="button" @click="blockValue = '1'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">1</button>
-                                    <button type="button" @click="blockValue = '2'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">2</button>
-                                    <button type="button" @click="blockValue = '3'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">3</button>
-                                    <button type="button" @click="blockValue = '4'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">4</button>
-                                    <button type="button" @click="blockValue = '5'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">5</button>
+                                    <template x-for="block in (studentCourseDetails[department]?.[selectedCourse]?.blocks || [])" :key="block">
+                                        <button type="button" @click="blockValue = block; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground" x-text="block"></button>
+                                    </template>
                                 </div>
                             </details>
                             <p class="invisible min-h-[14px] text-[11px] font-medium text-destructive opacity-0">&nbsp;</p>
@@ -608,9 +650,10 @@
                                     <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                                 </summary>
                                 <div class="absolute top-full z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                                    <button type="button" @click="editStudentDepartment = ''; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="editStudentDepartment === '' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">Select</button>
-                                    <button type="button" @click="editStudentDepartment = 'CICT'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="editStudentDepartment === 'CICT' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">CICT</button>
-                                    <button type="button" @click="editStudentDepartment = 'CBME'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="editStudentDepartment === 'CBME' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">CBME</button>
+                                    <button type="button" @click="editStudentDepartment = ''; editStudentCourse = ''; editStudentYearLevel = ''; editStudentBlock = ''; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="editStudentDepartment === '' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">Select</button>
+                                    <template x-for="option in Object.keys(courseOptions)" :key="`edit-${option}`">
+                                        <button type="button" @click="editStudentDepartment = option; editStudentCourse = ''; editStudentYearLevel = ''; editStudentBlock = ''; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground" x-text="option"></button>
+                                    </template>
                                 </div>
                             </details>
                             <p id="edit-student-department-empty-error" class="invisible min-h-[14px] text-[11px] font-medium text-destructive opacity-0">Please select an option.</p>
@@ -625,8 +668,8 @@
                                 </summary>
                                 <div class="absolute top-full z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                                     <template x-if="editStudentDepartment">
-                                        <template x-for="option in (editStudentDepartment === 'CICT' ? ['BSCS', 'BSIT', 'BSIS', 'BTVTED'] : editStudentDepartment === 'CBME' ? ['BSA', 'BSAIS', 'BPA', 'BSE'] : [])" :key="option">
-                                            <button type="button" @click="editStudentCourse = option; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground" x-text="option"></button>
+                                        <template x-for="option in (courseOptions[editStudentDepartment] || [])" :key="option">
+                                            <button type="button" @click="editStudentCourse = option; editStudentYearLevel = ''; editStudentBlock = ''; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground" x-text="option"></button>
                                         </template>
                                     </template>
                                 </div>
@@ -645,10 +688,9 @@
                                     <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                                 </summary>
                                 <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                                    <button type="button" @click="editStudentYearLevel = '1'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">1</button>
-                                    <button type="button" @click="editStudentYearLevel = '2'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">2</button>
-                                    <button type="button" @click="editStudentYearLevel = '3'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">3</button>
-                                    <button type="button" @click="editStudentYearLevel = '4'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">4</button>
+                                    <template x-for="year in (studentCourseDetails[editStudentDepartment]?.[editStudentCourse]?.years || [])" :key="year">
+                                        <button type="button" @click="editStudentYearLevel = year; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground" x-text="year"></button>
+                                    </template>
                                 </div>
                             </details>
                             <p id="edit-student-year-empty-error" class="invisible min-h-[14px] text-[11px] font-medium text-destructive opacity-0">Please select an option.</p>
@@ -662,11 +704,9 @@
                                     <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                                 </summary>
                                 <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                                    <button type="button" @click="editStudentBlock = '1'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">1</button>
-                                    <button type="button" @click="editStudentBlock = '2'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">2</button>
-                                    <button type="button" @click="editStudentBlock = '3'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">3</button>
-                                    <button type="button" @click="editStudentBlock = '4'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">4</button>
-                                    <button type="button" @click="editStudentBlock = '5'; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">5</button>
+                                    <template x-for="block in (studentCourseDetails[editStudentDepartment]?.[editStudentCourse]?.blocks || [])" :key="block">
+                                        <button type="button" @click="editStudentBlock = block; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground" x-text="block"></button>
+                                    </template>
                                 </div>
                             </details>
                             <p class="invisible min-h-[14px] text-[11px] font-medium text-destructive opacity-0">&nbsp;</p>
@@ -741,8 +781,8 @@
                                 </summary>
                                 <div class="absolute top-full z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                                     <button type="button" @click="editRecipientDepartment = ''; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="editRecipientDepartment === '' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">Select department</button>
-                                    @foreach ($departments as $department)
-                                        <button type="button" @click="editRecipientDepartment = @js($department); $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="editRecipientDepartment === @js($department) ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">{{ $department }}</button>
+                                    @foreach ($recipientDepartments as $department)
+                                        <button type="button" @click="editRecipientDepartment = @js($department->name); editRecipientDesignation = ''; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="editRecipientDepartment === @js($department->name) ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">{{ $department->name }}</button>
                                     @endforeach
                                 </div>
                             </details>
@@ -750,7 +790,11 @@
                         </div>
                         <div class="grid min-h-[74px] gap-0.5">
                             <label for="edit-recipient-designation" class="text-[11px] font-medium text-muted-foreground">Position / Designation <span class="text-destructive">*</span></label>
-                            <input id="edit-recipient-designation" x-model="editRecipientDesignation" name="designation" list="configured-position-options" aria-describedby="edit-recipient-designation-empty-error" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                            <input id="edit-recipient-designation" type="hidden" name="designation" x-model="editRecipientDesignation">
+                            <details id="edit-recipient-designation-field" x-data="{}" class="group relative w-full" x-on:click.outside="$el.removeAttribute('open')">
+                                <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-xs shadow-sm outline-none [&::-webkit-details-marker]:hidden"><span class="truncate" x-text="editRecipientDesignation || 'Select position'" :class="editRecipientDesignation ? '' : 'text-muted-foreground'"></span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6" /></svg></summary>
+                                <div class="absolute top-full z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md"><button type="button" @click="editRecipientDesignation = ''; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">Select position</button><template x-for="position in (recipientDepartmentOptions[editRecipientDepartment] || [])" :key="position"><button type="button" @click="editRecipientDesignation = position; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground" x-text="position"></button></template></div>
+                            </details>
                             <p id="edit-recipient-designation-empty-error" class="invisible min-h-[14px] text-[11px] font-medium text-destructive opacity-0">This field is required.</p>
                         </div>
                     </div>
@@ -763,7 +807,7 @@
             </div>
         </div>
 
-        <div x-show="recipientModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div x-show="recipientModalOpen" x-cloak @click.self="resetRecipientForm()" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
             <div @click.outside="recipientModalOpen = false" class="w-full max-w-2xl rounded-2xl border border-border bg-white shadow-2xl">
                 <div class="flex items-start justify-between border-b border-border px-5 py-4">
                     <div>
@@ -826,10 +870,10 @@
                                             <svg x-show="!recipientDepartment" class="absolute right-2 h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 10 3 3 7-7" /></svg>
                                             <span>Select department</span>
                                         </button>
-                                        @foreach ($departments as $department)
-                                            <button type="button" @click="recipientDepartment = @js($department); $event.target.closest('details').removeAttribute('open')" class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="recipientDepartment === @js($department) ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">
-                                                <svg x-show="recipientDepartment === '{{ $department }}'" class="absolute right-2 h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 10 3 3 7-7" /></svg>
-                                                {{ $department }}
+                                        @foreach ($recipientDepartments as $department)
+                                            <button type="button" @click="recipientDepartment = @js($department->name); recipientDesignation = ''; $event.target.closest('details').removeAttribute('open')" class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="recipientDepartment === @js($department->name) ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">
+                                                <svg x-show="recipientDepartment === @js($department->name)" class="absolute right-2 h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 10 3 3 7-7" /></svg>
+                                                {{ $department->name }}
                                             </button>
                                         @endforeach
                                     </div>
@@ -839,13 +883,17 @@
                         </div>
                         <div class="grid min-h-[74px] gap-0.5">
                             <label for="new-recipient-designation" class="text-[11px] font-medium text-muted-foreground">Position / Designation <span class="text-destructive">*</span></label>
-                            <input id="new-recipient-designation" x-model="recipientDesignation" name="designation" list="configured-position-options" aria-describedby="new-recipient-designation-empty-error" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                            <input id="new-recipient-designation" type="hidden" name="designation" x-model="recipientDesignation">
+                            <details id="new-recipient-designation-field" x-data="{}" class="group relative w-full" x-on:click.outside="$el.removeAttribute('open')">
+                                <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-xs shadow-sm outline-none [&::-webkit-details-marker]:hidden"><span data-position-label class="truncate" x-text="recipientDesignation || 'Select position'" :class="recipientDesignation ? '' : 'text-muted-foreground'"></span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6" /></svg></summary>
+                                <div class="absolute top-full z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md"><button type="button" @click="recipientDesignation = ''; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground">Select position</button><template x-for="position in (recipientDepartmentOptions[recipientDepartment] || [])" :key="position"><button type="button" @click="recipientDesignation = position; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground" x-text="position"></button></template></div>
+                            </details>
                             <p id="new-recipient-designation-empty-error" class="invisible min-h-[14px] text-[11px] font-medium text-destructive opacity-0">This field is required.</p>
                         </div>
                     </div>
 
                     <datalist id="configured-position-options">
-                        @foreach ($departments as $department)
+                        @foreach ($recipientDepartments as $department)
                             @foreach ($department->positions as $position)
                                 <option value="{{ $position->name }}">{{ $department->name }}</option>
                             @endforeach
@@ -860,7 +908,8 @@
             </div>
         </div>
 
-        <div data-account-table="recipients" x-show="tab === 'recipients'" x-cloak class="mx-auto mt-4 w-full overflow-x-auto rounded-lg border">
+        <div x-show="tab === 'recipients'" x-cloak class="mx-auto mt-4 w-full">
+            <div data-account-table="recipients" class="w-full overflow-x-auto rounded-lg border">
             <table class="w-full text-[13px]">
                 <thead class="border-b bg-primary text-white">
                     <tr class="text-left">
@@ -911,8 +960,31 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
             @if ($recipientUsers->hasPages())
-                <div class="mt-4">{{ $recipientUsers->links() }}</div>
+                <nav class="mt-5 flex justify-end" aria-label="Recipient accounts pagination">
+                    <div class="flex items-center gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
+                        @if ($recipientUsers->onFirstPage())
+                            <span class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground/50" aria-disabled="true">Previous</span>
+                        @else
+                            <a href="{{ $recipientUsers->previousPageUrl() }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Previous</a>
+                        @endif
+
+                        @foreach ($recipientUsers->getUrlRange(1, $recipientUsers->lastPage()) as $page => $url)
+                            @if ($page === $recipientUsers->currentPage())
+                                <span class="inline-flex h-8 min-w-8 items-center justify-center rounded bg-primary px-2 text-xs font-semibold text-primary-foreground" aria-current="page">{{ $page }}</span>
+                            @else
+                                <a href="{{ $url }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded border border-transparent px-2 text-xs text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground">{{ $page }}</a>
+                            @endif
+                        @endforeach
+
+                        @if ($recipientUsers->hasMorePages())
+                            <a href="{{ $recipientUsers->nextPageUrl() }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Next</a>
+                        @else
+                            <span class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground/50" aria-disabled="true">Next</span>
+                        @endif
+                    </div>
+                </nav>
             @endif
         </div>
     </div>

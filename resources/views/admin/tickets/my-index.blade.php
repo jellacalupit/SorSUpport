@@ -89,13 +89,13 @@
                     <thead class="border-b bg-primary text-white">
                         <tr class="text-left">
                             <th class="whitespace-nowrap rounded-tl-lg px-2 py-2 font-semibold sm:px-3">Ticket ID</th>
-                            <th class="px-2 py-2 font-semibold sm:px-3">Subject Title</th>
+                            <th class="w-[20%] px-2 py-2 font-semibold sm:px-3">Subject Title</th>
                             <th class="hidden px-2 py-2 font-semibold sm:px-3 lg:table-cell">Classification</th>
                             <th class="px-2 py-2 font-semibold sm:px-3">Status</th>
                             <th class="hidden whitespace-nowrap px-2 py-2 font-semibold sm:px-3 md:table-cell">SLA</th>
                             <th class="hidden px-2 py-2 font-semibold sm:px-3 xl:table-cell">Filed by</th>
                             <th class="hidden whitespace-nowrap px-2 py-2 font-semibold sm:px-3 xl:table-cell">Date Submitted</th>
-                            <th class="hidden whitespace-nowrap rounded-tr-lg px-2 py-2 font-semibold sm:px-3 xl:table-cell">Last Updated</th>
+                            <th class="hidden w-[10%] whitespace-nowrap rounded-tr-lg px-2 py-2 font-semibold sm:px-3 xl:table-cell">Last Updated</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y">
@@ -213,13 +213,15 @@
                         </div>
                         <h3 class="mt-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $ticket->complaint?->subject_title ?? 'Untitled' }}</h3>
                         <div class="mt-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                            <span class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
-                                @if ($studentUser?->avatar_path && ! $ticket->complaint?->is_anonymous)
-                                    <img src="{{ asset('storage/' . $studentUser->avatar_path) }}" alt="{{ $studentUser->display_name }}" class="h-full w-full object-cover">
-                                @else
-                                    {{ $studentUser?->name_initials ?: 'A' }}
-                                @endif
-                            </span>
+                            @if (! $ticket->complaint?->is_anonymous)
+                                <span class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                                    @if ($studentUser?->avatar_path)
+                                        <img src="{{ asset('storage/' . $studentUser->avatar_path) }}" alt="{{ $studentUser->display_name }}" class="h-full w-full object-cover">
+                                    @else
+                                        {{ $studentUser?->name_initials ?: 'A' }}
+                                    @endif
+                                </span>
+                            @endif
                             <span class="relative min-w-0" x-data="{ studentProfileOpen: false }" x-on:mouseenter="studentProfileOpen = true" x-on:mouseleave="studentProfileOpen = false">
                                 <span class="{{ $ticket->complaint?->is_anonymous ? '' : 'cursor-pointer truncate font-semibold text-foreground hover:text-primary hover:underline' }}">{{ $studentDisplayName }}</span>
                                 @if ($studentUser && ! $ticket->complaint?->is_anonymous)

@@ -362,7 +362,7 @@
 
                                         <h1
                                             data-admin-page-title
-                                            class="font-display text-lg font-bold text-primary sm:text-xl"
+                                            class="flex items-center gap-2 font-display text-lg font-bold text-primary sm:text-xl"
                                         >
                                             {{ $title ?: 'Dashboard' }}
                                         </h1>

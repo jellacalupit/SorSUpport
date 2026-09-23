@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\User;
+use App\Models\Department;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -27,8 +28,23 @@ class ProfileUpdateRequest extends FormRequest
                     Rule::unique(User::class)->ignore($this->user()->id),
                 ],
                 'username' => ['required', 'digits_between:1,20', Rule::unique(User::class)->ignore($this->user()->id)],
-                'department' => ['nullable', 'string', 'max:255'],
-                'designation' => ['nullable', 'string', 'max:255'],
+                'department' => [
+                    'nullable',
+                    'string',
+                    Rule::exists('departments', 'name')->where(fn ($query) => $query->where('type', 'recipient')),
+                ],
+                'designation' => [
+                    'nullable',
+                    'string',
+                    Rule::exists('department_positions', 'name')->where(function ($query) {
+                        $departmentId = Department::query()
+                            ->forRecipients()
+                            ->where('name', $this->input('department'))
+                            ->value('id');
+
+                        $query->where('department_id', $departmentId);
+                    }),
+                ],
                 'role' => ['required', 'in:recipient,student,sds_admin'],
             ];
         }

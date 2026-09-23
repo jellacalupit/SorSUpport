@@ -76,6 +76,12 @@
     $passwordUpdateHasErrors = $errors->getBag('updatePassword')->any();
     $currentPasswordServerError = $errors->getBag('updatePassword')->first('current_password');
     $currentPasswordServerErrorIsRequired = $currentPasswordServerError && str_contains(strtolower($currentPasswordServerError), 'required');
+    $profileDepartmentValue = old('department', $isInitialAdminSetup ? '' : ($profileDepartment !== '—' ? $profileDepartment : ''));
+    $profileDesignationValue = old('designation', $isInitialAdminSetup ? '' : ($profileDesignation !== '—' ? $profileDesignation : ''));
+    $profileDepartmentOptions = collect($departments)->map(fn ($department) => [
+        'name' => $department->name,
+        'positions' => $department->positions->pluck('name')->values(),
+    ])->values();
 @endphp
 
 <x-app-layout :role="$user->role === 'sds_admin' ? 'admin' : ($user->role === 'student' ? 'student' : 'recipient')" title="My Profile">
@@ -123,7 +129,7 @@
             <div class="space-y-5">
                 <div>
                     <h3 class="{{ $isRecipient ? 'mt-6' : '' }} px-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Account Information</h3>
-                    <div id="profile-details-card" class="surface mt-2 overflow-hidden p-0">
+                    <div id="profile-details-card" class="surface relative z-10 mt-2 overflow-visible p-0">
                         <div id="profile-details-view">
                             @php
                                 $accountInfoRows = $isInitialAdminSetup
@@ -179,7 +185,7 @@
                         </div>
 
                         @if ($editable)
-                            <form id="profile-edit-form" method="POST" action="{{ route('profile.update') }}" class="hidden grid gap-1.5 p-2 sm:p-3">
+                            <form id="profile-edit-form" method="POST" action="{{ route('profile.update') }}" class="relative z-20 hidden grid gap-1.5 overflow-visible p-2 sm:p-3">
                                 @csrf
                                 @method('PATCH')
 
@@ -240,13 +246,32 @@
                                 <div class="grid items-start gap-1.5 md:grid-cols-2">
                                     <div class="grid gap-0.5">
                                         <label for="profile-department" class="text-[11px] font-medium text-muted-foreground">Department</label>
-                                        <input id="profile-department" name="department" value="{{ old('department', $isInitialAdminSetup ? '' : ($profileDepartment !== '—' ? $profileDepartment : '')) }}" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                                        <details id="profile-department-menu" class="group relative" x-data="{}" x-on:click.outside="$el.removeAttribute('open')">
+                                            <summary class="flex h-8 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-muted px-2 py-1 text-[12px] font-medium text-foreground [&::-webkit-details-marker]:hidden">
+                                                <span id="profile-department-label" class="truncate">{{ $profileDepartmentValue !== '' ? $profileDepartmentValue : 'Select department' }}</span>
+                                                <svg class="h-3.5 w-3.5 shrink-0 opacity-60 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                                            </summary>
+                                            <div class="absolute top-full z-[100] mt-1 w-max min-w-full max-w-[calc(100vw-2rem)] overflow-visible rounded-md border border-border bg-white p-1 text-foreground shadow-lg">
+                                                <button type="button" data-profile-department-option="" class="relative flex w-full items-center rounded-md px-2 py-1.5 text-left text-[12px] hover:bg-muted">Select department</button>
+                                                @foreach ($profileDepartmentOptions as $departmentOption)
+                                                    <button type="button" data-profile-department-option="{{ $departmentOption['name'] }}" class="relative flex w-full items-center rounded-md px-2 py-1.5 text-left text-[12px] hover:bg-muted">{{ $departmentOption['name'] }}</button>
+                                                @endforeach
+                                            </div>
+                                        </details>
+                                        <input type="hidden" id="profile-department" name="department" data-profile-department value="{{ $profileDepartmentValue }}">
                                         <div data-error-slot class="{{ $errors->has('department') ? 'min-h-4' : 'hidden' }}">@error('department') <p data-server-error class="text-[11px] text-destructive">{{ $message }}</p> @enderror</div>
                                     </div>
 
                                     <div class="grid gap-0.5">
                                         <label for="profile-designation" class="text-[11px] font-medium text-muted-foreground">Position</label>
-                                        <input id="profile-designation" name="designation" value="{{ old('designation', $isInitialAdminSetup ? '' : ($profileDesignation !== '—' ? $profileDesignation : '')) }}" class="h-8 w-full rounded-md border border-input bg-muted px-2 text-[12px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                                        <details id="profile-position-menu" class="group relative" x-data="{}" x-on:click.outside="$el.removeAttribute('open')">
+                                            <summary class="flex h-8 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-muted px-2 py-1 text-[12px] font-medium text-foreground [&::-webkit-details-marker]:hidden">
+                                                <span id="profile-position-label" class="truncate">{{ $profileDesignationValue !== '' ? $profileDesignationValue : 'Select position' }}</span>
+                                                <svg class="h-3.5 w-3.5 shrink-0 opacity-60 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                                            </summary>
+                                            <div id="profile-position-options" class="absolute top-full z-[100] mt-1 w-max min-w-full max-w-[calc(100vw-2rem)] overflow-visible rounded-md border border-border bg-white p-1 text-foreground shadow-lg"></div>
+                                        </details>
+                                        <input type="hidden" id="profile-designation" name="designation" data-profile-position value="{{ $profileDesignationValue }}">
                                         <div data-error-slot class="{{ $errors->has('designation') ? 'min-h-4' : 'hidden' }}">@error('designation') <p data-server-error class="text-[11px] text-destructive">{{ $message }}</p> @enderror</div>
                                     </div>
                                 </div>
@@ -262,6 +287,44 @@
                                     @endif
                                 </div>
                             </form>
+                            <script>
+                                (() => {
+                                    const departmentInput = document.querySelector('[data-profile-department]');
+                                    const positionInput = document.querySelector('[data-profile-position]');
+                                    const departmentLabel = document.getElementById('profile-department-label');
+                                    const positionLabel = document.getElementById('profile-position-label');
+                                    const departmentOptions = document.querySelectorAll('[data-profile-department-option]');
+                                    const positionOptions = document.getElementById('profile-position-options');
+                                    if (!departmentInput || !positionInput || !positionOptions) return;
+                                    const departments = @json($profileDepartmentOptions);
+                                    const selectedPosition = @js($profileDesignationValue);
+                                    const renderPositions = () => {
+                                        const department = departments.find((item) => item.name === departmentInput.value);
+                                        positionOptions.innerHTML = '<button type="button" data-profile-position-option="" class="relative flex w-full items-center rounded-md px-2 py-1.5 text-left text-[12px] hover:bg-muted">Select position</button>';
+                                        (department?.positions || []).forEach((position) => {
+                                            positionOptions.insertAdjacentHTML('beforeend', `<button type="button" data-profile-position-option="${position.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')}" class="relative flex w-full items-center rounded-md px-2 py-1.5 text-left text-[12px] hover:bg-muted">${position}</button>`);
+                                        });
+                                        positionOptions.querySelectorAll('[data-profile-position-option]').forEach((option) => option.addEventListener('click', () => {
+                                            positionInput.value = option.dataset.profilePositionOption;
+                                            positionLabel.textContent = positionInput.value || 'Select position';
+                                            option.closest('details')?.removeAttribute('open');
+                                        }));
+                                    };
+                                    departmentOptions.forEach((option) => option.addEventListener('click', () => {
+                                        departmentInput.value = option.dataset.profileDepartmentOption;
+                                        departmentLabel.textContent = departmentInput.value || 'Select department';
+                                        positionInput.value = '';
+                                        positionLabel.textContent = 'Select position';
+                                        option.closest('details')?.removeAttribute('open');
+                                        renderPositions();
+                                    }));
+                                    renderPositions();
+                                    if (selectedPosition) {
+                                        positionInput.value = selectedPosition;
+                                        positionLabel.textContent = selectedPosition;
+                                    }
+                                })();
+                            </script>
                         @endif
                     </div>
                 </div>

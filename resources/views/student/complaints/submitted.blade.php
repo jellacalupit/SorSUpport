@@ -39,6 +39,10 @@
                         <span class="min-w-0 text-right text-xs font-semibold wrap-break-word">{{ $submittedComplaint['subject_title'] }}</span>
                     </div>
                     <div class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 px-4 py-2.5">
+                        <span class="text-xs text-muted-foreground">Category</span>
+                        <span class="min-w-0 text-right text-xs font-semibold wrap-break-word">{{ $submittedComplaint['category_name'] ?? '—' }}</span>
+                    </div>
+                    <div class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 px-4 py-2.5">
                         <span class="text-xs text-muted-foreground">Status</span>
                         <span class="justify-self-end"><x-status-badge :status="$submittedComplaint['status'] ?? 'Pending'" :show-icon="false" class="px-2 py-0 text-[10px]" /></span>
                     </div>

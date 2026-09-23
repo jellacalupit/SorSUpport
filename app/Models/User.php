@@ -229,6 +229,23 @@ class User extends Authenticatable implements MustVerifyEmailContract
         return $this->hasOne(Recipient::class);
     }
 
+    public function hasCompleteProfile(): bool
+    {
+        if ($this->role === self::ROLE_STUDENT) {
+            return $this->student !== null
+                && collect(['student_id', 'department', 'course', 'year_level'])
+                    ->every(fn (string $field) => trim((string) $this->student->{$field}) !== '');
+        }
+
+        if ($this->role === self::ROLE_RECIPIENT) {
+            return $this->recipient !== null
+                && collect(['staff_id', 'department', 'designation'])
+                    ->every(fn (string $field) => trim((string) $this->recipient->{$field}) !== '');
+        }
+
+        return true;
+    }
+
     /**
      * Audit logs performed by this user.
      */

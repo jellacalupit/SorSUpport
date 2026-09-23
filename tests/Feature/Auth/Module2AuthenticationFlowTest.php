@@ -39,6 +39,30 @@ class Module2AuthenticationFlowTest extends TestCase
         Notification::assertSentTo($user, \Illuminate\Auth\Notifications\VerifyEmail::class);
     }
 
+    public function test_activated_student_and_recipient_are_redirected_to_password_change_without_email_verification(): void
+    {
+        foreach ([User::ROLE_STUDENT, User::ROLE_RECIPIENT] as $role) {
+            /** @var User $user */
+            $user = User::factory()->unverified()->create([
+                'username' => $role . '-123',
+                'password' => bcrypt('password'),
+                'role' => $role,
+                'must_change_password' => true,
+                'is_active' => true,
+                'email_verified_at' => now(),
+            ]);
+
+            $response = $this->post('/login', [
+                'username' => $user->username,
+                'password' => 'password',
+            ]);
+
+            $response->assertRedirect(route('password.force'));
+            $this->assertAuthenticatedAs($user);
+            $this->post('/logout');
+        }
+    }
+
     public function test_sds_admin_seed_requires_profile_setup_on_first_login(): void
     {
         Artisan::call('db:seed', ['--class' => SdsAdminSeeder::class]);

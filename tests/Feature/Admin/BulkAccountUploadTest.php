@@ -3,6 +3,7 @@
 namespace Tests\Feature\Admin;
 
 use App\Models\Recipient;
+use App\Models\Department;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -75,6 +76,35 @@ class BulkAccountUploadTest extends TestCase
         $response->assertRedirect(route('admin.accounts.index', ['category_filter' => 'recipients']));
         $this->assertDatabaseHas('users', ['email' => 'rey@recipient.test', 'role' => User::ROLE_RECIPIENT, 'must_change_password' => true]);
         $this->assertDatabaseHas('recipients', ['staff_id' => 'R2001', 'department' => 'CICT', 'designation' => 'Coordinator']);
+    }
+
+    public function test_bulk_upload_accepts_recipient_staff_id_full_name_and_email_only(): void
+    {
+        $admin = User::factory()->create([
+            'username' => 'admin1',
+            'role' => User::ROLE_SDS_ADMIN,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+
+        $file = UploadedFile::fake()->createWithContent('recipients.csv', "Staff ID,Full Name,Email\nR2002,Jamie Recipient,jamie@recipient.test\n");
+
+        $response = $this->actingAs($admin)->post(route('admin.accounts.upload.store'), [
+            'account_type' => User::ROLE_RECIPIENT,
+            'file' => $file,
+        ]);
+
+        $response->assertRedirect(route('admin.accounts.index', ['category_filter' => 'recipients']));
+        $this->assertDatabaseHas('users', [
+            'email' => 'jamie@recipient.test',
+            'name' => 'Jamie Recipient',
+            'role' => User::ROLE_RECIPIENT,
+        ]);
+        $this->assertDatabaseHas('recipients', [
+            'staff_id' => 'R2002',
+            'department' => '',
+            'designation' => '',
+        ]);
     }
 
     public function test_bulk_upload_reports_invalid_and_duplicate_rows_without_creating_them(): void
@@ -193,6 +223,8 @@ class BulkAccountUploadTest extends TestCase
             'must_change_password' => false,
         ]);
 
+        Department::create(['name' => 'CICT', 'type' => 'recipient']);
+
         $response = $this->actingAs($admin)
             ->post(route('admin.accounts.store'), [
                 'first_name' => 'Lian',
@@ -218,6 +250,8 @@ class BulkAccountUploadTest extends TestCase
             'email_verified_at' => now(),
             'must_change_password' => false,
         ]);
+
+        Department::create(['name' => 'CBME', 'type' => 'recipient']);
 
         /** @var User $recipient */
         $recipient = User::factory()->create([
@@ -268,6 +302,8 @@ class BulkAccountUploadTest extends TestCase
             'email_verified_at' => now(),
             'must_change_password' => false,
         ]);
+
+        Department::create(['name' => 'BIOS', 'type' => 'recipient']);
 
         /** @var User $recipient */
         $recipient = User::factory()->create([
@@ -353,5 +389,83 @@ class BulkAccountUploadTest extends TestCase
         $response->assertSee('editRecipientModalOpen');
         $response->assertSee('Edit Student Account');
         $response->assertSee('Edit Recipient Account');
+    }
+
+    public function test_admin_accounts_uses_departments_configured_in_system_settings(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_SDS_ADMIN,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+
+        Department::create(['name' => 'Configured Student Department', 'type' => 'student']);
+        Department::create(['name' => 'Configured Recipient Department', 'type' => 'recipient']);
+
+        $response = $this->actingAs($admin)->get(route('admin.accounts.index'));
+
+        $response->assertOk();
+        $response->assertSee('Configured Student Department');
+        $response->assertSee('Configured Recipient Department');
+    }
+
+    public function test_incomplete_recipient_cannot_be_activated(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_SDS_ADMIN,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+        $recipient = User::factory()->create([
+            'role' => User::ROLE_RECIPIENT,
+            'is_active' => false,
+        ]);
+        Recipient::create([
+            'user_id' => $recipient->id,
+            'staff_id' => 'R3001',
+            'department' => '',
+            'designation' => '',
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->patch(route('admin.accounts.reactivate', $recipient));
+
+        $response->assertRedirect(route('admin.accounts.index', ['category_filter' => 'recipients']));
+        $response->assertSessionHasErrors('account');
+        $this->assertDatabaseHas('users', ['id' => $recipient->id, 'is_active' => false]);
+
+        $page = $this->actingAs($admin)
+            ->get(route('admin.accounts.index', ['category_filter' => 'recipients']));
+
+        $page->assertSee('cursor-not-allowed');
+    }
+
+    public function test_complete_recipient_can_be_activated(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_SDS_ADMIN,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+        $recipient = User::factory()->create([
+            'role' => User::ROLE_RECIPIENT,
+            'is_active' => false,
+        ]);
+        Recipient::create([
+            'user_id' => $recipient->id,
+            'staff_id' => 'R3002',
+            'department' => 'Configured Department',
+            'designation' => 'Coordinator',
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->patch(route('admin.accounts.reactivate', $recipient));
+
+        $response->assertRedirect(route('admin.accounts.index', ['category_filter' => 'recipients']));
+        $this->assertDatabaseHas('users', [
+            'id' => $recipient->id,
+            'is_active' => true,
+        ]);
+        $this->assertNotNull($recipient->fresh()->email_verified_at);
     }
 }

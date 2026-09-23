@@ -61,13 +61,16 @@
                 <tbody class="divide-y">
                     @forelse ($auditLogs as $log)
                         @php
-                            $performerName = $log->performer?->table_name ?? 'System';
-                            $accountType = match ($log->performer?->role) {
-                                'sds_admin' => 'Administrator',
-                                'student' => 'Student',
-                                'recipient' => 'Recipient',
-                                default => 'System',
-                            };
+                            $isAnonymousComplaint = (bool) $log->ticket?->complaint?->is_anonymous;
+                            $performerName = $isAnonymousComplaint ? '—' : ($log->performer?->table_name ?? 'System');
+                            $accountType = $isAnonymousComplaint
+                                ? 'Student'
+                                : match ($log->performer?->role) {
+                                    'sds_admin' => 'Administrator',
+                                    'student' => 'Student',
+                                    'recipient' => 'Recipient',
+                                    default => 'System',
+                                };
                         @endphp
                         <tr class="align-top transition-colors hover:bg-primary-soft">
                             <td class="break-words px-3 py-2.5 font-semibold">{{ ucfirst(str_replace('_', ' ', $log->action)) }}</td>
@@ -82,6 +85,7 @@
                     @endforelse
                 </tbody>
             </table>
+        </div>
         </div>
 
         @if ($auditLogs->hasPages())
@@ -109,6 +113,5 @@
                 </div>
             </nav>
         @endif
-        </div>
     </div>
 </x-app-layout>

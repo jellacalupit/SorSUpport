@@ -58,6 +58,28 @@ class AnalyticsSeeder extends Seeder
             ->orderBy('name')
             ->get();
 
+        if ($categories->isEmpty()) {
+            $defaultCategories = [
+                'Academic Concerns',
+                'Administrative Concerns',
+                'Faculty/Staff Conduct',
+                'Facilities and Services',
+                'Student Welfare Concerns',
+                'Organizational/Student Council Concerns',
+            ];
+
+            foreach ($defaultCategories as $index => $name) {
+                $category = ComplaintCategory::create([
+                    'name' => $name,
+                    'description' => 'Seeded analytics category',
+                    'resolution_deadline_days' => 5 + ($index % 4),
+                    'is_active' => true,
+                ]);
+
+                $categories->push($category);
+            }
+        }
+
         $students = Student::query()
             ->where('student_id', 'like', 'STU-%')
             ->with('user')
@@ -66,25 +88,31 @@ class AnalyticsSeeder extends Seeder
         if ($students->isEmpty()) {
             $students = collect();
             foreach (range(1, 20) as $index) {
-                $user = User::create([
+                $email = 'student' . $index . '@example.com';
+                $user = User::query()->firstOrCreate(
+                    ['email' => $email],
+                    [
                     'name' => 'Student ' . $index,
                     'username' => 'student' . $index,
-                    'email' => 'student' . $index . '@example.com',
                     'password' => bcrypt('password'),
                     'must_change_password' => false,
                     'role' => User::ROLE_STUDENT,
                     'is_active' => true,
                     'email_verified_at' => now(),
-                ]);
+                    ]
+                );
 
-                $students->push(Student::create([
+                $students->push(Student::query()->firstOrCreate(
+                    ['user_id' => $user->id],
+                    [
                     'user_id' => $user->id,
                     'student_id' => 'STU' . str_pad($index, 4, '0', STR_PAD_LEFT),
                     'department' => 'Department ' . ($index % 4 + 1),
                     'course' => 'Course ' . ($index % 3 + 1),
                     'year_level' => (string) (($index % 4) + 1),
                     'block' => (string) (($index % 4) + 1),
-                ]));
+                    ]
+                ));
             }
         }
 

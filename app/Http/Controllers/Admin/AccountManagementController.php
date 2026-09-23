@@ -12,6 +12,7 @@ use App\Models\User as AppUser;
 use App\Notifications\AccountUpdateNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -96,7 +97,7 @@ class AccountManagementController extends Controller
             ->orderBy('users.id', $direction)
             ->select('users.*');
 
-        $studentUsers = $studentUsers->paginate(10, ['*'], 'students_page')->appends($request->query());
+        $studentUsers = $studentUsers->paginate(15, ['*'], 'students_page')->appends($request->query());
 
         $recipientUsers = $applyFilters(AppUser::with(['student', 'recipient'])
             ->whereIn('role', [AppUser::ROLE_RECIPIENT, AppUser::ROLE_SDS_ADMIN]));
@@ -108,12 +109,17 @@ class AccountManagementController extends Controller
             ->select('users.*');
 
         $recipientUsers = $recipientUsers
-            ->paginate(10, ['*'], 'recipients_page')
+            ->paginate(15, ['*'], 'recipients_page')
             ->appends($request->query());
 
-        $departments = Department::query()->orderBy('name')->pluck('name');
+        $departments = Department::query()
+            ->with(['positions', 'courses'])
+            ->orderBy('name')
+            ->get();
+        $studentDepartments = $departments->where('type', 'student')->values();
+        $recipientDepartments = $departments->where('type', 'recipient')->values();
 
-        return view('admin.accounts.index', compact('studentUsers', 'recipientUsers', 'departments'));
+        return view('admin.accounts.index', compact('studentUsers', 'recipientUsers', 'departments', 'studentDepartments', 'recipientDepartments'));
     }
 
     /**
@@ -144,6 +150,11 @@ class AccountManagementController extends Controller
         }
 
         if ($validated['role'] === AppUser::ROLE_RECIPIENT) {
+            $recipientData = $request->validate([
+                'staff_id' => ['required', 'string', 'max:255'],
+                'recipient_department' => ['required', 'string', Rule::exists('departments', 'name')->where(fn ($query) => $query->where('type', 'recipient'))],
+                'designation' => ['required', 'string', 'max:255'],
+            ]);
             $username = $request->staff_id;
         }
 
@@ -180,9 +191,9 @@ class AccountManagementController extends Controller
 
             Recipient::create([
                 'user_id' => $user->id,
-                'staff_id' => $request->staff_id,
-                'department' => $request->recipient_department,
-                'designation' => $request->designation,
+                'staff_id' => $recipientData['staff_id'],
+                'department' => $recipientData['recipient_department'],
+                'designation' => $recipientData['designation'],
             ]);
 
         }
@@ -253,21 +264,26 @@ class AccountManagementController extends Controller
         }
 
         if ($user->role === AppUser::ROLE_RECIPIENT) {
+            $recipientData = $request->validate([
+                'staff_id' => ['required', 'string', 'max:255'],
+                'recipient_department' => ['required', 'string', Rule::exists('departments', 'name')->where(fn ($query) => $query->where('type', 'recipient'))],
+                'designation' => ['required', 'string', 'max:255'],
+            ]);
             $user->update([
-                'username' => $request->staff_id,
+                'username' => $recipientData['staff_id'],
             ]);
 
             if ($user->recipient) {
                 $user->recipient->update([
-                    'staff_id' => $request->staff_id,
-                    'department' => $request->recipient_department,
-                    'designation' => $request->designation,
+                    'staff_id' => $recipientData['staff_id'],
+                    'department' => $recipientData['recipient_department'],
+                    'designation' => $recipientData['designation'],
                 ]);
             } else {
                 $user->recipient()->create([
-                    'staff_id' => $request->staff_id,
-                    'department' => $request->recipient_department,
-                    'designation' => $request->designation,
+                    'staff_id' => $recipientData['staff_id'],
+                    'department' => $recipientData['recipient_department'],
+                    'designation' => $recipientData['designation'],
                 ]);
             }
         }
@@ -322,21 +338,28 @@ class AccountManagementController extends Controller
      */
     public function reactivate(AppUser $user)
     {
+        if (! $user->hasCompleteProfile()) {
+            return redirect()
+                ->route('admin.accounts.index', ['category_filter' => $user->role === AppUser::ROLE_RECIPIENT ? 'recipients' : 'students'])
+                ->withErrors(['account' => 'Complete the account information before activating it.']);
+        }
+
         $user->update([
             'is_active' => true,
+            'email_verified_at' => $user->email_verified_at ?? now(),
         ]);
 
         $category = $user->role === AppUser::ROLE_RECIPIENT ? 'recipients' : 'students';
 
         AuditLog::activity(
-            'account_reactivated',
-            details: sprintf('Reactivated %s account for %s.', $user->role, $user->name)
+            'account_activated',
+            details: sprintf('Activated %s account for %s.', $user->role, $user->name)
         );
 
         if ($user->email) {
             $user->notify(new AccountUpdateNotification(
-                'Your SORSUPPORT account was reactivated',
-                'Your account has been reactivated and is available for use.'
+                'Your SORSUPPORT account was activated',
+                'Your account has been activated and is available for use.'
             ));
         }
 
@@ -380,10 +403,9 @@ class AccountManagementController extends Controller
         AuditLog::activity(
             'accounts_imported',
             details: sprintf(
-                'Imported %d %s account(s); %d row(s) failed.',
+                'Imported %d %s account(s).',
                 $summary['imported'],
-                $validated['account_type'],
-                count($summary['errors'] ?? [])
+                $validated['account_type']
             )
         );
 
