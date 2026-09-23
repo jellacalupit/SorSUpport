@@ -182,10 +182,11 @@ class AnalyticsService
         $escalationEvents = $tickets->flatMap->auditLogs->where('action', 'ticket_escalated');
         $categoryCounts = $tickets->groupBy(fn ($ticket) => $ticket->complaint?->category?->name ?? 'Uncategorized')->map->count();
         $statusCounts = $tickets->groupBy('status')->map->count();
-        $period = $filters['period'] ?? 'daily';
+        $period = $this->volumePeriod($filters);
         [$start, $end] = $this->buildPeriodRange($filters, $period === 'monthly' ? 'month' : ($period === 'weekly' ? 'week' : 'day'));
         $submittedSeries = $this->seriesForTickets($tickets, 'complaint.created_at', $period, $start, $end);
         $resolvedSeries = $this->seriesForTickets($resolved, 'resolved_at', $period, $start, $end);
+        $closedSeries = $this->seriesForTickets($tickets->where('status', Ticket::STATUS_CLOSED), 'resolved_at', $period, $start, $end);
         $recipientRows = $tickets
             ->map(function ($ticket) {
                 $handler = $ticket->assignee ?? $ticket->currentHandler;
@@ -213,6 +214,7 @@ class AnalyticsService
 
                 return [
                     'name' => $user->table_name ?: 'Unassigned',
+                    'department' => $user->recipient?->department ?: 'Unassigned',
                     'assigned' => $ticketGroup->count(),
                     'resolved' => $resolved->count(),
                     'escalated' => $ticketGroup->where('status', Ticket::STATUS_ESCALATED)->count(),
@@ -268,7 +270,7 @@ class AnalyticsService
             'total' => $tickets->count(), 'resolutionTickets' => $resolutionTickets->count(), 'resolved' => $resolved->count(), 'resolutionRate' => $resolutionTickets->count() ? round($resolved->count() / $resolutionTickets->count() * 100) : 0,
             'averageHours' => $resolutionHours->isNotEmpty() ? round($resolutionHours->avg(), 1) : 0, 'fastestHours' => $resolutionHours->min() ?? 0, 'longestHours' => $resolutionHours->max() ?? 0,
             'sla' => ['assigned' => $assignedDeadlines->count(), 'within' => $withinSla, 'approaching' => $approaching, 'breached' => $breached, 'rate' => $assignedDeadlines->count() ? round($withinSla / $assignedDeadlines->count() * 100) : 0],
-            'volume' => ['labels' => $submittedSeries['labels'], 'submitted' => $submittedSeries['data'], 'resolved' => $resolvedSeries['data']],
+            'volume' => ['labels' => $submittedSeries['labels'], 'submitted' => $submittedSeries['data'], 'resolved' => $resolvedSeries['data'], 'closed' => $closedSeries['data'], 'period' => $period],
             'categoryCounts' => $categoryNames->mapWithKeys(fn ($name) => [$name => $categoryCounts[$name] ?? 0])->toArray(),
             'statusCounts' => collect(['pending' => 'Pending', 'assigned' => 'Assigned', 'in_progress' => 'In Progress', 'escalated' => 'Escalated', 'resolved' => 'Resolved', 'closed' => 'Closed'])->mapWithKeys(fn ($label, $key) => [$label => ($statusCounts[$key] ?? 0)])->toArray(),
             'resolutionByCategory' => $this->resolutionByCategory($tickets, $categoryNames),
@@ -290,6 +292,21 @@ class AnalyticsService
         $step = $period === 'monthly' ? 'addMonth' : ($period === 'weekly' ? 'addWeek' : 'addDay');
         while ($cursor->lte($end)) { $labels[] = $cursor->format($format); $data[] = $values[$cursor->format($format)] ?? 0; $cursor->{$step}(); }
         return ['labels' => $labels, 'data' => $data];
+    }
+
+    protected function volumePeriod(array $filters): string
+    {
+        if (filled($filters['start_date'] ?? null) && filled($filters['end_date'] ?? null)) {
+            $days = Carbon::parse($filters['start_date'])->diffInDays(Carbon::parse($filters['end_date'])) + 1;
+
+            return $days <= 31 ? 'daily' : ($days <= 180 ? 'weekly' : 'monthly');
+        }
+
+        return match ($filters['period'] ?? 'all_time') {
+            'this_month', 'last_month' => 'daily',
+            'last_3_months' => 'weekly',
+            default => 'monthly',
+        };
     }
 
     protected function resolutionByCategory(Collection $tickets, Collection $categoryNames): array

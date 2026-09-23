@@ -78,6 +78,26 @@ class BulkAccountUploadTest extends TestCase
         $this->assertDatabaseHas('recipients', ['staff_id' => 'R2001', 'department' => 'CICT', 'designation' => 'Coordinator']);
     }
 
+    public function test_bulk_upload_page_accepts_selected_account_type(): void
+    {
+        $admin = User::factory()->create([
+            'username' => 'admin1',
+            'role' => User::ROLE_SDS_ADMIN,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+
+        $file = UploadedFile::fake()->createWithContent('recipients.csv', "Staff ID,Full Name,Email,Department,Position,Status\nR3001,Test Recipient,test.recipient@test.local,CICT,Coordinator,Active\n");
+
+        $response = $this->actingAs($admin)->post(route('admin.accounts.upload.store'), [
+            'account_type' => User::ROLE_RECIPIENT,
+            'file' => $file,
+        ]);
+
+        $response->assertRedirect(route('admin.accounts.index', ['category_filter' => 'recipients']));
+        $this->assertDatabaseHas('recipients', ['staff_id' => 'R3001']);
+    }
+
     public function test_bulk_upload_accepts_recipient_staff_id_full_name_and_email_only(): void
     {
         $admin = User::factory()->create([

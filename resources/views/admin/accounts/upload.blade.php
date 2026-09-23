@@ -14,6 +14,16 @@
             @csrf
 
             <div>
+                <label for="account-type" class="block font-semibold text-black mb-2">
+                    Account Type
+                </label>
+                <select id="account-type" name="account_type" required class="border rounded w-full p-2 text-black">
+                    <option value="student">Student</option>
+                    <option value="recipient">Recipient</option>
+                </select>
+            </div>
+
+            <div>
 
                 <label class="block font-semibold text-black mb-2">
                     CSV or Excel File Only

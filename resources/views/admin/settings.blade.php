@@ -476,12 +476,12 @@
             </div>
 
             <div x-show="addDepartmentOpen" x-cloak x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                <div @click.outside="resetDepartmentForm()" class="flex h-[90vh] max-h-[90vh] w-full max-w-4xl min-h-0 flex-col rounded-2xl border border-border bg-white shadow-2xl" role="dialog" aria-modal="true" aria-label="Add department">
+                <div @click.outside="resetDepartmentForm()" class="max-h-[min(75vh,45rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-white shadow-2xl" role="dialog" aria-modal="true" aria-label="Add department">
                     <div class="flex items-start justify-between border-b border-border px-5 py-4">
                         <div><p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Department Management</p><h2 class="mt-1 text-lg font-bold text-foreground" x-text="departmentEditId ? 'Edit Department' : (departmentType === 'student' ? 'Add Student Department' : 'Add Recipient Department')"></h2></div>
                         <button type="button" @click="resetDepartmentForm()" class="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Close add department form"><x-icons.x class="h-4 w-4" /></button>
                     </div>
-                    <form x-bind:action="departmentEditId ? `/admin/departments/${departmentEditId}` : '{{ route('admin.departments.store') }}'" method="POST" @submit="saveDepartment($event)" class="min-h-0 overflow-y-auto grid gap-4 p-5">
+                    <form x-bind:action="departmentEditId ? '{{ route('admin.departments.update', ['department' => '__DEPARTMENT__']) }}'.replace('__DEPARTMENT__', departmentEditId) : '{{ route('admin.departments.store') }}'" method="POST" @submit="saveDepartment($event)" class="min-h-0 overflow-y-auto grid gap-4 p-5">
                         @csrf
                         <input type="hidden" name="_method" value="PUT" x-bind:disabled="!departmentEditId">
                         <input type="hidden" name="type" :value="departmentType">
@@ -499,9 +499,9 @@
                             <div class="grid gap-2">
                                 <input x-ref="courseInput" type="text" x-model="courseDraft.course" placeholder="Course name" class="h-8 w-full rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring">
                                 <textarea x-model="courseDraft.description" rows="2" placeholder="Course description or definition" class="w-full rounded-md border border-input bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"></textarea>
-                                <div class="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-2">
-                                    <input type="number" min="1" max="6" step="1" x-model="courseDraft.year_level" placeholder="Number of year levels" class="h-8 w-full rounded-md border border-input bg-white px-2 text-sm text-foreground">
-                                    <input type="number" min="1" max="10" step="1" x-model="courseDraft.block" placeholder="Number of blocks" class="h-8 w-full rounded-md border border-input bg-white px-2 text-sm text-foreground">
+                                <div class="grid grid-cols-[7rem_7rem_auto_auto] items-center gap-2">
+                                    <input type="number" min="1" max="6" step="1" x-model="courseDraft.year_level" placeholder="Year levels" class="h-8 w-full rounded-md border border-input bg-white px-2 text-sm text-foreground">
+                                    <input type="number" min="1" max="10" step="1" x-model="courseDraft.block" placeholder="Blocks" class="h-8 w-full rounded-md border border-input bg-white px-2 text-sm text-foreground">
                                     <button type="button" @click="addCourse()" class="grid h-8 w-8 shrink-0 place-items-center rounded-md text-primary transition-colors hover:bg-primary-soft" aria-label="Confirm course" title="Confirm course"><x-icons.check class="h-4 w-4" /></button>
                                     <button type="button" @click="courseDraft._editingCourse ? (departmentCourses.splice(courseDraft._editingIndex, 0, courseDraft._editingCourse), resetCourseDraft()) : resetCourseDraft()" class="grid h-8 w-8 shrink-0 place-items-center rounded-md text-primary transition-colors hover:bg-primary-soft" aria-label="Cancel course" title="Cancel course"><x-icons.x class="h-4 w-4" /></button>
                                 </div>

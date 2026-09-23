@@ -133,6 +133,29 @@ class DepartmentSettingsTest extends TestCase
         $this->assertDatabaseHas('department_courses', ['department_id' => $department->id, 'course' => 'BSCS', 'year_level' => 4, 'block' => null]);
     }
 
+    public function test_admin_can_edit_recipient_department_positions(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_SDS_ADMIN,
+            'is_active' => true,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+        $department = Department::create(['name' => 'Old Recipient Department', 'type' => 'recipient']);
+        $department->positions()->create(['name' => 'Old Position', 'description' => 'Old description']);
+
+        $response = $this->actingAs($admin)->put(route('admin.departments.update', $department), [
+            'name' => 'New Recipient Department',
+            'description' => 'Updated recipient department.',
+            'positions' => [['name' => 'New Position', 'description' => 'Updated position description.']],
+        ]);
+
+        $response->assertRedirect(route('admin.settings', ['settings_tab' => 'department']));
+        $this->assertDatabaseHas('departments', ['id' => $department->id, 'name' => 'New Recipient Department']);
+        $this->assertDatabaseMissing('department_positions', ['department_id' => $department->id, 'name' => 'Old Position']);
+        $this->assertDatabaseHas('department_positions', ['department_id' => $department->id, 'name' => 'New Position', 'description' => 'Updated position description.']);
+    }
+
     public function test_admin_can_delete_a_department(): void
     {
         $admin = User::factory()->create([
