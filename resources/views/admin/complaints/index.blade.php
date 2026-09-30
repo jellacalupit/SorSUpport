@@ -195,7 +195,7 @@
                     ->limit(5)
                     ->get()
                     ->sortByDesc(fn ($log) => $log->created_at?->timestamp ?? 0)
-                    ->values();
+                    ->values() ?? collect();
             @endphp
             <template id="complaint-{{ $complaint->id }}">
                 <div class="grid items-start gap-4 sm:grid-cols-[1.35fr_1fr]">
@@ -264,7 +264,13 @@
 
                     <div class="flex flex-col gap-4 overflow-hidden sm:h-[calc(100vh-6rem)]">
                         <div class="admin-ticket-thread flex-1 flex flex-col min-h-0">
-                            <x-ticket-thread :ticket="$ticket" viewerRole="admin" />
+                            @if ($ticket)
+                                <x-ticket-thread :ticket="$ticket" viewerRole="admin" />
+                            @else
+                                <div class="surface flex min-h-[10rem] flex-1 items-center justify-center p-4 text-center text-sm text-muted-foreground">
+                                    No ticket has been generated for this complaint yet.
+                                </div>
+                            @endif
                         </div>
 
                         <div class="h-[15.5rem] shrink-0 rounded-lg border border-border bg-card p-3 flex flex-col">

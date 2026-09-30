@@ -258,9 +258,6 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
         Route::get('/analytics', [AnalyticsController::class, 'index'])
             ->name('analytics.index');
 
-        Route::get('/reports', [AnalyticsController::class, 'reports'])
-            ->name('reports');
-
         Route::get('/audit', function (\Illuminate\Http\Request $request) {
             $query = \App\Models\AuditLog::query()->with(['performer', 'ticket.complaint'])->latest();
 

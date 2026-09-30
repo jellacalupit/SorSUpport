@@ -27,7 +27,6 @@
             'label' => 'Insight',
             'items' => [
                 ['route' => 'admin.analytics.index', 'label' => 'Analytics', 'icon' => 'bar-chart-3'],
-                ['route' => 'admin.reports', 'label' => 'Reports', 'icon' => 'file-text'],
                 ['route' => 'admin.audit', 'label' => 'Audit Trail', 'icon' => 'history'],
             ],
         ],

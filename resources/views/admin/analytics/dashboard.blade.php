@@ -14,6 +14,30 @@
         ];
     @endphp
     <div class="space-y-6 pb-10">
+        @php
+            $formatDate = fn ($date) => $date ? \Illuminate\Support\Carbon::parse($date)->format('F j, Y') : 'All time';
+            $activeFilterLabels = collect([
+                ($filters['category_id'] ?? null) ? $categoryOptions->firstWhere('id', $filters['category_id'])?->name : 'All Categories',
+                ($filters['classification'] ?? null) ? str_replace('_', ' ', ucfirst($filters['classification'])) : 'All Classifications',
+                ($filters['status'] ?? null) ? str_replace('_', ' ', ucfirst($filters['status'])) : 'All Statuses',
+                $filters['department'] ?? 'All Departments',
+            ]);
+        @endphp
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+            <div class="flex min-w-0 flex-1 flex-col gap-2 rounded-xl border border-border bg-primary-soft/30 p-2.5 sm:flex-row sm:items-center sm:justify-between sm:p-3">
+                <div class="min-w-0">
+                    <p class="text-sm font-bold text-primary">Showing results for:</p>
+                    <p class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span>{{ $formatDate($filters['start_date'] ?? null) }} – {{ $formatDate($filters['end_date'] ?? null) }}</span>
+                        @foreach ($activeFilterLabels as $label)
+                            <span class="before:mr-3 before:content-['•']">{{ $label }}</span>
+                        @endforeach
+                    </p>
+                </div>
+                <span class="inline-flex shrink-0 items-center gap-2 rounded-lg border border-primary/10 bg-white px-3 py-1.5 text-xs font-bold text-primary"><x-icons.ticket class="h-4 w-4" /> {{ number_format($data['total']) }} Filtered Tickets</span>
+            </div>
+            <a href="{{ route('admin.analytics.export.pdf', request()->query()) }}" class="inline-flex h-9 shrink-0 items-center justify-center gap-2 self-center rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 sm:self-center"><x-icons.download class="h-4 w-4" /> Generate Report</a>
+        </div>
         <form method="GET" class="surface p-4 sm:p-5">
             <div class="mb-4 flex items-center gap-2 text-primary"><span class="grid h-7 w-7 place-items-center rounded-full bg-primary-soft"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6 7v5l-4 2v-7z" /></svg></span><h2 class="font-display text-base font-bold">Filter Analytics</h2></div>
             <div class="grid gap-x-5 gap-y-4 md:grid-cols-2 xl:grid-cols-3">
@@ -25,16 +49,6 @@
                 <div class="flex items-end gap-3"><button class="inline-flex h-9 flex-1 items-center justify-center rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90">Apply Filters</button><a href="{{ route('admin.analytics.index') }}" class="inline-flex h-9 flex-1 items-center justify-center rounded-md border border-primary/40 px-3 text-sm font-semibold text-primary hover:bg-primary-soft">Reset</a></div>
             </div>
         </form>
-        @php
-            $formatDate = fn ($date) => $date ? \Illuminate\Support\Carbon::parse($date)->format('F j, Y') : 'All time';
-            $activeFilterLabels = collect([
-                ($filters['category_id'] ?? null) ? $categoryOptions->firstWhere('id', $filters['category_id'])?->name : 'All Categories',
-                ($filters['classification'] ?? null) ? str_replace('_', ' ', ucfirst($filters['classification'])) : 'All Classifications',
-                ($filters['status'] ?? null) ? str_replace('_', ' ', ucfirst($filters['status'])) : 'All Statuses',
-                $filters['department'] ?? 'All Departments',
-            ]);
-        @endphp
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-stretch"><div class="flex min-w-0 flex-1 flex-col gap-2 rounded-xl border border-border bg-primary-soft/30 p-2.5 sm:flex-row sm:items-center sm:justify-between sm:p-3"><div class="flex min-w-0 items-start gap-2"><span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6 7v5l-4 2v-7z" /></svg></span><div class="min-w-0"><p class="text-sm font-bold text-primary">Showing results for:</p><p class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"><span>{{ $formatDate($filters['start_date'] ?? null) }} – {{ $formatDate($filters['end_date'] ?? null) }}</span>@foreach ($activeFilterLabels as $label)<span class="before:mr-3 before:content-['•']">{{ $label }}</span>@endforeach</p></div></div><span class="inline-flex shrink-0 items-center gap-2 rounded-lg border border-primary/10 bg-white px-3 py-1.5 text-xs font-bold text-primary"><x-icons.ticket class="h-4 w-4" /> {{ number_format($data['total']) }} Filtered Tickets</span></div><a href="{{ route('admin.analytics.export.pdf', request()->query()) }}" class="inline-flex h-9 shrink-0 items-center justify-center gap-2 self-center rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 sm:self-center"><x-icons.download class="h-4 w-4" /> Generate Report</a></div>
         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             @php
                 $summaryCards = [

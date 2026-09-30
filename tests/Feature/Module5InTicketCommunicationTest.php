@@ -19,6 +19,48 @@ class Module5InTicketCommunicationTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_admin_complaints_index_handles_complaints_without_tickets(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_SDS_ADMIN,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+        $studentUser = User::factory()->create([
+            'role' => User::ROLE_STUDENT,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+        $student = Student::create([
+            'user_id' => $studentUser->id,
+            'student_id' => 'S9001',
+            'department' => 'IT',
+            'course' => 'BSIT',
+            'year_level' => '2nd Year',
+            'block' => 'A',
+        ]);
+        $category = ComplaintCategory::create([
+            'name' => 'Missing Ticket Category',
+            'resolution_deadline_days' => 3,
+            'is_active' => true,
+        ]);
+        $complaint = Complaint::create([
+            'reference_number' => Complaint::generateReferenceNumber(),
+            'student_id' => $student->id,
+            'category_id' => $category->id,
+            'subject_title' => 'Complaint without a ticket',
+            'description' => 'The admin list should still render this complaint.',
+            'is_anonymous' => false,
+            'status' => Complaint::STATUS_PENDING,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.complaints.index'))
+            ->assertOk()
+            ->assertSee($complaint->subject_title)
+            ->assertSee('No ticket has been generated for this complaint yet.');
+    }
+
     public function test_student_recipient_and_admin_can_post_and_see_messages_in_same_thread(): void
     {
         // Create test users

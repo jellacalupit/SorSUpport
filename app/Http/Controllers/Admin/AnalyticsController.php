@@ -14,13 +14,6 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class AnalyticsController extends Controller
 {
-    public function reports()
-    {
-        return view('admin.reports', [
-            'categoryOptions' => ComplaintCategory::query()->orderBy('name')->get(),
-        ]);
-    }
-
     public function index(Request $request, AnalyticsService $analytics)
     {
         $request->mergeIfMissing([
