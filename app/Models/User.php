@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable implements MustVerifyEmailContract
 {
+    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, MustVerifyEmailTrait;
 
     public const ROLE_STUDENT = 'student';
