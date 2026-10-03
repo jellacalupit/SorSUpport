@@ -93,7 +93,7 @@ class AccountManagementController extends Controller
         $direction = $request->input('sort_id', 'asc') === 'asc' ? 'asc' : 'desc';
         $studentUsers = $studentUsers
             ->leftJoin('students', 'students.user_id', '=', 'users.id')
-            ->orderByRaw("CAST(students.student_id AS INTEGER) {$direction}")
+            ->orderByRaw("CAST(students.student_id AS UNSIGNED) {$direction}")
             ->orderBy('users.id', $direction)
             ->select('users.*');
 
