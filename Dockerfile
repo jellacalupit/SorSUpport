@@ -24,8 +24,8 @@ RUN apt-get update && apt-get install -y \
         gd \
         intl \
         zip \
-    && a2dismod mpm_event \
-    && a2enmod rewrite \
+    && a2dismod mpm_event mpm_worker mpm_prefork \
+    && a2enmod mpm_prefork rewrite \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
