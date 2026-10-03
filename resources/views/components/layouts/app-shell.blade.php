@@ -395,7 +395,7 @@
                                                 </span>
 
                                                 @unless (Auth::user()->must_change_password)
-                                                    <span class="block max-w-72 truncate text-[11px] text-muted-foreground">
+                                                    <span class="block whitespace-nowrap text-right text-[11px] leading-tight text-muted-foreground">
                                                         ID {{ $adminIdentityId }} · {{ $adminIdentityDepartment }} · {{ $adminIdentityDesignation }}
                                                     </span>
                                                 @endunless

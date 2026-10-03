@@ -54,6 +54,8 @@ class ProfileTest extends TestCase
             ->get('/profile')
             ->assertOk()
             ->assertSee('profile-username')
+            ->assertSee('id="profile-photo-overlay"', false)
+            ->assertSee('id="recipient-profile-photo"', false)
             ->assertSee('First Name *')
             ->assertSee('Last Name *')
             ->assertSee('Email *')
@@ -87,6 +89,39 @@ class ProfileTest extends TestCase
             'department' => 'Student Development Services',
             'designation' => 'Administrator',
         ]);
+    }
+
+    public function test_sds_admin_profile_photo_control_starts_hidden_until_edit_mode(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_SDS_ADMIN,
+            'username' => '1001',
+        ]);
+
+        $this->actingAs($user)
+            ->get('/profile')
+            ->assertOk()
+            ->assertSee('id="profile-photo-overlay"', false)
+            ->assertSee('id="recipient-profile-photo"', false)
+            ->assertSee('class="absolute bottom-1 right-1 z-20 hidden"', false);
+    }
+
+    public function test_sds_admin_profile_does_not_infer_middle_name_from_full_name(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_SDS_ADMIN,
+            'name' => 'Mary Jane Smith',
+            'first_name' => null,
+            'middle_name' => null,
+            'last_name' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->get('/profile')
+            ->assertOk()
+            ->assertSee('name="first_name" value="Mary Jane"', false)
+            ->assertSee('name="middle_name" value=""', false)
+            ->assertSee('name="last_name" value="Smith"', false);
     }
 
     public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void

@@ -21,17 +21,9 @@
     $parsedNameParts = array_values(array_filter(preg_split('/\s+/', trim((string) ($user->name ?? ''))) ?: [], static fn ($part) => $part !== ''));
 
     if ($profileFirstName === '' && !empty($parsedNameParts)) {
-        if (count($parsedNameParts) >= 3) {
-            $profileFirstName = implode(' ', array_slice($parsedNameParts, 0, -2));
-        } elseif (count($parsedNameParts) === 2) {
-            $profileFirstName = $parsedNameParts[0] ?? '';
-        } else {
-            $profileFirstName = $parsedNameParts[0] ?? '';
-        }
-    }
-
-    if ($profileMiddleName === '' && !empty($parsedNameParts) && count($parsedNameParts) >= 3) {
-        $profileMiddleName = $parsedNameParts[count($parsedNameParts) - 2] ?? '';
+        $profileFirstName = count($parsedNameParts) > 1
+            ? implode(' ', array_slice($parsedNameParts, 0, -1))
+            : ($parsedNameParts[0] ?? '');
     }
 
     if ($profileLastName === '' && !empty($parsedNameParts)) {
@@ -111,7 +103,7 @@
                         </div>
                         <h2 class="{{ $isRecipient ? 'mt-4 text-xl sm:text-2xl' : 'mt-5 text-lg sm:text-xl' }} truncate font-bold">{{ $recipientDisplayName }}</h2>
                         @unless ($isInitialAdminSetup)
-                            <p class="mt-1 truncate text-xs font-normal opacity-95">ID {{ $profileId }} · {{ $profileDepartment }} · {{ $profileDesignation }}</p>
+                            <p class="mt-1 w-full max-w-full whitespace-normal break-words px-2 text-xs font-normal opacity-95">ID {{ $profileId }} · {{ $profileDepartment }} · {{ $profileDesignation }}</p>
                         @endunless
                         @if ($user->role !== 'sds_admin')
                             <span class="mt-3 inline-flex rounded-full border border-primary bg-primary-foreground/15 px-4 py-1 text-xs font-normal">{{ $profileRole }}</span>
