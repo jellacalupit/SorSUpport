@@ -72,4 +72,4 @@ RUN sed -ri \
 
 EXPOSE 80
 
-CMD ["bash", "-c", "a2dismod mpm_event mpm_worker 2>/dev/null || true; a2enmod mpm_prefork rewrite; exec apache2-foreground"]
+CMD ["bash", "-c", "a2dismod mpm_event mpm_worker 2>/dev/null || true; a2enmod mpm_prefork rewrite; php artisan storage:link; exec apache2-foreground"]
