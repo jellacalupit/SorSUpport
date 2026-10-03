@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y \
         gd \
         intl \
         zip \
+    && a2dismod mpm_event \
     && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
 
