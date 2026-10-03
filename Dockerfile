@@ -1,12 +1,26 @@
+# =========================
+# Frontend build
+# =========================
+FROM node:22-alpine AS frontend
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+
+# =========================
+# Laravel / Apache
+# =========================
 FROM php:8.2-apache
 
 # Install system dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
-    curl \
-    nodejs \
-    npm \
     libzip-dev \
     libpng-dev \
     libjpeg-dev \
@@ -24,9 +38,13 @@ RUN apt-get update && apt-get install -y \
         gd \
         intl \
         zip \
-    && a2dismod mpm_event mpm_worker mpm_prefork \
-    && a2enmod mpm_prefork rewrite \
     && rm -rf /var/lib/apt/lists/*
+
+# Make sure only Apache prefork MPM is enabled
+RUN a2dismod mpm_event mpm_worker mpm_prefork || true \
+    && rm -f /etc/apache2/mods-enabled/mpm_*.load \
+    && rm -f /etc/apache2/mods-enabled/mpm_*.conf \
+    && a2enmod mpm_prefork rewrite
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -42,8 +60,8 @@ RUN composer install \
     --optimize-autoloader \
     --no-interaction
 
-# Install frontend dependencies and build Vite
-RUN npm ci && npm run build
+# Copy Vite production build
+COPY --from=frontend /app/public/build ./public/build
 
 # Laravel writable directories
 RUN chown -R www-data:www-data \
