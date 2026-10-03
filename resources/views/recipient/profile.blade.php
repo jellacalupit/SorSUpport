@@ -112,7 +112,7 @@
                 </aside>
 
                 @if ($editable)
-                    <button type="button" id="toggle-profile-edit" @click="document.getElementById('profile-details-view')?.classList.add('hidden'); document.getElementById('profile-edit-form')?.classList.remove('hidden'); $el.classList.add('hidden')" class="inline-flex h-10 w-full items-center justify-center rounded-full bg-[#5a101c] px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#7a1d2a]">
+                    <button type="button" id="toggle-profile-edit" @click="document.getElementById('profile-details-view')?.classList.add('hidden'); document.getElementById('profile-edit-form')?.classList.remove('hidden'); document.getElementById('profile-photo-overlay')?.classList.remove('hidden'); $el.classList.add('hidden')" class="inline-flex h-10 w-full items-center justify-center rounded-full bg-[#5a101c] px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#7a1d2a]">
                         Edit Profile
                     </button>
                 @endif
@@ -273,7 +273,7 @@
 
                                 <div class="flex flex-wrap items-center gap-2 pt-2">
                                     <button type="submit" class="inline-flex h-8 items-center justify-center rounded-full bg-primary px-3 text-[11px] font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Save Changes</button>
-                                    <button type="button" id="cancel-profile-edit" @click="document.getElementById('profile-edit-form')?.classList.add('hidden'); document.getElementById('profile-details-view')?.classList.remove('hidden'); document.getElementById('toggle-profile-edit')?.classList.remove('hidden')" class="inline-flex h-8 min-w-[90px] items-center justify-center rounded-full border border-border bg-white px-3 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted">Cancel</button>
+                                    <button type="button" id="cancel-profile-edit" @click="document.getElementById('profile-edit-form')?.classList.add('hidden'); document.getElementById('profile-details-view')?.classList.remove('hidden'); document.getElementById('profile-photo-overlay')?.classList.add('hidden'); document.getElementById('toggle-profile-edit')?.classList.remove('hidden')" class="inline-flex h-8 min-w-[90px] items-center justify-center rounded-full border border-border bg-white px-3 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted">Cancel</button>
                                     @if (session('status') === 'profile-updated')
                                         <p class="text-[11px] text-success">Saved.</p>
                                     @endif

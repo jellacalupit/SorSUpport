@@ -103,7 +103,9 @@ class ProfileTest extends TestCase
             ->assertOk()
             ->assertSee('id="profile-photo-overlay"', false)
             ->assertSee('id="recipient-profile-photo"', false)
-            ->assertSee('class="absolute bottom-1 right-1 z-20 hidden"', false);
+            ->assertSee('class="absolute bottom-1 right-1 z-20 hidden"', false)
+            ->assertSee("getElementById('profile-photo-overlay')?.classList.remove('hidden')", false)
+            ->assertSee("getElementById('profile-photo-overlay')?.classList.add('hidden')", false);
     }
 
     public function test_sds_admin_profile_does_not_infer_middle_name_from_full_name(): void
