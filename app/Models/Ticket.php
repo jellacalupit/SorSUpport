@@ -46,6 +46,7 @@ class Ticket extends Model
         'closure_reason',
         'deadline',
         'acknowledged_at',
+        'escalated_at',
         'resolved_at',
         'closed_at',
         'forwarded_at',
@@ -57,6 +58,7 @@ class Ticket extends Model
         return [
             'deadline' => 'datetime',
             'acknowledged_at' => 'datetime',
+            'escalated_at' => 'datetime',
             'resolved_at' => 'datetime',
             'closed_at' => 'datetime',
             'forwarded_at' => 'datetime',

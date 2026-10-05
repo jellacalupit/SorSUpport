@@ -78,17 +78,8 @@
     };
     $recipientMetaText = null;
     if ($role === 'recipient' && $ticket?->status !== 'pending' && ! in_array($ticket?->status, ['resolved', 'closed', 'rejected'], true)) {
-        if ($ticket?->deadline) {
-            $deadlineDate = $ticket->deadline->copy()->setTimezone('Asia/Manila');
-            $daysRemaining = $ticket->remainingDays();
-
-            if ($deadlineDate->isPast() && ! $deadlineDate->isToday()) {
-                $recipientMetaText = 'Past due';
-            } elseif ($daysRemaining !== null && $daysRemaining <= 0) {
-                $recipientMetaText = 'Due today';
-            } elseif ($daysRemaining !== null) {
-                $recipientMetaText = (int) $daysRemaining . ' days remaining';
-            }
+        if ($ticket?->escalated_at) {
+            $recipientMetaText = 'Escalated ' . $ticket->escalated_at->copy()->setTimezone('Asia/Manila')->format('M d');
         }
     }
     $unreadService = app(\App\Services\TicketUnreadService::class);

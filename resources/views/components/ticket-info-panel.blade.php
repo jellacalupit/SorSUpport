@@ -17,13 +17,6 @@
     $studentUser = $student?->user;
     $studentDisplayName = $complaint?->is_anonymous ? 'Anonymous' : ($studentUser?->table_name ?? 'Anonymous');
     $studentCourseYearBlock = trim(($student->course ?? 'Course not specified') . ' ' . ($student->year_level ?? 'N/A') . (($student->block ?? '') !== '' ? '-' . $student->block : ''));
-    $resolutionDays = $complaint?->created_at && $ticket->deadline
-        ? (int) $complaint->created_at->diffInDays($ticket->deadline)
-        : null;
-    $daysRemaining = in_array($ticket->status, ['pending', 'closed', 'rejected', 'resolved'], true)
-        || in_array($ticket->classification, ['informational', 'invalid'], true)
-        ? null
-        : $ticket->remainingDays();
     $statusDisplay = $studentView && $ticket->classification === 'informational' && $ticket->status === 'pending'
         ? 'Closed'
         : ($studentView
@@ -106,13 +99,21 @@
             <p class="text-sm font-medium leading-tight wrap-break-word">{{ $complaint?->category?->name ?? 'Uncategorized' }}</p>
         </div>
 
-        <!-- Person Involved -->
-        <div class="min-w-0">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Person Involved</p>
-            <p class="text-sm font-medium leading-tight wrap-break-word">
-                {{ filled($complaint?->personnel_involved) ? $complaint->personnel_involved : '—' }}
-            </p>
-        </div>
+        <!-- Person Involved (older tickets only) -->
+        @if (filled($complaint?->personnel_involved))
+            <div class="min-w-0">
+                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Person Involved</p>
+                <p class="text-sm font-medium leading-tight wrap-break-word">{{ $complaint->personnel_involved }}</p>
+            </div>
+        @endif
+
+        <!-- Suggested Recipient -->
+        @if ($complaint?->suggestedRecipient?->user)
+            <div class="min-w-0">
+                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Suggested Recipient</p>
+                <p class="text-sm font-medium leading-tight wrap-break-word">{{ $complaint->suggestedRecipient->user->table_name }}</p>
+            </div>
+        @endif
 
         <!-- Current Holder -->
         <div class="min-w-0">
@@ -146,24 +147,12 @@
             </p>
         </div>
 
-        <!-- Resolution Deadline -->
-        @if ($ticket->status !== 'closed')
+        <!-- Escalation date -->
+        @if ($ticket->escalated_at)
             <div class="min-w-0">
-                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Resolution Deadline</p>
+                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Escalated On</p>
                 <p class="text-sm font-medium leading-tight wrap-break-word">
-                    @if ($isInvalid)
-                        —
-                    @elseif (in_array($ticket->classification, ['informational', 'invalid'], true))
-                        —
-                    @elseif ($ticket->status === 'pending')
-                        —
-                    @elseif ($ticket->status === 'resolved')
-                        Paused
-                    @elseif ($ticket->deadline)
-                        {{ $ticket->deadline->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}
-                    @else
-                        —
-                    @endif
+                    {{ $ticket->escalated_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}
                 </p>
             </div>
         @endif

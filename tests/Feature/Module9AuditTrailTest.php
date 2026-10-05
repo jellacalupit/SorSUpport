@@ -126,7 +126,7 @@ class Module9AuditTrailTest extends TestCase
             ->assertRedirect();
 
         $this->actingAs($admin)
-            ->post(route('admin.tickets.escalate', $ticket))
+            ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $recipientTwo->id])
             ->assertRedirect();
 
         $ticket->refresh();
@@ -285,7 +285,7 @@ class Module9AuditTrailTest extends TestCase
         $this->assertNotNull($log->created_at);
     }
 
-    public function test_anonymous_complaint_creates_closed_informational_ticket_and_hides_identity(): void
+    public function test_anonymous_complaint_stays_pending_for_admin_review_and_hides_identity(): void
     {
         /** @var \App\Models\User $admin */
         $admin = User::factory()->create(['role' => User::ROLE_SDS_ADMIN, 'email_verified_at' => now()]);
@@ -333,8 +333,8 @@ class Module9AuditTrailTest extends TestCase
 
         $this->assertDatabaseHas('tickets', [
             'complaint_id' => $complaint->id,
-            'status' => Ticket::STATUS_CLOSED,
-            'classification' => Ticket::CLASSIFICATION_INFORMATIONAL,
+            'status' => Ticket::STATUS_PENDING,
+            'classification' => null,
             'current_handler_id' => $admin->id,
         ]);
         $this->assertDatabaseHas('audit_logs', [
@@ -342,18 +342,34 @@ class Module9AuditTrailTest extends TestCase
             'performed_by' => null,
         ]);
 
-        $myTicketsResponse = $this->actingAs($admin)
-            ->get(route('admin.tickets.my'))
-            ->assertOk()
-            ->assertSee($complaint->reference_number);
+        $ticket = $complaint->ticket;
 
-        $myTicketsResponse
+        $this->actingAs($admin)
+            ->get(route('admin.tickets.review.index'))
+            ->assertOk()
+            ->assertSee($complaint->reference_number)
             ->assertDontSee($studentUser->name)
             ->assertDontSee($studentUser->email);
 
-        $this->assertDatabaseHas('complaints', [
-            'id' => $complaint->id,
-            'status' => Complaint::STATUS_CLOSED,
+        // An anonymous submission can only be kept as an informational record.
+        $this->actingAs($admin)
+            ->post(route('admin.tickets.assign', $ticket), [
+                'assignment_mode' => 'recipient',
+                'recipient_id' => $recipient->id,
+            ])
+            ->assertStatus(422);
+
+        $this->actingAs($admin)
+            ->post(route('admin.tickets.forward-informational-close', $ticket), [
+                'recipient_id' => $recipient->id,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'status' => Ticket::STATUS_CLOSED,
+            'classification' => Ticket::CLASSIFICATION_INFORMATIONAL,
+            'forwarded_to' => $recipient->id,
         ]);
     }
 

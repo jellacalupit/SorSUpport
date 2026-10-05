@@ -61,13 +61,8 @@ class ComplaintController extends Controller
         $sort = $request->input('sort', 'newest');
 
         $complaints = $query
-            ->when($sort === 'deadline_urgency', function ($query) {
-                $query->orderByRaw('CASE WHEN deadline IS NULL THEN 1 ELSE 0 END ASC')
-                    ->orderBy('deadline', 'asc')
-                    ->orderByDesc('updated_at');
-            })
-            ->when($sort === 'newest', fn ($query) => $query->orderByDesc('updated_at'))
             ->when($sort === 'oldest', fn ($query) => $query->orderBy('updated_at', 'asc'))
+            ->when($sort !== 'oldest', fn ($query) => $query->orderByDesc('updated_at'))
             ->paginate(10)
             ->appends($request->query());
 

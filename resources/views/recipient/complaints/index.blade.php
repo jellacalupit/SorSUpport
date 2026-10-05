@@ -10,7 +10,7 @@
 
                 @php
                     $statusLabels = ['' => 'All status', 'in_progress' => 'In Progress', 'escalated' => 'Escalated', 'resolved' => 'Resolved', 'closed' => 'Closed'];
-                    $sortLabels = ['newest' => 'Sort by newest date', 'oldest' => 'Sort by oldest date', 'deadline_urgency' => 'Sort by deadline urgency'];
+                    $sortLabels = ['newest' => 'Sort by newest date', 'oldest' => 'Sort by oldest date'];
                     $selectedStatus = request('status_filter', '');
                     $selectedSort = request('sort', 'newest');
                 @endphp

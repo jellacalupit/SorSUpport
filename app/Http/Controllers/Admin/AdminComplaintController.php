@@ -92,10 +92,6 @@ class AdminComplaintController extends Controller
             ->select('updated_at')
             ->whereColumn('tickets.complaint_id', 'complaints.id')
             ->limit(1);
-        $ticketDeadline = Ticket::query()
-            ->select('deadline')
-            ->whereColumn('tickets.complaint_id', 'complaints.id')
-            ->limit(1);
 
         if ($sort === 'oldest_update') {
             $query->orderBy($ticketUpdatedAt, 'asc');
@@ -103,10 +99,6 @@ class AdminComplaintController extends Controller
             $query->orderByDesc('complaints.created_at');
         } elseif ($sort === 'oldest_submitted') {
             $query->orderBy('complaints.created_at', 'asc');
-        } elseif ($sort === 'deadline_urgency') {
-            $query->orderByRaw('CASE WHEN (' . $ticketDeadline->toSql() . ') IS NULL THEN 1 ELSE 0 END ASC', $ticketDeadline->getBindings())
-                ->orderBy($ticketDeadline, 'asc')
-                ->orderByDesc($ticketUpdatedAt);
         } else {
             $query->orderByDesc($ticketUpdatedAt);
         }

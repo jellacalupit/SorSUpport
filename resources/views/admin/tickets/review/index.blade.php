@@ -182,7 +182,7 @@
             <div class="sticky top-0 z-10 flex items-start justify-between border-b border-border bg-card px-4 py-3">
                 <div>
                     <h2 class="font-display text-lg font-bold text-primary">Ticket Review</h2>
-                    <p class="mt-0.5 text-xs text-muted-foreground">Step 1 validity, then step 2 classification and routing.</p>
+                    <p class="mt-0.5 text-xs text-muted-foreground">Check the details, then step 1 validity and step 2 classification and routing.</p>
                 </div>
                 <button type="button" data-ticket-review-close class="grid h-8 w-8 shrink-0 place-items-center rounded-md text-xl leading-none text-muted-foreground hover:bg-muted hover:text-primary" aria-label="Close ticket review">&times;</button>
             </div>
@@ -208,12 +208,14 @@
                 $categoryRecipients = collect([$category->recipient])
                     ->merge($category->suggestedRecipients)
                     ->merge($category->escalationHierarchies->pluck('recipient'))
+                    ->push($ticket->complaint->suggestedRecipient)
                     ->filter(fn ($recipient) => $recipient && $recipient->user && $recipient->user->is_active)
                     ->unique('id')
                     ->values();
             }
 
             $availableRecipients = $categoryRecipients;
+            $isAnonymousTicket = (bool) $ticket->complaint->is_anonymous;
         @endphp
         @if ($ticket->status === 'resolved')
             <template id="complaint-{{ $ticket->complaint->id }}">
@@ -244,7 +246,12 @@
                         </div>
                         <div class="mt-3 grid gap-2">
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Category</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->category?->name ?? 'Uncategorized' }}</p></div>
-                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Person involved</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->personnel_involved ?: 'Not specified' }}</p></div>
+                            @if (filled($ticket->complaint->personnel_involved))
+                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Person involved</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->personnel_involved }}</p></div>
+                            @endif
+                            @if ($ticket->complaint->suggestedRecipient?->user)
+                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Suggested recipient</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->suggestedRecipient->user->table_name }}</p></div>
+                            @endif
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Description</p><p class="whitespace-pre-line wrap-break-word text-sm leading-relaxed text-foreground">{{ $ticket->complaint->description ?? 'No description' }}</p></div>
                             @if ($ticket->complaint->attachment_files)
                                 <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Attachment</p>
@@ -261,7 +268,7 @@
                                 <p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->currentHandler?->table_name ?? $ticket->assignee?->table_name ?? '—' }}</p>
                             </div>
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Classification</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : '—' }}</p></div>
-                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Resolution Deadline</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->deadline ? $ticket->deadline->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') : ($ticket->resolved_at ? 'Paused' : '—') }}</p></div>
+                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Escalated On</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->escalated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? '—' }}</p></div>
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Updated</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</p></div>
                         </div>
 
@@ -333,10 +340,10 @@
                     <h3 class="mt-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $ticket->complaint->subject_title }}</h3>
                     <div class="mt-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                         <span class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
-                            @if ($studentUser?->avatar_path)
+                            @if ($studentUser?->avatar_path && ! $ticket->complaint->is_anonymous)
                                 <img src="{{ asset('storage/' . $studentUser->avatar_path) }}" alt="{{ $studentDisplayName }}" class="h-full w-full object-cover">
                             @else
-                                {{ collect($studentNameParts)->map(fn ($part) => substr($part, 0, 1))->take(2)->join('') ?: 'A' }}
+                                {{ $ticket->complaint->is_anonymous ? 'A' : (collect($studentNameParts)->map(fn ($part) => substr($part, 0, 1))->take(2)->join('') ?: 'A') }}
                             @endif
                         </span>
                         <span class="relative min-w-0" x-data="{ studentProfileOpen: false }" x-on:mouseenter="studentProfileOpen = true" x-on:mouseleave="studentProfileOpen = false">
@@ -364,8 +371,7 @@
                         <span class="shrink-0">{{ $ticket->complaint->created_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</span>
                     </div>
                     <div class="mt-3 grid gap-2">
-                        <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Category</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->category?->name ?? 'Uncategorized' }}</p></div>
-                        <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Person involved</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->personnel_involved ?: 'Not specified' }}</p></div>
+                        @include('admin.tickets.review.partials.details', ['ticket' => $ticket])
                         <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Description</p><p class="whitespace-pre-line wrap-break-word text-sm leading-relaxed text-foreground">{{ $ticket->complaint->description }}</p></div>
                         @foreach ($ticket->complaint->attachment_files as $attachment)
                             <a href="{{ Storage::url($attachment['path']) }}" target="_blank" rel="noopener" class="inline-flex max-w-full items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-xs font-semibold text-foreground hover:border-primary hover:bg-primary-soft">
@@ -377,7 +383,7 @@
 
                 </div>
                 @if ($ticket->status === 'pending')
-                <div x-data="{ validity: null, classification: null, jurisdiction: null, resolutionTime: '', informationalDisposition: null, selectedRecipientId: null, selectedRecipient: '', invalidReason: '', invalidReasonError: false }">
+                <div x-data="{ validity: null, classification: {{ $isAnonymousTicket ? "'informational'" : 'null' }}, jurisdiction: null, informationalDisposition: null, selectedRecipientId: null, selectedRecipient: '', invalidReason: '', invalidReasonError: false }">
                     <div class="rounded-lg border border-border bg-white p-4 text-foreground shadow-sm">
                     <h3 class="flex items-center gap-2 font-display text-base font-bold text-black">
                         <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">1</span>
@@ -393,8 +399,13 @@
                             <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">2</span>
                             <span>Classification</span>
                         </h3>
+                        @if ($isAnonymousTicket)
+                            <p class="mt-2 text-xs text-muted-foreground">Anonymous submissions are kept as informational records. Choose whether to retain it in SDS records or forward it to a recipient.</p>
+                        @endif
                         <div class="mt-4 grid gap-2">
-                            <button type="button" x-on:click="classification = 'needs_resolution'" class="w-full rounded-full border border-primary px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="classification === 'needs_resolution' ? 'bg-primary text-primary-foreground' : 'bg-white text-primary hover:bg-primary-soft'">Needs Resolution</button>
+                            @unless ($isAnonymousTicket)
+                                <button type="button" x-on:click="classification = 'needs_resolution'" class="w-full rounded-full border border-primary px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="classification === 'needs_resolution' ? 'bg-primary text-primary-foreground' : 'bg-white text-primary hover:bg-primary-soft'">Needs Resolution</button>
+                            @endunless
                             <button type="button" x-on:click="classification = 'informational'" class="w-full rounded-full border border-primary px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="classification === 'informational' ? 'bg-primary text-primary-foreground' : 'bg-white text-primary hover:bg-primary-soft'">Informational</button>
                         </div>
                         <div x-show="classification === 'needs_resolution'" x-cloak class="mt-5 border-t border-border pt-4">
@@ -422,14 +433,6 @@
                                     @endforelse
                                 </div>
                             </details>
-                            <div x-show="jurisdiction === 'sds' || (jurisdiction === 'different_office' && selectedRecipientId)" x-cloak class="mt-4 border-t border-border pt-4">
-                                <label for="resolution-time-{{ $ticket->id }}" class="text-sm font-semibold text-black">Resolution Time / SLA</label>
-                                <div class="mt-2 flex items-center gap-2">
-                                    <input id="resolution-time-{{ $ticket->id }}" x-model="resolutionTime" type="number" min="1" max="15" step="1" inputmode="numeric" class="h-9 w-24 rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring" placeholder="1–15">
-                                    <span class="text-sm text-muted-foreground">days</span>
-                                </div>
-                                <p class="mt-1 text-[11px] text-muted-foreground">Enter a value from 1 to 15 days.</p>
-                            </div>
                         </div>
                         <div x-show="classification === 'informational'" x-cloak class="mt-5 border-t border-border pt-4">
                             <p class="text-sm font-semibold text-black">Should the ticket retain in SDS records or should it be forwarded to a recipient?</p>
@@ -470,16 +473,14 @@
                     <form x-show="validity === 'valid' && classification === 'needs_resolution' && jurisdiction === 'sds'" x-cloak method="POST" action="{{ route('admin.tickets.acknowledge', $ticket) }}" class="mt-3">
                         @csrf
                         <input type="hidden" name="return_to_pending" value="1">
-                        <input type="hidden" name="resolution_time" x-bind:value="resolutionTime">
-                        <button type="submit" x-bind:disabled="!resolutionTime || Number(resolutionTime) < 1 || Number(resolutionTime) > 15" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">Acknowledge Ticket</button>
+                        <button type="submit" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Acknowledge Ticket</button>
                     </form>
                     <form x-show="validity === 'valid' && classification === 'needs_resolution' && jurisdiction === 'different_office' && selectedRecipientId" x-cloak method="POST" action="{{ route('admin.tickets.assign', $ticket) }}" class="mt-3">
                         @csrf
                         <input type="hidden" name="return_to_pending" value="1">
                         <input type="hidden" name="assignment_mode" value="recipient">
                         <input type="hidden" name="recipient_id" x-bind:value="selectedRecipientId">
-                        <input type="hidden" name="resolution_time" x-bind:value="resolutionTime">
-                        <button type="submit" x-bind:disabled="!resolutionTime || Number(resolutionTime) < 1 || Number(resolutionTime) > 15" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">Assign Ticket to Recipient</button>
+                        <button type="submit" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Assign Ticket to Recipient</button>
                     </form>
                     <form x-show="validity === 'valid' && classification === 'informational' && informationalDisposition === 'retain'" x-cloak method="POST" action="{{ route('admin.tickets.retain-informational', $ticket) }}" class="mt-3">
                         @csrf
@@ -517,7 +518,12 @@
                             </div>
                             <div class="mt-3 grid gap-2">
                                 <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Category</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->category?->name ?? 'Uncategorized' }}</p></div>
-                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Person involved</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->personnel_involved ?: 'Not specified' }}</p></div>
+                                @if (filled($ticket->complaint->personnel_involved))
+                                    <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Person involved</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->personnel_involved }}</p></div>
+                                @endif
+                                @if ($ticket->complaint->suggestedRecipient?->user)
+                                    <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Suggested recipient</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->suggestedRecipient->user->table_name }}</p></div>
+                                @endif
                                 <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Description</p><p class="whitespace-pre-line wrap-break-word text-sm leading-relaxed text-foreground">{{ $ticket->complaint->description ?? 'No description' }}</p></div>
                                 @if ($ticket->complaint->attachment_files)
                                     <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Attachment</p>
@@ -536,7 +542,7 @@
                                     </p>
                                 </div>
                                 <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Classification</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : '—' }}</p></div>
-                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Resolution Time / SLA</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->resolved_at ? 'Paused' : '—' }}</p></div>
+                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Escalated On</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->escalated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? '—' }}</p></div>
                                 <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Updated</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</p></div>
                             </div>
 

@@ -106,33 +106,6 @@ class Module8EmailNotificationsTest extends TestCase
         $this->assertArrayNotHasKey('message', $mailMessage->viewData);
     }
 
-    public function test_daily_reminders_are_sent_to_current_handler_for_tickets_nearing_deadline(): void
-    {
-        Mail::fake();
-
-        $handler = User::factory()->create([
-            'email' => 'handler@example.com',
-            'role' => User::ROLE_RECIPIENT,
-        ]);
-
-        $this->createTicket([
-            'current_handler_id' => $handler->id,
-            'deadline' => now()->addDays(3),
-            'status' => Ticket::STATUS_ASSIGNED,
-        ]);
-
-        $sentCount = app(EmailNotificationService::class)
-            ->sendDailyReminders();
-
-        $this->assertSame(1, $sentCount);
-
-        $this->assertDatabaseHas('email_notifications', [
-            'recipient_email' => $handler->email,
-            'type' => EmailNotification::TYPE_DAILY_REMINDER,
-            'status' => EmailNotification::STATUS_SENT,
-        ]);
-    }
-
     private function createTicket(array $overrides = []): Ticket
     {
         $studentUser = User::factory()->create([

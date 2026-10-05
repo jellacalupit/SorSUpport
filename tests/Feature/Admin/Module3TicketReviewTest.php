@@ -482,6 +482,8 @@ class Module3TicketReviewTest extends TestCase
         $response->assertOk();
         $response->assertSee($recipientUser->name);
         $response->assertSee($recipientUserTwo->name);
-        $response->assertDontSee($otherRecipientUser->name);
+        $response->assertSee('R-1001 ·');
+        $response->assertSee('R-1002 ·');
+        $response->assertDontSee('R-1003 ·');
     }
 }

@@ -84,55 +84,6 @@ class EmailNotificationService
         }
     }
 
-    /**
-     * Send reminder emails to current handlers for tickets nearing their deadline.
-     */
-    public function sendDailyReminders(): int
-    {
-        $tickets = Ticket::query()
-            ->whereNotNull('current_handler_id')
-            ->whereNotIn('status', [Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED, Ticket::STATUS_REJECTED])
-            ->whereBetween('deadline', [now(), now()->addDays(3)])
-            ->get();
-
-        $sent = 0;
-
-        foreach ($tickets as $ticket) {
-            $handler = $ticket->currentHandler;
-
-            if (! $handler?->email) {
-                continue;
-            }
-
-            $existingReminder = EmailNotification::query()
-                ->where('ticket_id', $ticket->id)
-                ->where('recipient_email', $handler->email)
-                ->where('type', EmailNotification::TYPE_DAILY_REMINDER)
-                ->whereIn('status', [
-                    EmailNotification::STATUS_PENDING,
-                    EmailNotification::STATUS_SENT,
-                ])
-                ->exists();
-
-            if ($existingReminder) {
-                continue;
-            }
-
-            $notification = EmailNotification::create([
-                'ticket_id' => $ticket->id,
-                'recipient_email' => $handler->email,
-                'type' => EmailNotification::TYPE_DAILY_REMINDER,
-                'status' => EmailNotification::STATUS_PENDING,
-            ]);
-
-            if ($this->sendNotification($notification)) {
-                $sent++;
-            }
-        }
-
-        return $sent;
-    }
-
     protected function resolveTemplate(string $type): string
     {
         return match ($type) {

@@ -36,6 +36,7 @@ class TicketUnreadService
 
     public const ADMIN_CHANGE_ACTIONS = [
         'complaint_submitted',
+        'anonymous_complaint_submitted',
         'ticket_assigned',
         'ticket_acknowledged',
         'ticket_classified',

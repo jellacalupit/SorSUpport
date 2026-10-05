@@ -59,10 +59,10 @@
                         <label for="f-sort" class="text-sm font-medium">Sort by</label>
                         <details x-data="{}" class="group relative w-52" x-on:click.outside="$el.removeAttribute('open')">
                             <summary id="f-sort" class="flex h-9 cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
-                                <span>{{ request('sort', 'latest_update') === 'latest_update' ? 'Latest Update' : (request('sort') === 'oldest_update' ? 'Oldest Update' : (request('sort') === 'latest_submitted' ? 'Latest Submitted' : (request('sort') === 'oldest_submitted' ? 'Oldest Submitted' : 'Deadline Urgency'))) }}</span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                                <span>{{ request('sort', 'latest_update') === 'latest_update' ? 'Latest Update' : (request('sort') === 'oldest_update' ? 'Oldest Update' : (request('sort') === 'latest_submitted' ? 'Latest Submitted' : 'Oldest Submitted')) }}</span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                             </summary>
                             <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                                @foreach (['latest_update' => 'Latest Update', 'oldest_update' => 'Oldest Update', 'latest_submitted' => 'Latest Submitted', 'oldest_submitted' => 'Oldest Submitted', 'deadline_urgency' => 'Deadline Urgency'] as $value => $label)
+                                @foreach (['latest_update' => 'Latest Update', 'oldest_update' => 'Oldest Update', 'latest_submitted' => 'Latest Submitted', 'oldest_submitted' => 'Oldest Submitted'] as $value => $label)
                                     <a href="{{ $query(array_merge(request()->only(['search','category_filter','classification_filter','status_filter','filed_from','filed_to']), ['sort' => $value])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ request('sort', 'latest_update') === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if ((request('sort', 'latest_update') === $value))<x-icons.check class="absolute right-2 h-4 w-4" />@endif{{ $label }}</a>
                                 @endforeach
                             </div>
@@ -115,7 +115,7 @@
                         <th class="py-2 pl-1.5 pr-2 font-semibold" style="width: 13%;">Category</th>
                         <th class="px-2 py-2 font-semibold" style="width: 9%;">Classification</th>
                         <th class="py-2 pl-1.5 pr-2 font-semibold" style="width: 7%;">Status</th>
-                        <th class="px-2 py-2 font-semibold" style="width: 6%;">SLA</th>
+                        <th class="px-2 py-2 font-semibold" style="width: 6%;">Escalated</th>
                         <th class="px-2 py-2 font-semibold" style="width: 7%;">Current Holder</th>
                         <th class="px-2 py-2 font-semibold" style="width: 10.5%;">Filed By</th>
                         <th class="px-2 py-2 font-semibold" style="width: 8%;">Date Submitted</th>
@@ -132,10 +132,6 @@
                             $holderRecipient = $holderUser?->recipient;
                             $currentHolder = $holderUser?->table_name ?? '—';
                             $filedBy = $complaint->is_anonymous ? 'Anonymous' : ($complaint->student?->user?->table_name ?? 'Unknown');
-                            $hasDeadline = $ticket?->status !== 'pending' && ! in_array($ticket?->classification, ['informational', 'invalid'], true) && $ticket?->deadline;
-                            $daysLeft = $hasDeadline ? now()->setTimezone('Asia/Manila')->startOfDay()->diffInDays($ticket->deadline->copy()->setTimezone('Asia/Manila')->startOfDay(), false) : null;
-                            $deadlineText = $daysLeft === null ? '—' : ($daysLeft < 0 ? 'Overdue' : ($daysLeft === 0 ? 'Due Today' : $daysLeft . ' days left'));
-                            $deadlineClass = $hasDeadline ? 'font-semibold text-red-700' : 'text-muted-foreground';
                             $isUnread = $ticket ? app(\App\Services\TicketUnreadService::class)->unreadCountForTicket(Auth::user(), $ticket) > 0 : false;
                         @endphp
                         <tr data-unread="{{ $isUnread ? 'true' : 'false' }}" class="transition-colors hover:bg-primary-soft {{ $isUnread ? 'bg-primary-soft/70' : '' }}">
@@ -144,7 +140,7 @@
                             <td class="wrap-break-word py-1.5 pl-1.5 pr-2 {{ $isUnread ? 'text-black' : 'text-muted-foreground' }}">{{ $complaint->category?->name ?? 'Uncategorized' }}</td>
                             <td class="px-2 py-1.5">@if ($ticket)<x-classification-badge :classification="$ticket->classification" class="text-[10px]" />@else<span class="text-[10px] text-muted-foreground">—</span>@endif</td>
                             <td class="py-1.5 pl-1.5 pr-2"><x-status-badge :status="ucwords(str_replace(['_', '-'], ' ', $ticket?->status ?? $complaint->status))" :show-icon="false" class="px-2 py-0.5 text-[10px]" /></td>
-                            <td class="whitespace-nowrap px-2 py-1.5 {{ $deadlineClass }}">{{ $deadlineText }}</td>
+                            <td class="px-2 py-1.5 {{ $ticket?->escalated_at ? 'font-semibold text-red-700' : 'text-muted-foreground' }}">{{ $ticket?->escalated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y') ?? '—' }}</td>
                             <td class="truncate px-2 py-1.5 {{ $isUnread ? 'text-black' : 'text-muted-foreground' }}"><span class="relative inline-block" x-data="{ holderProfileOpen: false }" x-on:mouseenter="holderProfileOpen = true" x-on:mouseleave="holderProfileOpen = false"><span class="cursor-pointer hover:text-primary hover:underline">{{ $currentHolder }}</span>@if ($holderUser)<span x-show="holderProfileOpen" x-cloak class="brand-gradient absolute top-6 left-0 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-left text-primary-foreground shadow-lg"><span class="flex items-center gap-3"><span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">@if ($holderUser->avatar_path)<img src="{{ asset('storage/' . $holderUser->avatar_path) }}" alt="{{ $currentHolder }}" class="h-full w-full object-cover">@else{{ $holderUser->name_initials }}@endif</span><span class="min-w-0"><span class="block wrap-break-word text-sm font-bold">{{ $currentHolder }}</span><span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $holderRecipient?->staff_id ?? $holderUser->username ?? $holderUser->id }} · {{ $holderRecipient?->department ?? 'Department not specified' }} · {{ $holderRecipient?->designation ?? 'Designation not specified' }}</span></span></span><span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">{{ $holderUser->role === \App\Models\User::ROLE_SDS_ADMIN ? 'Admin' : 'Recipient' }}</span></span>@endif</span></td>
                             <td class="relative overflow-visible px-2 py-1.5 {{ $isUnread ? 'text-black' : 'text-muted-foreground' }}"><span class="relative inline-block group"><span class="{{ $complaint->is_anonymous ? '' : 'cursor-pointer truncate hover:text-primary hover:underline' }}">{{ $filedBy }}</span>@if ($complaint->student?->user && ! $complaint->is_anonymous)<span class="brand-gradient absolute top-6 left-0 z-30 hidden w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-left text-primary-foreground shadow-lg group-hover:block"><span class="flex items-center gap-3"><span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">@if ($complaint->student->user->avatar_path)<img src="{{ asset('storage/' . $complaint->student->user->avatar_path) }}" alt="{{ $filedBy }}" class="h-full w-full object-cover">@else{{ $complaint->student->user->name_initials }}@endif</span><span class="min-w-0"><span class="block wrap-break-word text-sm font-bold">{{ $filedBy }}</span><span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $complaint->student?->student_id ?? 'N/A' }} · {{ $complaint->student?->department ?? 'Department not specified' }} · {{ trim(($complaint->student?->course ?? 'Course not specified') . ' ' . ($complaint->student?->year_level ?? 'N/A') . (($complaint->student?->block ?? '') !== '' ? '-' . $complaint->student->block : '')) }}</span></span></span><span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">Student</span></span>@endif</span></td>
                             <td class="whitespace-nowrap px-2 py-1.5 {{ $isUnread ? 'text-black' : 'text-muted-foreground' }}">{{ $complaint->created_at?->copy()->setTimezone('Asia/Manila')->format('m/d/y h:i A') ?? 'Unknown' }}</td>
@@ -184,12 +180,6 @@
                     : ($ticket?->currentHandler ?? $ticket?->assignee);
                 $currentHolderName = $holderUser?->table_name ?? '—';
                 $holderRecipient = $holderUser?->recipient;
-                $hasAdminSetDeadline = $ticket?->status !== 'pending'
-                    && ! in_array($ticket?->classification ?? '', ['informational', 'invalid'], true)
-                    && $ticket?->deadline;
-                $resolutionDeadline = $hasAdminSetDeadline
-                    ? $ticket->deadline->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A')
-                    : '—';
                 $auditLogs = $ticket?->auditLogs()
                     ->orderByDesc('created_at')
                     ->limit(5)
@@ -243,7 +233,12 @@
                         </div>
                         <div class="mt-3 grid gap-2">
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Category</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $complaint->category?->name ?? 'Uncategorized' }}</p></div>
-                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Person involved</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $complaint->personnel_involved ?: 'Not specified' }}</p></div>
+                            @if (filled($complaint->personnel_involved))
+                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Person involved</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $complaint->personnel_involved }}</p></div>
+                            @endif
+                            @if ($complaint->suggestedRecipient?->user)
+                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Suggested recipient</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $complaint->suggestedRecipient->user->table_name }}</p></div>
+                            @endif
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Description</p><p class="whitespace-pre-line wrap-break-word text-sm leading-relaxed text-foreground">{{ $complaint->description ?? 'No description' }}</p></div>
                             @if ($complaint->attachment_files)
                                 <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Attachment</p>
@@ -257,7 +252,10 @@
                             @endif
                             <div class="border-t border-border pt-2"><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Current Holder</p><p class="text-sm font-medium leading-tight text-foreground"><span class="relative inline-block" x-data="{ holderProfileOpen: false }" x-on:mouseenter="holderProfileOpen = true" x-on:mouseleave="holderProfileOpen = false"><span class="cursor-pointer hover:text-primary hover:underline">{{ $currentHolderName }}</span>@if ($holderUser)<span x-show="holderProfileOpen" x-cloak class="brand-gradient absolute top-6 left-0 z-[100] w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-left text-primary-foreground shadow-lg"><span class="flex items-center gap-3"><span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">@if ($holderUser->avatar_path)<img src="{{ asset('storage/' . $holderUser->avatar_path) }}" alt="{{ $currentHolderName }}" class="h-full w-full object-cover">@else{{ $holderUser->name_initials }}@endif</span><span class="min-w-0"><span class="block wrap-break-word text-sm font-bold">{{ $currentHolderName }}</span><span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $holderRecipient?->staff_id ?? $holderUser->username ?? $holderUser->id }} · {{ $holderRecipient?->department ?? 'Department not specified' }} · {{ $holderRecipient?->designation ?? 'Designation not specified' }}</span></span></span><span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">{{ $holderUser->role === \App\Models\User::ROLE_SDS_ADMIN ? 'Admin' : 'Recipient' }}</span></span>@endif</span></p></div>
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Classification</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket?->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : '—' }}</p></div>
-                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Resolution Deadline</p><p class="text-sm font-medium leading-tight text-foreground">{{ $resolutionDeadline }}</p></div>
+                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Escalated On</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket?->escalated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? '—' }}</p></div>
+                            @if ($ticket)
+                                <x-ticket-escalate-form :ticket="$ticket" class="mt-1" />
+                            @endif
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Updated</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket?->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? $complaint->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</p></div>
                         </div>
                     </div>

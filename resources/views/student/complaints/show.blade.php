@@ -57,6 +57,13 @@
                         {{ filled($complaint->personnel_involved) ? $complaint->personnel_involved : '—' }}
                     </p>
                 </div>
+
+                @if ($complaint->suggestedRecipient?->user)
+                    <div class="min-w-0">
+                        <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Suggested Recipient</p>
+                        <p class="text-sm font-medium leading-tight wrap-break-word">{{ $complaint->suggestedRecipient->user->table_name }}</p>
+                    </div>
+                @endif
             </div>
 
             <div class="mt-3">

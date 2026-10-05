@@ -27,6 +27,7 @@ class Complaint extends Model
         'category_id',
         'subject_title',
         'personnel_involved',
+        'suggested_recipient_id',
         'description',
         'file_attachment',
         'is_anonymous',
@@ -110,6 +111,14 @@ class Complaint extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(ComplaintCategory::class, 'category_id');
+    }
+
+    /**
+     * Recipient the student suggested to handle the complaint.
+     */
+    public function suggestedRecipient(): BelongsTo
+    {
+        return $this->belongsTo(Recipient::class, 'suggested_recipient_id');
     }
 
     /**

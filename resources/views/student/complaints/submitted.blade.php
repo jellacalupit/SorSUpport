@@ -42,6 +42,24 @@
                         <span class="text-xs text-muted-foreground">Category</span>
                         <span class="min-w-0 text-right text-xs font-semibold wrap-break-word">{{ $submittedComplaint['category_name'] ?? '—' }}</span>
                     </div>
+                    @if (filled($submittedComplaint['suggested_recipient'] ?? null))
+                        <div class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 px-4 py-2.5">
+                            <span class="text-xs text-muted-foreground">Suggested recipient</span>
+                            <span class="min-w-0 text-right text-xs font-semibold wrap-break-word">{{ $submittedComplaint['suggested_recipient'] }}</span>
+                        </div>
+                    @endif
+                    @if (($submittedComplaint['attachment_count'] ?? 0) > 0)
+                        <div class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 px-4 py-2.5">
+                            <span class="text-xs text-muted-foreground">Attachments</span>
+                            <span class="min-w-0 text-right text-xs font-semibold wrap-break-word">{{ $submittedComplaint['attachment_count'] }} {{ Str::plural('file', $submittedComplaint['attachment_count']) }}</span>
+                        </div>
+                    @endif
+                    @if ($submittedComplaint['is_anonymous'] ?? false)
+                        <div class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 px-4 py-2.5">
+                            <span class="text-xs text-muted-foreground">Privacy</span>
+                            <span class="min-w-0 text-right text-xs font-semibold wrap-break-word">Submitted anonymously</span>
+                        </div>
+                    @endif
                     <div class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 px-4 py-2.5">
                         <span class="text-xs text-muted-foreground">Status</span>
                         <span class="justify-self-end"><x-status-badge :status="$submittedComplaint['status'] ?? 'Pending'" :show-icon="false" class="px-2 py-0 text-[10px]" /></span>
@@ -49,10 +67,12 @@
                 </div>
             </section>
 
-            <div class="mt-3 flex items-start gap-2.5 rounded-xl bg-muted p-3 text-left text-xs text-muted-foreground">
-                <x-icons.mail-open class="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <p>An email notification has been sent to your registered email address.</p>
-            </div>
+            @unless ($submittedComplaint['is_anonymous'] ?? false)
+                <div class="mt-3 flex items-start gap-2.5 rounded-xl bg-muted p-3 text-left text-xs text-muted-foreground">
+                    <x-icons.mail-open class="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <p>An email notification has been sent to your registered email address.</p>
+                </div>
+            @endunless
 
             <div class="mt-5 grid w-full gap-2">
                 <a href="{{ route('student.complaints.show', $submittedComplaint['id']) }}" class="inline-flex h-11 items-center justify-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">

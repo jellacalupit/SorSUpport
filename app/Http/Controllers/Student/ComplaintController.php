@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Complaint;
 use App\Models\ComplaintCategory;
+use App\Models\Recipient;
 use App\Models\ThreadMessage;
 use App\Models\Ticket;
 use App\Models\TicketThread;
@@ -90,10 +91,33 @@ class ComplaintController extends Controller
     {
         $categories = ComplaintCategory::query()
             ->where('is_active', true)
+            ->with('suggestedRecipients')
             ->orderBy('name')
             ->get();
 
-        return view('student.complaints.create', compact('categories'));
+        $recipients = Recipient::query()
+            ->activeVerified()
+            ->with('user')
+            ->get()
+            ->sortBy(fn (Recipient $recipient) => $recipient->user->table_name, SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
+
+        $recipientOptions = $recipients->map(fn (Recipient $recipient) => [
+            'id' => (string) $recipient->id,
+            'name' => $recipient->user->table_name,
+            'detail' => implode(' · ', array_filter([$recipient->designation, $recipient->department])),
+        ]);
+
+        // Recipients the admin configured as suggestions for each category.
+        $categoryRecipients = $categories->mapWithKeys(fn (ComplaintCategory $category) => [
+            (string) $category->id => $category->suggestedRecipients
+                ->pluck('id')
+                ->intersect($recipients->pluck('id'))
+                ->map(fn ($id) => (string) $id)
+                ->values(),
+        ]);
+
+        return view('student.complaints.create', compact('categories', 'recipientOptions', 'categoryRecipients'));
     }
 
     /**
@@ -109,6 +133,7 @@ class ComplaintController extends Controller
             ],
             'subject_title' => 'required|string|max:50',
             'personnel_involved' => 'nullable|string|max:255',
+            'suggested_recipient_id' => 'nullable|integer',
             'description' => 'required|string|max:5000',
             'file_attachment' => 'nullable|array|max:10',
             'file_attachment.*' => 'file|mimes:pdf,docx,jpg,jpeg,png,heic|max:10240',
@@ -134,6 +159,23 @@ class ComplaintController extends Controller
                 ]);
         }
 
+        $suggestedRecipientId = null;
+
+        if (filled($validated['suggested_recipient_id'] ?? null)) {
+            $suggestedRecipientId = Recipient::query()
+                ->activeVerified()
+                ->whereKey($validated['suggested_recipient_id'])
+                ->value('id');
+
+            if (! $suggestedRecipientId) {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        'suggested_recipient_id' => 'The selected recipient is not available.',
+                    ]);
+            }
+        }
+
         $attachmentPaths = [];
 
         if ($request->hasFile('file_attachment')) {
@@ -152,6 +194,7 @@ class ComplaintController extends Controller
             $student,
             $category,
             $recipientUserId,
+            $suggestedRecipientId,
             $attachmentPaths,
             $isAnonymous
         ) {
@@ -161,54 +204,39 @@ class ComplaintController extends Controller
                 'category_id' => $category->id,
                 'subject_title' => $validated['subject_title'],
                 'personnel_involved' => $validated['personnel_involved'] ?? null,
+                'suggested_recipient_id' => $suggestedRecipientId,
                 'description' => $validated['description'],
                 'file_attachment' => $attachmentPaths ? json_encode($attachmentPaths) : null,
                 'is_anonymous' => $isAnonymous,
-                'status' => $isAnonymous ? Complaint::STATUS_CLOSED : Complaint::STATUS_PENDING,
+                'status' => Complaint::STATUS_PENDING,
             ]);
 
-            if ($isAnonymous) {
-                $adminId = User::query()
-                    ->where('role', User::ROLE_SDS_ADMIN)
-                    ->orderBy('id')
-                    ->value('id');
-
-                $ticket = Ticket::create([
-                    'complaint_id' => $complaint->id,
-                    'status' => Ticket::STATUS_CLOSED,
-                    'classification' => Ticket::CLASSIFICATION_INFORMATIONAL,
-                    'jurisdiction' => Ticket::JURISDICTION_SDS,
-                    'current_handler_id' => $adminId,
-                    'closed_at' => now(),
-                    'closure_reason' => 'Anonymous informational submission.',
-                ]);
-
-                AuditLog::create([
-                    'ticket_id' => $ticket->id,
-                    'performed_by' => null,
-                    'action' => 'anonymous_complaint_submitted',
-                    'details' => "Anonymous complaint {$complaint->reference_number} submitted as an informational ticket.",
-                ]);
-
-                return $complaint;
-            }
-
+            // Every submission, anonymous or not, waits for the SDS admin's review.
             $ticket = Ticket::create([
                 'complaint_id' => $complaint->id,
                 'status' => Ticket::STATUS_PENDING,
                 'current_handler_id' => User::query()->where('role', User::ROLE_SDS_ADMIN)->orderBy('id')->value('id'),
-                'deadline' => $complaint->created_at->copy()->addDays((int) $category->resolution_deadline_days),
             ]);
 
-            AuditLog::log(
-                $ticket->id,
-                'complaint_submitted',
-                Auth::id(),
-                "Complaint {$complaint->reference_number} submitted."
-            );
+            if ($isAnonymous) {
+                // Keep the submitter out of the audit trail.
+                AuditLog::create([
+                    'ticket_id' => $ticket->id,
+                    'performed_by' => null,
+                    'action' => 'anonymous_complaint_submitted',
+                    'details' => "Anonymous complaint {$complaint->reference_number} submitted for review.",
+                ]);
+            } else {
+                AuditLog::log(
+                    $ticket->id,
+                    'complaint_submitted',
+                    Auth::id(),
+                    "Complaint {$complaint->reference_number} submitted."
+                );
+            }
 
             // Acknowledge complaint submission to the student.
-            if (Auth::user()->email) {
+            if (! $isAnonymous && Auth::user()->email) {
                 EmailNotification::create([
                     'ticket_id' => $ticket->id,
                     'recipient_email' => Auth::user()->email,
@@ -243,13 +271,26 @@ class ComplaintController extends Controller
 
         return redirect()
             ->route('student.complaints.create')
-            ->with('submittedComplaint', [
-                'id' => $complaint->id,
-                'reference_number' => $complaint->reference_number,
-                'subject_title' => $complaint->subject_title,
-                'category_name' => $category->name,
-                'status' => 'Pending',
-            ]);
+            ->with('submittedComplaint', $this->submittedSummary($complaint));
+    }
+
+    /**
+     * Details shown in the confirmation after a ticket is submitted.
+     */
+    protected function submittedSummary(Complaint $complaint): array
+    {
+        $complaint->loadMissing(['category', 'suggestedRecipient.user']);
+
+        return [
+            'id' => $complaint->id,
+            'reference_number' => $complaint->reference_number,
+            'subject_title' => $complaint->subject_title,
+            'category_name' => $complaint->category?->name,
+            'suggested_recipient' => $complaint->suggestedRecipient?->user?->table_name,
+            'attachment_count' => count($complaint->attachment_files),
+            'is_anonymous' => (bool) $complaint->is_anonymous,
+            'status' => 'Pending',
+        ];
     }
 
     /**
@@ -269,12 +310,7 @@ class ComplaintController extends Controller
 
         return redirect()
             ->route('student.complaints.create')
-            ->with('submittedComplaint', [
-                'id' => $complaint->id,
-                'reference_number' => $complaint->reference_number,
-                'subject_title' => $complaint->subject_title,
-                'status' => 'Pending',
-            ]);
+            ->with('submittedComplaint', $this->submittedSummary($complaint));
     }
 
     /**

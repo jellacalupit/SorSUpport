@@ -237,7 +237,7 @@
                             <div class="min-w-0">
                                 <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Selected category</p>
                                 <h2 class="mt-1 truncate text-xl font-bold text-foreground" x-text="selectedCategoryName"></h2>
-                                <p class="mt-1 text-sm text-muted-foreground">Define the order recipients are escalated to when a deadline is breached.</p>
+                                <p class="mt-1 text-sm text-muted-foreground">Define the recipients suggested, in order, when the SDS admin escalates a ticket.</p>
                             </div>
                             <button type="button" x-show="hasUnsavedChanges" x-cloak class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-semibold text-amber-700">
                                 <span class="h-2 w-2 rounded-full bg-amber-500"></span>
@@ -298,7 +298,7 @@
                                             <div x-show="isLastLevel(index)" x-cloak class="mt-4 rounded-xl border border-amber-200 bg-white/70 px-3 py-2">
                                                 <label class="flex items-start gap-3 text-sm text-amber-800">
                                                     <input type="checkbox" x-model="level.isTerminal" @change="markDirty(); ensureTerminalState();" class="mt-1 h-4 w-4 rounded border-input text-amber-600 focus:ring-amber-500">
-                                                    <span>Terminal level, flag for manual SDS Administrator intervention if breached here.</span>
+                                                    <span>Last level. The SDS Administrator decides what happens next.</span>
                                                 </label>
                                             </div>
                                         </div>

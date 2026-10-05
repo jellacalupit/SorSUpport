@@ -15,7 +15,7 @@ class Module4TicketRoutingTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_assign_a_needs_resolution_ticket_to_a_recipient_and_set_deadline(): void
+    public function test_admin_can_assign_a_needs_resolution_ticket_to_a_recipient_without_a_deadline(): void
     {
         /** @var User $admin */
         $admin = User::factory()->create([
@@ -87,14 +87,14 @@ class Module4TicketRoutingTest extends TestCase
                 'recipient_id' => $recipient->id,
             ]);
 
-        $response->assertRedirect(route('admin.tickets.review.show', $ticket));
+        $response->assertRedirect(route('admin.tickets.review.index'));
 
         $ticket->refresh();
 
         $this->assertSame(Ticket::STATUS_IN_PROGRESS, $ticket->status);
         $this->assertSame($recipient->user_id, $ticket->current_handler_id);
         $this->assertSame($recipient->user_id, $ticket->assigned_to);
-        $this->assertSame(now()->addDays(3)->toDateString(), $ticket->deadline->toDateString());
+        $this->assertNull($ticket->deadline);
         $this->assertTrue($ticket->thread->is_active);
 
         $this->assertDatabaseHas('email_notifications', [

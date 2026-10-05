@@ -21,13 +21,6 @@
                     @if ($complaint->ticket->status === 'assigned')
                         <form method="POST" action="{{ route('admin.tickets.acknowledge', $complaint->ticket) }}" class="grid gap-3">
                             @csrf
-                            <div>
-                                <label for="admin-resolution-time" class="text-sm font-semibold text-foreground">Resolution Time / SLA</label>
-                                <div class="mt-2 flex items-center gap-2">
-                                    <input id="admin-resolution-time" name="resolution_time" type="number" min="1" max="15" step="1" inputmode="numeric" required class="h-9 w-24 rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring">
-                                    <span class="text-sm text-muted-foreground">days</span>
-                                </div>
-                            </div>
                             <button type="submit" class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-green-800 px-4 text-sm font-semibold text-white transition-colors hover:bg-green-900"><x-icons.check class="h-4 w-4" /> Acknowledge Ticket</button>
                         </form>
                     @elseif ($complaint->ticket->status === 'in_progress')
@@ -42,6 +35,8 @@
                     @endif
                 </div>
             @endif
+
+            <x-ticket-escalate-form :ticket="$complaint->ticket" class="surface p-4 sm:p-6" />
 
             @if ($complaint->ticket->classification === 'needs_resolution')
                 <div class="grid content-start gap-3"><x-ticket-thread :ticket="$complaint->ticket" viewerRole="admin" /></div>

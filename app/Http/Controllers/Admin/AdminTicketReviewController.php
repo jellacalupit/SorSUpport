@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class AdminTicketReviewController extends Controller
@@ -68,6 +69,7 @@ class AdminTicketReviewController extends Controller
             ->whereIn('status', [Ticket::STATUS_PENDING, Ticket::STATUS_RESOLVED])
             ->with([
                 'complaint.student.user',
+                'complaint.suggestedRecipient.user',
                 'complaint.category.recipient.user',
                 'complaint.category.suggestedRecipients.user',
                 'complaint.category.escalationHierarchies.recipient.user',
@@ -162,12 +164,7 @@ class AdminTicketReviewController extends Controller
             ->when($status === 'in_progress', fn ($query) => $query->whereIn('status', [Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS]))
             ->when($status && $status !== 'in_progress', fn ($query) => $query->where('status', $status))
             ->when($sort === 'oldest', fn ($query) => $query->orderBy('updated_at', 'asc'))
-            ->when($sort === 'deadline_urgency', function ($query) {
-                $query->orderByRaw('CASE WHEN deadline IS NULL THEN 1 ELSE 0 END ASC')
-                    ->orderBy('deadline', 'asc')
-                    ->orderByDesc('updated_at');
-            })
-            ->when($sort === 'newest', fn ($query) => $query->orderByDesc('updated_at'))
+            ->when($sort !== 'oldest', fn ($query) => $query->orderByDesc('updated_at'))
             ->paginate(10)
             ->appends($request->query());
 
@@ -196,7 +193,7 @@ class AdminTicketReviewController extends Controller
             'closure_reason' => $validated['closure_reason'],
         ]);
 
-        if ($ticket->complaint?->student?->user?->email) {
+        if (! $ticket->complaint?->is_anonymous && $ticket->complaint?->student?->user?->email) {
             EmailNotification::create([
                 'ticket_id' => $ticket->id,
                 'recipient_email' => $ticket->complaint->student->user->email,
@@ -229,6 +226,12 @@ class AdminTicketReviewController extends Controller
             'classification' => 'required|in:needs_resolution,informational',
             'jurisdiction' => 'required|in:sds,recipient',
         ]);
+
+        abort_if(
+            $ticket->complaint?->is_anonymous && $validated['classification'] !== Ticket::CLASSIFICATION_INFORMATIONAL,
+            422,
+            'Anonymous submissions can only be kept as informational records.'
+        );
 
         // If "Needs Resolution", activate thread immediately
         if ($validated['classification'] === Ticket::CLASSIFICATION_NEEDS_RESOLUTION) {
@@ -336,7 +339,7 @@ class AdminTicketReviewController extends Controller
 
         AuditLog::log($ticket->id, 'ticket_retained_in_sds_records', Auth::id(), 'Informational ticket retained in SDS records and closed.');
 
-        if ($ticket->complaint?->student?->user?->email) {
+        if (! $ticket->complaint?->is_anonymous && $ticket->complaint?->student?->user?->email) {
             EmailNotification::create([
                 'ticket_id' => $ticket->id,
                 'recipient_email' => $ticket->complaint->student->user->email,
@@ -393,11 +396,11 @@ class AdminTicketReviewController extends Controller
             404,
             'Only needs-resolution tickets can be assigned.'
         );
+        abort_if($ticket->complaint?->is_anonymous, 422, 'Anonymous submissions can only be kept as informational records.');
 
         $validated = $request->validate([
             'assignment_mode' => 'required|in:direct,recipient',
             'recipient_id' => 'required_if:assignment_mode,recipient|nullable|exists:recipients,id',
-            'resolution_time' => 'required|integer|between:1,15',
         ]);
 
         $recipient = null;
@@ -411,9 +414,7 @@ class AdminTicketReviewController extends Controller
             $assignedUserId = $recipient->user_id;
         }
 
-        $deadline = $ticket->complaint?->created_at?->copy()->addDays((int) $validated['resolution_time']);
-
-        DB::transaction(function () use ($ticket, $recipient, $assignedUserId, $deadline, $validated): void {
+        DB::transaction(function () use ($ticket, $recipient, $assignedUserId): void {
             $thread = $ticket->thread;
 
             if (! $thread) {
@@ -431,10 +432,10 @@ class AdminTicketReviewController extends Controller
                 'jurisdiction' => $ticket->jurisdiction ?? Ticket::JURISDICTION_RECIPIENT,
                 'assigned_to' => $recipient ? $assignedUserId : null,
                 'current_handler_id' => $assignedUserId,
-                'deadline' => $deadline,
+                'deadline' => null,
             ]);
 
-            $action = $recipient ? 'ticket_assigned' : 'ticket_assigned';
+            $action = 'ticket_assigned';
             $details = $recipient
                 ? "SDS Admin assigned the ticket {$ticket->complaint->reference_number} to {$recipient->user->display_name} for handling."
                 : 'Ticket assigned to SDS admin for direct handling.';
@@ -478,7 +479,7 @@ class AdminTicketReviewController extends Controller
             return false;
         }
 
-        $configuredRecipientIds = collect([$category->recipient_id])
+        $configuredRecipientIds = collect([$category->recipient_id, $ticket->complaint->suggested_recipient_id])
             ->merge($category->suggestedRecipients()->pluck('recipients.id'))
             ->merge($category->escalationHierarchies()->pluck('recipient_id'))
             ->filter()
@@ -500,13 +501,9 @@ class AdminTicketReviewController extends Controller
             ($ticket->status === Ticket::STATUS_ASSIGNED && $ticket->current_handler_id === Auth::id()),
             404
         );
+        abort_if($ticket->complaint?->is_anonymous, 422, 'Anonymous submissions can only be kept as informational records.');
 
-        $validated = $request->validate([
-            'resolution_time' => 'required|integer|between:1,15',
-        ]);
-        $deadline = $ticket->complaint?->created_at?->copy()->addDays((int) $validated['resolution_time']);
-
-        DB::transaction(function () use ($ticket, $deadline) {
+        DB::transaction(function () use ($ticket) {
             $thread = $ticket->thread;
             if (! $thread) {
                 $ticket->thread()->create(['is_active' => true]);
@@ -520,7 +517,7 @@ class AdminTicketReviewController extends Controller
                 'jurisdiction' => Ticket::JURISDICTION_SDS,
                 'assigned_to' => null,
                 'current_handler_id' => Auth::id(),
-                'deadline' => $deadline,
+                'deadline' => null,
                 'acknowledged_at' => now(),
             ]);
 
@@ -593,25 +590,95 @@ class AdminTicketReviewController extends Controller
     }
 
     /**
-     * Close a ticket (Admin-only) after resolution.
+     * Escalate an active ticket to the recipient chosen by the admin.
      */
-    public function escalate(Ticket $ticket): RedirectResponse
+    public function escalate(Request $request, Ticket $ticket): RedirectResponse
     {
         abort_unless(
-            in_array($ticket->status, [Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS]),
+            $ticket->classification === Ticket::CLASSIFICATION_NEEDS_RESOLUTION &&
+            in_array($ticket->status, [Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED], true),
             404,
             'Only active tickets can be escalated.'
         );
 
-        $escalated = $this->escalationService->escalate($ticket, Auth::user());
+        $validated = $request->validate([
+            'recipient_id' => 'required|exists:recipients,id',
+        ], [
+            'recipient_id.required' => 'Select who the ticket should be escalated to.',
+        ]);
 
-        if (! $escalated) {
-            return redirect()->route('admin.tickets.review.index')
-                ->withErrors(['escalation' => 'No further escalation target is configured for this ticket.']);
+        $recipient = $this->escalationService
+            ->escalationTargets($ticket)
+            ->firstWhere('id', (int) $validated['recipient_id']);
+
+        if (! $recipient) {
+            return back()->withErrors(['recipient_id' => 'The ticket cannot be escalated to the selected recipient.']);
         }
 
-        return redirect()->route('admin.tickets.review.index')
-            ->with('success', 'Ticket escalated successfully.');
+        $this->escalationService->escalate($ticket, $recipient, Auth::user());
+
+        return back()->with('success', sprintf('Ticket escalated to %s.', $recipient->user->display_name));
+    }
+
+    /**
+     * Correct the category or suggested recipient a student picked, before the ticket is classified.
+     */
+    public function updateDetails(Request $request, Ticket $ticket): RedirectResponse
+    {
+        abort_unless($ticket->status === Ticket::STATUS_PENDING && $ticket->classification === null, 404);
+
+        $validated = $request->validate([
+            'category_id' => ['required', Rule::exists('complaint_categories', 'id')->where('is_active', true)],
+            'suggested_recipient_id' => 'nullable|integer',
+        ]);
+
+        $complaint = $ticket->complaint;
+        $category = ComplaintCategory::findOrFail($validated['category_id']);
+        $suggestedRecipient = null;
+
+        if (filled($validated['suggested_recipient_id'] ?? null)) {
+            $suggestedRecipient = Recipient::query()
+                ->activeVerified()
+                ->with('user')
+                ->find($validated['suggested_recipient_id']);
+
+            if (! $suggestedRecipient) {
+                return back()->withErrors(['suggested_recipient_id' => 'The selected recipient is not available.']);
+            }
+        }
+
+        $changes = [];
+
+        if ((int) $complaint->category_id !== (int) $category->id) {
+            $changes[] = sprintf('Category changed from "%s" to "%s".', $complaint->category?->name ?? 'Uncategorized', $category->name);
+        }
+
+        if ((int) $complaint->suggested_recipient_id !== (int) $suggestedRecipient?->id) {
+            $changes[] = sprintf(
+                'Suggested recipient changed from %s to %s.',
+                $complaint->suggestedRecipient?->user?->display_name ?? 'none',
+                $suggestedRecipient?->user?->display_name ?? 'none'
+            );
+        }
+
+        if ($changes === []) {
+            return redirect()->route('admin.tickets.review.index');
+        }
+
+        DB::transaction(function () use ($ticket, $complaint, $category, $suggestedRecipient, $changes): void {
+            $complaint->update([
+                'category_id' => $category->id,
+                'suggested_recipient_id' => $suggestedRecipient?->id,
+            ]);
+
+            $ticket->touch();
+
+            AuditLog::log($ticket->id, 'ticket_details_updated', Auth::id(), implode(' ', $changes));
+        });
+
+        return redirect()
+            ->route('admin.tickets.review.index')
+            ->with('success', 'Ticket details updated.');
     }
 
     /**

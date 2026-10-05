@@ -83,7 +83,7 @@ class AnalyticsController extends Controller
             ->when(! empty($filters['category_id']), fn ($query) => $query->whereHas('complaint', fn ($complaint) => $complaint->where('category_id', $filters['category_id'])))
             ->when(! empty($filters['start_date']), fn ($query) => $query->whereHas('complaint', fn ($complaint) => $complaint->whereDate('created_at', '>=', $filters['start_date'])))
             ->when(! empty($filters['end_date']), fn ($query) => $query->whereHas('complaint', fn ($complaint) => $complaint->whereDate('created_at', '<=', $filters['end_date'])))
-            ->orderBy('deadline')
+            ->orderByDesc('updated_at')
             ->paginate(10)
             ->withQueryString();
 

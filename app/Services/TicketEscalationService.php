@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\DB;
 
 class TicketEscalationService
 {
+    /**
+     * Next recipient in the category's configured hierarchy, used as the suggested escalation target.
+     */
     public function getNextRecipient(Ticket $ticket): ?Recipient
     {
         $category = $ticket->complaint?->category;
@@ -47,50 +50,58 @@ class TicketEscalationService
         return $levels->first()?->first()?->recipient;
     }
 
-    public function escalate(Ticket $ticket, ?User $performedBy = null): bool
+    /**
+     * Recipients a ticket can be escalated to: every active recipient except the current handler,
+     * with the category's hierarchy listed first in level order.
+     */
+    public function escalationTargets(Ticket $ticket): Collection
     {
-        $targetRecipient = $this->getNextRecipient($ticket);
+        $currentHandlerUserId = $ticket->assigned_to ?: $ticket->current_handler_id;
 
-        if (! $targetRecipient) {
-            return false;
-        }
+        $hierarchy = $ticket->complaint?->category
+            ? $ticket->complaint->category->escalationHierarchies()->with('recipient.user')->get()->pluck('recipient')
+            : collect();
 
-        $category = $ticket->complaint?->category;
+        $others = Recipient::query()
+            ->activeVerified()
+            ->with('user')
+            ->orderBy('department')
+            ->get();
 
-        if (! $category) {
-            return false;
-        }
+        return $hierarchy
+            ->merge($others)
+            ->filter(fn ($recipient) => $recipient?->user?->is_active
+                && $recipient->user->email_verified_at
+                && (int) $recipient->user_id !== (int) $currentHandlerUserId)
+            ->unique('id')
+            ->values();
+    }
 
-        $deadline = $ticket->deadline?->isFuture()
-            ? $ticket->deadline
-            : now()->addDays((int) $category->resolution_deadline_days);
-
-        DB::transaction(function () use ($ticket, $targetRecipient, $performedBy, $deadline): void {
-            $performedById = $performedBy?->id
-                ?? $ticket->current_handler_id
-                ?? $ticket->assigned_to;
-
-        $ticket->update([
+    /**
+     * Escalate a ticket to the recipient chosen by the SDS admin and record when it happened.
+     */
+    public function escalate(Ticket $ticket, Recipient $targetRecipient, ?User $performedBy = null): void
+    {
+        DB::transaction(function () use ($ticket, $targetRecipient, $performedBy): void {
+            $ticket->update([
                 'status' => Ticket::STATUS_ESCALATED,
                 'assigned_to' => $targetRecipient->user_id,
                 'current_handler_id' => $targetRecipient->user_id,
-                'deadline' => $deadline,
+                'escalated_at' => now(),
             ]);
+
+            if ($ticket->thread) {
+                $ticket->thread->update(['is_active' => true]);
+            }
 
             AuditLog::log(
                 $ticket->id,
                 'ticket_escalated',
-                $performedById,
-                'Ticket escalated to the next configured recipient authority.'
+                $performedBy?->id,
+                sprintf('Ticket escalated to %s.', $targetRecipient->user?->display_name ?? 'the selected recipient')
             );
 
-            $usersToNotify = $this->getUsersToNotify($ticket, $targetRecipient, $performedBy);
-
-            foreach ($usersToNotify as $user) {
-                if (! $user?->email) {
-                    continue;
-                }
-
+            foreach ($this->getUsersToNotify($ticket, $targetRecipient, $performedBy) as $user) {
                 EmailNotification::create([
                     'ticket_id' => $ticket->id,
                     'recipient_email' => $user->email,
@@ -99,8 +110,6 @@ class TicketEscalationService
                 ]);
             }
         });
-
-        return true;
     }
 
     protected function getUsersToNotify(Ticket $ticket, Recipient $targetRecipient, ?User $performedBy = null): Collection
@@ -109,10 +118,6 @@ class TicketEscalationService
 
         if ($performedBy?->isSdsAdmin()) {
             $users->push($performedBy);
-        }
-
-        if (! $performedBy) {
-            $users->push(User::query()->where('role', User::ROLE_SDS_ADMIN)->first());
         }
 
         if ($targetRecipient->user) {

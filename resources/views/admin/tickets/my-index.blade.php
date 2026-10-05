@@ -63,11 +63,11 @@
                         <details x-data="{}" class="group relative w-36 shrink-0" x-on:click.outside="$el.removeAttribute('open')">
                             <span aria-hidden="true" class="invisible block h-0 whitespace-nowrap">Newest First</span>
                             <summary id="my-sort" class="flex h-9 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
-                                <span class="truncate">{{ $sortValue === 'oldest' ? 'Oldest First' : ($sortValue === 'deadline_urgency' ? 'Deadline Urgency' : 'Newest First') }}</span>
+                                <span class="truncate">{{ $sortValue === 'oldest' ? 'Oldest First' : 'Newest First' }}</span>
                                 <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                             </summary>
                             <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                                @foreach (['newest' => 'Newest First', 'oldest' => 'Oldest First', 'deadline_urgency' => 'Deadline Urgency'] as $sortOption => $sortLabel)
+                                @foreach (['newest' => 'Newest First', 'oldest' => 'Oldest First'] as $sortOption => $sortLabel)
                                     <a href="{{ route('admin.tickets.my', array_filter(['search' => request('search'), 'status_filter' => request('status_filter'), 'sort' => $sortOption])) }}" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $sortValue === $sortOption ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                         @if ($sortValue === $sortOption) <x-icons.check class="absolute right-2 h-4 w-4" /> @endif
                                         {{ $sortLabel }}
@@ -92,7 +92,7 @@
                             <th class="w-[20%] px-2 py-2 font-semibold sm:px-3">Subject Title</th>
                             <th class="hidden px-2 py-2 font-semibold sm:px-3 lg:table-cell">Classification</th>
                             <th class="px-2 py-2 font-semibold sm:px-3">Status</th>
-                            <th class="hidden whitespace-nowrap px-2 py-2 font-semibold sm:px-3 md:table-cell">SLA</th>
+                            <th class="hidden whitespace-nowrap px-2 py-2 font-semibold sm:px-3 md:table-cell">Escalated</th>
                             <th class="hidden px-2 py-2 font-semibold sm:px-3 xl:table-cell">Filed by</th>
                             <th class="hidden whitespace-nowrap px-2 py-2 font-semibold sm:px-3 xl:table-cell">Date Submitted</th>
                             <th class="hidden w-[10%] whitespace-nowrap rounded-tr-lg px-2 py-2 font-semibold sm:px-3 xl:table-cell">Last Updated</th>
@@ -120,9 +120,6 @@
                                     'invalid' => 'text-red-600',
                                     default => 'text-muted-foreground',
                                 };
-                                $hasDeadline = $ticket->status !== 'pending' && ! in_array($ticket->classification, ['informational', 'invalid'], true) && $ticket->deadline;
-                                $daysLeft = $hasDeadline ? now()->setTimezone('Asia/Manila')->startOfDay()->diffInDays($ticket->deadline->copy()->setTimezone('Asia/Manila')->startOfDay(), false) : null;
-                                $slaText = $daysLeft === null ? '—' : ($daysLeft < 0 ? 'Overdue' : ($daysLeft === 0 ? 'Due Today' : $daysLeft . ' days left'));
                                 $isUnread = app(\App\Services\TicketUnreadService::class)->unreadCountForTicket(Auth::user(), $ticket) > 0;
                                 $studentCourseYearBlock = trim(($student?->course ?? 'Course not specified') . ' ' . ($student?->year_level ?? 'N/A') . (($student?->block ?? '') !== '' ? '-' . $student->block : ''));
                             @endphp
@@ -135,7 +132,7 @@
                                 </td>
                                 <td class="hidden px-2 py-2 sm:px-3 lg:table-cell"><x-classification-badge :classification="$classification" class="text-[10px]" /></td>
                                 <td class="px-2 py-2 sm:px-3"><x-status-badge :status="$statusDisplay" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px]" /></td>
-                                <td class="hidden whitespace-nowrap px-2 py-2 sm:px-3 md:table-cell {{ $hasDeadline ? 'font-semibold text-red-700' : 'text-muted-foreground' }}">{{ $slaText }}</td>
+                                <td class="hidden whitespace-nowrap px-2 py-2 sm:px-3 md:table-cell {{ $ticket->escalated_at ? 'font-semibold text-red-700' : 'text-muted-foreground' }}">{{ $ticket->escalated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y') ?? '—' }}</td>
                                 <td class="hidden px-2 py-2 sm:px-3 xl:table-cell {{ $isUnread ? 'text-black' : 'text-muted-foreground' }}">
                                     <span class="relative inline-block" x-data="{ studentProfileOpen: false }" x-on:mouseenter="studentProfileOpen = true" x-on:mouseleave="studentProfileOpen = false">
                                         <span class="{{ $ticket->complaint?->is_anonymous ? '' : 'cursor-pointer hover:text-primary hover:underline' }}">{{ $studentTableName }}</span>
@@ -193,9 +190,6 @@
                 $studentUser = $student?->user;
                 $studentDisplayName = $ticket->complaint?->is_anonymous ? 'Anonymous' : ($studentUser?->table_name ?? 'Anonymous');
                 $studentCourseYearBlock = trim(($student?->course ?? 'Course not specified') . ' ' . ($student?->year_level ?? 'N/A') . (($student?->block ?? '') !== '' ? '-' . $student->block : ''));
-                $resolutionDeadline = $ticket->deadline
-                    ? $ticket->deadline->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A')
-                    : ($ticket->resolved_at ? 'Paused' : '—');
                 $auditLogs = $ticket->auditLogs()
                     ->orderByDesc('created_at')
                     ->limit(5)
@@ -248,7 +242,12 @@
                         </div>
                         <div class="mt-3 grid gap-2">
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Category</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint?->category?->name ?? 'Uncategorized' }}</p></div>
-                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Person involved</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint?->personnel_involved ?: 'Not specified' }}</p></div>
+                            @if (filled($ticket->complaint?->personnel_involved))
+                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Person involved</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint?->personnel_involved }}</p></div>
+                            @endif
+                            @if ($ticket->complaint?->suggestedRecipient?->user)
+                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Suggested recipient</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint?->suggestedRecipient->user->table_name }}</p></div>
+                            @endif
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Description</p><p class="whitespace-pre-line wrap-break-word text-sm leading-relaxed text-foreground">{{ $ticket->complaint?->description ?? 'No description' }}</p></div>
                             @if ($ticket->complaint?->attachment_files)
                                 <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Attachment</p>
@@ -261,7 +260,8 @@
                                 </div>
                             @endif
                             <div class="border-t border-border pt-2"><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Classification</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : '—' }}</p></div>
-                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Resolution Deadline</p><p class="text-sm font-medium leading-tight text-foreground">{{ $resolutionDeadline }}</p></div>
+                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Escalated On</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->escalated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? '—' }}</p></div>
+                            <x-ticket-escalate-form :ticket="$ticket" class="mt-1" />
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Updated</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</p></div>
                         </div>
                     </div>
