@@ -1,4 +1,4 @@
-<div class="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
+<div class="grid gap-5">
     <div>
         <div class="relative mb-4 flex items-center justify-between gap-3" x-data="{ ticketInfoOpen: false }" x-on:click.outside="ticketInfoOpen = false">
             <div class="flex min-w-0 items-center gap-2">
@@ -23,8 +23,8 @@
                 </ol>
             </div>
         </div>
-        <div class="surface p-4 sm:p-6">
-        <div class="grid gap-4">
+        <div class="max-md:surface p-4 sm:p-6 md:grid md:grid-cols-2 md:items-start md:gap-5 md:p-0">
+        <div class="grid gap-4 md:surface md:p-6">
             <div class="grid gap-1.5">
                 <label for="subject_title" class="text-sm font-semibold">Subject title <span class="text-destructive" aria-hidden="true">*</span></label>
                 <input id="subject_title" name="subject_title" value="{{ old('subject_title') }}" placeholder="Short summary of your concern" maxlength="50" required class="h-11 w-full rounded-xl border {{ $errors->has('subject_title') ? 'border-destructive !border-destructive password-error-border' : 'border-input' }} bg-muted px-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" x-bind:class="showValidation && ! $el.value.trim() ? 'border-destructive !border-destructive password-error-border' : ''" />
@@ -92,6 +92,9 @@
                 <x-input-error :messages="$errors->get('description')" />
                 <p x-show="showValidation && !document.getElementById('description').value.trim()" x-cloak class="text-xs font-medium text-destructive">This field is required.</p>
             </div>
+        </div>
+        <div class="mt-4 grid gap-5 md:mt-0">
+        <div class="grid gap-4 md:surface md:p-6">
             <div class="grid gap-1.5">
                 <span class="text-sm font-semibold">Attachment <span class="font-normal text-muted-foreground">(optional)</span></span>
                 <div x-show="attachmentFiles.length" x-cloak class="grid gap-2">
@@ -145,10 +148,19 @@
                 <x-input-error :messages="$errors->get('is_anonymous')" />
             </div>
         </div>
+        <div class="hidden w-full gap-2 md:flex">
+            <button type="submit" class="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90">
+                {{ $buttonText }}
+            </button>
+            <a href="{{ route('student.dashboard') }}" class="inline-flex h-10 flex-1 items-center justify-center rounded-md border border-input bg-background px-6 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
+                Cancel
+            </a>
+        </div>
+        </div>
         </div>
     </div>
 
-    <div class="grid content-start gap-5">
+    <div class="grid content-start gap-5 md:hidden">
         <div class="flex w-full gap-2">
             <button type="submit" class="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90">
                 {{ $buttonText }}

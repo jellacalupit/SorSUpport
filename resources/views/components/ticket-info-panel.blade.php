@@ -92,60 +92,53 @@
         </div>
     </div>
 
-    <div class="mt-3 grid grid-flow-col grid-cols-2 grid-rows-5 gap-x-3 gap-y-1 sm:grid-cols-3 sm:grid-rows-3">
+    <div class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
         <!-- Category -->
         <div class="min-w-0">
             <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Category</p>
             <p class="text-sm font-medium leading-tight wrap-break-word">{{ $complaint?->category?->name ?? 'Uncategorized' }}</p>
         </div>
 
-        <!-- Person Involved (older tickets only) -->
-        @if (filled($complaint?->personnel_involved))
-            <div class="min-w-0">
-                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Person Involved</p>
-                <p class="text-sm font-medium leading-tight wrap-break-word">{{ $complaint->personnel_involved }}</p>
-            </div>
-        @endif
-
-        <!-- Suggested Recipient -->
-        @if ($complaint?->suggestedRecipient?->user)
+        @if ($ticket->status === 'pending')
+            <!-- Suggested Recipient -->
             <div class="min-w-0">
                 <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Suggested Recipient</p>
-                <p class="text-sm font-medium leading-tight wrap-break-word">{{ $complaint->suggestedRecipient->user->table_name }}</p>
+                <p class="text-sm font-medium leading-tight wrap-break-word">{{ $complaint?->suggestedRecipient?->user?->table_name ?? 'None' }}</p>
             </div>
-        @endif
-
-        <!-- Current Holder -->
-        <div class="min-w-0">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Current Holder</p>
-            <p class="text-sm font-medium leading-tight wrap-break-word">
-                @if ($holder && $holderRecipient)
-                    <span class="relative" x-data="{ holderProfileOpen: false }" x-on:click.outside="holderProfileOpen = false">
-                        <button type="button" class="text-left text-primary hover:underline" x-on:click="holderProfileOpen = !holderProfileOpen" aria-label="View {{ $holderDisplayName }} profile">
-                            {{ $holderDisplayName }}
-                        </button>
-                        <span x-show="holderProfileOpen" x-cloak class="brand-gradient absolute top-7 left-0 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-primary-foreground shadow-lg">
-                            <span class="flex items-center gap-3">
-                                <span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">
-                                    @if ($holder->avatar_path)
-                                        <img src="{{ asset('storage/' . $holder->avatar_path) }}" alt="{{ $holderDisplayName }}" class="h-full w-full object-cover">
-                                    @else
-                                        {{ $holder->name_initials }}
-                                    @endif
+        @else
+            <!-- Current Holder -->
+            <div class="min-w-0">
+                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Current Holder</p>
+                <p class="text-sm font-medium leading-tight wrap-break-word">
+                    @if ($holder && $holderRecipient)
+                        <span class="relative" x-data="{ holderProfileOpen: false }" x-on:click.outside="holderProfileOpen = false">
+                            <button type="button" class="text-left text-primary hover:underline" x-on:click="holderProfileOpen = !holderProfileOpen" aria-label="View {{ $holderDisplayName }} profile">
+                                {{ $holderDisplayName }}
+                            </button>
+                            <span x-show="holderProfileOpen" x-cloak class="brand-gradient absolute top-7 left-0 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-primary-foreground shadow-lg">
+                                <span class="flex items-center gap-3">
+                                    <span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">
+                                        @if ($holder->avatar_path)
+                                            <img src="{{ asset('storage/' . $holder->avatar_path) }}" alt="{{ $holderDisplayName }}" class="h-full w-full object-cover">
+                                        @else
+                                            {{ $holder->name_initials }}
+                                        @endif
+                                    </span>
+                                    <span class="min-w-0">
+                                        <span class="block wrap-break-word text-sm font-bold">{{ $holderDisplayName }}</span>
+                                        <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $holderRecipient->staff_id }} · {{ $holderRecipient->department }} · {{ $holderRecipient->designation }}</span>
+                                    </span>
                                 </span>
-                                <span class="min-w-0">
-                                    <span class="block wrap-break-word text-sm font-bold">{{ $holderDisplayName }}</span>
-                                    <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $holderRecipient->staff_id }} · {{ $holderRecipient->department }} · {{ $holderRecipient->designation }}</span>
-                                </span>
+                                <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">{{ $holder?->role === \App\Models\User::ROLE_SDS_ADMIN ? 'Admin' : 'Recipient' }}</span>
                             </span>
-                            <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">{{ $holder?->role === \App\Models\User::ROLE_SDS_ADMIN ? 'Admin' : 'Recipient' }}</span>
                         </span>
-                    </span>
-                @else
-                    {{ $holderDisplayName }}
-                @endif
-            </p>
-        </div>
+                    @else
+                        {{ $holderDisplayName }}
+                    @endif
+                </p>
+            </div>
+
+        @endif
 
         <!-- Escalation date -->
         @if ($ticket->escalated_at)
@@ -165,30 +158,6 @@
                 </p>
             </div>
         @endif
-
-        <!-- Classification -->
-        <div class="min-w-0">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Classification</p>
-            <p class="text-sm font-medium leading-tight wrap-break-word">
-                {{ $ticket->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : 'Not yet classified' }}
-            </p>
-        </div>
-
-        <!-- Date Submitted -->
-        <div class="min-w-0">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Date Submitted</p>
-            <p class="text-sm font-medium leading-tight wrap-break-word">
-                {{ $submittedAt?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}
-            </p>
-        </div>
-
-        <!-- Last Updated -->
-        <div class="min-w-0">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Updated</p>
-            <p class="text-sm font-medium leading-tight wrap-break-word">
-                {{ $lastUpdate }}
-            </p>
-        </div>
     </div>
 
     <!-- Description -->
@@ -234,4 +203,30 @@
             <p class="mt-1 text-muted-foreground">{{ $ticket->closure_reason }}</p>
         </div>
     @endif
+</div>
+
+<div class="surface grid grid-cols-3 gap-3 px-4 py-3 sm:px-6">
+        <!-- Classification -->
+        <div class="min-w-0">
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Classification</p>
+            <p class="text-sm font-medium leading-tight wrap-break-word">
+                {{ $ticket->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : 'Not yet classified' }}
+            </p>
+        </div>
+
+        <!-- Date Submitted -->
+        <div class="min-w-0">
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Date Submitted</p>
+            <p class="text-sm font-medium leading-tight wrap-break-word">
+                {{ $submittedAt?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}
+            </p>
+        </div>
+
+        <!-- Last Updated -->
+        <div class="min-w-0">
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Updated</p>
+            <p class="text-sm font-medium leading-tight wrap-break-word">
+                {{ $lastUpdate }}
+            </p>
+        </div>
 </div>

@@ -246,9 +246,6 @@
                         </div>
                         <div class="mt-3 grid gap-2">
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Category</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->category?->name ?? 'Uncategorized' }}</p></div>
-                            @if (filled($ticket->complaint->personnel_involved))
-                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Person involved</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->personnel_involved }}</p></div>
-                            @endif
                             @if ($ticket->complaint->suggestedRecipient?->user)
                                 <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Suggested recipient</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->suggestedRecipient->user->table_name }}</p></div>
                             @endif
@@ -518,9 +515,6 @@
                             </div>
                             <div class="mt-3 grid gap-2">
                                 <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Category</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->category?->name ?? 'Uncategorized' }}</p></div>
-                                @if (filled($ticket->complaint->personnel_involved))
-                                    <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Person involved</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->personnel_involved }}</p></div>
-                                @endif
                                 @if ($ticket->complaint->suggestedRecipient?->user)
                                     <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Suggested recipient</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->suggestedRecipient->user->table_name }}</p></div>
                                 @endif

@@ -24,12 +24,6 @@
             <p class="{{ $labelClass }}">Suggested recipient</p>
             <p class="{{ $valueClass }}">{{ $complaint->suggestedRecipient?->user?->table_name ?? 'None' }}</p>
         </div>
-        @if (filled($complaint->personnel_involved))
-            <div>
-                <p class="{{ $labelClass }}">Person involved</p>
-                <p class="{{ $valueClass }}">{{ $complaint->personnel_involved }}</p>
-            </div>
-        @endif
     </div>
 
     @if ($detailsEditable)

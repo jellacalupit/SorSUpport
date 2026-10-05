@@ -8,15 +8,23 @@
     </div>
 
     @if ($complaint->ticket)
-        <!-- Ticket Info Panel -->
-        <x-ticket-info-panel :ticket="$complaint->ticket" student-view />
-
-        @if ($complaint->ticket->classification === 'needs_resolution')
-            <!-- Thread Section -->
-            <div class="mt-3">
-                <x-ticket-thread :ticket="$complaint->ticket" viewerRole="student" />
+        @php $hasThread = $complaint->ticket->classification === 'needs_resolution'; @endphp
+        <div class="grid gap-3 {{ $hasThread ? 'md:grid-cols-2 md:items-start md:gap-5' : '' }}">
+            <!-- Ticket Details -->
+            <div class="min-w-0">
+                <h2 class="mb-0.5 font-display text-base font-bold">Ticket Details</h2>
+                <div class="grid gap-3">
+                    <x-ticket-info-panel :ticket="$complaint->ticket" student-view />
+                </div>
             </div>
-        @endif
+
+            @if ($hasThread)
+                <!-- Thread Section -->
+                <div class="min-w-0">
+                    <x-ticket-thread :ticket="$complaint->ticket" viewerRole="student" />
+                </div>
+            @endif
+        </div>
     @else
         <!-- Anonymous Complaint Notice -->
         <x-page-section title="Anonymous Complaint">
@@ -51,12 +59,6 @@
                     </p>
                 </div>
 
-                <div class="min-w-0">
-                    <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Person Involved</p>
-                    <p class="text-sm font-medium leading-tight wrap-break-word">
-                        {{ filled($complaint->personnel_involved) ? $complaint->personnel_involved : '—' }}
-                    </p>
-                </div>
 
                 @if ($complaint->suggestedRecipient?->user)
                     <div class="min-w-0">
