@@ -844,12 +844,12 @@
                                 </span>
 
                                 <details
-                                    class="relative"
+                                    class="relative shrink-0"
                                     data-account-menu
                                 >
 
                                     <summary
-                                        class="grid h-9 w-9 cursor-pointer list-none place-items-center rounded-full bg-primary-foreground/15 text-sm font-bold ring-1 ring-primary-foreground/30"
+                                        class="block h-9 w-9 shrink-0 cursor-pointer list-none overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-1 ring-primary-foreground/30 [&::-webkit-details-marker]:hidden"
                                         aria-label="Account menu"
                                     >
 
@@ -858,12 +858,14 @@
                                             <img
                                                 src="{{ asset('storage/' . Auth::user()->avatar_path) }}"
                                                 alt="{{ Auth::user()->name }}"
-                                                class="h-full w-full rounded-full object-cover"
+                                                class="block h-9 w-9 max-w-none object-cover"
                                             >
 
                                         @else
 
-                                            {{ Auth::user()->must_change_password ? 'A' : (Auth::user()->name_initials ?: 'A') }}
+                                            <span class="grid h-9 w-9 place-items-center">
+                                                {{ Auth::user()->must_change_password ? 'A' : (Auth::user()->name_initials ?: 'A') }}
+                                            </span>
 
                                         @endif
 

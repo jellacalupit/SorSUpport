@@ -16,18 +16,19 @@
     </div>
 
     <!-- Stats Grid -->
-    <div class="mt-5 grid grid-cols-6 gap-1 sm:gap-3">
-        <x-stat-card compact label="Total" :value="$totalCount" />
-        <x-stat-card compact label="Pending" :value="$pendingCount" value-tone="yellow" />
+    <div class="mt-5 grid grid-cols-1 gap-2 min-[220px]:grid-cols-2 min-[360px]:grid-cols-3 sm:grid-cols-6 sm:gap-3">
+        <x-stat-card compact inline label="Total" :value="$totalCount" />
+        <x-stat-card compact inline label="Pending" :value="$pendingCount" value-tone="yellow" />
         <x-stat-card
             compact
+            inline
             label="In Progress"
             :value="$inProgressCount"
             value-tone="blue"
         />
-        <x-stat-card compact label="Escalated" :value="$escalatedCount" value-tone="red" />
-        <x-stat-card compact label="Resolved" :value="$resolvedCount" value-tone="green" />
-        <x-stat-card compact label="Closed" :value="$closedCount" />
+        <x-stat-card compact inline label="Escalated" :value="$escalatedCount" value-tone="red" />
+        <x-stat-card compact inline label="Resolved" :value="$resolvedCount" value-tone="green" />
+        <x-stat-card compact inline label="Closed" :value="$closedCount" />
     </div>
 
     <!-- Recent Tickets Section -->

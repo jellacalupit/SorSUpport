@@ -2,14 +2,17 @@
     <section>
         <form method="POST" action="{{ route('student.notifications.delete-selected') }}" class="space-y-2">
             @csrf
-            <div class="mb-2 flex flex-wrap items-center justify-between gap-3">
-                <h2 class="truncate text-xs font-medium text-muted-foreground">{{ $notifications->count() }} notification(s) · {{ $unread }} unread</h2>
-                <div class="flex items-center gap-2">
-                    <button type="submit" formaction="{{ route('student.notifications.read-all') }}" formmethod="POST" class="mark-selected-read-btn inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-emerald-800 bg-emerald-800 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700 disabled:pointer-events-none disabled:opacity-50" disabled>
+            <div class="flex items-center justify-between gap-3">
+                <div class="flex min-w-0 items-center gap-3">
+                    <input type="checkbox" id="select-all-student-notifications" class="h-4 w-4 shrink-0 rounded-[6px] accent-red-800" aria-label="Select all notifications" title="Select all notifications">
+                    <label for="select-all-student-notifications" class="truncate text-xs font-medium text-muted-foreground">{{ $notifications->count() }} notification(s) · {{ $unread }} unread</label>
+                </div>
+                <div class="flex shrink-0 items-center gap-2">
+                    <button type="submit" formaction="{{ route('student.notifications.read-all') }}" formmethod="POST" class="mark-selected-read-btn inline-flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-md border border-emerald-800 bg-emerald-800 text-xs font-medium text-white transition-colors hover:bg-emerald-700 disabled:pointer-events-none disabled:opacity-50 sm:w-auto sm:px-3" aria-label="Mark as read" title="Mark as read" disabled>
                         <x-icons.mail-open class="h-4 w-4" />
                         <span class="hidden sm:inline">Mark as Read</span>
                     </button>
-                    <button type="submit" class="delete-selected-btn inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-red-800 bg-red-800 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-900 disabled:pointer-events-none disabled:opacity-50" disabled>
+                    <button type="submit" class="delete-selected-btn inline-flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-md border border-red-800 bg-red-800 text-xs font-medium text-white transition-colors hover:bg-red-900 disabled:pointer-events-none disabled:opacity-50 sm:w-auto sm:px-3" aria-label="Delete" title="Delete" disabled>
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
                             <path d="M3 6h18"/>
                             <path d="M8 6V4h8v2"/>
@@ -20,11 +23,6 @@
                         <span class="hidden sm:inline">Delete</span>
                     </button>
                 </div>
-            </div>
-
-            <div class="-mt-1 flex items-center gap-2 pb-0.5">
-                <input type="checkbox" id="select-all-student-notifications" class="h-4 w-4 rounded-[6px] accent-red-800" aria-label="Select all notifications">
-                <label for="select-all-student-notifications" class="text-xs font-medium text-muted-foreground">Select all notifications</label>
             </div>
 
             <ul class="grid gap-0.5">
