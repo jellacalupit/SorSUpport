@@ -8,6 +8,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use App\Notifications\ResetPasswordNotification;
 use App\Notifications\VerifyEmailNotification;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -115,6 +116,15 @@ class User extends Authenticatable implements MustVerifyEmailContract
     public function sendEmailVerificationNotification(): void
     {
         $this->notify(new VerifyEmailNotification());
+    }
+
+    /**
+     * Only report a profile photo when its file still exists, so views fall back to initials
+     * instead of a broken image when the stored file is gone.
+     */
+    public function getAvatarPathAttribute(?string $value): ?string
+    {
+        return filled($value) && Storage::disk('public')->exists($value) ? $value : null;
     }
 
     /**
