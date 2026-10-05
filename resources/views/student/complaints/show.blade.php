@@ -9,7 +9,7 @@
 
     @if ($complaint->ticket)
         @php $hasThread = $complaint->ticket->classification === 'needs_resolution'; @endphp
-        <div class="grid gap-3 {{ $hasThread ? 'md:grid-cols-2 md:items-start md:gap-5' : '' }}">
+        <div class="grid gap-3 {{ $hasThread ? 'lg:grid-cols-2 lg:items-start lg:gap-5' : '' }}">
             <!-- Ticket Details -->
             <div class="min-w-0">
                 <h2 class="mb-0.5 font-display text-base font-bold">Ticket Details</h2>
