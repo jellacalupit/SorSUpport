@@ -319,14 +319,11 @@
     height: 100dvh;
 }
 
-/* The bottom navigation is fixed on every screen size, so the scrolling area always stops
-   above it (including the home-indicator inset on phones) and nothing ends up hidden behind it. */
+/* Approximate height of the bottom navigation (including the home-indicator inset on phones),
+   used to size the ticket conversation. The navigation itself is laid out below the scrolling
+   area, so nothing depends on this to stay visible. */
 :root {
     --tab-bar-height: calc(3.5rem + max(0.5rem, env(safe-area-inset-bottom, 0px)));
-}
-
-.app-main {
-    margin-bottom: var(--tab-bar-height);
 }
 
 /* Thinner scrollbars on phones and tablets. */

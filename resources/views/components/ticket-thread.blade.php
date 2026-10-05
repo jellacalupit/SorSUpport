@@ -212,8 +212,15 @@
 
         <!-- Reply Form -->
         @php
-            $isClosedOrResolved = in_array($ticket->status, ['closed', 'resolved'], true);
+            $isClosedOrResolved = in_array($ticket->status, ['closed', 'resolved', 'rejected'], true);
             $isReadOnly = $isClosedOrResolved || $isPendingReview;
+            $messagePlaceholder = match (true) {
+                $isPendingReview => 'Waiting for admin review',
+                $ticket->status === 'resolved' => 'This ticket is resolved',
+                $ticket->status === 'closed' => 'This ticket is closed',
+                $ticket->status === 'rejected' => 'This ticket was rejected',
+                default => 'Type your message...',
+            };
             $replyRouteName = match($viewerRole) {
                 'admin' => 'admin.complaints.reply',
                 'recipient' => 'recipient.complaints.reply',
@@ -235,7 +242,7 @@
                         <textarea
                             name="content"
                             rows="1"
-                            placeholder="Type your message..."
+                            placeholder="{{ $messagePlaceholder }}"
                             @disabled($isReadOnly)
                             class="block min-h-10 w-full resize-none rounded-3xl border-0 bg-transparent px-4 py-2.5 text-[15px] leading-5 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-0 disabled:cursor-not-allowed"
                         ></textarea>

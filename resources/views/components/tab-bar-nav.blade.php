@@ -40,7 +40,8 @@
     }
 @endphp
 
-<nav class="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card">
+{{-- Sits in the page column below the scrolling area (not floating over it), so content and its scrollbar always end above it. --}}
+<nav class="relative z-30 w-full shrink-0 border-t border-border bg-card">
     <div class="relative mx-auto grid w-full items-end gap-1 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:gap-2 sm:px-6 md:gap-4 md:px-10 lg:gap-8 lg:px-16 {{ $showFab ? 'grid-cols-5 sm:grid-cols-4' : 'grid-cols-4' }}">
         @foreach($tabs as $tabIndex => $tab)
             @php

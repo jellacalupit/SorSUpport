@@ -992,9 +992,9 @@
                     </script>
 
                     <!-- Main Content -->
-                    <main class="app-main mx-auto min-h-0 w-full min-w-0 max-w-6xl flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8">
+                    <main class="min-h-0 w-full min-w-0 flex-1 overflow-y-auto">
 
-                        <div class="min-w-0">
+                        <div class="mx-auto w-full min-w-0 max-w-6xl px-4 py-5 sm:px-6 lg:px-8">
                             {{ $slot }}
                         </div>
 
