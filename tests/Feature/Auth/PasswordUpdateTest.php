@@ -77,7 +77,7 @@ class PasswordUpdateTest extends TestCase
 
         $this->get('/profile')
             ->assertOk()
-            ->assertSee('Incorrect password. Try again.')
+            ->assertSee('Input does not match current password')
             ->assertSee('id="recipient-password-form"', false);
 
         $this->assertSame($originalPassword, $user->refresh()->password);

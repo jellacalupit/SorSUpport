@@ -158,10 +158,36 @@
                 </p>
             </div>
         @endif
-    </div>
 
+        <!-- Classification -->
+        <div class="min-w-0">
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Classification</p>
+            <p class="text-sm font-medium leading-tight wrap-break-word">
+                {{ $ticket->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : 'Not yet classified' }}
+            </p>
+        </div>
+
+        <!-- Date Submitted -->
+        <div class="min-w-0">
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Date Submitted</p>
+            <p class="text-sm font-medium leading-tight wrap-break-word">
+                {{ $submittedAt?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}
+            </p>
+        </div>
+
+        <!-- Last Updated -->
+        <div class="min-w-0">
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Updated</p>
+            <p class="text-sm font-medium leading-tight wrap-break-word">
+                {{ $lastUpdate }}
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="surface p-4 sm:p-6">
     <!-- Description -->
-    <div class="mt-3">
+    <div>
         <p class="text-xs font-semibold tracking-wide text-foreground uppercase">Description</p>
         <p class="text-sm leading-relaxed whitespace-pre-line text-foreground">{{ trim($complaint?->description ?? 'No description provided') }}</p>
     </div>
@@ -203,30 +229,4 @@
             <p class="mt-1 text-muted-foreground">{{ $ticket->closure_reason }}</p>
         </div>
     @endif
-</div>
-
-<div class="surface grid grid-cols-3 gap-3 px-4 py-3 sm:px-6">
-        <!-- Classification -->
-        <div class="min-w-0">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Classification</p>
-            <p class="text-sm font-medium leading-tight wrap-break-word">
-                {{ $ticket->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : 'Not yet classified' }}
-            </p>
-        </div>
-
-        <!-- Date Submitted -->
-        <div class="min-w-0">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Date Submitted</p>
-            <p class="text-sm font-medium leading-tight wrap-break-word">
-                {{ $submittedAt?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}
-            </p>
-        </div>
-
-        <!-- Last Updated -->
-        <div class="min-w-0">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Updated</p>
-            <p class="text-sm font-medium leading-tight wrap-break-word">
-                {{ $lastUpdate }}
-            </p>
-        </div>
 </div>

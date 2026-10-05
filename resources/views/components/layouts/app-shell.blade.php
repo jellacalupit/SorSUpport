@@ -129,9 +129,9 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
 
-    <body class="font-sans antialiased bg-background text-foreground">
+    <body class="overflow-hidden font-sans antialiased bg-background text-foreground">
 
-        <div class="min-h-screen">
+        <div>
 
             @if($isAdmin)
 
@@ -156,7 +156,7 @@
                         )
                     "
                     data-admin-shell
-                    class="flex h-screen overflow-hidden"
+                    class="app-viewport flex overflow-hidden"
                 >
 
                     <!-- Mobile Overlay -->
@@ -800,7 +800,7 @@
                      STUDENT / RECIPIENT LAYOUT
                      ========================================================= -->
 
-                <div class="flex h-screen min-w-0 flex-col overflow-hidden">
+                <div class="app-viewport flex min-w-0 flex-col overflow-hidden">
 
                     <!-- Header -->
                     @unless($isProfile)

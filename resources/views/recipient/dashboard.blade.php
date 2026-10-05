@@ -6,12 +6,12 @@
         </p>
     </div>
 
-    <div class="grid grid-cols-5 gap-2 sm:gap-3">
-        <x-stat-card compact label="Total" :value="$totalCount" />
-        <x-stat-card compact label="In Progress" :value="$inProgressCount" value-tone="blue" />
-        <x-stat-card compact label="Escalated" :value="$escalatedCount" value-tone="red" />
-        <x-stat-card compact label="Resolved" :value="$resolvedCount" value-tone="green" />
-        <x-stat-card compact label="Closed" :value="$closedCount" />
+    <div class="grid grid-cols-1 gap-2 min-[220px]:grid-cols-2 min-[360px]:grid-cols-5 min-[360px]:gap-1.5 sm:gap-3">
+        <x-stat-card compact inline="narrow" label="Total" :value="$totalCount" />
+        <x-stat-card compact inline="narrow" label="In Progress" :value="$inProgressCount" value-tone="blue" />
+        <x-stat-card compact inline="narrow" label="Escalated" :value="$escalatedCount" value-tone="red" />
+        <x-stat-card compact inline="narrow" label="Resolved" :value="$resolvedCount" value-tone="green" />
+        <x-stat-card compact inline="narrow" label="Closed" :value="$closedCount" />
     </div>
 
     <section class="mt-5">

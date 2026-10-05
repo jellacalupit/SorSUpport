@@ -220,12 +220,12 @@
                 default => 'student.complaints.reply',
             };
         @endphp
-            <div class="mt-0.5 pt-0.5">
-                <form id="ticket-reply-form" method="POST" action="{{ route($replyRouteName, $ticket->complaint->id) }}#in-ticket-communication" enctype="multipart/form-data" class="flex w-full min-w-0 items-center gap-1.5 {{ $isReadOnly ? 'opacity-60' : '' }}" data-avatar-url="{{ Auth::user()->avatar_path ? asset('storage/' . Auth::user()->avatar_path) : '' }}" data-avatar-initials="{{ collect(explode(' ', Auth::user()->name))->filter()->map(fn ($part) => substr($part, 0, 1))->take(2)->join('') }}">
+            <div class="mt-2">
+                <form id="ticket-reply-form" method="POST" action="{{ route($replyRouteName, $ticket->complaint->id) }}#in-ticket-communication" enctype="multipart/form-data" class="flex w-full min-w-0 items-end gap-2 {{ $isReadOnly ? 'opacity-60' : '' }}" data-avatar-url="{{ Auth::user()->avatar_path ? asset('storage/' . Auth::user()->avatar_path) : '' }}" data-avatar-initials="{{ collect(explode(' ', Auth::user()->name))->filter()->map(fn ($part) => substr($part, 0, 1))->take(2)->join('') }}">
                     @csrf
                     
-                    <div class="min-w-0 flex flex-1 flex-col justify-center rounded-xl border border-border bg-muted transition-colors focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/50">
-                        <div id="ticket-file-preview" class="relative hidden w-fit max-w-full items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground">
+                    <div class="min-w-0 flex flex-1 flex-col justify-center rounded-3xl border border-border bg-muted transition-colors focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/50">
+                        <div id="ticket-file-preview" class="relative mx-2 mt-2 hidden w-fit max-w-full items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground">
                             <x-icons.file-text class="h-4 w-4 shrink-0 text-muted-foreground" />
                             <span id="ticket-file-name" class="min-w-0 truncate"></span>
                             <button id="ticket-file-remove" type="button" class="absolute -top-2 -right-2 grid h-6 w-6 place-items-center rounded-full border border-border bg-background text-muted-foreground shadow-sm hover:text-foreground" aria-label="Remove selected file" title="Remove selected file">
@@ -237,17 +237,17 @@
                             rows="1"
                             placeholder="Type your message..."
                             @disabled($isReadOnly)
-                            class="min-h-7 w-full resize-none rounded-xl border-0 bg-transparent px-2 py-0.5 text-[12px] leading-4 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-0 disabled:cursor-not-allowed"
+                            class="block min-h-10 w-full resize-none rounded-3xl border-0 bg-transparent px-4 py-2.5 text-[15px] leading-5 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-0 disabled:cursor-not-allowed"
                         ></textarea>
                     </div>
 
-                    <label class="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-colors {{ $isReadOnly ? 'cursor-not-allowed' : 'cursor-pointer hover:border-primary hover:bg-primary-soft hover:text-primary' }}" title="Attach a file">
+                    <label class="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-colors {{ $isReadOnly ? 'cursor-not-allowed' : 'cursor-pointer hover:border-primary hover:bg-primary-soft hover:text-primary' }}" title="Attach a file">
                         <input type="file" name="file_attachment" accept=".pdf,.docx,.jpg,.jpeg,.png,.heic" class="hidden" @disabled($isReadOnly)>
-                        <x-icons.paperclip class="h-3.5 w-3.5" />
+                        <x-icons.paperclip class="h-[18px] w-[18px]" />
                     </label>
 
-                    <button type="submit" @disabled($isReadOnly) class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground" aria-label="Send message" title="Send message">
-                        <x-icons.send class="h-3.5 w-3.5" />
+                    <button type="submit" @disabled($isReadOnly) class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground" aria-label="Send message" title="Send message">
+                        <x-icons.send class="h-[18px] w-[18px]" />
                     </button>
                 </form>
                 <script>

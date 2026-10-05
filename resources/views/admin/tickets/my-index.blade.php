@@ -384,22 +384,22 @@
             }
 
             .admin-ticket-thread #ticket-reply-form textarea {
-                min-height: 1.75rem;
-                padding: 0.25rem 0.5rem;
-                font-size: 12px;
+                min-height: 2.25rem;
+                padding: 0.5rem 0.875rem;
+                font-size: 14px;
                 line-height: 1.25rem;
             }
 
-            .admin-ticket-thread #ticket-reply-form label,
-            .admin-ticket-thread #ticket-reply-form button {
-                height: 1.75rem;
-                width: 1.75rem;
+            .admin-ticket-thread #ticket-reply-form > label,
+            .admin-ticket-thread #ticket-reply-form > button {
+                height: 2.25rem;
+                width: 2.25rem;
             }
 
-            .admin-ticket-thread #ticket-reply-form label svg,
-            .admin-ticket-thread #ticket-reply-form button svg {
-                height: 0.875rem;
-                width: 0.875rem;
+            .admin-ticket-thread #ticket-reply-form > label svg,
+            .admin-ticket-thread #ticket-reply-form > button svg {
+                height: 1rem;
+                width: 1rem;
             }
         </style>
 

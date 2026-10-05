@@ -92,7 +92,7 @@
                 <div id="current-password-field" class="grid gap-1.5">
                     <label for="current_password" class="sr-only">Current password</label>
                     <div class="relative">
-                        <input id="current_password" name="current_password" type="password" autocomplete="current-password" aria-describedby="current-password-empty-error current-password-error" placeholder="Enter current password" class="h-11 w-full rounded-xl border border-input bg-muted px-3 pr-11 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                        <input id="current_password" data-password-field="current" name="current_password" type="password" autocomplete="current-password" aria-describedby="current-password-empty-error current-password-error" placeholder="Enter current password" class="h-11 w-full rounded-xl border border-input bg-muted px-3 pr-11 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
                         <button type="button" data-toggle-password="current_password" aria-label="Show password" class="absolute inset-y-0 right-3 grid place-items-center text-muted-foreground">
                             <svg data-eye-icon class="hidden h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0Z"/><circle cx="12" cy="12" r="3"/></svg>
                             <svg data-eye-off-icon class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0Z"/><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="m4 4 16 16"/></svg>
@@ -101,13 +101,13 @@
                             <x-icons.check class="h-4 w-4" stroke-width="3" />
                         </span>
                     </div>
-                    <p id="current-password-empty-error" class="hidden text-xs font-medium text-destructive">This field is required.</p>
-                    <p id="current-password-error" class="{{ $errors->updatePassword->has('current_password') ? '' : 'hidden' }} text-xs font-medium text-destructive">Input does not match current password</p>
+                    <p id="current-password-empty-error" data-password-error="current-empty" class="hidden text-xs font-medium text-destructive">This field is required.</p>
+                    <p id="current-password-error" data-password-error="current-mismatch" class="{{ $errors->updatePassword->has('current_password') ? '' : 'hidden' }} text-xs font-medium text-destructive">Input does not match current password</p>
                 </div>
                 <div id="profile-password-field" class="grid gap-1.5">
                     <label for="profile-password" class="sr-only">New password</label>
                     <div class="relative">
-                        <input id="profile-password" data-password-rules name="password" type="password" autocomplete="new-password" aria-describedby="profile-password-empty-error profile-password-mismatch-error" placeholder="Enter new password" class="h-11 w-full rounded-xl border border-input bg-muted px-3 pr-11 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                        <input id="profile-password" data-password-field="new" name="password" type="password" autocomplete="new-password" aria-describedby="profile-password-empty-error profile-password-mismatch-error" placeholder="Enter new password" class="h-11 w-full rounded-xl border border-input bg-muted px-3 pr-11 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
                         <button type="button" data-toggle-password="profile-password" aria-label="Show password" class="absolute inset-y-0 right-3 grid place-items-center text-muted-foreground">
                             <svg data-eye-icon class="hidden h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0Z"/><circle cx="12" cy="12" r="3"/></svg>
                             <svg data-eye-off-icon class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0Z"/><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="m4 4 16 16"/></svg>
@@ -116,7 +116,7 @@
                             <x-icons.check class="h-4 w-4" stroke-width="3" />
                         </span>
                     </div>
-                    <p id="profile-password-empty-error" class="hidden text-xs font-medium text-destructive">This field is required.</p>
+                    <p id="profile-password-empty-error" data-password-error="new-empty" class="hidden text-xs font-medium text-destructive">This field is required.</p>
                     @error('password', 'updatePassword')
                         <p class="text-xs font-medium text-destructive">{{ $message }}</p>
                     @enderror
@@ -124,7 +124,7 @@
                 <div id="password-confirmation-field" class="grid gap-1.5">
                     <label for="password_confirmation" class="sr-only">Confirm new password</label>
                     <div class="relative">
-                        <input id="password_confirmation" name="password_confirmation" type="password" disabled autocomplete="new-password" aria-describedby="profile-password-confirmation-empty-error profile-password-mismatch-error" placeholder="Re-enter new password" class="h-11 w-full rounded-xl border border-input bg-muted px-3 pr-11 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60" />
+                        <input id="password_confirmation" data-password-field="confirmation" name="password_confirmation" type="password" disabled autocomplete="new-password" aria-describedby="profile-password-confirmation-empty-error profile-password-mismatch-error" placeholder="Re-enter new password" class="h-11 w-full rounded-xl border border-input bg-muted px-3 pr-11 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60" />
                         <button type="button" data-toggle-password="password_confirmation" aria-label="Show password" class="absolute inset-y-0 right-3 grid place-items-center text-muted-foreground">
                             <svg data-eye-icon class="hidden h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0Z"/><circle cx="12" cy="12" r="3"/></svg>
                             <svg data-eye-off-icon class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0Z"/><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="m4 4 16 16"/></svg>
@@ -133,8 +133,8 @@
                             <x-icons.check class="h-4 w-4" stroke-width="3" />
                         </span>
                     </div>
-                    <p id="profile-password-confirmation-empty-error" class="hidden text-xs font-medium text-destructive">This field is required.</p>
-                    <p id="profile-password-mismatch-error" class="hidden text-xs font-medium text-destructive">New passwords don't match.</p>
+                    <p id="profile-password-confirmation-empty-error" data-password-error="confirmation-empty" class="hidden text-xs font-medium text-destructive">This field is required.</p>
+                    <p id="profile-password-mismatch-error" data-password-error="confirmation-mismatch" class="hidden text-xs font-medium text-destructive">New passwords don't match.</p>
                 </div>
                 <ul data-password-rules-list class="grid gap-1 text-xs text-muted-foreground">
                     <li data-rule="length" class="flex items-center gap-2"><span class="hidden shrink-0 text-sm font-bold leading-none text-success">✓</span>At least 8 characters</li>
@@ -155,189 +155,6 @@
             </a>
         </div>
         <x-avatar-cropper input="student-profile-photo" />
+        <x-password-form-script form="student-password-form" toggle="toggle-student-password" cancel="cancel-student-password" />
     </div>
 </x-app-layout>
-
-<script>
-    (() => {
-        const form = document.getElementById('student-password-form');
-        const toggleButton = document.getElementById('toggle-student-password');
-        const cancelButton = document.getElementById('cancel-student-password');
-        const currentPassword = document.getElementById('current_password');
-        const newPassword = document.getElementById('profile-password');
-        const confirmation = document.getElementById('password_confirmation');
-        const rulesList = form?.querySelector('[data-password-rules-list]');
-        const currentEmptyError = document.getElementById('current-password-empty-error');
-        const currentMismatchError = document.getElementById('current-password-error');
-        const newEmptyError = document.getElementById('profile-password-empty-error');
-        const confirmationEmptyError = document.getElementById('profile-password-confirmation-empty-error');
-        const confirmationMismatchError = document.getElementById('profile-password-mismatch-error');
-        if (!form || !currentPassword || !newPassword || !confirmation) return;
-
-        let currentVerified = false;
-        let currentCheckId = 0;
-        let currentCheckTimer;
-
-        const checksFor = (value) => ({ length: value.length >= 8, uppercase: /[A-Z]/.test(value), number: /[\d\W_]/.test(value) });
-        const passesRules = (value) => Object.values(checksFor(value)).every(Boolean);
-        const isShown = (error) => Boolean(error && !error.classList.contains('hidden'));
-
-        const renderRules = (checks) => Object.entries(checks).forEach(([name, passed]) => {
-            const rule = rulesList?.querySelector(`[data-rule="${name}"]`);
-            if (!rule) return;
-            rule.classList.toggle('text-primary', passed);
-            rule.classList.toggle('text-muted-foreground', !passed);
-            rule.querySelector('span')?.classList.toggle('hidden', !passed);
-        });
-
-        const setErrorState = (error, hasError) => error?.classList.toggle('hidden', !hasError);
-
-        const syncErrorBorders = () => {
-            currentPassword.classList.toggle('password-error-border', isShown(currentEmptyError) || isShown(currentMismatchError));
-            newPassword.classList.toggle('password-error-border', isShown(newEmptyError));
-            confirmation.classList.toggle('password-error-border', isShown(confirmationEmptyError) || isShown(confirmationMismatchError));
-        };
-
-        // Swap the show/hide toggle for a green check once the field is confirmed valid.
-        const setValid = (input, isValid) => {
-            const toggle = form.querySelector(`[data-toggle-password="${input.id}"]`);
-            const check = form.querySelector(`[data-valid-icon="${input.id}"]`);
-            toggle?.classList.toggle('hidden', isValid);
-            toggle?.classList.toggle('grid', !isValid);
-            check?.classList.toggle('hidden', !isValid);
-            check?.classList.toggle('grid', isValid);
-        };
-
-        const setVisibility = (input, visible) => {
-            const toggle = form.querySelector(`[data-toggle-password="${input.id}"]`);
-            input.type = visible ? 'text' : 'password';
-            toggle?.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
-            toggle?.querySelector('[data-eye-icon]')?.classList.toggle('hidden', !visible);
-            toggle?.querySelector('[data-eye-off-icon]')?.classList.toggle('hidden', visible);
-        };
-
-        const updateMatchState = () => {
-            const password = newPassword.value;
-            const confirmed = confirmation.value;
-            const matched = passesRules(password) && confirmed !== '' && password === confirmed;
-            setErrorState(confirmationMismatchError, password !== '' && confirmed !== '' && password !== confirmed);
-            setValid(newPassword, matched);
-            setValid(confirmation, matched);
-            rulesList?.classList.toggle('hidden', matched);
-            syncErrorBorders();
-        };
-
-        const verifyCurrentPassword = async () => {
-            const checkId = ++currentCheckId;
-            let response;
-
-            try {
-                response = await fetch('{{ route('password.check-current') }}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
-                        'Accept': 'application/json',
-                    },
-                    body: new URLSearchParams({ current_password: currentPassword.value }),
-                });
-            } catch {
-                return false;
-            }
-
-            // Ignore answers for a value the user has already changed.
-            if (checkId !== currentCheckId) return false;
-
-            currentVerified = response.ok;
-            setValid(currentPassword, response.ok);
-            setErrorState(currentMismatchError, response.status === 422);
-            syncErrorBorders();
-
-            return response.ok;
-        };
-
-        const resetForm = () => {
-            clearTimeout(currentCheckTimer);
-            currentCheckId++;
-            currentVerified = false;
-            form.reset();
-            confirmation.disabled = true;
-            [currentPassword, newPassword, confirmation].forEach((input) => {
-                setVisibility(input, false);
-                setValid(input, false);
-            });
-            [currentEmptyError, currentMismatchError, newEmptyError, confirmationEmptyError, confirmationMismatchError].forEach((error) => setErrorState(error, false));
-            syncErrorBorders();
-            renderRules(checksFor(''));
-            rulesList?.classList.remove('hidden');
-        };
-
-        const closeForm = () => {
-            resetForm();
-            form.classList.add('hidden');
-            form.classList.remove('grid');
-        };
-
-        toggleButton?.addEventListener('click', () => {
-            if (!form.classList.contains('hidden')) {
-                closeForm();
-                return;
-            }
-
-            resetForm();
-            form.classList.remove('hidden');
-            form.classList.add('grid');
-        });
-
-        cancelButton?.addEventListener('click', closeForm);
-
-        form.querySelectorAll('[data-toggle-password]').forEach((button) => {
-            button.addEventListener('click', () => {
-                const input = document.getElementById(button.dataset.togglePassword);
-                if (input) setVisibility(input, input.type === 'password');
-            });
-        });
-
-        currentPassword.addEventListener('input', () => {
-            clearTimeout(currentCheckTimer);
-            currentCheckId++;
-            currentVerified = false;
-            setValid(currentPassword, false);
-            setErrorState(currentMismatchError, false);
-            setErrorState(currentEmptyError, currentPassword.value === '');
-            syncErrorBorders();
-            if (currentPassword.value !== '') currentCheckTimer = setTimeout(verifyCurrentPassword, 400);
-        });
-
-        newPassword.addEventListener('input', () => {
-            const checks = checksFor(newPassword.value);
-            renderRules(checks);
-            confirmation.disabled = !Object.values(checks).every(Boolean);
-            setErrorState(newEmptyError, newPassword.value === '');
-            updateMatchState();
-        });
-
-        confirmation.addEventListener('input', () => {
-            setErrorState(confirmationEmptyError, confirmation.value === '');
-            updateMatchState();
-        });
-
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault();
-
-            const currentIsEmpty = currentPassword.value === '';
-            const newIsEmpty = newPassword.value === '';
-            const confirmationIsEmpty = confirmation.value === '';
-            setErrorState(currentEmptyError, currentIsEmpty);
-            setErrorState(newEmptyError, newIsEmpty);
-            setErrorState(confirmationEmptyError, confirmationIsEmpty);
-            updateMatchState();
-            if (currentIsEmpty || newIsEmpty || confirmationIsEmpty) return;
-            if (!passesRules(newPassword.value) || newPassword.value !== confirmation.value) return;
-
-            clearTimeout(currentCheckTimer);
-            if (currentVerified || await verifyCurrentPassword()) form.submit();
-        });
-
-        syncErrorBorders();
-    })();
-</script>

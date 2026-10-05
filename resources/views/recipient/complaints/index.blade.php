@@ -14,10 +14,10 @@
                     $selectedStatus = request('status_filter', '');
                     $selectedSort = request('sort', 'newest');
                 @endphp
-                <div class="flex flex-row items-center gap-2">
-                    <details x-data="{}" class="group relative w-56 shrink-0" x-on:click.outside="$el.removeAttribute('open')">
+                <div class="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-center gap-2 sm:flex">
+                    <details x-data="{}" class="group relative min-w-0 sm:w-56 sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
                         <summary id="sort-filter" class="flex h-9 w-full cursor-pointer list-none items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none ring-offset-background transition-colors hover:bg-muted focus:ring-1 focus:ring-ring [&::-webkit-details-marker]:hidden">
-                            <span class="truncate">{{ $sortLabels[$selectedSort] ?? 'Sort by newest date' }}</span>
+                            <span class="min-w-0 truncate">{{ $sortLabels[$selectedSort] ?? 'Sort by newest date' }}</span>
                             <svg class="h-4 w-4 shrink-0 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                         </summary>
                         <div class="absolute top-full right-0 z-50 mt-1 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95">
@@ -32,9 +32,9 @@
                         </div>
                     </details>
 
-                    <details x-data="{}" class="group relative w-32 shrink-0" x-on:click.outside="$el.removeAttribute('open')">
+                    <details x-data="{}" class="group relative min-w-0 sm:w-32 sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
                         <summary id="status-filter" class="flex h-9 w-full cursor-pointer list-none items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none ring-offset-background transition-colors hover:bg-muted focus:ring-1 focus:ring-ring [&::-webkit-details-marker]:hidden">
-                            <span class="truncate">{{ $statusLabels[$selectedStatus] ?? 'All statuses' }}</span>
+                            <span class="min-w-0 truncate">{{ $statusLabels[$selectedStatus] ?? 'All statuses' }}</span>
                             <svg class="h-4 w-4 shrink-0 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                         </summary>
                         <div class="absolute top-full right-0 z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95">

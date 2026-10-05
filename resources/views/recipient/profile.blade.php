@@ -88,7 +88,7 @@
                                     @csrf
                                     <label class="grid h-8 w-8 cursor-pointer place-items-center rounded-full border-2 border-white bg-[#5a101c] text-white shadow-md transition-colors hover:bg-[#7a1d2a]" aria-label="Upload profile photo">
                                         <x-icons.camera class="h-4 w-4 text-white" />
-                                        <input id="recipient-profile-photo" name="avatar" type="file" accept="image/*" class="hidden" onchange="this.form.submit()" />
+                                        <input id="recipient-profile-photo" name="avatar" type="file" accept="image/*" class="hidden" />
                                     </label>
                                 </form>
                             @endif
@@ -333,31 +333,33 @@
                             @csrf
                             @method('PUT')
                             <div id="recipient-current-password-field" class="grid gap-0.5">
-                                <label for="recipient-current-password" class="text-[11px] font-semibold">Old Password</label>
+                                <label for="recipient-current-password" class="sr-only">Current password</label>
                                 <div class="relative">
-                                    <input id="recipient-current-password" name="current_password" type="password" aria-describedby="recipient-current-password-empty-error recipient-current-password-error recipient-current-password-match" placeholder="Enter current password" class="h-8 w-full rounded-lg border border-input bg-muted px-2.5 pr-9 text-[12px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                                    <input id="recipient-current-password" data-password-field="current" name="current_password" type="password" autocomplete="current-password" aria-describedby="recipient-current-password-empty-error recipient-current-password-error" placeholder="Enter current password" class="h-8 w-full rounded-lg border border-input bg-muted px-2.5 pr-9 text-[12px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
                                     <button type="button" data-toggle-password="recipient-current-password" aria-label="Show password" class="absolute inset-y-0 right-2.5 grid place-items-center text-muted-foreground"><svg data-eye-icon class="hidden h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0Z"/><circle cx="12" cy="12" r="3"/></svg><svg data-eye-off-icon class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0Z"/><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="m4 4 16 16"/></svg></button>
+                                    <span data-valid-icon="recipient-current-password" class="pointer-events-none absolute inset-y-0 right-2.5 hidden place-items-center text-green-600" aria-hidden="true"><x-icons.check class="h-3.5 w-3.5" stroke-width="3" /></span>
                                 </div>
-                                <p id="recipient-current-password-empty-error" class="{{ $currentPasswordServerErrorIsRequired ? '' : 'hidden' }} text-[11px] font-medium text-destructive">This field is required.</p>
-                                <p id="recipient-current-password-error" class="{{ $currentPasswordServerError && ! $currentPasswordServerErrorIsRequired ? '' : 'hidden' }} text-[11px] font-medium text-destructive">{{ $currentPasswordServerError && ! $currentPasswordServerErrorIsRequired ? $currentPasswordServerError : 'Incorrect password. Try again.' }}</p>
-                                <p id="recipient-current-password-match" class="hidden text-[11px] font-medium text-success">Password matches.</p>
+                                <p id="recipient-current-password-empty-error" data-password-error="current-empty" class="{{ $currentPasswordServerErrorIsRequired ? '' : 'hidden' }} text-[11px] font-medium text-destructive">This field is required.</p>
+                                <p id="recipient-current-password-error" data-password-error="current-mismatch" class="{{ $currentPasswordServerError && ! $currentPasswordServerErrorIsRequired ? '' : 'hidden' }} text-[11px] font-medium text-destructive">Input does not match current password</p>
                             </div>
                             <div id="recipient-password-field" class="grid gap-0.5">
-                                <label for="recipient-password" class="text-[11px] font-semibold">New Password</label>
+                                <label for="recipient-password" class="sr-only">New password</label>
                                 <div class="relative">
-                                    <input id="recipient-password" data-password-rules name="password" type="password" aria-describedby="recipient-password-empty-error recipient-password-mismatch-error" placeholder="Enter new password" class="h-8 w-full rounded-lg border border-input bg-muted px-2.5 pr-9 text-[12px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                                    <input id="recipient-password" data-password-field="new" name="password" autocomplete="new-password" type="password" aria-describedby="recipient-password-empty-error recipient-password-mismatch-error" placeholder="Enter new password" class="h-8 w-full rounded-lg border border-input bg-muted px-2.5 pr-9 text-[12px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
                                         <button type="button" data-toggle-password="recipient-password" aria-label="Show password" class="absolute inset-y-0 right-2.5 grid place-items-center text-muted-foreground"><svg data-eye-icon class="hidden h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0Z"/><circle cx="12" cy="12" r="3"/></svg><svg data-eye-off-icon class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0Z"/><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="m4 4 16 16"/></svg></button>
+                                    <span data-valid-icon="recipient-password" class="pointer-events-none absolute inset-y-0 right-2.5 hidden place-items-center text-green-600" aria-hidden="true"><x-icons.check class="h-3.5 w-3.5" stroke-width="3" /></span>
                                 </div>
-                                <p id="recipient-password-empty-error" class="hidden text-[11px] font-medium text-destructive">This field is required.</p>
+                                <p id="recipient-password-empty-error" data-password-error="new-empty" class="hidden text-[11px] font-medium text-destructive">This field is required.</p>
                             </div>
                             <div id="recipient-password-confirmation-field" class="grid gap-0.5">
-                                <label for="recipient-password-confirmation" class="text-[11px] font-semibold">Confirm Password</label>
+                                <label for="recipient-password-confirmation" class="sr-only">Confirm new password</label>
                                 <div class="relative">
-                                    <input id="recipient-password-confirmation" name="password_confirmation" type="password" disabled aria-describedby="recipient-password-confirmation-empty-error recipient-password-mismatch-error" placeholder="Re-enter new password" class="h-8 w-full rounded-lg border border-input bg-muted px-2.5 pr-9 text-[12px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60" />
+                                    <input id="recipient-password-confirmation" data-password-field="confirmation" name="password_confirmation" autocomplete="new-password" type="password" disabled aria-describedby="recipient-password-confirmation-empty-error recipient-password-mismatch-error" placeholder="Re-enter new password" class="h-8 w-full rounded-lg border border-input bg-muted px-2.5 pr-9 text-[12px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60" />
                                         <button type="button" data-toggle-password="recipient-password-confirmation" aria-label="Show password" class="absolute inset-y-0 right-2.5 grid place-items-center text-muted-foreground"><svg data-eye-icon class="hidden h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0Z"/><circle cx="12" cy="12" r="3"/></svg><svg data-eye-off-icon class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0Z"/><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="m4 4 16 16"/></svg></button>
+                                    <span data-valid-icon="recipient-password-confirmation" class="pointer-events-none absolute inset-y-0 right-2.5 hidden place-items-center text-green-600" aria-hidden="true"><x-icons.check class="h-3.5 w-3.5" stroke-width="3" /></span>
                                 </div>
-                                <p id="recipient-password-confirmation-empty-error" class="hidden text-[11px] font-medium text-destructive">This field is required.</p>
-                                <p id="recipient-password-mismatch-error" class="hidden text-[11px] font-medium text-destructive">New passwords don't match.</p>
+                                <p id="recipient-password-confirmation-empty-error" data-password-error="confirmation-empty" class="hidden text-[11px] font-medium text-destructive">This field is required.</p>
+                                <p id="recipient-password-mismatch-error" data-password-error="confirmation-mismatch" class="hidden text-[11px] font-medium text-destructive">New passwords don't match.</p>
                             </div>
                             <ul data-password-rules-list class="grid gap-1 text-[11px] text-muted-foreground">
                                 <li data-rule="length" class="flex items-center gap-2"><span class="hidden shrink-0 text-sm font-bold leading-none text-success">✓</span>At least 8 characters</li>
@@ -383,6 +385,11 @@
                 @endif
             </div>
         </div>
+
+        @if ($user->role === 'recipient' || $editable)
+            <x-avatar-cropper input="recipient-profile-photo" />
+        @endif
+        <x-password-form-script form="recipient-password-form" toggle="toggle-recipient-password" cancel="cancel-recipient-password" />
     </div>
 </x-app-layout>
 
@@ -462,193 +469,6 @@
             if (extensionDisplay) extensionDisplay.textContent = label;
             const details = button.closest('details');
             if (details) details.removeAttribute('open');
-        });
-    });
-    toggleRecipientPassword?.addEventListener('click', () => {
-        if (!recipientPasswordForm?.classList.contains('hidden')) {
-            recipientPasswordForm.reset();
-            if (profileConfirmation) profileConfirmation.disabled = true;
-            setProfileMismatchState(false);
-            setProfileEmptyState(currentPassword, currentPasswordEmptyError, false);
-            setProfileEmptyState(profilePassword, profilePasswordEmptyError, false);
-            setProfileEmptyState(profileConfirmation, profileConfirmationEmptyError, false);
-            renderRules({ length: false, uppercase: false, number: false });
-        }
-        recipientPasswordForm?.classList.toggle('hidden');
-        recipientPasswordForm?.classList.toggle('grid');
-    });
-    cancelRecipientPassword?.addEventListener('click', () => {
-        recipientPasswordForm?.reset();
-        if (profileConfirmation) profileConfirmation.disabled = true;
-        setProfileMismatchState(false);
-        setProfileEmptyState(currentPassword, currentPasswordEmptyError, false);
-        setProfileEmptyState(profilePassword, profilePasswordEmptyError, false);
-        setProfileEmptyState(profileConfirmation, profileConfirmationEmptyError, false);
-        renderRules({ length: false, uppercase: false, number: false });
-        recipientPasswordForm?.classList.add('hidden');
-        recipientPasswordForm?.classList.remove('grid');
-    });
-
-    document.getElementById('recipient-profile-photo')?.addEventListener('change', (event) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-            document.getElementById('recipient-profile-avatar').innerHTML = `<img src="${reader.result}" alt="{{ $user->name }}" class="h-full w-full object-cover">`;
-        };
-        reader.readAsDataURL(file);
-    });
-
-    document.querySelectorAll('[data-toggle-password]').forEach((button) => {
-        button.addEventListener('click', () => {
-            const input = document.getElementById(button.dataset.togglePassword);
-            const eye = button.querySelector('[data-eye-icon]');
-            const eyeOff = button.querySelector('[data-eye-off-icon]');
-            if (!input || !eye || !eyeOff) return;
-            const isHidden = input.type === 'password';
-            input.type = isHidden ? 'text' : 'password';
-            button.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
-            eye.classList.toggle('hidden', !isHidden);
-            eyeOff.classList.toggle('hidden', isHidden);
-        });
-    });
-
-    const profilePassword = document.querySelector('[data-password-rules]');
-    const profileConfirmation = document.getElementById('recipient-password-confirmation');
-    const profileRules = document.querySelector('[data-password-rules-list]');
-    const currentPassword = document.getElementById('recipient-current-password');
-    const currentPasswordEmptyError = document.getElementById('recipient-current-password-empty-error');
-    const currentPasswordError = document.getElementById('recipient-current-password-error');
-    const currentPasswordMatch = document.getElementById('recipient-current-password-match');
-    const profilePasswordEmptyError = document.getElementById('recipient-password-empty-error');
-    const profileConfirmationEmptyError = document.getElementById('recipient-password-confirmation-empty-error');
-    const profilePasswordMismatchError = document.getElementById('recipient-password-mismatch-error');
-    let currentPasswordCheckTimer;
-    let currentPasswordCheckController;
-    let currentPasswordIsValid = false;
-    const checksFor = (value) => ({ length: value.length >= 8, uppercase: /[A-Z]/.test(value), number: /[\d\W_]/.test(value) });
-    const renderRules = (checks) => Object.entries(checks).forEach(([name, passed]) => {
-        const rule = profileRules?.querySelector(`[data-rule="${name}"]`);
-        if (!rule) return;
-        rule.classList.toggle('text-primary', passed);
-        rule.classList.toggle('text-muted-foreground', !passed);
-        const marker = rule.querySelector('span');
-        marker?.classList.toggle('text-success', passed);
-        marker?.classList.toggle('hidden', !passed);
-        if (marker) marker.textContent = passed ? '✓' : '';
-    });
-    const setProfileMismatchState = (hasMismatch) => {
-        profileConfirmation?.classList.toggle('border-destructive', hasMismatch);
-        profileConfirmation?.classList.toggle('!border-destructive', hasMismatch);
-        profileConfirmation?.classList.toggle('password-error-border', hasMismatch);
-        profilePasswordMismatchError?.classList.toggle('hidden', !hasMismatch);
-    };
-    const setProfileEmptyState = (input, error, isEmpty) => {
-        input?.classList.toggle('border-destructive', isEmpty);
-        input?.classList.toggle('!border-destructive', isEmpty);
-        input?.classList.toggle('password-error-border', isEmpty);
-        error?.classList.toggle('hidden', !isEmpty);
-    };
-    const setCurrentPasswordMatchState = (isMatch) => {
-        currentPasswordIsValid = isMatch;
-        currentPassword?.classList.toggle('border-success', isMatch);
-        currentPassword?.classList.toggle('!border-success', isMatch);
-        currentPassword?.classList.toggle('border-destructive', !isMatch);
-        currentPassword?.classList.toggle('!border-destructive', !isMatch);
-        currentPassword?.classList.toggle('password-error-border', !isMatch);
-        currentPasswordError?.classList.toggle('hidden', isMatch);
-        currentPasswordMatch?.classList.toggle('hidden', !isMatch);
-    };
-    const checkCurrentPassword = async () => {
-        if (!currentPassword?.value) return false;
-
-        currentPasswordCheckController?.abort();
-        currentPasswordCheckController = new AbortController();
-
-        let response;
-        try {
-            response = await fetch('{{ route('password.check-current') }}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
-                    'Accept': 'application/json',
-                },
-                body: new URLSearchParams({ current_password: currentPassword.value }),
-                signal: currentPasswordCheckController.signal,
-            });
-        } catch (error) {
-            if (error.name === 'AbortError') return false;
-            throw error;
-        }
-
-        setCurrentPasswordMatchState(response.ok);
-        return response.ok;
-    };
-    const updateProfilePasswordMatchState = () => {
-        const hasMismatch = Boolean(profilePassword?.value && profileConfirmation?.value && profilePassword.value !== profileConfirmation.value);
-        setProfileMismatchState(hasMismatch);
-    };
-    profilePassword?.addEventListener('input', () => {
-        const checks = checksFor(profilePassword.value);
-        renderRules(checks);
-        if (profileConfirmation) profileConfirmation.disabled = !Object.values(checks).every(Boolean);
-        setProfileEmptyState(profilePassword, profilePasswordEmptyError, profilePassword.value.length === 0);
-        updateProfilePasswordMatchState();
-    });
-    currentPassword?.addEventListener('input', () => {
-        currentPasswordIsValid = false;
-        setProfileEmptyState(currentPassword, currentPasswordEmptyError, currentPassword.value.length === 0);
-        currentPasswordError?.classList.add('hidden');
-        currentPasswordMatch?.classList.add('hidden');
-        currentPassword?.classList.remove('border-success', '!border-success', 'border-destructive', '!border-destructive', 'password-error-border');
-        clearTimeout(currentPasswordCheckTimer);
-        currentPasswordCheckController?.abort();
-        if (currentPassword.value) {
-            currentPasswordCheckTimer = setTimeout(() => checkCurrentPassword(), 150);
-        }
-    });
-    profilePassword?.addEventListener('focus', () => {
-        if (!currentPasswordIsValid) return;
-        currentPasswordMatch?.classList.add('hidden');
-        currentPassword?.classList.remove('border-success', '!border-success');
-    });
-    profileConfirmation?.addEventListener('input', () => {
-        setProfileEmptyState(profileConfirmation, profileConfirmationEmptyError, profileConfirmation.value.length === 0);
-        updateProfilePasswordMatchState();
-    });
-    recipientPasswordForm?.addEventListener('submit', (event) => {
-        if (recipientPasswordForm.dataset.passwordVerified === 'true') {
-            delete recipientPasswordForm.dataset.passwordVerified;
-            return;
-        }
-
-        const currentPasswordIsEmpty = !currentPassword?.value;
-        const passwordIsEmpty = !profilePassword?.value;
-        const confirmationIsEmpty = !profileConfirmation?.value;
-        setProfileMismatchState(false);
-        if (currentPasswordIsEmpty) {
-            currentPasswordError?.classList.add('hidden');
-            currentPasswordMatch?.classList.add('hidden');
-            currentPassword?.classList.remove('border-success', '!border-success', 'border-destructive', '!border-destructive', 'password-error-border');
-        }
-        setProfileEmptyState(currentPassword, currentPasswordEmptyError, currentPasswordIsEmpty);
-        setProfileEmptyState(profilePassword, profilePasswordEmptyError, passwordIsEmpty);
-        setProfileEmptyState(profileConfirmation, profileConfirmationEmptyError, confirmationIsEmpty);
-        if (currentPasswordIsEmpty || passwordIsEmpty || confirmationIsEmpty) {
-            event.preventDefault();
-            return;
-        }
-        if (profilePassword.value !== profileConfirmation.value) {
-            event.preventDefault();
-            setProfileMismatchState(true);
-            return;
-        }
-
-        event.preventDefault();
-        checkCurrentPassword().then((isValid) => {
-            if (! isValid) return;
-            recipientPasswordForm.dataset.passwordVerified = 'true';
-            recipientPasswordForm.submit();
         });
     });
 </script>
