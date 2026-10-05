@@ -38,7 +38,7 @@ class RecipientDashboardController extends Controller
             ->whereIn('status', ['closed', 'rejected'])
             ->count();
 
-        // Match the ticket list by showing the most urgent deadlines first.
+        // Only the five most recently updated tickets appear on the home page.
         $latestComplaints = Ticket::query()
             ->where('assigned_to', Auth::id())
             ->with([
@@ -47,6 +47,7 @@ class RecipientDashboardController extends Controller
                 'auditLogs',
             ])
             ->orderByDesc('updated_at')
+            ->limit(5)
             ->get();
 
         return view('recipient.dashboard', compact(

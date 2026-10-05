@@ -64,7 +64,7 @@
                             <button type="button" class="text-left font-medium text-primary hover:underline" x-on:click="studentProfileOpen = !studentProfileOpen" aria-label="View {{ $studentDisplayName }} profile">
                                 {{ $studentDisplayName }}
                             </button>
-                            <span x-show="studentProfileOpen" x-cloak class="brand-gradient absolute top-6 left-0 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-primary-foreground shadow-lg">
+                            <span x-show="studentProfileOpen" x-cloak data-keep-in-view class="brand-gradient absolute top-6 left-0 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-primary-foreground shadow-lg">
                                 <span class="flex items-center gap-3">
                                     <span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">
                                         @if ($studentUser->avatar_path)
@@ -115,7 +115,7 @@
                             <button type="button" class="text-left text-primary hover:underline" x-on:click="holderProfileOpen = !holderProfileOpen" aria-label="View {{ $holderDisplayName }} profile">
                                 {{ $holderDisplayName }}
                             </button>
-                            <span x-show="holderProfileOpen" x-cloak class="brand-gradient absolute top-7 left-0 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-primary-foreground shadow-lg">
+                            <span x-show="holderProfileOpen" x-cloak data-keep-in-view class="brand-gradient absolute top-7 left-0 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-primary-foreground shadow-lg">
                                 <span class="flex items-center gap-3">
                                     <span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">
                                         @if ($holder->avatar_path)

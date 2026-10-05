@@ -150,7 +150,7 @@
                                     @endif
                                 </button>
                                 @if ($message->sender?->recipient)
-                                    <span x-show="senderProfileOpen" x-cloak class="brand-gradient absolute bottom-0 left-10 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-left text-primary-foreground shadow-lg">
+                                    <span x-show="senderProfileOpen" x-cloak data-keep-in-view class="brand-gradient absolute bottom-0 left-10 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-left text-primary-foreground shadow-lg">
                                         <span class="flex items-center gap-3">
                                             <span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">
                                                 @if ($message->sender->avatar_path)

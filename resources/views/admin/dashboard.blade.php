@@ -295,7 +295,7 @@
                                         </p>
                                         
                                         <!-- Profile Tooltip -->
-                                        <span x-show="recipientProfileOpen" x-cloak class="brand-gradient absolute top-8 left-0 z-50 w-56 rounded-xl p-3 text-left text-primary-foreground shadow-lg">
+                                        <span x-show="recipientProfileOpen" x-cloak data-keep-in-view class="brand-gradient absolute top-8 left-0 z-50 w-56 max-w-[calc(100vw-2rem)] rounded-xl p-3 text-left text-primary-foreground shadow-lg">
                                             <span class="flex items-center gap-2">
                                                 <span class="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-xs font-bold ring-2 ring-primary-foreground/30">
                                                     @if ($recipient->user?->avatar_path)

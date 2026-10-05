@@ -110,7 +110,7 @@
                                     <span class="relative inline-block" x-data="{ holderProfileOpen: false }" x-on:mouseenter="holderProfileOpen = true" x-on:mouseleave="holderProfileOpen = false">
                                         <span class="min-w-0 break-words cursor-pointer hover:text-primary hover:underline">{{ $holderName }}</span>
                                         @if ($holderUser)
-                                            <span x-show="holderProfileOpen" x-cloak class="brand-gradient absolute top-6 left-0 z-[100] w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-left text-primary-foreground shadow-lg">
+                                            <span x-show="holderProfileOpen" x-cloak data-keep-in-view class="brand-gradient absolute top-6 left-0 z-[100] w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-left text-primary-foreground shadow-lg">
                                                 <span class="flex items-center gap-3">
                                                     <span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">
                                                         @if ($holderUser->avatar_path)
@@ -133,7 +133,7 @@
                                     <span class="group relative inline-block">
                                         <span class="min-w-0 break-words {{ $ticket->complaint->is_anonymous ? '' : 'cursor-pointer hover:text-primary hover:underline' }}">{{ $studentTableName }}</span>
                                         @if ($studentUser && ! $ticket->complaint->is_anonymous)
-                                            <span class="brand-gradient absolute top-6 right-0 z-[100] hidden w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-left text-primary-foreground shadow-lg group-hover:block sm:right-auto sm:left-0">
+                                            <span data-keep-in-view class="brand-gradient absolute top-6 right-0 z-[100] hidden w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-left text-primary-foreground shadow-lg group-hover:block sm:right-auto sm:left-0">
                                                 <span class="flex items-center gap-3">
                                                     <span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">
                                                         @if ($studentUser->avatar_path)
@@ -346,7 +346,7 @@
                         <span class="relative min-w-0" x-data="{ studentProfileOpen: false }" x-on:mouseenter="studentProfileOpen = true" x-on:mouseleave="studentProfileOpen = false">
                             <span class="{{ $ticket->complaint->is_anonymous ? '' : 'cursor-pointer truncate font-semibold text-foreground hover:text-primary hover:underline' }}">{{ $studentDisplayName }}</span>
                             @if ($studentUser && ! $ticket->complaint->is_anonymous)
-                                <span x-show="studentProfileOpen" x-cloak class="brand-gradient absolute top-6 left-0 z-[100] w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-left text-primary-foreground shadow-lg">
+                                <span x-show="studentProfileOpen" x-cloak data-keep-in-view class="brand-gradient absolute top-6 left-0 z-[100] w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-left text-primary-foreground shadow-lg">
                                     <span class="flex items-center gap-3">
                                         <span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">
                                             @if ($studentUser->avatar_path)
