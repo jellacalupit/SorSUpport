@@ -1,6 +1,6 @@
 @props([
     'item',
-    'role' => 'student', // 'student' or 'recipient'
+    'role' => 'student', // 'student', 'recipient' or 'admin'
     'first' => true,
     'last' => true,
     'unread' => false,
@@ -12,13 +12,11 @@
     $ticket = $isComplaint ? $item->ticket : $item;
     $complaint = $isComplaint ? $item : $item->complaint;
     
-    $route = $isComplaint
-        ? route('student.complaints.show', $item->id)
-        : ($role === 'student'
-            ? route('student.complaints.show', $complaint?->id)
-            : ($role === 'admin'
-                ? route('admin.complaints.show', $complaint?->id)
-                : route('recipient.tickets.show', $complaint?->id)));
+    $route = match (true) {
+        $role === 'admin' => route('admin.complaints.show', $complaint?->id),
+        $isComplaint || $role === 'student' => route('student.complaints.show', $complaint?->id),
+        default => route('recipient.tickets.show', $complaint?->id),
+    };
     
     $lastUpdate = 'Never';
     $lastUpdatedAt = null;
@@ -89,7 +87,7 @@
 
 <a 
     href="{{ $route }}"
-    class="surface {{ $radiusClass }} {{ $isUnread ? 'border-0 bg-primary-soft' : 'border border-border bg-card' }} block w-full min-w-0 max-w-full overflow-hidden p-3 transition-transform duration-200 ease-out hover:scale-[1.01] hover:border-0 {{ $isUnread ? 'hover:bg-primary-soft' : 'hover:bg-muted/80' }}"
+    {{ $attributes->merge(['class' => 'surface ' . $radiusClass . ' ' . ($isUnread ? 'border-0 bg-primary-soft' : 'border border-border bg-card') . ' block w-full min-w-0 max-w-full overflow-hidden p-3 transition-transform duration-200 ease-out hover:scale-[1.01] hover:border-0 ' . ($isUnread ? 'hover:bg-primary-soft' : 'hover:bg-muted/80')]) }}
 >
     <div class="min-w-0 {{ $role === 'recipient' ? 'grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3' : '' }}">
         @if ($role === 'recipient')
@@ -114,7 +112,7 @@
                         <span class="truncate">({{ $complaint?->category?->name ?? 'Uncategorized' }})</span>
                     @endif
                     @if ($isUnread && $badgeCount > 0)
-                        <span class="grid min-h-4 min-w-4 shrink-0 place-items-center rounded-full bg-[#7d1f2a] px-1 text-[9px] font-bold leading-none text-white">{{ $badgeCount > 99 ? '99+' : $badgeCount }}</span>
+                        <span data-unread-badge class="grid min-h-4 min-w-4 shrink-0 place-items-center rounded-full bg-[#7d1f2a] px-1 text-[9px] font-bold leading-none text-white">{{ $badgeCount > 99 ? '99+' : $badgeCount }}</span>
                     @endif
                 </span>
             </p>

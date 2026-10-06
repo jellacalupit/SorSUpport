@@ -142,17 +142,22 @@
                 <div
                     x-data="{ sidebarOpen: window.innerWidth >= 1024 }"
                     x-init="
+                        // Below desktop width the sidebar is an overlay: it starts closed and its
+                        // state is not remembered, so it never covers the page on load.
                         sidebarOpen =
-                            localStorage.getItem('adminSidebarOpen') !== null
-                                ? localStorage.getItem('adminSidebarOpen') === 'true'
-                                : window.innerWidth >= 1024;
+                            window.innerWidth >= 1024
+                                && localStorage.getItem('adminSidebarOpen') !== 'false';
 
                         $watch(
                             'sidebarOpen',
-                            value => localStorage.setItem(
-                                'adminSidebarOpen',
-                                JSON.stringify(value)
-                            )
+                            value => {
+                                if (window.innerWidth >= 1024) {
+                                    localStorage.setItem(
+                                        'adminSidebarOpen',
+                                        JSON.stringify(value)
+                                    );
+                                }
+                            }
                         )
                     "
                     data-admin-shell
@@ -164,7 +169,7 @@
                         x-show="sidebarOpen"
                         x-transition.opacity
                         @click="sidebarOpen = false"
-                        class="fixed inset-0 z-30 bg-black/40 lg:hidden"
+                        class="fixed inset-0 z-[55] bg-black/40 lg:hidden"
                         aria-hidden="true"
                     ></div>
 
@@ -179,11 +184,12 @@
                                 ? 'translate-x-0 lg:w-60'
                                 : '-translate-x-full lg:translate-x-0 lg:w-16'
                         "
-                        class="fixed left-0 top-0 z-40 flex h-screen w-72 -translate-x-full flex-col overflow-hidden border-r border-sidebar-border bg-sidebar p-3 text-sidebar-foreground transition-[transform,width] duration-200"
+                        @click="if (window.innerWidth < 1024 && $event.target.closest('a[href]')) sidebarOpen = false"
+                        class="app-viewport fixed left-0 top-0 z-[60] flex w-72 max-w-[85vw] -translate-x-full flex-col overflow-hidden border-r border-sidebar-border bg-sidebar p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-sidebar-foreground transition-[transform,width] duration-200"
                     >
 
                         <!-- Brand -->
-                        <div class="mb-4 flex items-start justify-between gap-2">
+                        <div class="mb-4 flex shrink-0 items-start justify-between gap-2">
 
                             <a
                                 href="{{ route('admin.dashboard') }}"
@@ -216,7 +222,7 @@
                             <!-- Navigation -->
 
                         <div
-                            class="flex-1 min-w-0 overflow-y-auto overflow-x-hidden"
+                            class="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden"
                         >
                             <x-sidebar-nav :locked="$adminNavigationLocked" />
                         </div>
@@ -225,7 +231,7 @@
                              USER MENU
                              ================================================= -->
 
-                        <div class="border-t border-sidebar-border pt-3">
+                        <div class="shrink-0 border-t border-sidebar-border pt-3">
 
                             <!-- Expanded User -->
                             <div
@@ -343,7 +349,7 @@
 
                             <div class="flex items-center justify-between px-4 py-3 sm:px-6">
 
-                                <div class="flex min-w-0 items-center gap-3">
+                                <div class="flex min-w-0 flex-1 items-center gap-3">
 
                                     <!-- Mobile Menu -->
                                     <button
@@ -362,7 +368,7 @@
 
                                         <h1
                                             data-admin-page-title
-                                            class="flex items-center gap-2 font-display text-lg font-bold text-primary sm:text-xl"
+                                            class="truncate font-display text-lg font-bold text-primary sm:text-xl"
                                         >
                                             {{ $title ?: 'Dashboard' }}
                                         </h1>

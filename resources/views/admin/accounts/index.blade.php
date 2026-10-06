@@ -222,7 +222,7 @@
                     <x-icons.upload class="h-4 w-4" /> Bulk Upload
                 </button>
                 <button type="button" @click="tab === 'students' ? accountModalOpen = true : openRecipientForm()" class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">
-                    <x-icons.plus class="h-4 w-4" /> Add Account Manually
+                    <x-icons.plus class="h-4 w-4" /> Add Account
                 </button>
             </div>
         </div>
@@ -386,7 +386,7 @@
         </form>
 
         <div data-account-table="students" x-show="tab === 'students'" x-cloak class="mx-auto mt-4 w-full overflow-x-auto rounded-lg border">
-            <table class="w-full text-[13px]">
+            <table class="w-full min-w-max whitespace-nowrap text-[13px]">
                 <thead class="border-b bg-primary text-white">
                     <tr class="text-left">
                         <th class="whitespace-nowrap rounded-tl-lg py-2 pl-4 pr-2 text-[13px] font-semibold">Student ID</th>
@@ -910,7 +910,7 @@
 
         <div x-show="tab === 'recipients'" x-cloak class="mx-auto mt-4 w-full">
             <div data-account-table="recipients" class="w-full overflow-x-auto rounded-lg border">
-            <table class="w-full text-[13px]">
+            <table class="w-full min-w-max whitespace-nowrap text-[13px]">
                 <thead class="border-b bg-primary text-white">
                     <tr class="text-left">
                         <th class="whitespace-nowrap rounded-tl-lg py-2 pl-4 pr-2 text-[13px] font-semibold">Staff ID</th>

@@ -70,7 +70,19 @@
                 No tickets are awaiting review.
             </div>
         @else
-            <div class="w-full rounded-lg border">
+            {{-- Phones: the same tappable cards students and recipients get. --}}
+            <ul class="grid grid-cols-1 gap-0.5 md:hidden">
+                @foreach ($tickets as $ticket)
+                    @php $isUnread = app(\App\Services\TicketUnreadService::class)->unreadCountForTicket(Auth::user(), $ticket) > 0; @endphp
+                    <li data-ticket-review-row data-read-url="{{ route('admin.tickets.read', $ticket) }}" data-unread="{{ $isUnread ? 'true' : 'false' }}">
+                        <x-ticket-card :item="$ticket" role="admin" :first="$loop->first" :last="$loop->last" data-ticket-review-link="ticket-{{ $ticket->id }}" data-ticket-details-link="complaint-{{ $ticket->complaint->id }}" data-ticket-status="{{ $ticket->status }}">
+                            Filed by {{ $ticket->complaint->is_anonymous ? 'Anonymous' : ($ticket->complaint->student?->user?->table_name ?? 'Anonymous') }}
+                        </x-ticket-card>
+                    </li>
+                @endforeach
+            </ul>
+
+            <div class="hidden w-full rounded-lg border md:block">
                 <table class="w-full table-auto text-xs">
                     <thead class="border-b bg-primary text-white">
                         <tr class="text-left">
@@ -165,7 +177,7 @@
 
     <div id="admin-ticket-drawer" class="pointer-events-none invisible fixed inset-0 z-50" aria-hidden="true">
         <div data-admin-ticket-backdrop class="absolute inset-0 bg-black/35 opacity-0 transition-opacity"></div>
-        <aside data-admin-ticket-panel class="absolute top-0 right-0 flex h-full w-full max-w-full translate-x-full flex-col overflow-y-auto bg-background shadow-2xl transition-transform duration-200 sm:max-w-[50vw]" role="dialog" aria-modal="true" aria-label="Ticket details">
+        <aside data-admin-ticket-panel class="absolute top-0 right-0 flex h-full w-full max-w-full translate-x-full flex-col overflow-y-auto bg-background shadow-2xl transition-transform duration-200 lg:max-w-[72vw] xl:max-w-[58vw]" role="dialog" aria-modal="true" aria-label="Ticket details">
             <div class="sticky top-0 z-10 flex items-start justify-between border-b border-border bg-card px-4 py-3">
                 <div>
                     <h2 class="font-display text-lg font-bold text-primary">Ticket Details</h2>
@@ -178,7 +190,7 @@
 
     <div id="ticket-review-drawer" class="pointer-events-none invisible fixed inset-0 z-50" aria-hidden="true">
         <div data-ticket-review-backdrop class="absolute inset-0 bg-black/35 opacity-0 transition-opacity"></div>
-        <aside data-ticket-review-panel class="absolute top-0 right-0 flex h-full w-full max-w-full translate-x-full flex-col overflow-y-auto bg-background shadow-2xl transition-transform duration-200 sm:max-w-[50vw]" role="dialog" aria-modal="true" aria-label="Ticket review">
+        <aside data-ticket-review-panel class="absolute top-0 right-0 flex h-full w-full max-w-full translate-x-full flex-col overflow-y-auto bg-background shadow-2xl transition-transform duration-200 lg:max-w-[72vw] xl:max-w-[58vw]" role="dialog" aria-modal="true" aria-label="Ticket review">
             <div class="sticky top-0 z-10 flex items-start justify-between border-b border-border bg-card px-4 py-3">
                 <div>
                     <h2 class="font-display text-lg font-bold text-primary">Ticket Review</h2>
@@ -192,16 +204,6 @@
 
     @foreach ($tickets as $ticket)
         @php
-            $student = $ticket->complaint->student;
-            $studentUser = $student?->user;
-            $studentNameParts = preg_split('/\s+/', trim((string) ($studentUser?->name ?? '')), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-            $holderUser = $ticket->currentHandler ?? $ticket->assignee ?? Auth::user();
-            $holderRecipient = $holderUser?->recipient;
-            $pendingHolderName = $holderUser?->table_name ?? '—';
-            $holderRole = $holderUser?->role === \App\Models\User::ROLE_SDS_ADMIN ? 'Admin' : 'Recipient';
-            $studentDisplayName = $ticket->complaint->is_anonymous ? 'Anonymous' : ($studentUser?->table_name ?? 'Anonymous');
-            $studentCourseYearBlock = trim(($student?->course ?? 'Course not specified') . ' ' . ($student?->year_level ?? 'N/A') . (($student?->block ?? '') !== '' ? '-' . $student->block : ''));
-
             $category = $ticket->complaint->category;
             $categoryRecipients = collect();
             if ($category) {
@@ -219,166 +221,11 @@
         @endphp
         @if ($ticket->status === 'resolved')
             <template id="complaint-{{ $ticket->complaint->id }}">
-                <div class="grid items-start gap-4 sm:grid-cols-[1.35fr_1fr]">
-                    <div class="min-w-0 rounded-lg border border-border bg-card p-4 sm:min-h-[calc(100vh-6rem)]">
-                        <div class="mb-1 flex items-center justify-between gap-3">
-                            <p class="font-mono text-[11px] font-semibold leading-tight text-primary">{{ $ticket->complaint->reference_number }}</p>
-                            <div class="shrink-0">
-                                <x-status-badge :status="match($ticket->status) { 'assigned', 'in_progress' => 'In Progress', 'resolved' => 'Resolved', 'escalated' => 'Escalated', 'rejected', 'closed' => 'Closed', default => ucfirst(str_replace('_', ' ', $ticket->status)), }" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" />
-                            </div>
-                        </div>
-                        <h3 class="mt-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $ticket->complaint->subject_title }}</h3>
-                        <div class="mt-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                            @if (! $ticket->complaint->is_anonymous)
-                                <span class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
-                                    @if ($ticket->complaint->student?->user?->avatar_path)
-                                        <img src="{{ asset('storage/' . $ticket->complaint->student->user->avatar_path) }}" alt="{{ $ticket->complaint->student->user->table_name ?? 'Student' }}" class="h-full w-full object-cover">
-                                    @else
-                                        {{ $ticket->complaint->student?->user?->name_initials ?: 'A' }}
-                                    @endif
-                                </span>
-                            @endif
-                            <span class="relative min-w-0" x-data="{ studentProfileOpen: false }" x-on:mouseenter="studentProfileOpen = true" x-on:mouseleave="studentProfileOpen = false">
-                                <span class="{{ $ticket->complaint->is_anonymous ? '' : 'cursor-pointer truncate font-semibold text-foreground hover:text-primary hover:underline' }}">{{ $ticket->complaint->is_anonymous ? 'Anonymous' : ($ticket->complaint->student?->user?->table_name ?? 'Anonymous') }}</span>
-                            </span>
-                            <span class="shrink-0">at</span>
-                            <span class="shrink-0">{{ $ticket->complaint->created_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</span>
-                        </div>
-                        <div class="mt-3 grid gap-2">
-                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Category</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->category?->name ?? 'Uncategorized' }}</p></div>
-                            @if ($ticket->complaint->suggestedRecipient?->user)
-                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Suggested recipient</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->suggestedRecipient->user->table_name }}</p></div>
-                            @endif
-                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Description</p><p class="whitespace-pre-line wrap-break-word text-sm leading-relaxed text-foreground">{{ $ticket->complaint->description ?? 'No description' }}</p></div>
-                            @if ($ticket->complaint->attachment_files)
-                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Attachment</p>
-                                    @foreach ($ticket->complaint->attachment_files as $attachment)
-                                        <a href="{{ Storage::url($attachment['path']) }}" target="_blank" rel="noopener" class="mt-2 inline-flex max-w-full items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-xs font-semibold text-foreground hover:border-primary hover:bg-primary-soft">
-                                            <x-icons.paperclip class="h-3.5 w-3.5 shrink-0" />
-                                            <span class="truncate">{{ $attachment['name'] }}</span>
-                                        </a>
-                                    @endforeach
-                                </div>
-                            @endif
-                            <div class="border-t border-border pt-2">
-                                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Current Holder</p>
-                                <p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->currentHandler?->table_name ?? $ticket->assignee?->table_name ?? '—' }}</p>
-                            </div>
-                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Classification</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : '—' }}</p></div>
-                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Escalated On</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->escalated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? '—' }}</p></div>
-                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Updated</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</p></div>
-                        </div>
-
-                        <div class="mt-4 grid gap-2 sm:grid-cols-2">
-                            <form method="POST" action="{{ route('admin.tickets.not-yet-resolved', $ticket) }}">
-                                @csrf
-                                <button type="submit" class="w-full rounded-full border border-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary transition-colors hover:bg-primary-soft">Not yet Resolved</button>
-                            </form>
-                            <form method="POST" action="{{ route('admin.tickets.close', $ticket) }}">
-                                @csrf
-                                <button type="submit" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Close Ticket</button>
-                            </form>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-col gap-4 overflow-hidden sm:h-[calc(100vh-6rem)]">
-                        <div class="admin-ticket-thread flex-1 flex flex-col min-h-0">
-                            <x-ticket-thread :ticket="$ticket" viewerRole="admin" />
-                        </div>
-
-                        <div class="h-[15.5rem] shrink-0 rounded-lg border border-border bg-card p-3 flex flex-col">
-                            <h3 class="font-display text-sm font-semibold leading-tight text-foreground">Audit Activity</h3>
-                            <ol class="mt-1.5 overflow-hidden space-y-2">
-                                @forelse ($ticket->auditLogs()->orderByDesc('created_at')->limit(5)->get() as $log)
-                                    @php
-                                        $activityLabel = match ($log->action) {
-                                            'ticket_assigned' => 'Ticket assigned',
-                                            'ticket_started' => 'Ticket started',
-                                            'message_posted' => 'Message posted',
-                                            'ticket_resolved' => 'Ticket resolved',
-                                            'ticket_escalated' => 'Ticket escalated',
-                                            'ticket_classified' => 'Ticket classified',
-                                            'ticket_closed' => 'Ticket closed',
-                                            'status_updated' => 'Status updated',
-                                            'classification_changed' => 'Classification changed',
-                                            default => ucfirst(str_replace('_', ' ', (string) ($log->action ?? 'Action'))),
-                                        };
-                                        $performerName = $log->performer?->name ?? 'System';
-                                    @endphp
-                                    <li class="flex min-w-0 gap-2">
-                                        <span class="mt-0.5 h-8 w-0.5 shrink-0 rounded-full" style="background-color: #800000;"></span>
-                                        <div class="min-w-0 flex-1 mt-0.5">
-                                            <p class="truncate text-xs font-semibold leading-tight text-foreground">{{ $activityLabel }}</p>
-                                            <p class="mt-0.5 truncate text-[11px] leading-snug text-muted-foreground">
-                                                <span>{{ $performerName }}</span>
-                                                <span class="text-border"> · </span>
-                                                <span>{{ $log->created_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y') }} · {{ $log->created_at?->copy()->setTimezone('Asia/Manila')->format('g:i A') }}</span>
-                                            </p>
-                                        </div>
-                                    </li>
-                                @empty
-                                    <li class="py-4 text-center text-xs text-muted-foreground">No recent audit activity.</li>
-                                @endforelse
-                            </ol>
-                        </div>
-                    </div>
-                </div>
+                <x-admin-ticket-view :ticket="$ticket" :review-actions="true" />
             </template>
         @endif
         <template id="ticket-{{ $ticket->id }}">
-            <div class="grid items-start gap-4 sm:grid-cols-[1.35fr_1fr]">
-                <div class="min-w-0 rounded-lg border border-border bg-card p-4 sm:min-h-[calc(100vh-8rem)]">
-                    <div class="mb-1 flex items-center justify-between gap-3">
-                        <p class="font-mono text-[11px] font-semibold leading-tight text-primary">{{ $ticket->complaint->reference_number }}</p>
-                        <div class="shrink-0">
-                            <x-status-badge :status="match($ticket->status) { 'assigned', 'in_progress' => 'In Progress', 'resolved' => 'Resolved', 'escalated' => 'Escalated', 'rejected', 'closed' => 'Closed', default => ucfirst(str_replace('_', ' ', $ticket->status)), }" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" />
-                        </div>
-                    </div>
-                    <h3 class="mt-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $ticket->complaint->subject_title }}</h3>
-                    <div class="mt-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                        <span class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
-                            @if ($studentUser?->avatar_path && ! $ticket->complaint->is_anonymous)
-                                <img src="{{ asset('storage/' . $studentUser->avatar_path) }}" alt="{{ $studentDisplayName }}" class="h-full w-full object-cover">
-                            @else
-                                {{ $ticket->complaint->is_anonymous ? 'A' : (collect($studentNameParts)->map(fn ($part) => substr($part, 0, 1))->take(2)->join('') ?: 'A') }}
-                            @endif
-                        </span>
-                        <span class="relative min-w-0" x-data="{ studentProfileOpen: false }" x-on:mouseenter="studentProfileOpen = true" x-on:mouseleave="studentProfileOpen = false">
-                            <span class="{{ $ticket->complaint->is_anonymous ? '' : 'cursor-pointer truncate font-semibold text-foreground hover:text-primary hover:underline' }}">{{ $studentDisplayName }}</span>
-                            @if ($studentUser && ! $ticket->complaint->is_anonymous)
-                                <span x-show="studentProfileOpen" x-cloak data-keep-in-view class="brand-gradient absolute top-6 left-0 z-[100] w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-left text-primary-foreground shadow-lg">
-                                    <span class="flex items-center gap-3">
-                                        <span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">
-                                            @if ($studentUser->avatar_path)
-                                                <img src="{{ asset('storage/' . $studentUser->avatar_path) }}" alt="{{ $studentDisplayName }}" class="h-full w-full object-cover">
-                                            @else
-                                                {{ collect($studentNameParts)->map(fn ($part) => substr($part, 0, 1))->take(2)->join('') }}
-                                            @endif
-                                        </span>
-                                        <span class="min-w-0">
-                                            <span class="block wrap-break-word text-sm font-bold">{{ $studentDisplayName }}</span>
-                                            <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $student?->student_id ?? 'N/A' }} · {{ $student?->department ?? 'Department not specified' }} · {{ $studentCourseYearBlock }}</span>
-                                        </span>
-                                    </span>
-                                    <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">Student</span>
-                                </span>
-                            @endif
-                        </span>
-                        <span class="shrink-0">at</span>
-                        <span class="shrink-0">{{ $ticket->complaint->created_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</span>
-                    </div>
-                    <div class="mt-3 grid gap-2">
-                        @include('admin.tickets.review.partials.details', ['ticket' => $ticket])
-                        <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Description</p><p class="whitespace-pre-line wrap-break-word text-sm leading-relaxed text-foreground">{{ $ticket->complaint->description }}</p></div>
-                        @foreach ($ticket->complaint->attachment_files as $attachment)
-                            <a href="{{ Storage::url($attachment['path']) }}" target="_blank" rel="noopener" class="inline-flex max-w-full items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-xs font-semibold text-foreground hover:border-primary hover:bg-primary-soft">
-                                <x-icons.paperclip class="h-3.5 w-3.5 shrink-0" />
-                                <span class="truncate">{{ $attachment['name'] }}</span>
-                            </a>
-                        @endforeach
-                    </div>
-
-                </div>
+            <x-admin-ticket-view :ticket="$ticket" :editable="true" :categories="$categories" :recipients="$recipients" :review-actions="true">
                 @if ($ticket->status === 'pending')
                 <div x-data="{ validity: null, classification: {{ $isAnonymousTicket ? "'informational'" : 'null' }}, jurisdiction: null, informationalDisposition: null, selectedRecipientId: null, selectedRecipient: '', invalidReason: '', invalidReasonError: false }">
                     <div class="rounded-lg border border-border bg-white p-4 text-foreground shadow-sm">
@@ -489,113 +336,8 @@
                         <button type="submit" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Forward &amp; Close Ticket</button>
                     </form>
                 </div>
-                @elseif ($ticket->status === 'resolved')
-                    <div class="grid items-start gap-4 sm:grid-cols-[1.35fr_1fr]">
-                        <div class="min-w-0 rounded-lg border border-border bg-card p-4 sm:min-h-[calc(100vh-6rem)]">
-                            <div class="mb-1 flex items-center justify-between gap-3">
-                                <p class="font-mono text-[11px] font-semibold leading-tight text-primary">{{ $ticket->complaint->reference_number }}</p>
-                                <div class="shrink-0">
-                                    <x-status-badge :status="match($ticket->status) { 'assigned', 'in_progress' => 'In Progress', 'resolved' => 'Resolved', 'escalated' => 'Escalated', 'rejected', 'closed' => 'Closed', default => ucfirst(str_replace('_', ' ', $ticket->status)), }" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" />
-                                </div>
-                            </div>
-                            <h3 class="mt-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $ticket->complaint->subject_title }}</h3>
-                            <div class="mt-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                                <span class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
-                                    @if ($ticket->complaint->student?->user?->avatar_path && ! $ticket->complaint->is_anonymous)
-                                        <img src="{{ asset('storage/' . $ticket->complaint->student->user->avatar_path) }}" alt="{{ $ticket->complaint->student->user->table_name ?? 'Student' }}" class="h-full w-full object-cover">
-                                    @else
-                                        {{ $ticket->complaint->student?->user?->name_initials ?: 'A' }}
-                                    @endif
-                                </span>
-                                <span class="relative min-w-0" x-data="{ studentProfileOpen: false }" x-on:mouseenter="studentProfileOpen = true" x-on:mouseleave="studentProfileOpen = false">
-                                    <span class="{{ $ticket->complaint->is_anonymous ? '' : 'cursor-pointer truncate font-semibold text-foreground hover:text-primary hover:underline' }}">{{ $ticket->complaint->is_anonymous ? 'Anonymous' : ($ticket->complaint->student?->user?->table_name ?? 'Anonymous') }}</span>
-                                </span>
-                                <span class="shrink-0">at</span>
-                                <span class="shrink-0">{{ $ticket->complaint->created_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</span>
-                            </div>
-                            <div class="mt-3 grid gap-2">
-                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Category</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->category?->name ?? 'Uncategorized' }}</p></div>
-                                @if ($ticket->complaint->suggestedRecipient?->user)
-                                    <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Suggested recipient</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->suggestedRecipient->user->table_name }}</p></div>
-                                @endif
-                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Description</p><p class="whitespace-pre-line wrap-break-word text-sm leading-relaxed text-foreground">{{ $ticket->complaint->description ?? 'No description' }}</p></div>
-                                @if ($ticket->complaint->attachment_files)
-                                    <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Attachment</p>
-                                        @foreach ($ticket->complaint->attachment_files as $attachment)
-                                            <a href="{{ Storage::url($attachment['path']) }}" target="_blank" rel="noopener" class="mt-2 inline-flex max-w-full items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-xs font-semibold text-foreground hover:border-primary hover:bg-primary-soft">
-                                                <x-icons.paperclip class="h-3.5 w-3.5 shrink-0" />
-                                                <span class="truncate">{{ $attachment['name'] }}</span>
-                                            </a>
-                                        @endforeach
-                                    </div>
-                                @endif
-                                <div class="border-t border-border pt-2">
-                                    <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Current Holder</p>
-                                    <p class="text-sm font-medium leading-tight text-foreground">
-                                        {{ $ticket->currentHandler?->table_name ?? $ticket->assignee?->table_name ?? '—' }}
-                                    </p>
-                                </div>
-                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Classification</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : '—' }}</p></div>
-                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Escalated On</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->escalated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? '—' }}</p></div>
-                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Updated</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</p></div>
-                            </div>
-
-                            <div class="mt-4 grid gap-2 sm:grid-cols-2">
-                                <form method="POST" action="{{ route('admin.tickets.not-yet-resolved', $ticket) }}">
-                                    @csrf
-                                    <button type="submit" class="w-full rounded-full border border-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary transition-colors hover:bg-primary-soft">Not yet Resolved</button>
-                                </form>
-                                <form method="POST" action="{{ route('admin.tickets.close', $ticket) }}">
-                                    @csrf
-                                    <button type="submit" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Close Ticket</button>
-                                </form>
-                            </div>
-                        </div>
-
-                        <div class="flex flex-col gap-4 overflow-hidden sm:h-[calc(100vh-6rem)]">
-                            <div class="admin-ticket-thread flex-1 flex flex-col min-h-0">
-                                <x-ticket-thread :ticket="$ticket" viewerRole="admin" />
-                            </div>
-
-                            <div class="h-[15.5rem] shrink-0 rounded-lg border border-border bg-card p-3 flex flex-col">
-                                <h3 class="font-display text-sm font-semibold leading-tight text-foreground">Audit Activity</h3>
-                                <ol class="mt-1.5 overflow-hidden space-y-2">
-                                    @forelse ($ticket->auditLogs()->orderByDesc('created_at')->limit(5)->get() as $log)
-                                        @php
-                                            $activityLabel = match ($log->action) {
-                                                'ticket_assigned' => 'Ticket assigned',
-                                                'ticket_started' => 'Ticket started',
-                                                'message_posted' => 'Message posted',
-                                                'ticket_resolved' => 'Ticket resolved',
-                                                'ticket_escalated' => 'Ticket escalated',
-                                                'ticket_classified' => 'Ticket classified',
-                                                'ticket_closed' => 'Ticket closed',
-                                                'status_updated' => 'Status updated',
-                                                'classification_changed' => 'Classification changed',
-                                                default => ucfirst(str_replace('_', ' ', (string) ($log->action ?? 'Action'))),
-                                            };
-                                            $performerName = $log->performer?->name ?? 'System';
-                                        @endphp
-                                        <li class="flex min-w-0 gap-2">
-                                            <span class="mt-0.5 h-8 w-0.5 shrink-0 rounded-full" style="background-color: #800000;"></span>
-                                            <div class="min-w-0 flex-1 mt-0.5">
-                                                <p class="truncate text-xs font-semibold leading-tight text-foreground">{{ $activityLabel }}</p>
-                                                <p class="mt-0.5 truncate text-[11px] leading-snug text-muted-foreground">
-                                                    <span>{{ $performerName }}</span>
-                                                    <span class="text-border"> · </span>
-                                                    <span>{{ $log->created_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y') }} · {{ $log->created_at?->copy()->setTimezone('Asia/Manila')->format('g:i A') }}</span>
-                                                </p>
-                                            </div>
-                                        </li>
-                                    @empty
-                                        <li class="py-4 text-center text-xs text-muted-foreground">No recent audit activity.</li>
-                                    @endforelse
-                                </ol>
-                            </div>
-                        </div>
-                    </div>
                 @endif
-            </div>
+            </x-admin-ticket-view>
         </template>
     @endforeach
 
@@ -695,6 +437,8 @@
                 if (row?.dataset.unread === 'true') {
                     row.dataset.unread = 'false';
                     row.classList.remove('bg-primary-soft/70');
+                    row.querySelector('[data-unread-badge]')?.remove();
+                    row.querySelector('a.surface')?.classList.replace('bg-primary-soft', 'bg-card');
                     row.querySelector('td:first-child')?.classList.remove('font-bold');
                     row.querySelectorAll('td:nth-child(2), td:nth-child(3), td:nth-child(4), td:nth-child(5)').forEach((cell) => {
                         cell.classList.remove('text-black');

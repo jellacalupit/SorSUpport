@@ -1,8 +1,18 @@
-@props(['ticket', 'showFiledBy' => false, 'studentView' => false, 'showClosedAt' => false])
+@props([
+    'ticket',
+    'showFiledBy' => false,
+    'studentView' => false,
+    'showClosedAt' => false,
+    // Admin review only: lets the category and suggested recipient be corrected before classifying.
+    'editable' => false,
+    'categories' => [],
+    'recipients' => [],
+])
 
 @php
     $complaint = $ticket->complaint;
     $isInvalid = $ticket->classification === 'invalid';
+    $canEditDetails = $editable && $ticket->status === 'pending' && $ticket->classification === null;
 
     $submittedAt = $complaint?->created_at?->copy()->setTimezone('Asia/Manila');
     $lastUpdate = 'Unknown';
@@ -47,7 +57,7 @@
     }
 @endphp
 
-<div class="surface p-4 sm:p-6">
+<div class="surface p-4 sm:p-6" @if ($canEditDetails) x-data="{ editingDetails: false }" @endif>
     <div class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
         <div class="min-w-0">
             <h2 class="font-display text-lg font-bold leading-tight wrap-break-word">
@@ -89,6 +99,12 @@
         </div>
         <div class="flex flex-col items-end gap-2">
             <x-status-badge :status="$statusDisplay" :classification="$ticket->classification" :show-icon="false" class="px-3 py-1 text-xs" />
+            @if ($canEditDetails)
+                <button type="button" x-show="!editingDetails" x-on:click="editingDetails = true" class="inline-flex shrink-0 items-center gap-1 rounded-full border border-primary px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary-soft">
+                    <x-icons.pencil class="h-3 w-3" />
+                    Edit
+                </button>
+            @endif
         </div>
     </div>
 
@@ -183,6 +199,35 @@
             </p>
         </div>
     </div>
+
+    @if ($canEditDetails)
+        <form x-show="editingDetails" x-cloak method="POST" action="{{ route('admin.tickets.update-details', $ticket) }}" class="mt-3 grid gap-2 rounded-lg border border-border bg-muted/50 p-3">
+            @csrf
+            @method('PATCH')
+            <p class="text-xs text-muted-foreground">Correct these if the student picked the wrong category or recipient.</p>
+            <label class="text-xs font-semibold leading-tight text-muted-foreground">
+                Category
+                <select name="category_id" required class="mt-1 h-9 w-full rounded-md border border-input bg-white px-2 text-xs font-normal text-foreground outline-none focus:ring-1 focus:ring-ring">
+                    @foreach ($categories as $categoryOption)
+                        <option value="{{ $categoryOption->id }}" @selected((int) $categoryOption->id === (int) $complaint->category_id)>{{ $categoryOption->name }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <label class="text-xs font-semibold leading-tight text-muted-foreground">
+                Suggested recipient
+                <select name="suggested_recipient_id" class="mt-1 h-9 w-full rounded-md border border-input bg-white px-2 text-xs font-normal text-foreground outline-none focus:ring-1 focus:ring-ring">
+                    <option value="">None</option>
+                    @foreach ($recipients as $recipientOption)
+                        <option value="{{ $recipientOption->id }}" @selected((int) $recipientOption->id === (int) $complaint->suggested_recipient_id)>{{ $recipientOption->user?->table_name }} · {{ $recipientOption->designation }}, {{ $recipientOption->department }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <div class="mt-1 grid grid-cols-2 gap-2">
+                <button type="button" x-on:click="editingDetails = false" class="w-full rounded-full border border-primary bg-white px-2.5 py-1.5 text-center text-xs font-semibold text-primary transition-colors hover:bg-primary-soft">Cancel</button>
+                <button type="submit" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Save Changes</button>
+            </div>
+        </form>
+    @endif
 </div>
 
 <div class="surface p-4 sm:p-6">
