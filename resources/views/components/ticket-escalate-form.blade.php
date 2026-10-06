@@ -43,7 +43,7 @@
                             $isSuggested = ! $suggestionUsed && (int) $step['recipient']->id === (int) $suggestedTargetId;
                             $suggestionUsed = $suggestionUsed || $isSuggested;
                         @endphp
-                        <option value="{{ $step['recipient']->id }}" @selected($isSuggested)>Level {{ $step['level'] }} · {{ $step['recipient']->user->table_name }} · {{ $step['recipient']->designation }}</option>
+                        <option value="{{ $step['recipient']->id }}" @selected($isSuggested)>Level {{ $step['level'] }} · {{ $step['recipient']->user->table_name }} · {{ $step['recipient']->designation }}@if ($ticket->complaint?->names($step['recipient']->user)) · named in this complaint @endif</option>
                     @endforeach
                 </optgroup>
             @endforeach

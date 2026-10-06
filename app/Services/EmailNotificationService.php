@@ -155,9 +155,15 @@ class EmailNotificationService
      */
     protected function recordDeliveryInAuditTrail(EmailNotification $notification, string $subject, string $body): void
     {
+        // The audit trail must not reveal the address of a student who hid their identity.
+        $complaint = $notification->ticket?->complaint;
+        $recipient = $complaint?->is_anonymous && $notification->recipient_email === $complaint->student?->user?->email
+            ? 'the student'
+            : $notification->recipient_email;
+
         $details = sprintf(
             'Email sent to %s. Subject: "%s". Message: %s Notification type: %s.',
-            $notification->recipient_email,
+            $recipient,
             $subject,
             $body,
             $notification->type

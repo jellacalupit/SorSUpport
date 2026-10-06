@@ -217,7 +217,7 @@ class AnalyticsService
             ->values();
         $classificationCounts = $tickets->groupBy(fn ($ticket) => $ticket->classification ?: 'unclassified')->map->count();
         $identified = $tickets->filter(fn ($ticket) => ! $ticket->complaint?->is_anonymous)->count();
-        $subjects = $tickets->groupBy(fn ($ticket) => $ticket->complaint?->subject_title ?: 'Untitled')->map->count()->sortDesc()->take(10);
+        $subjects = $tickets->groupBy(fn ($ticket) => $ticket->complaint?->public_subject ?? 'Untitled')->map->count()->sortDesc()->take(10);
         $openStatuses = [Ticket::STATUS_SUBMITTED, Ticket::STATUS_NEEDS_CLARIFICATION, Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED, Ticket::STATUS_REFERRED];
         $openTickets = $tickets->whereIn('status', $openStatuses);
         $unitRows = $tickets

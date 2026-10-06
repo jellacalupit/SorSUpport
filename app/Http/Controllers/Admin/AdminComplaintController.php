@@ -42,7 +42,8 @@ class AdminComplaintController extends Controller
 
         if ($request->filled('search_student')) {
             $student = $request->input('search_student');
-            $query->whereHas('student.user', function ($q) use ($student) {
+            // A name search must not reveal who filed a hidden-identity ticket.
+            $query->where('is_anonymous', false)->whereHas('student.user', function ($q) use ($student) {
                 $q->where('name', 'like', '%' . $student . '%');
             });
         }
@@ -57,7 +58,7 @@ class AdminComplaintController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('reference_number', 'like', '%' . $search . '%')
                     ->orWhere('subject_title', 'like', '%' . $search . '%')
-                    ->orWhereHas('student.user', fn ($student) => $student->where('name', 'like', '%' . $search . '%'))
+                    ->orWhere(fn ($named) => $named->where('is_anonymous', false)->whereHas('student.user', fn ($student) => $student->where('name', 'like', '%' . $search . '%')))
                     ->orWhereHas('category.recipient.user', fn ($recipient) => $recipient->where('name', 'like', '%' . $search . '%'));
             });
         }
@@ -153,8 +154,6 @@ class AdminComplaintController extends Controller
             'has_ticket' => (bool) $complaint->ticket,
         ]);
 
-        abort_if($complaint->is_anonymous, 404);
-
         // Authorization: ensure the complaint has a ticket and thread
         $ticket = $complaint->ticket;
 
@@ -183,7 +182,7 @@ class AdminComplaintController extends Controller
 
         if ($request->hasFile('file_attachment')) {
             $attachment = $request->file('file_attachment');
-            $attachmentPath = $attachment->store('complaints/replies', 'public');
+            $attachmentPath = $attachment->store('complaints/replies', 'local');
             $attachmentName = $attachment->getClientOriginalName();
         }
 

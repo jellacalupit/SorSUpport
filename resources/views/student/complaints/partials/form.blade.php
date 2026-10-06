@@ -87,6 +87,10 @@
                 <x-input-error :messages="$errors->get('suggested_recipient_id')" />
             </div>
             <div class="grid gap-1.5 pt-2">
+                <label for="personnel_involved" class="text-sm font-semibold">Person involved <span class="font-normal text-muted-foreground">(optional)</span></label>
+                <input id="personnel_involved" name="personnel_involved" value="{{ old('personnel_involved') }}" maxlength="255" placeholder="Name or position of the person concerned, if any" class="h-11 w-full rounded-xl border border-input bg-muted px-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                <p class="mb-3 text-xs text-muted-foreground">This keeps the ticket from being assigned to the person it is about.</p>
+                <x-input-error :messages="$errors->get('personnel_involved')" />
                 <label for="description" class="text-sm font-semibold">Description <span class="text-destructive" aria-hidden="true">*</span></label>
                 <textarea id="description" name="description" rows="9" required placeholder="Describe your concern in detail. If you can, include:&#10;• What happened&#10;• When and where it happened&#10;• Who was involved (name, position, or office)&#10;• What you have already done about it&#10;• What outcome you are hoping for" class="min-h-40 w-full rounded-xl border {{ $errors->has('description') ? 'border-destructive !border-destructive password-error-border' : 'border-input' }} bg-muted px-3 py-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" x-bind:class="showValidation && ! $el.value.trim() ? 'border-destructive !border-destructive password-error-border' : ''">{{ old('description') }}</textarea>
                 <x-input-error :messages="$errors->get('description')" />
@@ -128,7 +132,7 @@
                     <div x-show="privacyPinned || privacyHover" x-cloak x-on:mouseenter="privacyHover = true" x-on:mouseleave="privacyHover = false" class="absolute left-0 top-full z-50 mt-2 w-full max-w-sm rounded-xl border border-primary/40 bg-popover p-3 text-xs text-popover-foreground shadow-lg">
                         <div>
                             <p class="font-bold text-foreground">If you submit anonymously</p>
-                            <p class="mt-1.5 text-muted-foreground">Your name and student ID are not shown on the submission. The SDS Office still reviews it, then keeps it as an informational record or forwards it to the office concerned. There is no conversation thread and no escalation.</p>
+                            <p class="mt-1.5 text-muted-foreground">Your name and student ID are hidden from everyone who handles the ticket, including the SDS Office. It is still reviewed, assigned and resolved like any other ticket, and you can follow it and reply in the conversation. Give enough detail for the office to act without knowing who you are.</p>
                         </div>
                         <div class="mt-3 border-t border-border pt-3">
                             <p class="font-bold text-foreground">If you submit with your name</p>
@@ -147,6 +151,14 @@
                     <span>Submit anonymously</span>
                 </label>
                 <x-input-error :messages="$errors->get('is_anonymous')" />
+            </div>
+            <div class="grid gap-1.5 border-t border-border pt-4">
+                <span class="text-sm font-semibold">Declaration <span class="text-destructive" aria-hidden="true">*</span></span>
+                <label class="flex cursor-pointer items-start gap-3 text-sm">
+                    <input id="declaration" name="declaration" type="checkbox" value="1" @checked(old('declaration')) class="mt-0.5 h-4 w-4 shrink-0 rounded-[6px] accent-red-800" />
+                    <span class="text-xs leading-relaxed text-muted-foreground">I declare that the information I am submitting is true and correct to the best of my knowledge, and I understand that a false or malicious complaint may be dealt with under the Student Handbook. I consent to the collection and use of this information by Sorsogon State University to act on my concern, in accordance with the Data Privacy Act of 2012.</span>
+                </label>
+                <x-input-error :messages="$errors->get('declaration')" />
             </div>
         </div>
         <div class="hidden w-full gap-2 md:flex">

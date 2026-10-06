@@ -92,6 +92,26 @@
         </div>
     </div>
 
+    @unless ($studentView)
+        @if ($complaint?->isSensitive())
+            <div class="mt-3 rounded-lg border border-primary/30 bg-primary-soft px-3 py-2 text-xs text-primary" data-ticket-notice="sensitive">
+                <p class="font-semibold">Sensitive ticket</p>
+                <p class="mt-0.5">Only the SDS Office and the assigned handler can open this ticket. Do not share its details with anyone else.</p>
+            </div>
+        @endif
+        @if ($complaint?->is_anonymous)
+            <div class="mt-3 rounded-lg border border-border bg-muted px-3 py-2 text-xs text-muted-foreground" data-ticket-notice="hidden-identity">
+                <p class="font-semibold text-foreground">Identity hidden</p>
+                <p class="mt-0.5">The student chose not to show their name. You can still message them in the conversation and resolve the ticket as usual.</p>
+            </div>
+        @endif
+        @if ($holder && ! $ticket->isAwaitingReview() && $complaint?->names($holder))
+            <div class="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800" data-ticket-notice="conflict">
+                <p class="font-semibold">Possible conflict of interest</p>
+                <p class="mt-0.5">{{ $holderDisplayName }} appears to be the person named in this complaint. The SDS Office should assign it to someone else.</p>
+            </div>
+        @endif
+    @endunless
     <div class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
         <!-- Category -->
         <div class="min-w-0">
@@ -140,6 +160,12 @@
 
         @endif
 
+        @if (filled($complaint?->personnel_involved))
+            <div class="min-w-0">
+                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Person Involved</p>
+                <p class="text-sm font-medium leading-tight wrap-break-word">{{ $complaint->personnel_involved }}</p>
+            </div>
+        @endif
         <!-- Escalation date -->
         @if ($ticket->escalated_at)
             <div class="min-w-0">
@@ -250,7 +276,7 @@
                         $attachmentExtension = strtolower(pathinfo($attachment['name'] ?? $attachment['path'] ?? '', PATHINFO_EXTENSION));
                         $isImageAttachment = in_array($attachmentExtension, ['jpg', 'jpeg', 'png', 'heic']);
                     @endphp
-                    <a href="{{ asset('storage/' . $attachment['path']) }}" target="_blank" class="group flex w-fit max-w-full items-center gap-2 rounded-md border border-border bg-gray-200 p-1.5 text-black transition-colors hover:border-primary hover:bg-primary-soft">
+                    <a href="{{ $attachment['url'] }}" target="_blank" class="group flex w-fit max-w-full items-center gap-2 rounded-md border border-border bg-gray-200 p-1.5 text-black transition-colors hover:border-primary hover:bg-primary-soft">
                         <span class="flex min-w-0 items-center gap-2">
                             <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-gray-400 text-primary">
                                 @if ($isImageAttachment)

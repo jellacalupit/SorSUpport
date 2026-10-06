@@ -256,7 +256,7 @@
                             @if ($complaint->attachment_files)
                                 <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Attachment</p>
                                     @foreach ($complaint->attachment_files as $attachment)
-                                        <a href="{{ Storage::url($attachment['path']) }}" target="_blank" rel="noopener" class="mt-2 inline-flex max-w-full items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-xs font-semibold text-foreground hover:border-primary hover:bg-primary-soft">
+                                        <a href="{{ $attachment['url'] }}" target="_blank" rel="noopener" class="mt-2 inline-flex max-w-full items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-xs font-semibold text-foreground hover:border-primary hover:bg-primary-soft">
                                             <x-icons.paperclip class="h-3.5 w-3.5 shrink-0" />
                                             <span class="truncate">{{ $attachment['name'] }}</span>
                                         </a>
@@ -301,7 +301,7 @@
                                             'classification_changed' => 'Classification changed',
                                             default => ucfirst(str_replace('_', ' ', (string) ($log->action ?? 'Action'))),
                                         };
-                                        $performerName = $log->performer?->name ?? 'System';
+                                        $performerName = $log->display_performer?->name ?? 'System';
                                     @endphp
                                     <li class="flex min-w-0 gap-2">
                                         <span class="mt-0.5 h-8 w-0.5 shrink-0 rounded-full" style="background-color: #800000;"></span>

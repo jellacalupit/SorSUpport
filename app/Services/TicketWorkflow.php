@@ -295,6 +295,10 @@ class TicketWorkflow
                     : 'Ticket assigned to SDS admin for direct handling.'
             );
 
+            if ($recipient && $ticket->complaint->names($recipient->user)) {
+                AuditLog::log($ticket->id, 'conflict_of_interest_flagged', $admin->id, 'The ticket was assigned to a person who appears to be named in the complaint.');
+            }
+
             if ($recipient?->user) {
                 $this->notify($ticket, [$recipient->user], EmailNotification::TYPE_RECIPIENT_ASSIGNMENT);
             }

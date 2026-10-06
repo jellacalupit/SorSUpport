@@ -130,7 +130,7 @@
                                 {{ $ticket->complaint?->reference_number ?? $ticket->id }}
                             </td>
                             <td class="truncate px-3 py-2 text-xs text-foreground">
-                                {{ $ticket->complaint?->subject_title ?? 'No subject' }}
+                                {{ $ticket->complaint?->public_subject ?? 'No subject' }}
                             </td>
                             <td class="px-3 py-2 text-center">
                                 @php
@@ -233,8 +233,8 @@
                             <span class="absolute top-8 -bottom-2.5 left-4 w-px bg-[#7a1d2a]/20" aria-hidden="true"></span>
                         @endunless
                         <span class="relative grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-[#7a1d2a] text-white shadow-sm ring-2 ring-[#7a1d2a]/10">
-                            @if ($log->performer?->avatar_path)
-                                <img src="{{ asset('storage/' . $log->performer->avatar_path) }}" alt="{{ $log->performer->name }}" class="h-full w-full object-cover">
+                            @if ($log->display_performer?->avatar_path)
+                                <img src="{{ asset('storage/' . $log->display_performer->avatar_path) }}" alt="{{ $log->display_performer->name }}" class="h-full w-full object-cover">
                             @else
                                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     @if ($activityIcon === 'plus')
@@ -254,7 +254,7 @@
                         <div class="min-w-0 pt-0.5">
                             <p class="truncate text-[12px] font-semibold leading-tight text-foreground">{{ $activityLabel }}</p>
                             <p class="mt-0.5 truncate text-[11px] leading-snug text-muted-foreground">
-                                <span>{{ $log->performer?->given_name ?: 'System' }} updated activity</span>
+                                <span>{{ $log->display_performer?->given_name ?: 'System' }} updated activity</span>
                                 @if ($referenceNumber)
                                     <span class="text-border"> · </span>
                                     <span class="font-mono font-semibold text-[#7a1d2a]">{{ $referenceNumber }}</span>
@@ -399,7 +399,7 @@
                                         {{ $ticket->complaint?->reference_number ?? $ticket->id }}
                                     </td>
                                     <td class="max-w-[220px] truncate px-3 py-2 text-xs text-foreground">
-                                        {{ $ticket->complaint?->subject_title ?? 'No subject' }}
+                                        {{ $ticket->complaint?->public_subject ?? 'No subject' }}
                                     </td>
                                     <td class="px-3 py-2 text-center">
                                         @php
@@ -583,8 +583,8 @@
                             <li class="relative z-10 grid min-w-0 grid-cols-[25%_2rem_minmax(0,1fr)] items-start gap-2">
                                 <span class="flex h-8 items-center text-[11px] text-black">{{ $log->created_at?->diffForHumans() ?? 'Recently' }}</span>
                                 <span class="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-[#7a1d2a] text-white shadow-sm ring-2 ring-[#7a1d2a]/10">
-                                    @if ($log->performer?->avatar_path)
-                                        <img src="{{ asset('storage/' . $log->performer->avatar_path) }}" alt="{{ $log->performer->name }}" class="h-full w-full object-cover">
+                                    @if ($log->display_performer?->avatar_path)
+                                        <img src="{{ asset('storage/' . $log->display_performer->avatar_path) }}" alt="{{ $log->display_performer->name }}" class="h-full w-full object-cover">
                                     @else
                                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                             @if ($activityIcon === 'plus')
@@ -604,7 +604,7 @@
                                 <div class="min-w-0 pt-0.5">
                                     <p class="truncate text-[11px] font-semibold leading-tight text-foreground">{{ $activityLabel }}</p>
                                     <p class="mt-0.5 truncate text-[10px] leading-snug text-muted-foreground">
-                                        <span>{{ $log->performer?->given_name ?: 'System' }} updated activity</span>
+                                        <span>{{ $log->display_performer?->given_name ?: 'System' }} updated activity</span>
                                         @if ($referenceNumber)
                                             <span class="text-border"> · </span>
                                             <span class="font-mono font-semibold text-[#7a1d2a]">{{ $referenceNumber }}</span>

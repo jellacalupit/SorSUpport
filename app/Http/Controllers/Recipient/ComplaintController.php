@@ -19,6 +19,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Log;
 use App\Services\TicketUnreadService;
+use App\Services\TicketAccess;
 use App\Services\TicketWorkflow;
 
 class ComplaintController extends Controller
@@ -160,7 +161,7 @@ class ComplaintController extends Controller
 
         if ($request->hasFile('file_attachment')) {
             $attachment = $request->file('file_attachment');
-            $attachmentPath = $attachment->store('complaints/replies', 'public');
+            $attachmentPath = $attachment->store('complaints/replies', 'local');
             $attachmentName = $attachment->getClientOriginalName();
         }
 

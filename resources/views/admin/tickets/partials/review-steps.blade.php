@@ -14,7 +14,7 @@
 @endphp
 
 <x-ticket-actions :ticket="$ticket" role="admin" class="mb-3" />
-<div x-data="{ validity: null, classification: {{ $isAnonymousTicket ? "'informational'" : 'null' }}, jurisdiction: null, informationalDisposition: null, selectedRecipientId: null, selectedRecipient: '', invalidReason: '', invalidReasonError: false }">
+<div x-data="{ validity: null, classification: null, jurisdiction: null, informationalDisposition: null, selectedRecipientId: null, selectedRecipient: '', invalidReason: '', invalidReasonError: false }">
     <div class="rounded-lg border border-border bg-white p-4 text-foreground shadow-sm">
     <h3 class="flex items-center gap-2 font-display text-base font-bold text-black">
         <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">1</span>
@@ -31,12 +31,10 @@
             <span>Classification</span>
         </h3>
         @if ($isAnonymousTicket)
-            <p class="mt-2 text-xs text-muted-foreground">Anonymous submissions are kept as informational records. Choose whether to retain it in SDS records or forward it to a recipient.</p>
+            <p class="mt-2 text-xs text-muted-foreground">The student chose to hide their identity. Review and route the ticket as usual; their name is not shown to anyone handling it.</p>
         @endif
         <div class="mt-4 grid gap-2">
-            @unless ($isAnonymousTicket)
                 <button type="button" x-on:click="classification = 'needs_resolution'" class="w-full rounded-full border border-primary px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="classification === 'needs_resolution' ? 'bg-primary text-primary-foreground' : 'bg-white text-primary hover:bg-primary-soft'">Needs Resolution</button>
-            @endunless
             <button type="button" x-on:click="classification = 'informational'" class="w-full rounded-full border border-primary px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="classification === 'informational' ? 'bg-primary text-primary-foreground' : 'bg-white text-primary hover:bg-primary-soft'">Informational</button>
         </div>
         <div x-show="classification === 'needs_resolution'" x-cloak class="mt-5 border-t border-border pt-4">
@@ -56,6 +54,7 @@
                         <button type="button" x-on:click="selectedRecipientId = {{ $recipient->id }}; selectedRecipient = @js($recipientName); $el.closest('details').removeAttribute('open')" class="flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-primary-soft" x-bind:class="selectedRecipientId === {{ $recipient->id }} ? 'bg-primary-soft text-primary' : ''">
                             <span class="min-w-0">
                                 <span class="block truncate font-semibold">{{ $recipientName }}</span>
+                                @if ($ticket->complaint->names($recipient->user))<span class="block text-[10px] font-semibold text-red-700">Named in this complaint</span>@endif
                                 <span class="block truncate text-muted-foreground">{{ $recipient->staff_id }} · {{ $recipient->unit }} · {{ $recipient->designation }}</span>
                             </span>
                         </button>
@@ -82,6 +81,7 @@
                         <button type="button" x-on:click="selectedRecipientId = {{ $recipient->id }}; selectedRecipient = @js($recipientName); $el.closest('details').removeAttribute('open')" class="flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-primary-soft">
                             <span class="min-w-0">
                                 <span class="block truncate font-semibold">{{ $recipientName }}</span>
+                                @if ($ticket->complaint->names($recipient->user))<span class="block text-[10px] font-semibold text-red-700">Named in this complaint</span>@endif
                                 <span class="block truncate text-muted-foreground">{{ $recipient->staff_id }} · {{ $recipient->unit }} · {{ $recipient->designation }}</span>
                             </span>
                         </button>

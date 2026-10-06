@@ -138,31 +138,31 @@
                                     ? $messageTime->format('g:i A')
                                     : $messageTime->format('M d, g:i A')))
                             : 'Unknown';
-                            $senderFirstName = $message->sender?->given_name ?: 'Unknown';
+                            $senderFirstName = $message->display_sender?->given_name ?: 'Unknown';
                     @endphp
                     <div data-message-row class="flex w-full min-w-0 items-end gap-2 {{ $isOwnMessage ? 'justify-end' : 'justify-start' }}">
                         @unless ($isOwnMessage)
                             <div class="relative" x-data="{ senderProfileOpen: false }" x-on:click.outside="senderProfileOpen = false">
                                 <button type="button" data-message-avatar class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-soft text-[9px] font-bold text-primary" x-on:click="senderProfileOpen = !senderProfileOpen" aria-label="View sender profile">
-                                    @if ($message->sender?->avatar_path)
-                                        <img src="{{ asset('storage/' . $message->sender->avatar_path) }}" alt="" class="h-full w-full object-cover">
+                                    @if ($message->display_sender?->avatar_path)
+                                        <img src="{{ asset('storage/' . $message->display_sender->avatar_path) }}" alt="" class="h-full w-full object-cover">
                                     @else
-                                        {{ collect(explode(' ', $message->sender->name ?? 'Unknown'))->filter()->map(fn ($part) => substr($part, 0, 1))->take(2)->join('') }}
+                                        {{ collect(explode(' ', $message->display_sender->name ?? 'Unknown'))->filter()->map(fn ($part) => substr($part, 0, 1))->take(2)->join('') }}
                                     @endif
                                 </button>
-                                @if ($message->sender?->recipient)
+                                @if ($message->display_sender?->recipient)
                                     <span x-show="senderProfileOpen" x-cloak data-keep-in-view class="brand-gradient absolute bottom-0 left-10 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-left text-primary-foreground shadow-lg">
                                         <span class="flex items-center gap-3">
                                             <span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">
-                                                @if ($message->sender->avatar_path)
-                                                    <img src="{{ asset('storage/' . $message->sender->avatar_path) }}" alt="" class="h-full w-full object-cover">
+                                                @if ($message->display_sender->avatar_path)
+                                                    <img src="{{ asset('storage/' . $message->display_sender->avatar_path) }}" alt="" class="h-full w-full object-cover">
                                                 @else
-                                                    {{ collect(explode(' ', $message->sender->name ?? 'Unknown'))->filter()->map(fn ($part) => substr($part, 0, 1))->take(2)->join('') }}
+                                                    {{ collect(explode(' ', $message->display_sender->name ?? 'Unknown'))->filter()->map(fn ($part) => substr($part, 0, 1))->take(2)->join('') }}
                                                 @endif
                                             </span>
                                             <span class="min-w-0">
-                                                <span class="block wrap-break-word text-sm font-bold">{{ $message->sender->display_name }}</span>
-                                                <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $message->sender->recipient->staff_id }} · {{ $message->sender->recipient->unit }} · {{ $message->sender->recipient->designation }}</span>
+                                                <span class="block wrap-break-word text-sm font-bold">{{ $message->display_sender->display_name }}</span>
+                                                <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $message->display_sender->recipient->staff_id }} · {{ $message->display_sender->recipient->unit }} · {{ $message->display_sender->recipient->designation }}</span>
                                             </span>
                                         </span>
                                         <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">Recipient</span>
@@ -184,7 +184,7 @@
                                         $attachmentExtension = strtolower(pathinfo($attachmentName, PATHINFO_EXTENSION));
                                         $isImageAttachment = in_array($attachmentExtension, ['jpg', 'jpeg', 'png', 'heic']);
                                     @endphp
-                                    <a href="{{ asset('storage/' . $message->file_attachment) }}" target="_blank" class="group mt-2 inline-flex w-fit max-w-full items-start rounded-xl border border-border bg-gray-200 p-1.5 text-black hover:border-primary hover:bg-primary-soft">
+                                    <a href="{{ route('attachments.message', $message) }}" target="_blank" class="group mt-2 inline-flex w-fit max-w-full items-start rounded-xl border border-border bg-gray-200 p-1.5 text-black hover:border-primary hover:bg-primary-soft">
                                         <span class="mr-2 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-gray-400 text-primary">
                                             @if ($isImageAttachment)
                                                 <x-icons.image class="h-3.5 w-3.5 fill-muted text-gray-700 transition-colors" />

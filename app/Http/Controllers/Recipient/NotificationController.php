@@ -121,7 +121,8 @@ class NotificationController extends Controller
             ->latest()
             ->get()
             ->map(function (AuditLog $log) use ($user) {
-                $studentName = $log->ticket?->complaint?->student?->user?->display_name ?? 'The student';
+                $complaint = $log->ticket?->complaint;
+                $studentName = $complaint?->is_anonymous ? 'The student' : ($complaint?->student?->user?->display_name ?? 'The student');
 
                 return [
                     'id' => "audit-{$log->id}",

@@ -70,6 +70,10 @@ RUN sed -ri \
     /etc/apache2/sites-available/000-default.conf \
     /etc/apache2/apache2.conf
 
+# Never serve private ticket attachments directly
+COPY docker/private-storage.conf /etc/apache2/conf-available/private-storage.conf
+RUN a2enconf private-storage
+
 EXPOSE 80
 
-CMD ["bash", "-c", "a2dismod mpm_event mpm_worker 2>/dev/null || true; a2enmod mpm_prefork rewrite; mkdir -p storage/app/public && chown -R www-data:www-data storage/app/public; php artisan storage:link; php artisan migrate --force && exec apache2-foreground"]
+CMD ["bash", "-c", "a2dismod mpm_event mpm_worker 2>/dev/null || true; a2enmod mpm_prefork rewrite; mkdir -p storage/app/public/.private && chown -R www-data:www-data storage/app/public; rm -rf storage/app/private; ln -sfn /var/www/html/storage/app/public/.private storage/app/private; php artisan storage:link; php artisan migrate --force && exec apache2-foreground"]

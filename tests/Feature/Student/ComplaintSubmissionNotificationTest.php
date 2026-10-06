@@ -170,6 +170,7 @@ class ComplaintSubmissionNotificationTest extends TestCase
 
         $response = $this->actingAs($student)
             ->post(route('student.complaints.store'), [
+                'declaration' => '1',
                 'category_id' => $category->id,
                 'subject_title' => 'Complaint submission notification test',
                 'description' => 'This complaint tests submission notification creation.',

@@ -451,6 +451,19 @@ Route::middleware(['auth', 'active.user', 'force.password'])->group(function () 
 
     /*
     |--------------------------------------------------------------------------
+    | Ticket Attachments (private storage)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/attachments/complaints/{complaint}/{index}', [\App\Http\Controllers\AttachmentController::class, 'complaint'])
+        ->whereNumber('index')
+        ->name('attachments.complaint');
+
+    Route::get('/attachments/messages/{message}', [\App\Http\Controllers\AttachmentController::class, 'message'])
+        ->name('attachments.message');
+
+    /*
+    |--------------------------------------------------------------------------
     | Force Password Change
     |--------------------------------------------------------------------------
     */

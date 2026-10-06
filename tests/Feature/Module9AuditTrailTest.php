@@ -76,6 +76,7 @@ class Module9AuditTrailTest extends TestCase
 
         $this->actingAs($studentUser)
             ->post(route('student.complaints.store'), [
+                'declaration' => '1',
                 'category_id' => $category->id,
                 'subject_title' => 'Audit trail submission',
                 'personnel_involved' => 'None',
@@ -246,6 +247,7 @@ class Module9AuditTrailTest extends TestCase
 
         $this->actingAs($studentUser)
             ->post(route('student.complaints.store'), [
+                'declaration' => '1',
                 'category_id' => $category->id,
                 'subject_title' => 'Rejection test',
                 'personnel_involved' => 'None',
@@ -314,6 +316,7 @@ class Module9AuditTrailTest extends TestCase
 
         $this->actingAs($studentUser)
             ->post(route('student.complaints.store'), [
+                'declaration' => '1',
                 'category_id' => $category->id,
                 'subject_title' => 'Anonymous complaint',
                 'personnel_involved' => 'None',
@@ -345,14 +348,7 @@ class Module9AuditTrailTest extends TestCase
             ->assertDontSee($studentUser->name)
             ->assertDontSee($studentUser->email);
 
-        // An anonymous submission can only be kept as an informational record.
-        $this->actingAs($admin)
-            ->post(route('admin.tickets.assign', $ticket), [
-                'assignment_mode' => 'recipient',
-                'recipient_id' => $recipient->id,
-            ])
-            ->assertStatus(422);
-
+        // It can be assigned like any ticket (see ConfidentialityTest); here it is kept as a record.
         $this->actingAs($admin)
             ->post(route('admin.tickets.forward-informational-close', $ticket), [
                 'recipient_id' => $recipient->id,
@@ -404,6 +400,7 @@ class Module9AuditTrailTest extends TestCase
 
         $this->actingAs($studentUser)
             ->post(route('student.complaints.store'), [
+                'declaration' => '1',
                 'category_id' => $category->id,
                 'subject_title' => 'Admin audit page test',
                 'personnel_involved' => 'None',

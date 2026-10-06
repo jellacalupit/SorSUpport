@@ -8,7 +8,7 @@
                 <div class="mt-0.5 min-w-0 flex-1">
                     <p class="truncate text-xs font-semibold leading-tight text-foreground">{{ $auditLabels[$log->action] ?? ucfirst(str_replace('_', ' ', (string) ($log->action ?? 'Action'))) }}</p>
                     <p class="mt-0.5 truncate text-[11px] leading-snug text-muted-foreground">
-                        <span>{{ $log->performer?->table_name ?? 'System' }}</span>
+                        <span>{{ $log->display_performer?->table_name ?? 'System' }}</span>
                         <span class="text-border"> · </span>
                         <span>{{ $log->created_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}</span>
                     </p>

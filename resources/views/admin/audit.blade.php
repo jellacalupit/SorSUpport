@@ -62,10 +62,10 @@
                     @forelse ($auditLogs as $log)
                         @php
                             $isAnonymousComplaint = (bool) $log->ticket?->complaint?->is_anonymous;
-                            $performerName = $isAnonymousComplaint ? '—' : ($log->performer?->table_name ?? 'System');
+                            $performerName = $isAnonymousComplaint ? '—' : ($log->display_performer?->table_name ?? 'System');
                             $accountType = $isAnonymousComplaint
                                 ? 'Student'
-                                : match ($log->performer?->role) {
+                                : match ($log->display_performer?->role) {
                                     'sds_admin' => 'Administrator',
                                     'student' => 'Student',
                                     'recipient' => 'Recipient',

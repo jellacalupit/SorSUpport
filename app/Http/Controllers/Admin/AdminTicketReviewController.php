@@ -71,7 +71,7 @@ class AdminTicketReviewController extends Controller
                             $complaintQuery->where('subject_title', 'like', '%' . $search . '%')
                                 ->orWhere('reference_number', 'like', '%' . $search . '%');
                         })
-                        ->orWhereHas('complaint.student.user', fn ($userQuery) => $userQuery->where('name', 'like', '%' . $search . '%'));
+                        ->orWhereHas('complaint', fn ($complaintQuery) => $complaintQuery->where('is_anonymous', false)->whereHas('student.user', fn ($userQuery) => $userQuery->where('name', 'like', '%' . $search . '%')));
                 });
             })
             ->when($request->filled('category_filter'), function ($query) use ($request) {
@@ -131,7 +131,7 @@ class AdminTicketReviewController extends Controller
                             $complaintQuery->where('subject_title', 'like', '%' . $search . '%')
                                 ->orWhere('reference_number', 'like', '%' . $search . '%');
                         })
-                        ->orWhereHas('complaint.student.user', fn ($userQuery) => $userQuery->where('name', 'like', '%' . $search . '%'));
+                        ->orWhereHas('complaint', fn ($complaintQuery) => $complaintQuery->where('is_anonymous', false)->whereHas('student.user', fn ($userQuery) => $userQuery->where('name', 'like', '%' . $search . '%')));
                 });
             })
             ->when($request->filled('category_filter'), function ($query) use ($request) {
@@ -220,11 +220,6 @@ class AdminTicketReviewController extends Controller
             'jurisdiction' => 'required|in:sds,recipient',
         ]);
 
-        abort_if(
-            $ticket->complaint?->is_anonymous && $validated['classification'] !== Ticket::CLASSIFICATION_INFORMATIONAL,
-            422,
-            'Anonymous submissions can only be kept as informational records.'
-        );
 
 
         $ticket->update([
@@ -321,7 +316,7 @@ class AdminTicketReviewController extends Controller
 
         AuditLog::log($ticket->id, 'ticket_retained_in_sds_records', Auth::id(), 'Informational ticket retained in SDS records and closed.');
 
-        if (! $ticket->complaint?->is_anonymous && $ticket->complaint?->student?->user?->email) {
+        if ($ticket->complaint?->student?->user?->email) {
             EmailNotification::create([
                 'ticket_id' => $ticket->id,
                 'recipient_email' => $ticket->complaint->student->user->email,
@@ -379,7 +374,6 @@ class AdminTicketReviewController extends Controller
             404,
             'Only needs-resolution tickets can be assigned.'
         );
-        abort_if($ticket->complaint?->is_anonymous, 422, 'Anonymous submissions can only be kept as informational records.');
 
         $validated = $request->validate([
             'assignment_mode' => 'required|in:direct,recipient',
@@ -426,7 +420,6 @@ class AdminTicketReviewController extends Controller
      */
     public function acknowledge(Request $request, Ticket $ticket): RedirectResponse
     {
-        abort_if($ticket->complaint?->is_anonymous, 422, 'Anonymous submissions can only be kept as informational records.');
 
         if ($ticket->status === Ticket::STATUS_ASSIGNED) {
             $this->workflow->acknowledge($ticket, Auth::user());

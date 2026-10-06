@@ -140,6 +140,9 @@ class ComplaintController extends Controller
             'file_attachment' => 'nullable|array|max:10',
             'file_attachment.*' => 'file|mimes:pdf,docx,jpg,jpeg,png,heic|max:10240',
             'is_anonymous' => 'nullable|boolean',
+            'declaration' => 'accepted',
+        ], [
+            'declaration.accepted' => 'Please confirm the declaration before submitting.',
         ]);
 
         $student = Auth::user()->student;
@@ -191,7 +194,7 @@ class ComplaintController extends Controller
         if ($request->hasFile('file_attachment')) {
             foreach ($request->file('file_attachment') as $file) {
                 $attachmentPaths[] = [
-                    'path' => $file->store('complaints', 'public'),
+                    'path' => $file->store('complaints', 'local'),
                     'name' => $file->getClientOriginalName(),
                 ];
             }
@@ -218,6 +221,7 @@ class ComplaintController extends Controller
                 'description' => $validated['description'],
                 'file_attachment' => $attachmentPaths ? json_encode($attachmentPaths) : null,
                 'is_anonymous' => $isAnonymous,
+                'declared_at' => now(),
                 'status' => Complaint::STATUS_SUBMITTED,
             ]);
 
@@ -402,7 +406,7 @@ class ComplaintController extends Controller
 
         if ($request->hasFile('file_attachment')) {
             $attachment = $request->file('file_attachment');
-            $attachmentPath = $attachment->store('complaints/replies', 'public');
+            $attachmentPath = $attachment->store('complaints/replies', 'local');
             $attachmentName = $attachment->getClientOriginalName();
         }
 

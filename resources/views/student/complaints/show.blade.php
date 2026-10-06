@@ -96,7 +96,7 @@
                     @else
                         <x-icons.file-text class="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
                     @endif
-                    <a href="{{ asset('storage/' . $attachment['path']) }}" target="_blank" class="hover:underline">
+                    <a href="{{ $attachment['url'] }}" target="_blank" class="hover:underline">
                         {{ $attachment['name'] }}
                     </a>
                 </p>

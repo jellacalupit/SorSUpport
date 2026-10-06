@@ -27,6 +27,22 @@ class ThreadMessage extends Model
     }
 
     /**
+     * The sender as the signed-in user may see them: the student behind a hidden-identity
+     * ticket appears as Anonymous to everyone else.
+     */
+    public function getDisplaySenderAttribute(): ?User
+    {
+        $sender = $this->sender;
+        $complaint = $this->thread?->ticket?->complaint;
+
+        if ($sender && $complaint && $complaint->isFiledBy($sender) && $complaint->hidesIdentityFrom(\Illuminate\Support\Facades\Auth::user())) {
+            return User::anonymous();
+        }
+
+        return $sender;
+    }
+
+    /**
      * User who sent the message.
      */
     public function sender(): BelongsTo

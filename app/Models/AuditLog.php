@@ -47,6 +47,22 @@ class AuditLog extends Model
     }
 
     /**
+     * The performer as the signed-in user may see them: the student behind a hidden-identity
+     * ticket appears as Anonymous to everyone else.
+     */
+    public function getDisplayPerformerAttribute(): ?User
+    {
+        $performer = $this->performer;
+        $complaint = $this->ticket?->complaint;
+
+        if ($performer && $complaint && $complaint->isFiledBy($performer) && $complaint->hidesIdentityFrom(Auth::user())) {
+            return User::anonymous();
+        }
+
+        return $performer;
+    }
+
+    /**
      * User who performed the action.
      */
     public function performer(): BelongsTo

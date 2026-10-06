@@ -165,6 +165,7 @@ class CategorySettingsTest extends TestCase
         $student = $this->student();
         $category = $this->category(['name' => 'Academic Concerns', 'allows_hidden_identity' => false]);
         $ticket = [
+            'declaration' => '1',
             'category_id' => $category->id,
             'subject_title' => 'Grade concern',
             'description' => 'My grade was not encoded.',
@@ -189,6 +190,7 @@ class CategorySettingsTest extends TestCase
 
         $this->actingAs($this->student())
             ->post(route('student.complaints.store'), [
+                'declaration' => '1',
                 'category_id' => $category->id,
                 'subject_title' => 'Unwanted messages',
                 'description' => 'I keep receiving unwanted messages.',
@@ -213,6 +215,7 @@ class CategorySettingsTest extends TestCase
 
         $this->actingAs($student)
             ->post(route('student.complaints.store'), [
+                'declaration' => '1',
                 'category_id' => $inactive->id,
                 'subject_title' => 'Old category',
                 'description' => 'Trying an inactive category.',

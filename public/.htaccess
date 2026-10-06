@@ -5,6 +5,9 @@
 
     RewriteEngine On
 
+    # Private ticket attachments are only served through the application.
+    RewriteRule ^storage/\.private - [F,L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

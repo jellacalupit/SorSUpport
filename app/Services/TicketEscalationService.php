@@ -107,6 +107,10 @@ class TicketEscalationService
                 sprintf('Ticket escalated to %s.', $targetRecipient->user?->display_name ?? 'the selected recipient')
             );
 
+            if ($ticket->complaint?->names($targetRecipient->user)) {
+                AuditLog::log($ticket->id, 'conflict_of_interest_flagged', $performedBy?->id, 'The ticket was escalated to a person who appears to be named in the complaint.');
+            }
+
             foreach ($this->getUsersToNotify($ticket, $targetRecipient, $performedBy) as $user) {
                 EmailNotification::create([
                     'ticket_id' => $ticket->id,

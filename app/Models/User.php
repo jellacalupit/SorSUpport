@@ -119,6 +119,18 @@ class User extends Authenticatable implements MustVerifyEmailContract
     }
 
     /**
+     * A stand-in shown in place of a student whose identity is hidden on a ticket.
+     */
+    public static function anonymous(): self
+    {
+        return (new self)->forceFill([
+            'name' => 'Anonymous',
+            'first_name' => 'Anonymous',
+            'role' => self::ROLE_STUDENT,
+        ]);
+    }
+
+    /**
      * Only report a profile photo when its file still exists, so views fall back to initials
      * instead of a broken image when the stored file is gone.
      */
