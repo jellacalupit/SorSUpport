@@ -50,6 +50,46 @@ class DefaultPasswordTest extends TestCase
             ->assertRedirect(route('password.force'));
     }
 
+    public function test_an_account_the_admin_activated_skips_email_verification(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_SDS_ADMIN,
+            'is_active' => true,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+        $student = $this->activatedStudent(['is_active' => false, 'email_verified_at' => null]);
+
+        $this->actingAs($admin)->patch(route('admin.accounts.reactivate', $student))->assertSessionHasNoErrors();
+
+        $student->refresh();
+        $this->assertTrue((bool) $student->is_active);
+        $this->assertNotNull($student->email_verified_at);
+
+        auth()->logout();
+
+        $this->post(route('login'), ['username' => '20240001', 'password' => '20240001'])
+            ->assertRedirect(route('password.force'));
+    }
+
+    public function test_an_active_account_left_unverified_still_goes_to_create_password(): void
+    {
+        $student = $this->activatedStudent(['email_verified_at' => null]);
+
+        $this->post(route('login'), ['username' => '20240001', 'password' => '20240001'])
+            ->assertRedirect(route('password.force'));
+
+        $this->assertNotNull($student->fresh()->email_verified_at);
+    }
+
+    public function test_an_inactive_account_still_goes_to_email_verification(): void
+    {
+        $this->activatedStudent(['is_active' => false, 'email_verified_at' => null]);
+
+        $this->post(route('login'), ['username' => '20240001', 'password' => '20240001'])
+            ->assertRedirect(route('verification.notice'));
+    }
+
     public function test_a_student_on_the_default_password_cannot_open_any_page_first(): void
     {
         $student = $this->activatedStudent();

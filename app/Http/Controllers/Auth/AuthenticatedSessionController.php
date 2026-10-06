@@ -35,6 +35,11 @@ class AuthenticatedSessionController extends Controller
 
         AuditLog::activity('user_logged_in', details: sprintf('User %s logged in.', $user->name));
 
+        // Email verification is only for inactive accounts; one the admin activated skips it.
+        if ($user->is_active && ! $user->hasVerifiedEmail()) {
+            $user->forceFill(['email_verified_at' => now()])->save();
+        }
+
         // An account still using its ID as the password must set a new one first.
         if (! $user->must_change_password && filled($user->username) && $request->input('password') === $user->username) {
             $user->forceFill(['must_change_password' => true])->save();

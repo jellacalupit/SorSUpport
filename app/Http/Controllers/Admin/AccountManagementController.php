@@ -355,10 +355,11 @@ class AccountManagementController extends Controller
                 ->withErrors(['account' => 'Complete the account information before activating it.']);
         }
 
-        $user->update([
+        // Activating an account also verifies it, so the user goes straight to creating a password.
+        $user->forceFill([
             'is_active' => true,
             'email_verified_at' => $user->email_verified_at ?? now(),
-        ]);
+        ])->save();
 
         $category = $user->role === AppUser::ROLE_RECIPIENT ? 'recipients' : 'students';
 

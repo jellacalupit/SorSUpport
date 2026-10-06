@@ -92,6 +92,7 @@ class AuthenticationTest extends TestCase
     {
         /** @var User $user */
         $user = User::factory()->create([
+            'is_active' => false,
             'email_verified_at' => null,
         ]);
 
