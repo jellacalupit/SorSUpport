@@ -76,9 +76,7 @@
         );
 
     $adminUserNameForAvatar = trim((string) (Auth::user()?->name ?? ''));
-    $adminAvatarInitials = Auth::user()->must_change_password
-        ? 'A'
-        : (Auth::user()?->name_initials ?: 'A');
+    $adminAvatarInitials = Auth::user()?->name_initials ?: 'A';
     $adminInSetupMode = Auth::check() && Auth::user()->role === 'sds_admin' && Auth::user()->must_change_password;
     $adminIdentityDepartment = $adminInSetupMode ? '—' : (blank(Auth::user()->recipient?->unit) ? '—' : Auth::user()->recipient?->unit);
     $adminIdentityDesignation = $adminInSetupMode ? '—' : (blank(Auth::user()->recipient?->designation) ? '—' : Auth::user()->recipient?->designation);
@@ -870,7 +868,7 @@
                                         @else
 
                                             <span class="grid h-9 w-9 place-items-center">
-                                                {{ Auth::user()->must_change_password ? 'A' : (Auth::user()->name_initials ?: 'A') }}
+                                                {{ Auth::user()->name_initials ?: 'A' }}
                                             </span>
 
                                         @endif

@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use Illuminate\Validation\Rule;
 
 class ForcePasswordController extends Controller
 {
@@ -29,7 +30,10 @@ class ForcePasswordController extends Controller
                 'required',
                 'confirmed',
                 'min:8',
+                Rule::notIn([(string) Auth::user()->username]),
             ],
+        ], [
+            'password.not_in' => 'Your new password cannot be your ID.',
         ]);
 
         /** @var User $user */

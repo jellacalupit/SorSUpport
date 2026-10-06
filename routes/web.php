@@ -328,7 +328,7 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
     });
 
 
-Route::middleware(['auth', 'active.user', 'role:student'])
+Route::middleware(['auth', 'active.user', 'force.password', 'role:student'])
     ->prefix('student')
     ->name('student.')
     ->group(function () {
@@ -377,7 +377,7 @@ Route::middleware(['auth', 'active.user', 'role:student'])
             ->name('complaints.reply');
     });
 
-Route::middleware(['auth', 'active.user', 'role:recipient'])
+Route::middleware(['auth', 'active.user', 'force.password', 'role:recipient'])
     ->prefix('recipient')
     ->name('recipient.')
     ->group(function () {
