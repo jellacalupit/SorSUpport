@@ -154,7 +154,7 @@
                     </select>
                 </div>
                 <aside class="hidden overflow-hidden rounded-xl border border-border bg-card lg:block">
-                    <p class="border-b border-border bg-muted/40 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Categories</p>
+                    <p class="border-b border-border bg-muted/50 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Categories</p>
                     <ul class="max-h-[32rem] overflow-y-auto p-2">
                         <template x-for="item in categories" :key="item.id">
                             <li>
@@ -294,10 +294,6 @@
                     .recipient-departments button[aria-label="Delete department"]:hover { background-color: var(--primary-soft); }
                     .student-departments button[aria-label="Toggle department details"],
                     .recipient-departments button[aria-label="Toggle department details"] { width: 1.5rem; height: 1.5rem; padding: 0; background: transparent; color: var(--primary); }
-                    button[aria-label="Edit course"] { color: var(--muted-foreground); }
-                    button[aria-label="Edit course"]:hover { color: var(--primary); }
-                    button[aria-label="Edit course"] + button[aria-label="Remove course"] { margin-left: 1rem; }
-                    button[aria-label="Edit position"] + button[aria-label="Remove position"] { margin-left: 0.5rem; }
                 </style>
                 <section class="student-departments">
                     <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -330,7 +326,7 @@
 
             <script>
                 document.addEventListener('click', (event) => {
-                    const confirmButton = event.target.closest('button[aria-label="Confirm position"]');
+                    const confirmButton = event.target.closest('[data-designation-confirm]');
                     if (!confirmButton) return;
 
                     requestAnimationFrame(() => {
@@ -340,10 +336,10 @@
                 });
 
                 document.addEventListener('click', (event) => {
-                    const editButton = event.target.closest('button[aria-label="Edit position"]');
+                    const editButton = event.target.closest('[data-designation-edit]');
                     if (!editButton) return;
 
-                    const row = editButton.closest('div.flex.items-start');
+                    const row = editButton.closest('[data-designation-row]');
                     const savedDescription = row?.querySelector('input[name*="[description]"]')?.value || '';
                     requestAnimationFrame(() => {
                         const description = document.querySelector('textarea[placeholder="Designation description"]');
@@ -355,7 +351,7 @@
                 });
 
                 document.addEventListener('click', (event) => {
-                    const cancelButton = event.target.closest('button[aria-label="Cancel position"]');
+                    const cancelButton = event.target.closest('[data-designation-cancel]');
                     if (!cancelButton) return;
 
                     requestAnimationFrame(() => {
@@ -409,27 +405,82 @@
                             <label for="settings-department-description" class="mb-1.5 block text-sm font-semibold text-foreground">Description</label>
                             <textarea id="settings-department-description" name="description" x-model="departmentDescription" rows="3" class="w-full rounded-md border border-input bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"></textarea>
                         </div>
-                        <div x-show="departmentType === 'college'">
-                            <div class="mb-1.5 flex items-center gap-2"><p class="text-sm font-semibold text-foreground">Programs</p><button type="button" @click="courseDraftError = ''; $nextTick(() => $refs.courseInput?.focus())" class="grid h-6 w-6 place-items-center rounded-md border border-gray-300 bg-white text-primary transition-colors hover:bg-primary-soft" aria-label="Add course" title="Add program"><x-icons.plus class="h-3.5 w-3.5" /></button></div>
-                            <div class="grid gap-2">
+                        <div x-show="departmentType === 'college'" class="rounded-lg border border-border">
+                            <div class="border-b border-border bg-muted/50 px-3 py-2">
+                                <p class="text-sm font-semibold text-foreground">Programs</p>
+                                <p class="text-[11px] text-muted-foreground">Fill in a program, then choose Add program. A college needs at least one.</p>
+                            </div>
+                            <div class="grid gap-2 p-3">
                                 <input x-ref="courseInput" type="text" x-model="courseDraft.course" placeholder="Program name" class="h-8 w-full rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring">
                                 <textarea x-model="courseDraft.description" rows="2" placeholder="Program description" class="w-full rounded-md border border-input bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"></textarea>
-                                <div class="grid grid-cols-[7rem_7rem_auto_auto] items-center gap-2">
-                                    <input type="number" min="1" max="6" step="1" x-model="courseDraft.year_level" placeholder="Year levels" class="h-8 w-full rounded-md border border-input bg-white px-2 text-sm text-foreground">
-                                    <input type="number" min="1" max="10" step="1" x-model="courseDraft.block" placeholder="Blocks" class="h-8 w-full rounded-md border border-input bg-white px-2 text-sm text-foreground">
-                                    <button type="button" @click="addCourse()" class="grid h-8 w-8 shrink-0 place-items-center rounded-md text-primary transition-colors hover:bg-primary-soft" aria-label="Confirm course" title="Confirm program"><x-icons.check class="h-4 w-4" /></button>
-                                    <button type="button" @click="courseDraft._editingCourse ? (departmentCourses.splice(courseDraft._editingIndex, 0, courseDraft._editingCourse), resetCourseDraft()) : resetCourseDraft()" class="grid h-8 w-8 shrink-0 place-items-center rounded-md text-primary transition-colors hover:bg-primary-soft" aria-label="Cancel course" title="Cancel"><x-icons.x class="h-4 w-4" /></button>
+                                <div class="flex flex-wrap items-end gap-2">
+                                    <label class="grid w-28 gap-1 text-[11px] font-medium text-muted-foreground">Year levels
+                                        <input type="number" min="1" max="6" step="1" x-model="courseDraft.year_level" placeholder="e.g. 4" class="h-8 w-full rounded-md border border-input bg-white px-2 text-sm text-foreground">
+                                    </label>
+                                    <label class="grid w-28 gap-1 text-[11px] font-medium text-muted-foreground">Blocks (optional)
+                                        <input type="number" min="1" max="10" step="1" x-model="courseDraft.block" placeholder="e.g. 2" class="h-8 w-full rounded-md border border-input bg-white px-2 text-sm text-foreground">
+                                    </label>
+                                    <div class="ml-auto flex items-center gap-2">
+                                        <button type="button" @click="courseDraft._editingCourse ? (departmentCourses.splice(courseDraft._editingIndex, 0, courseDraft._editingCourse), resetCourseDraft()) : resetCourseDraft()" class="inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Clear</button>
+                                        <button type="button" @click="addCourse()" class="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-primary/10 bg-primary-soft px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"><x-icons.plus class="h-3.5 w-3.5" /> Add program</button>
+                                    </div>
                                 </div>
                                 <p x-show="courseDraftError" x-text="courseDraftError" class="text-xs text-destructive"></p>
                             </div>
-                            <div class="mt-2 grid gap-2"><template x-for="(course, index) in departmentCourses" :key="`${course.course}-${index}`"><div class="flex items-start justify-between gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm"><div class="min-w-0"><input type="hidden" :name="`programs[${index}][name]`" :value="course.course"><input type="hidden" :name="`programs[${index}][year_level]`" :value="course.year_level"><input type="hidden" :name="`programs[${index}][block]`" :value="course.block"><input type="hidden" :name="`programs[${index}][description]`" :value="course.description"><div x-text="course.course" class="font-semibold"></div><div x-show="course.description" x-text="course.description" class="text-[11px] leading-relaxed text-muted-foreground"></div><div x-text="`${course.year_level} Year Levels${course.block ? ` · ${course.block} Blocks` : ''}`" class="text-[11px] text-muted-foreground"></div></div><div class="flex shrink-0 items-center gap-1"><button type="button" @click="courseDraft = { ...course, _editingCourse: { ...course }, _editingIndex: index }; departmentCourses.splice(index, 1); $nextTick(() => $refs.courseInput?.focus())" class="text-primary hover:text-primary-dark" aria-label="Edit course" title="Edit program"><x-icons.pencil class="h-4 w-4" /></button><button type="button" @click="removeCourse(index)" class="text-muted-foreground hover:text-destructive" aria-label="Remove course" title="Remove program"><x-icons.x class="h-4 w-4" /></button></div></div></template></div>
+                            <div class="grid gap-2 border-t border-border bg-muted/50 p-3">
+                                <p x-show="departmentCourses.length === 0" class="py-1 text-center text-[11px] text-muted-foreground">No programs added yet.</p>
+                                <template x-for="(course, index) in departmentCourses" :key="`${course.course}-${index}`">
+                                    <div class="flex items-start justify-between gap-3 rounded-md border border-border bg-white px-3 py-2 text-sm">
+                                        <div class="min-w-0">
+                                            <input type="hidden" :name="`programs[${index}][name]`" :value="course.course">
+                                            <input type="hidden" :name="`programs[${index}][year_level]`" :value="course.year_level">
+                                            <input type="hidden" :name="`programs[${index}][block]`" :value="course.block">
+                                            <input type="hidden" :name="`programs[${index}][description]`" :value="course.description">
+                                            <div x-text="course.course" class="font-semibold"></div>
+                                            <div x-show="course.description" x-text="course.description" class="text-[11px] leading-relaxed text-muted-foreground"></div>
+                                            <div x-text="`${course.year_level} Year Levels${course.block ? ` · ${course.block} Blocks` : ''}`" class="text-[11px] text-muted-foreground"></div>
+                                        </div>
+                                        <div class="flex shrink-0 items-center gap-1">
+                                            <button type="button" @click="courseDraft = { ...course, _editingCourse: { ...course }, _editingIndex: index }; departmentCourses.splice(index, 1); $nextTick(() => $refs.courseInput?.focus())" class="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary" aria-label="Edit program" title="Edit program"><x-icons.pencil class="h-3.5 w-3.5" /></button>
+                                            <button type="button" @click="removeCourse(index)" class="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary hover:text-destructive" aria-label="Remove program" title="Remove program"><x-icons.trash class="h-3.5 w-3.5" /></button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
                         </div>
-                        <div>
-                            <div class="mb-1.5 flex items-center gap-2"><p class="text-sm font-semibold text-foreground">Designations</p><button type="button" @click="positionDraftError = ''; $nextTick(() => $refs.positionInput?.focus())" class="grid h-6 w-6 place-items-center rounded-md border border-gray-300 bg-white text-primary transition-colors hover:bg-primary-soft" aria-label="Add position" title="Add designation"><x-icons.plus class="h-3.5 w-3.5" /></button></div>
-                            <div class="grid gap-2"><input x-ref="positionInput" type="text" x-model="positionDraft" @input="positionDraftError = ''" @keydown.enter.prevent="addPosition()" placeholder="Designation name" class="h-8 w-full rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"><textarea x-model="positionDescriptionDraft" @input="positionDraftError = ''" rows="2" placeholder="Designation description" class="w-full rounded-md border border-input bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"></textarea><p x-show="positionDraftError" x-text="positionDraftError" class="text-xs text-destructive"></p><div class="flex items-center justify-end gap-2"><button type="button" @click="addPosition()" class="grid h-8 w-8 shrink-0 place-items-center rounded-md text-primary hover:bg-primary-soft" aria-label="Confirm position" title="Confirm designation"><x-icons.check class="h-4 w-4" /></button><button type="button" @click="positionEditingPosition ? (departmentPositions.splice(positionEditingIndex, 0, positionEditingPosition), positionEditingPosition = null, positionEditingIndex = null, positionDraft = '', positionDescriptionDraft = '', positionDraftError = '') : (positionDraft = '', positionDescriptionDraft = '', positionDraftError = '')" class="grid h-8 w-8 shrink-0 place-items-center rounded-md text-primary hover:bg-primary-soft" aria-label="Cancel position" title="Cancel"><x-icons.x class="h-4 w-4" /></button></div></div>
-                            <div class="mt-2 grid gap-2"><template x-for="(position, index) in departmentPositions" :key="`${position.name}-${index}`"><div class="flex items-start justify-between gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm"><div class="min-w-0"><input type="hidden" :name="`designations[${index}][name]`" :value="position.name"><input type="hidden" :name="`designations[${index}][description]`" :value="position.description"><div x-text="position.name" class="font-semibold"></div><div x-show="position.description" x-text="position.description" class="text-[11px] leading-relaxed text-muted-foreground"></div></div><div class="flex shrink-0 items-center gap-4"><button type="button" @click="positionDraft = position.name; positionDescriptionDraft = position.description || ''; positionEditingPosition = { ...position }; positionEditingIndex = index; departmentPositions.splice(index, 1); $nextTick(() => $refs.positionInput?.focus())" class="text-muted-foreground hover:text-primary" aria-label="Edit position" title="Edit designation"><x-icons.pencil class="h-4 w-4" /></button><button type="button" @click="removePosition(index)" class="text-muted-foreground hover:text-destructive" aria-label="Remove position" title="Remove designation"><x-icons.x class="h-4 w-4" /></button></div></div></template></div>
+                        <div class="rounded-lg border border-border">
+                            <div class="border-b border-border bg-muted/50 px-3 py-2">
+                                <p class="text-sm font-semibold text-foreground">Designations</p>
+                                <p class="text-[11px] text-muted-foreground">The positions staff hold here, such as Dean or Program Chair. Fill one in, then choose Add designation.</p>
+                            </div>
+                            <div class="grid gap-2 p-3">
+                                <input x-ref="positionInput" type="text" x-model="positionDraft" @input="positionDraftError = ''" @keydown.enter.prevent="addPosition()" placeholder="Designation name" class="h-8 w-full rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring">
+                                <textarea x-model="positionDescriptionDraft" @input="positionDraftError = ''" rows="2" placeholder="Designation description" class="w-full rounded-md border border-input bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"></textarea>
+                                <div class="flex items-center justify-end gap-2">
+                                    <button type="button" data-designation-cancel @click="positionEditingPosition ? (departmentPositions.splice(positionEditingIndex, 0, positionEditingPosition), positionEditingPosition = null, positionEditingIndex = null, positionDraft = '', positionDescriptionDraft = '', positionDraftError = '') : (positionDraft = '', positionDescriptionDraft = '', positionDraftError = '')" class="inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Clear</button>
+                                    <button type="button" data-designation-confirm @click="addPosition()" class="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-primary/10 bg-primary-soft px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"><x-icons.plus class="h-3.5 w-3.5" /> Add designation</button>
+                                </div>
+                                <p x-show="positionDraftError" x-text="positionDraftError" class="text-xs text-destructive"></p>
+                            </div>
+                            <div class="grid gap-2 border-t border-border bg-muted/50 p-3">
+                                <p x-show="departmentPositions.length === 0" class="py-1 text-center text-[11px] text-muted-foreground">No designations added yet.</p>
+                                <template x-for="(position, index) in departmentPositions" :key="`${position.name}-${index}`">
+                                    <div data-designation-row class="flex items-start justify-between gap-3 rounded-md border border-border bg-white px-3 py-2 text-sm">
+                                        <div class="min-w-0">
+                                            <input type="hidden" :name="`designations[${index}][name]`" :value="position.name">
+                                            <input type="hidden" :name="`designations[${index}][description]`" :value="position.description">
+                                            <div x-text="position.name" class="font-semibold"></div>
+                                            <div x-show="position.description" x-text="position.description" class="text-[11px] leading-relaxed text-muted-foreground"></div>
+                                        </div>
+                                        <div class="flex shrink-0 items-center gap-1">
+                                            <button type="button" data-designation-edit @click="positionDraft = position.name; positionDescriptionDraft = position.description || ''; positionEditingPosition = { ...position }; positionEditingIndex = index; departmentPositions.splice(index, 1); $nextTick(() => $refs.positionInput?.focus())" class="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary" aria-label="Edit designation" title="Edit designation"><x-icons.pencil class="h-3.5 w-3.5" /></button>
+                                            <button type="button" @click="removePosition(index)" class="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary hover:text-destructive" aria-label="Remove designation" title="Remove designation"><x-icons.trash class="h-3.5 w-3.5" /></button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
                         </div>
-                        <div class="flex justify-end gap-2 pt-2"><button type="button" @click="resetDepartmentForm()" class="inline-flex h-8 items-center justify-center rounded-full border border-border bg-white px-4 text-[11px] font-semibold text-foreground hover:bg-muted">Cancel</button><button type="submit" class="inline-flex h-8 items-center justify-center rounded-full bg-primary px-4 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90">Save</button></div>
+                        <div class="flex justify-end gap-2 border-t border-border pt-4"><button type="button" @click="resetDepartmentForm()" class="inline-flex h-8 items-center justify-center rounded-full border border-border bg-white px-4 text-[11px] font-semibold text-foreground hover:bg-muted">Cancel</button><button type="submit" class="inline-flex h-8 items-center justify-center rounded-full bg-primary px-5 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90">Save</button></div>
                     </form>
                 </div>
             </div>
@@ -584,7 +635,7 @@
                         </div>
                         <button type="button" @click="selectSuggestedRecipients()" class="inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Select</button>
                     </div>
-                    <div x-show="recipientDraftIds.length > 0" class="mt-4 flex flex-wrap gap-3 rounded-lg border border-border bg-muted/40 p-3">
+                    <div x-show="recipientDraftIds.length > 0" class="mt-4 flex flex-wrap gap-3 rounded-lg border border-border bg-muted/50 p-3">
                         <template x-for="recipientId in recipientDraftIds" :key="`selected-${recipientId}`">
                             <template x-for="recipient in recipientOptions.filter(item => item.id === recipientId)" :key="recipient.id">
                                 <div class="relative w-14 text-center">
