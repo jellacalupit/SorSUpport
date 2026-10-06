@@ -31,13 +31,16 @@ class ComplaintCategoryController extends Controller
     {
         $validated = $this->validatedCategory($request);
 
-        $category = DB::transaction(function () use ($validated): ComplaintCategory {
+        $handlingOptions = $this->handlingOptions($request);
+
+        $category = DB::transaction(function () use ($validated, $handlingOptions): ComplaintCategory {
             $category = ComplaintCategory::create([
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
                 'recipient_id' => $validated['recipient_id'] ?? null,
                 'resolution_deadline_days' => $validated['resolution_deadline_days'] ?? 1,
                 'is_active' => true,
+                ...$handlingOptions,
             ]);
 
             $category->suggestedRecipients()->sync($validated['suggested_recipient_ids'] ?? []);
@@ -62,7 +65,9 @@ class ComplaintCategoryController extends Controller
     {
         $validated = $this->validatedCategory($request);
 
-        DB::transaction(function () use ($category, $validated): void {
+        $handlingOptions = $this->handlingOptions($request, $category);
+
+        DB::transaction(function () use ($category, $validated, $handlingOptions): void {
             $category->update([
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
@@ -70,6 +75,7 @@ class ComplaintCategoryController extends Controller
                 ...array_key_exists('resolution_deadline_days', $validated) && $validated['resolution_deadline_days'] !== null
                     ? ['resolution_deadline_days' => $validated['resolution_deadline_days']]
                     : [],
+                ...$handlingOptions,
             ]);
 
             $category->suggestedRecipients()->sync($validated['suggested_recipient_ids'] ?? []);
@@ -135,6 +141,34 @@ class ComplaintCategoryController extends Controller
             ->with('success', 'Escalation hierarchy saved.');
     }
 
+    /**
+     * Add the handbook-based starter categories that do not exist yet. Recipients and escalation
+     * paths are left for the admin to set, since they depend on the campus accounts.
+     */
+    public function storeStarters(): RedirectResponse
+    {
+        $existing = ComplaintCategory::query()->pluck('name')->map(fn (string $name) => mb_strtolower($name))->all();
+        $added = 0;
+
+        foreach (ComplaintCategory::starterCategories() as $starter) {
+            if (in_array(mb_strtolower($starter['name']), $existing, true)) {
+                continue;
+            }
+
+            ComplaintCategory::create($starter + ['resolution_deadline_days' => 15, 'is_active' => true]);
+            $added++;
+        }
+
+        if ($added > 0) {
+            AuditLog::activity('starter_categories_added', details: sprintf('Added %d starter complaint categories.', $added));
+        }
+
+        return redirect()->route('admin.settings')->with(
+            'success',
+            $added > 0 ? "Added {$added} starter categories. Review them and set their recipients." : 'All starter categories already exist.'
+        );
+    }
+
     public function toggleStatus(ComplaintCategory $category): RedirectResponse
     {
         $category->update(['is_active' => ! $category->is_active]);
@@ -159,11 +193,34 @@ class ComplaintCategoryController extends Controller
         return redirect()->route('admin.settings')->with('success', 'Complaint category deleted successfully.');
     }
 
+    /**
+     * Sensitive handling and hidden-identity settings. A form that does not send them leaves an
+     * existing category unchanged. Sensitive categories always accept hidden-identity submissions,
+     * as the handbook allows anonymous harassment complaints.
+     */
+    protected function handlingOptions(Request $request, ?ComplaintCategory $category = null): array
+    {
+        $isSensitive = $request->has('is_sensitive')
+            ? $request->boolean('is_sensitive')
+            : (bool) ($category?->is_sensitive ?? false);
+
+        $allowsHiddenIdentity = $request->has('allows_hidden_identity')
+            ? $request->boolean('allows_hidden_identity')
+            : (bool) ($category?->allows_hidden_identity ?? true);
+
+        return [
+            'is_sensitive' => $isSensitive,
+            'allows_hidden_identity' => $isSensitive || $allowsHiddenIdentity,
+        ];
+    }
+
     protected function validatedCategory(Request $request): array
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'is_sensitive' => 'nullable|boolean',
+            'allows_hidden_identity' => 'nullable|boolean',
             'recipient_id' => 'nullable|exists:recipients,id',
             'resolution_deadline_days' => 'nullable|integer|min:1',
             'suggested_recipient_ids' => 'nullable|array',

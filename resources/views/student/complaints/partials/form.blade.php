@@ -116,7 +116,7 @@
                 </label>
                 <x-input-error :messages="$errors->get('file_attachment')" />
             </div>
-            <div class="grid gap-1.5 pt-2">
+            <div class="grid gap-1.5 pt-2" x-effect="if (! allowsHiddenIdentity) anonymous = false">
                 <div class="relative flex items-center gap-2" x-data="{ privacyPinned: false, privacyHover: false }" x-on:click.outside="privacyPinned = false; privacyHover = false">
                     <label for="is_anonymous" class="text-sm font-semibold leading-5">Privacy option</label>
                     <div class="relative grid h-5 w-4 shrink-0 place-items-center">
@@ -136,7 +136,8 @@
                         </div>
                     </div>
                 </div>
-                <label class="flex items-center gap-3 text-sm">
+                <p x-show="! allowsHiddenIdentity" x-cloak class="text-xs text-muted-foreground">This category needs your name so the office concerned can act on it.</p>
+                <label x-show="allowsHiddenIdentity" class="flex items-center gap-3 text-sm">
                     <input id="is_anonymous" name="is_anonymous" type="checkbox" value="1" x-model="anonymous" class="peer sr-only" />
                     <span class="grid h-4 w-4 shrink-0 place-items-center rounded-full border border-primary text-[11px] font-bold leading-none text-white transition-colors peer-focus-visible:ring-1 peer-focus-visible:ring-ring" x-bind:class="anonymous ? 'bg-primary' : 'bg-transparent'" aria-hidden="true">
                         <svg x-show="anonymous" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="h-3 w-3">

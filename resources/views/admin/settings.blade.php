@@ -1,6 +1,6 @@
 <x-app-layout :role="'admin'" title="System Settings">
     <div class="-mt-1 sm:-mt-2">
-    <div x-data="{ settingsTab: 'category', deleteModalOpen: false, deleteCategoryName: '', deleteCategoryUrl: '', addCategoryOpen: @js(request()->boolean('add_category')), editCategoryOpen: false, editCategory: { id: null, name: '', description: '', recipientId: '' }, suggestedRecipientsOpen: false, recipientSearch: '', selectedRecipientIds: [], recipientDraftIds: [], hierarchyLevels: [{ level: 1, recipientIds: [] }], recipientOptions: @js($recipients->map(fn ($recipient) => ['id' => $recipient->id, 'first_name' => $recipient->user?->first_name ?: $recipient->user?->name, 'name' => $recipient->user?->display_name, 'department' => $recipient->unit, 'avatar' => $recipient->user?->avatar_path ? asset('storage/' . $recipient->user->avatar_path) : null])->values()), categoryOptions: @js($categories->map(fn ($category) => ['id' => $category->id, 'name' => $category->name, 'description' => $category->description, 'recipientId' => $category->recipient_id, 'suggestedRecipientIds' => $category->suggestedRecipients->pluck('id')->values(), 'hierarchyLevels' => $category->escalationHierarchies->groupBy('level')->map(fn ($items, $level) => ['level' => (int) $level, 'recipientIds' => $items->pluck('recipient_id')->values()])->values()])->values()), openEditCategory(categoryId) { const category = this.categoryOptions.find(item => item.id === categoryId); if (!category) return; this.selectedRecipientIds = [...(category.suggestedRecipientIds || [])]; this.hierarchyLevels = (category.hierarchyLevels?.length ? category.hierarchyLevels : [{ level: 1, recipientIds: [] }]).map(level => ({ level: level.level, recipientIds: [...level.recipientIds] })); this.recipientDraftIds = []; this.recipientSearch = ''; this.editCategory = { id: category.id, name: category.name, description: category.description || '', recipientId: category.recipientId || '' }; this.editCategoryOpen = true; }, resetEditCategory() { this.editCategory = { id: null, name: '', description: '', recipientId: '' }; this.hierarchyLevels = [{ level: 1, recipientIds: [] }]; }, closeEditCategory() { this.resetEditCategory(); this.selectedRecipientIds = []; this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; this.editCategoryOpen = false; }, addHierarchyLevel() { const highest = this.hierarchyLevels.reduce((max, level) => Math.max(max, Number(level.level) || 0), 0); this.hierarchyLevels.push({ level: highest + 1, recipientIds: [] }); }, removeHierarchyLevel(index) { if (this.hierarchyLevels.length > 1) this.hierarchyLevels.splice(index, 1); }, openSuggestedRecipients() { this.recipientDraftIds = [...this.selectedRecipientIds]; this.recipientSearch = ''; this.suggestedRecipientsOpen = true; }, selectSuggestedRecipients() { this.selectedRecipientIds = [...new Set(this.recipientDraftIds)]; this.suggestedRecipientsOpen = false; this.recipientSearch = ''; }, closeSuggestedRecipients() { this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; }, resetCategoryForm() { this.$refs.categoryForm?.reset(); this.selectedRecipientIds = []; this.hierarchyLevels = [{ level: 1, recipientIds: [] }]; this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; }, closeCategoryModal() { this.resetCategoryForm(); this.addCategoryOpen = false; } }" class="grid gap-4 sm:gap-6">
+    <div x-data="{ settingsTab: 'category', deleteModalOpen: false, deleteCategoryName: '', deleteCategoryUrl: '', addCategoryOpen: @js(request()->boolean('add_category')), editCategoryOpen: false, editCategory: { id: null, name: '', description: '', recipientId: '', isSensitive: false, allowsHiddenIdentity: true }, suggestedRecipientsOpen: false, recipientSearch: '', selectedRecipientIds: [], recipientDraftIds: [], hierarchyLevels: [{ level: 1, recipientIds: [] }], recipientOptions: @js($recipients->map(fn ($recipient) => ['id' => $recipient->id, 'first_name' => $recipient->user?->first_name ?: $recipient->user?->name, 'name' => $recipient->user?->display_name, 'department' => $recipient->unit, 'avatar' => $recipient->user?->avatar_path ? asset('storage/' . $recipient->user->avatar_path) : null])->values()), categoryOptions: @js($categories->map(fn ($category) => ['id' => $category->id, 'name' => $category->name, 'description' => $category->description, 'recipientId' => $category->recipient_id, 'isSensitive' => (bool) $category->is_sensitive, 'allowsHiddenIdentity' => (bool) $category->allows_hidden_identity, 'suggestedRecipientIds' => $category->suggestedRecipients->pluck('id')->values(), 'hierarchyLevels' => $category->escalationHierarchies->groupBy('level')->map(fn ($items, $level) => ['level' => (int) $level, 'recipientIds' => $items->pluck('recipient_id')->values()])->values()])->values()), openEditCategory(categoryId) { const category = this.categoryOptions.find(item => item.id === categoryId); if (!category) return; this.selectedRecipientIds = [...(category.suggestedRecipientIds || [])]; this.hierarchyLevels = (category.hierarchyLevels?.length ? category.hierarchyLevels : [{ level: 1, recipientIds: [] }]).map(level => ({ level: level.level, recipientIds: [...level.recipientIds] })); this.recipientDraftIds = []; this.recipientSearch = ''; this.editCategory = { id: category.id, name: category.name, description: category.description || '', recipientId: category.recipientId || '', isSensitive: !!category.isSensitive, allowsHiddenIdentity: !!category.allowsHiddenIdentity }; this.editCategoryOpen = true; }, resetEditCategory() { this.editCategory = { id: null, name: '', description: '', recipientId: '', isSensitive: false, allowsHiddenIdentity: true }; this.hierarchyLevels = [{ level: 1, recipientIds: [] }]; }, closeEditCategory() { this.resetEditCategory(); this.selectedRecipientIds = []; this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; this.editCategoryOpen = false; }, addHierarchyLevel() { const highest = this.hierarchyLevels.reduce((max, level) => Math.max(max, Number(level.level) || 0), 0); this.hierarchyLevels.push({ level: highest + 1, recipientIds: [] }); }, removeHierarchyLevel(index) { if (this.hierarchyLevels.length > 1) this.hierarchyLevels.splice(index, 1); }, openSuggestedRecipients() { this.recipientDraftIds = [...this.selectedRecipientIds]; this.recipientSearch = ''; this.suggestedRecipientsOpen = true; }, selectSuggestedRecipients() { this.selectedRecipientIds = [...new Set(this.recipientDraftIds)]; this.suggestedRecipientsOpen = false; this.recipientSearch = ''; }, closeSuggestedRecipients() { this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; }, resetCategoryForm() { this.$refs.categoryForm?.reset(); this.selectedRecipientIds = []; this.hierarchyLevels = [{ level: 1, recipientIds: [] }]; this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; }, closeCategoryModal() { this.resetCategoryForm(); this.addCategoryOpen = false; } }" class="grid gap-4 sm:gap-6">
         <span x-init="settingsTab = @js(request('settings_tab', 'category'))" class="hidden"></span>
         <div class="flex items-end justify-between gap-2">
             <div class="inline-flex min-w-0 items-center gap-3 border-b border-border sm:gap-6">
@@ -18,7 +18,15 @@
                     <li x-data="{ expanded: false }" class="overflow-hidden rounded-lg border border-border bg-card">
                         <div @click="expanded = !expanded" class="flex cursor-pointer items-start justify-between gap-3 px-4 py-3">
                             <div class="min-w-0">
-                                <p class="truncate text-base font-bold text-primary">{{ $category->name }}</p>
+                                <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-bold text-primary">
+                                    <span class="min-w-0 truncate">{{ $category->name }}</span>
+                                    @if ($category->is_sensitive)
+                                        <span class="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground">Sensitive</span>
+                                    @endif
+                                    @unless ($category->allows_hidden_identity)
+                                        <span class="rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Name required</span>
+                                    @endunless
+                                </p>
                                 <p class="mt-0.5 text-xs text-muted-foreground">{{ $category->description ?: 'No category description provided.' }}</p>
                             </div>
                             <div class="flex shrink-0 items-center gap-2">
@@ -65,7 +73,14 @@
                         </div>
                     </li>
                 @empty
-                    <li class="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">No complaint categories configured.</li>
+                    <li class="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground lg:col-span-2">
+                        <p>No complaint categories configured.</p>
+                        <p class="mt-1 text-xs">Add your own, or start from the categories based on the student handbook and adjust them.</p>
+                        <form action="{{ route('admin.categories.starters') }}" method="POST" class="mt-4">
+                            @csrf
+                            <button type="submit" class="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90"><x-icons.plus class="h-3.5 w-3.5" /> Add starter categories</button>
+                        </form>
+                    </li>
                 @endforelse
             </ul>
         </div>
@@ -539,6 +554,18 @@
                         <label for="settings-category-description" class="mb-1.5 block text-sm font-semibold text-foreground">Description</label>
                         <textarea id="settings-category-description" name="description" rows="4" class="w-full rounded-md border border-input bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"></textarea>
                     </div>
+                    <div class="grid gap-3 rounded-lg border border-border p-3">
+                        <label class="flex cursor-pointer items-start gap-2.5 text-sm">
+                            <input type="hidden" name="allows_hidden_identity" value="0">
+                            <input type="checkbox" name="allows_hidden_identity" value="1" checked class="mt-0.5 h-4 w-4 shrink-0" style="accent-color: #7a1d2a">
+                            <span><span class="font-semibold text-foreground">Allow hidden identity</span><span class="block text-[11px] leading-relaxed text-muted-foreground">Students may submit under this category without showing their name and student ID.</span></span>
+                        </label>
+                        <label class="flex cursor-pointer items-start gap-2.5 text-sm">
+                            <input type="hidden" name="is_sensitive" value="0">
+                            <input type="checkbox" name="is_sensitive" value="1"  class="mt-0.5 h-4 w-4 shrink-0" style="accent-color: #7a1d2a">
+                            <span><span class="font-semibold text-foreground">Sensitive category</span><span class="block text-[11px] leading-relaxed text-muted-foreground">For harassment and similar concerns. Tickets are handled confidentially and always accept hidden identity.</span></span>
+                        </label>
+                    </div>
                     <div>
                         <p class="mb-1.5 text-sm font-semibold text-foreground">Suggested Recipients</p>
                         <div class="flex flex-wrap items-center gap-2">
@@ -595,6 +622,18 @@
                         <textarea id="edit-settings-category-description" x-model="editCategory.description" name="description" rows="4" class="w-full rounded-md border border-input bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"></textarea>
                     </div>
                     <input type="hidden" name="recipient_id" :value="editCategory.recipientId || ''">
+                    <div class="grid gap-3 rounded-lg border border-border p-3">
+                        <label class="flex cursor-pointer items-start gap-2.5 text-sm">
+                            <input type="hidden" name="allows_hidden_identity" value="0">
+                            <input type="checkbox" name="allows_hidden_identity" value="1" x-model="editCategory.allowsHiddenIdentity" x-bind:disabled="editCategory.isSensitive" class="mt-0.5 h-4 w-4 shrink-0" style="accent-color: #7a1d2a">
+                            <span><span class="font-semibold text-foreground">Allow hidden identity</span><span class="block text-[11px] leading-relaxed text-muted-foreground">Students may submit under this category without showing their name and student ID.</span></span>
+                        </label>
+                        <label class="flex cursor-pointer items-start gap-2.5 text-sm">
+                            <input type="hidden" name="is_sensitive" value="0">
+                            <input type="checkbox" name="is_sensitive" value="1" x-model="editCategory.isSensitive" class="mt-0.5 h-4 w-4 shrink-0" style="accent-color: #7a1d2a">
+                            <span><span class="font-semibold text-foreground">Sensitive category</span><span class="block text-[11px] leading-relaxed text-muted-foreground">For harassment and similar concerns. Tickets are handled confidentially and always accept hidden identity.</span></span>
+                        </label>
+                    </div>
                     <div>
                         <p class="mb-1.5 text-sm font-semibold text-foreground">Suggested Recipients</p>
                         <div class="flex flex-wrap items-center gap-2">

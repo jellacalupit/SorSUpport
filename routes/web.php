@@ -187,6 +187,9 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
         Route::post('/categories', [ComplaintCategoryController::class, 'store'])
             ->name('categories.store');
 
+        Route::post('/categories/starters', [ComplaintCategoryController::class, 'storeStarters'])
+            ->name('categories.starters');
+
         Route::put('/categories/{category}', [ComplaintCategoryController::class, 'update'])
             ->name('categories.update');
 

@@ -117,7 +117,14 @@ class ComplaintController extends Controller
                 ->values(),
         ]);
 
-        return view('student.complaints.create', compact('categories', 'recipientOptions', 'categoryRecipients'));
+        // Categories under which a student may hide their identity.
+        $hiddenIdentityCategories = $categories
+            ->where('allows_hidden_identity', true)
+            ->pluck('id')
+            ->map(fn ($id) => (string) $id)
+            ->values();
+
+        return view('student.complaints.create', compact('categories', 'recipientOptions', 'categoryRecipients', 'hiddenIdentityCategories'));
     }
 
     /**
@@ -156,6 +163,14 @@ class ComplaintController extends Controller
                 ->withInput()
                 ->withErrors([
                     'category_id' => 'The selected category has no assigned recipient.',
+                ]);
+        }
+
+        if (($validated['is_anonymous'] ?? false) && ! $category->allows_hidden_identity) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'is_anonymous' => 'This category needs your name so the office concerned can act on it.',
                 ]);
         }
 
