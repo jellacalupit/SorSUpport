@@ -258,6 +258,7 @@
                     </button>
                 </form>
                 <script>
+                    {
                     const initialMessageList = document.getElementById('ticket-message-list-{{ $ticket->id }}');
                     const replyForm = document.getElementById('ticket-reply-form');
                     const fileField = replyForm?.elements.file_attachment;
@@ -408,6 +409,7 @@
                             messageField.focus();
                         }
                     });
+                    }
                 </script>
             </div>
     </div>

@@ -662,7 +662,7 @@ class AdminTicketReviewController extends Controller
         }
 
         if ($changes === []) {
-            return redirect()->route('admin.tickets.review.index');
+            return redirect()->route('admin.complaints.show', $ticket->complaint);
         }
 
         DB::transaction(function () use ($ticket, $complaint, $category, $suggestedRecipient, $changes): void {
@@ -677,7 +677,7 @@ class AdminTicketReviewController extends Controller
         });
 
         return redirect()
-            ->route('admin.tickets.review.index')
+            ->route('admin.complaints.show', $ticket->complaint)
             ->with('success', 'Ticket details updated.');
     }
 

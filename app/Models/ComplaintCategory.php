@@ -43,7 +43,7 @@ class ComplaintCategory extends Model
      */
     public function escalationHierarchies(): HasMany
     {
-        return $this->hasMany(EscalationHierarchy::class)->orderBy('level');
+        return $this->hasMany(EscalationHierarchy::class)->orderBy('path_number')->orderBy('level');
     }
 
     /**

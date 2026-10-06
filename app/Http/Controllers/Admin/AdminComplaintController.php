@@ -120,20 +120,25 @@ class AdminComplaintController extends Controller
      */
     public function show(Complaint $complaint): View
     {
-        abort_if($complaint->is_anonymous, 404);
-
         $complaint->load([
             'student.user',
+            'suggestedRecipient.user',
             'category.recipient.user',
+            'category.suggestedRecipients.user',
             'ticket.assignee',
+            'ticket.currentHandler.recipient',
             'ticket.thread.messages.sender',
             'ticket.auditLogs.performer',
         ]);
 
+        // Opening the ticket is what marks it as read, from whichever list it was opened.
         app(TicketUnreadService::class)->markTicketsViewed(Auth::user(), [(string) $complaint->id]);
 
+        $categories = ComplaintCategory::query()->where('is_active', true)->orderBy('name')->get();
+        $recipients = \App\Models\Recipient::query()->activeVerified()->with('user')->orderBy('department')->get();
+
         // Identified complaints should have tickets; if not, still show what we have.
-        return view('admin.complaints.show', compact('complaint'));
+        return view('admin.complaints.show', compact('complaint', 'categories', 'recipients'));
     }
 
     /**

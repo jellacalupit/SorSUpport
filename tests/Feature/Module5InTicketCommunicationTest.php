@@ -57,7 +57,12 @@ class Module5InTicketCommunicationTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.complaints.index'))
             ->assertOk()
-            ->assertSee($complaint->subject_title)
+            ->assertSee($complaint->subject_title);
+
+        // Tickets open as their own page, which is where the missing ticket is explained.
+        $this->actingAs($admin)
+            ->get(route('admin.complaints.show', $complaint))
+            ->assertOk()
             ->assertSee('No ticket has been generated for this complaint yet.');
     }
 

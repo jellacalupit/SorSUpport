@@ -12,6 +12,8 @@ class EscalationHierarchy extends Model
 
     protected $fillable = [
         'complaint_category_id',
+        'path_number',
+        'path_name',
         'level',
         'recipient_id',
     ];

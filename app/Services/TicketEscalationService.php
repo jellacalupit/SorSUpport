@@ -13,7 +13,46 @@ use Illuminate\Support\Facades\DB;
 class TicketEscalationService
 {
     /**
-     * Next recipient in the category's configured hierarchy, used as the suggested escalation target.
+     * The category's escalation paths that the ticket can be escalated along. Each option is one
+     * configured step: ['path' => name, 'level' => n, 'recipient' => Recipient]. Only recipients
+     * configured in the hierarchy are offered, minus the current handler and inactive accounts.
+     */
+    public function escalationOptions(Ticket $ticket): Collection
+    {
+        $category = $ticket->complaint?->category;
+
+        if (! $category) {
+            return collect();
+        }
+
+        $currentHandlerUserId = $ticket->assigned_to ?: $ticket->current_handler_id;
+
+        return $category->escalationHierarchies()
+            ->with('recipient.user')
+            ->get()
+            ->filter(fn ($entry) => $entry->recipient?->user?->is_active
+                && $entry->recipient->user->email_verified_at
+                && (int) $entry->recipient->user_id !== (int) $currentHandlerUserId)
+            ->map(fn ($entry) => [
+                'path_number' => (int) $entry->path_number,
+                'path' => $entry->path_name ?: 'Path ' . $entry->path_number,
+                'level' => (int) $entry->level,
+                'recipient' => $entry->recipient,
+            ])
+            ->values();
+    }
+
+    /**
+     * Recipients a ticket can be escalated to: only those configured in the category's hierarchy.
+     */
+    public function escalationTargets(Ticket $ticket): Collection
+    {
+        return $this->escalationOptions($ticket)->pluck('recipient')->unique('id')->values();
+    }
+
+    /**
+     * Suggested escalation target: the next level on the path the current handler is on,
+     * otherwise the first step of the first path.
      */
     public function getNextRecipient(Ticket $ticket): ?Recipient
     {
@@ -24,57 +63,26 @@ class TicketEscalationService
         }
 
         $hierarchy = $category->escalationHierarchies()->with('recipient.user')->get();
+        $options = $this->escalationOptions($ticket);
 
-        if ($hierarchy->isEmpty()) {
+        if ($options->isEmpty()) {
             return null;
         }
 
         $currentHandlerUserId = $ticket->assigned_to ?: $ticket->current_handler_id;
+        $current = $hierarchy->first(fn ($entry): bool => (int) $entry->recipient?->user_id === (int) $currentHandlerUserId);
 
-        if (! $currentHandlerUserId) {
-            return $hierarchy->first()?->recipient;
+        if ($current) {
+            $next = $options
+                ->where('path_number', (int) $current->path_number)
+                ->first(fn (array $option): bool => $option['level'] > (int) $current->level);
+
+            if ($next) {
+                return $next['recipient'];
+            }
         }
 
-        $levels = $hierarchy->groupBy('level')->sortKeys();
-        $currentLevel = $levels->first(function ($entries) use ($currentHandlerUserId): bool {
-            return $entries->contains(fn ($entry): bool => (int) $entry->recipient?->user_id === (int) $currentHandlerUserId);
-        });
-
-        if ($currentLevel) {
-            $currentLevelNumber = (int) $currentLevel->first()->level;
-            $nextLevel = $levels->first(fn ($entries, $level): bool => (int) $level > $currentLevelNumber);
-
-            return $nextLevel?->first()?->recipient;
-        }
-
-        return $levels->first()?->first()?->recipient;
-    }
-
-    /**
-     * Recipients a ticket can be escalated to: every active recipient except the current handler,
-     * with the category's hierarchy listed first in level order.
-     */
-    public function escalationTargets(Ticket $ticket): Collection
-    {
-        $currentHandlerUserId = $ticket->assigned_to ?: $ticket->current_handler_id;
-
-        $hierarchy = $ticket->complaint?->category
-            ? $ticket->complaint->category->escalationHierarchies()->with('recipient.user')->get()->pluck('recipient')
-            : collect();
-
-        $others = Recipient::query()
-            ->activeVerified()
-            ->with('user')
-            ->orderBy('department')
-            ->get();
-
-        return $hierarchy
-            ->merge($others)
-            ->filter(fn ($recipient) => $recipient?->user?->is_active
-                && $recipient->user->email_verified_at
-                && (int) $recipient->user_id !== (int) $currentHandlerUserId)
-            ->unique('id')
-            ->values();
+        return $options->first()['recipient'];
     }
 
     /**

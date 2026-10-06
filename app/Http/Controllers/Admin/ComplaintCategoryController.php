@@ -73,12 +73,66 @@ class ComplaintCategoryController extends Controller
             ]);
 
             $category->suggestedRecipients()->sync($validated['suggested_recipient_ids'] ?? []);
-            $this->syncEscalationHierarchy($category, $validated['hierarchy_levels'] ?? []);
+
+            // The category form does not carry the hierarchy; only touch it when it was sent.
+            if (array_key_exists('hierarchy_levels', $validated)) {
+                $this->syncEscalationHierarchy($category, $validated['hierarchy_levels'] ?? []);
+            }
         });
 
         AuditLog::activity('category_updated', details: sprintf('Updated complaint category "%s".', $category->name));
 
         return redirect()->route('admin.settings')->with('success', 'Complaint category updated successfully.');
+    }
+
+    /**
+     * Save the escalation paths of a category. Each path is an ordered list of recipients;
+     * the position in the list is the escalation level.
+     */
+    public function updateEscalation(Request $request, ComplaintCategory $category): RedirectResponse
+    {
+        $validated = $request->validate([
+            'paths' => 'nullable|array',
+            'paths.*.name' => 'nullable|string|max:100',
+            'paths.*.recipient_ids' => 'nullable|array',
+            'paths.*.recipient_ids.*' => 'integer|exists:recipients,id',
+        ]);
+
+        $paths = collect($validated['paths'] ?? [])
+            ->map(fn (array $path): array => [
+                'name' => trim((string) ($path['name'] ?? '')),
+                'recipient_ids' => array_values(array_unique(array_map('intval', $path['recipient_ids'] ?? []))),
+            ])
+            ->filter(fn (array $path): bool => $path['recipient_ids'] !== [])
+            ->values();
+
+        $recipientIds = $paths->flatMap(fn (array $path): array => $path['recipient_ids'])->unique();
+
+        if ($recipientIds->isNotEmpty() && Recipient::query()->active()->whereIn('id', $recipientIds)->count() !== $recipientIds->count()) {
+            throw ValidationException::withMessages(['paths' => 'Only active recipients can be placed in an escalation path.']);
+        }
+
+        DB::transaction(function () use ($category, $paths): void {
+            $category->escalationHierarchies()->delete();
+
+            foreach ($paths as $pathIndex => $path) {
+                foreach ($path['recipient_ids'] as $levelIndex => $recipientId) {
+                    EscalationHierarchy::create([
+                        'complaint_category_id' => $category->id,
+                        'path_number' => $pathIndex + 1,
+                        'path_name' => $path['name'] !== '' ? $path['name'] : null,
+                        'level' => $levelIndex + 1,
+                        'recipient_id' => $recipientId,
+                    ]);
+                }
+            }
+        });
+
+        AuditLog::activity('escalation_hierarchy_updated', details: sprintf('Updated the escalation hierarchy of "%s".', $category->name));
+
+        return redirect()
+            ->route('admin.settings', ['settings_tab' => 'escalation', 'category' => $category->id])
+            ->with('success', 'Escalation hierarchy saved.');
     }
 
     public function toggleStatus(ComplaintCategory $category): RedirectResponse

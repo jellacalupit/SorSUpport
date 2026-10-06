@@ -24,7 +24,7 @@ class TicketDetailsEditTest extends TestCase
                 'category_id' => $otherCategory->id,
                 'suggested_recipient_id' => $recipient->id,
             ])
-            ->assertRedirect(route('admin.tickets.review.index'))
+            ->assertRedirect(route('admin.complaints.show', $ticket->complaint))
             ->assertSessionHasNoErrors();
 
         $complaint = $ticket->complaint->refresh();

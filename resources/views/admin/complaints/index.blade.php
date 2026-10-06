@@ -5,16 +5,21 @@
                 $selectedCategory = $categories->firstWhere('id', request('category_filter'));
                 $query = fn (array $values) => route('admin.complaints.index', array_filter($values, fn ($value) => $value !== null && $value !== ''));
             @endphp
-            <div class="mb-4 space-y-3">
-                <div class="flex flex-col gap-2 lg:flex-row lg:items-center">
-                    <div class="relative flex-1">
+            <div class="mb-4 grid gap-2">
+                <div class="flex items-center gap-2">
+                    <div class="relative min-w-0 flex-1">
                         <x-icons.search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <input id="f-search" name="search" value="{{ request('search') }}" autocomplete="off" placeholder="Search ticket id, subject title, recipient or student" class="h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 text-xs shadow-sm outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-ring" />
                     </div>
-                    <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
-                        <div class="col-span-2 flex items-center gap-2">
-                            <span class="shrink-0 text-sm font-medium">Filter by</span>
-                            <details x-data="{}" class="group relative min-w-0 flex-1 sm:w-56 sm:flex-none" x-on:click.outside="$el.removeAttribute('open')">
+                    <a data-reset-filters href="{{ route('admin.complaints.index') }}" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90" aria-label="Refresh all tickets" title="Refresh all tickets">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21 12a9 9 0 1 1-2.64-6.36L21 8" />
+                                <path d="M21 3v5h-5" />
+                            </svg>
+                        </a>
+                </div>
+                <div class="grid grid-cols-2 gap-2 lg:grid-cols-4">
+                    <details x-data="{}" class="group relative min-w-0 w-full" x-on:click.outside="$el.removeAttribute('open')">
                                 <summary id="f-category" class="flex h-9 cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
                                     <span class="truncate">{{ $selectedCategory?->name ?? 'All categories' }}</span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                                 </summary>
@@ -25,68 +30,42 @@
                                     @endforeach
                                 </div>
                             </details>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <details x-data="{}" class="group relative min-w-0 flex-1 sm:w-40 sm:flex-none" x-on:click.outside="$el.removeAttribute('open')">
-                                <summary id="f-classification" class="flex h-9 cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
-                                    <span class="truncate">{{ request('classification_filter') ? ucfirst(str_replace('_', ' ', request('classification_filter'))) : 'All classifications' }}</span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-                                </summary>
-                                <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                                    @foreach (['' => 'All classifications', 'needs_resolution' => 'Needs Resolution', 'informational' => 'Informational', 'invalid' => 'Invalid'] as $value => $label)
-                                        <a href="{{ $query(array_merge(request()->only(['search','category_filter','status_filter','filed_from','filed_to','sort']), ['classification_filter' => $value])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ request('classification_filter', '') === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if (request('classification_filter', '') === $value)<x-icons.check class="absolute right-2 h-4 w-4" />@endif{{ $label }}</a>
-                                    @endforeach
-                                </div>
-                            </details>
-                        </div>
-
-                        <div class="flex items-center gap-2">
-                            <details x-data="{}" class="group relative min-w-0 flex-1 sm:w-40 sm:flex-none" x-on:click.outside="$el.removeAttribute('open')">
-                                <summary id="f-status" class="flex h-9 cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
-                                    <span class="truncate">{{ request('status_filter') ? ucfirst(str_replace('_', ' ', request('status_filter'))) : 'All statuses' }}</span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-                                </summary>
-                                <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                                    @foreach (['' => 'All statuses', 'pending' => 'Pending', 'assigned' => 'Assigned', 'in_progress' => 'In Progress', 'escalated' => 'Escalated', 'resolved' => 'Resolved', 'closed' => 'Closed'] as $value => $label)
-                                        <a href="{{ $query(array_merge(request()->only(['search','category_filter','classification_filter','filed_from','filed_to','sort']), ['status_filter' => $value])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ request('status_filter', '') === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if (request('status_filter', '') === $value)<x-icons.check class="absolute right-2 h-4 w-4" />@endif{{ $label }}</a>
-                                    @endforeach
-                                </div>
-                            </details>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:flex-wrap">
-                    <div class="flex items-center gap-2">
-                        <label for="f-sort" class="w-20 shrink-0 text-sm font-medium sm:w-auto">Sort by</label>
-                        <details x-data="{}" class="group relative min-w-0 flex-1 sm:w-52 sm:flex-none" x-on:click.outside="$el.removeAttribute('open')">
+                    <details x-data="{}" class="group relative min-w-0 w-full" x-on:click.outside="$el.removeAttribute('open')">
                             <summary id="f-sort" class="flex h-9 cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
-                                <span>{{ request('sort', 'latest_update') === 'latest_update' ? 'Latest Update' : (request('sort') === 'oldest_update' ? 'Oldest Update' : (request('sort') === 'latest_submitted' ? 'Latest Submitted' : 'Oldest Submitted')) }}</span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                                <span class="truncate">{{ request('sort', 'latest_update') === 'latest_update' ? 'Latest Update' : (request('sort') === 'oldest_update' ? 'Oldest Update' : (request('sort') === 'latest_submitted' ? 'Latest Submitted' : 'Oldest Submitted')) }}</span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                             </summary>
-                            <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                            <div class="absolute top-full z-50 mt-1 w-full min-w-max rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                                 @foreach (['latest_update' => 'Latest Update', 'oldest_update' => 'Oldest Update', 'latest_submitted' => 'Latest Submitted', 'oldest_submitted' => 'Oldest Submitted'] as $value => $label)
                                     <a href="{{ $query(array_merge(request()->only(['search','category_filter','classification_filter','status_filter','filed_from','filed_to']), ['sort' => $value])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ request('sort', 'latest_update') === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if ((request('sort', 'latest_update') === $value))<x-icons.check class="absolute right-2 h-4 w-4" />@endif{{ $label }}</a>
                                 @endforeach
                             </div>
                         </details>
-                    </div>
-
-                    <div class="flex items-center gap-2">
-                        <label for="f-from" class="w-20 shrink-0 text-sm font-medium sm:w-auto">Filed from</label>
-                        <input id="f-from" type="date" name="filed_from" value="{{ request('filed_from') }}" lang="en-US" class="h-9 min-w-0 flex-1 sm:min-w-[10.5rem] sm:flex-none rounded-md border border-input bg-transparent px-3 text-xs focus:ring-1 focus:ring-ring" />
-                    </div>
-
-                    <div class="flex items-center gap-2">
-                        <label for="f-to" class="w-20 shrink-0 text-sm font-medium sm:w-auto">Filed to</label>
-                        <input id="f-to" type="date" name="filed_to" value="{{ request('filed_to') }}" lang="en-US" class="h-9 min-w-0 flex-1 sm:min-w-[10.5rem] sm:flex-none rounded-md border border-input bg-transparent px-3 text-xs focus:ring-1 focus:ring-ring" />
-                    </div>
-
-                    <div class="flex flex-wrap gap-2">
-                        <a data-reset-filters href="{{ route('admin.complaints.index') }}" class="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90" aria-label="Refresh all tickets" title="Refresh all tickets">
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M21 12a9 9 0 1 1-2.64-6.36L21 8" />
-                                <path d="M21 3v5h-5" />
-                            </svg>
-                        </a>
-                    </div>
+                    <details x-data="{}" class="group relative min-w-0 w-full" x-on:click.outside="$el.removeAttribute('open')">
+                                <summary id="f-classification" class="flex h-9 cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
+                                    <span class="truncate">{{ request('classification_filter') ? ucfirst(str_replace('_', ' ', request('classification_filter'))) : 'All classifications' }}</span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                                </summary>
+                                <div class="absolute top-full z-50 mt-1 w-full min-w-max rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                                    @foreach (['' => 'All classifications', 'needs_resolution' => 'Needs Resolution', 'informational' => 'Informational', 'invalid' => 'Invalid'] as $value => $label)
+                                        <a href="{{ $query(array_merge(request()->only(['search','category_filter','status_filter','filed_from','filed_to','sort']), ['classification_filter' => $value])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ request('classification_filter', '') === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if (request('classification_filter', '') === $value)<x-icons.check class="absolute right-2 h-4 w-4" />@endif{{ $label }}</a>
+                                    @endforeach
+                                </div>
+                            </details>
+                    <details x-data="{}" class="group relative min-w-0 w-full" x-on:click.outside="$el.removeAttribute('open')">
+                                <summary id="f-status" class="flex h-9 cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
+                                    <span class="truncate">{{ request('status_filter') ? ucfirst(str_replace('_', ' ', request('status_filter'))) : 'All statuses' }}</span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                                </summary>
+                                <div class="absolute top-full z-50 mt-1 w-full min-w-max rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                                    @foreach (['' => 'All statuses', 'pending' => 'Pending', 'assigned' => 'Assigned', 'in_progress' => 'In Progress', 'escalated' => 'Escalated', 'resolved' => 'Resolved', 'closed' => 'Closed'] as $value => $label)
+                                        <a href="{{ $query(array_merge(request()->only(['search','category_filter','classification_filter','filed_from','filed_to','sort']), ['status_filter' => $value])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ request('status_filter', '') === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if (request('status_filter', '') === $value)<x-icons.check class="absolute right-2 h-4 w-4" />@endif{{ $label }}</a>
+                                    @endforeach
+                                </div>
+                            </details>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label for="f-from" class="shrink-0 text-xs font-medium sm:text-sm">Filed from</label>
+                    <input id="f-from" type="date" name="filed_from" value="{{ request('filed_from') }}" lang="en-US" class="h-9 min-w-0 flex-1 rounded-md border border-input bg-transparent px-2 text-xs focus:ring-1 focus:ring-ring sm:w-40 sm:flex-none" />
+                    <label for="f-to" class="shrink-0 text-xs font-medium sm:text-sm">to</label>
+                    <input id="f-to" type="date" name="filed_to" value="{{ request('filed_to') }}" lang="en-US" class="h-9 min-w-0 flex-1 rounded-md border border-input bg-transparent px-2 text-xs focus:ring-1 focus:ring-ring sm:w-40 sm:flex-none" />
                 </div>
             </div>
         </form>
@@ -98,7 +77,7 @@
         <ul class="grid grid-cols-1 gap-0.5 xl:hidden">
             @forelse ($complaints as $complaint)
                 <li>
-                    <x-ticket-card :item="$complaint->ticket ?? $complaint" role="admin" :first="$loop->first" :last="$loop->last" data-admin-ticket-link="complaint-{{ $complaint->id }}">
+                    <x-ticket-card :item="$complaint->ticket ?? $complaint" role="admin" :first="$loop->first" :last="$loop->last">
                         Filed by {{ $complaint->is_anonymous ? 'Anonymous' : ($complaint->student?->user?->table_name ?? 'Unknown') }}
                         @if ($complaint->ticket && $complaint->ticket->status !== 'pending' && ($complaint->ticket->currentHandler ?? $complaint->ticket->assignee))
                             <span>· Held by {{ ($complaint->ticket->currentHandler ?? $complaint->ticket->assignee)->table_name }}</span>
@@ -151,8 +130,8 @@
                             $isUnread = $ticket ? app(\App\Services\TicketUnreadService::class)->unreadCountForTicket(Auth::user(), $ticket) > 0 : false;
                         @endphp
                         <tr data-unread="{{ $isUnread ? 'true' : 'false' }}" class="transition-colors hover:bg-primary-soft {{ $isUnread ? 'bg-primary-soft/70' : '' }}">
-                            <td class="whitespace-nowrap px-2 py-1.5 font-mono font-semibold text-primary"><a href="#" data-admin-ticket-link="complaint-{{ $complaint->id }}" class="hover:underline">{{ $complaint->reference_number }}</a></td>
-                            <td class="truncate px-2 py-1.5 {{ $isUnread ? 'text-black' : 'text-muted-foreground' }}"><a href="#" data-admin-ticket-link="complaint-{{ $complaint->id }}" class="block truncate font-medium hover:text-primary">{{ $complaint->subject_title }}</a></td>
+                            <td class="whitespace-nowrap px-2 py-1.5 font-mono font-semibold text-primary"><a href="{{ route('admin.complaints.show', $complaint) }}" class="hover:underline">{{ $complaint->reference_number }}</a></td>
+                            <td class="truncate px-2 py-1.5 {{ $isUnread ? 'text-black' : 'text-muted-foreground' }}"><a href="{{ route('admin.complaints.show', $complaint) }}" class="block truncate font-medium hover:text-primary">{{ $complaint->subject_title }}</a></td>
                             <td class="wrap-break-word py-1.5 pl-1.5 pr-2 {{ $isUnread ? 'text-black' : 'text-muted-foreground' }}">{{ $complaint->category?->name ?? 'Uncategorized' }}</td>
                             <td class="px-2 py-1.5">@if ($ticket)<x-classification-badge :classification="$ticket->classification" class="text-[10px]" />@else<span class="text-[10px] text-muted-foreground">—</span>@endif</td>
                             <td class="py-1.5 pl-1.5 pr-2"><x-status-badge :status="ucwords(str_replace(['_', '-'], ' ', $ticket?->status ?? $complaint->status))" :show-icon="false" class="px-2 py-0.5 text-[10px]" /></td>
@@ -170,32 +149,6 @@
         </div>
         @if ($complaints->hasPages())<div class="mt-5">{{ $complaints->links() }}</div>@endif
         </div>
-
-        <div id="admin-ticket-drawer" class="pointer-events-none invisible fixed inset-0 z-50" aria-hidden="true">
-            <div data-admin-ticket-backdrop class="absolute inset-0 bg-black/35 opacity-0 transition-opacity"></div>
-            <aside data-admin-ticket-panel class="absolute top-0 right-0 flex h-full w-full max-w-full translate-x-full flex-col overflow-y-auto bg-background shadow-2xl transition-transform duration-200 lg:max-w-[72vw] xl:max-w-[58vw]" role="dialog" aria-modal="true" aria-label="Ticket details">
-                <div class="sticky top-0 z-10 flex items-start justify-between border-b border-border bg-card px-4 py-3">
-                    <div>
-                        <h2 class="font-display text-lg font-bold text-primary">Ticket Details</h2>
-                    </div>
-                    <button type="button" data-admin-ticket-close class="grid h-8 w-8 shrink-0 place-items-center rounded-md text-xl leading-none text-muted-foreground hover:bg-muted hover:text-primary" aria-label="Close ticket details">&times;</button>
-                </div>
-                <div data-admin-ticket-body class="p-4"></div>
-            </aside>
-        </div>
-
-        @foreach ($complaints as $complaint)
-            @php
-                $ticket = $complaint->ticket;
-            @endphp
-            <template id="complaint-{{ $complaint->id }}">
-                @if ($ticket)
-                    <x-admin-ticket-view :ticket="$ticket" />
-                @else
-                    <div class="surface p-6 text-center text-sm text-muted-foreground">No ticket has been generated for this complaint yet.</div>
-                @endif
-            </template>
-        @endforeach
 
         <style>
             [data-ticket-results] td:has(.brand-gradient) {
@@ -218,59 +171,5 @@
             }
 
         </style>
-
-        <script>
-            (() => {
-                const drawer = document.getElementById('admin-ticket-drawer');
-                if (!drawer) return;
-                if (drawer.dataset.ready) return;
-                drawer.dataset.ready = 'true';
-
-                const panel = drawer.querySelector('[data-admin-ticket-panel]');
-                const body = drawer.querySelector('[data-admin-ticket-body]');
-                const backdrop = drawer.querySelector('[data-admin-ticket-backdrop]');
-                const closeButton = drawer.querySelector('[data-admin-ticket-close]');
-
-                function openTicket(complaintId) {
-                    const template = document.getElementById(complaintId);
-                    if (!template) return;
-
-                    body.innerHTML = '';
-                    body.appendChild(template.content.cloneNode(true));
-                    if (window.Alpine) window.Alpine.initTree(body);
-
-                    drawer.classList.remove('pointer-events-none', 'invisible');
-                    drawer.setAttribute('aria-hidden', 'false');
-                    backdrop.classList.add('opacity-100');
-                    backdrop.classList.remove('opacity-0');
-                    panel.classList.add('translate-x-0');
-                    panel.classList.remove('translate-x-full');
-                    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
-                        const messageList = body.querySelector('[data-ticket-message-list]');
-                        if (messageList) messageList.scrollTop = messageList.scrollHeight;
-                    }));
-                }
-
-                function closeTicket() {
-                    drawer.classList.add('pointer-events-none', 'invisible');
-                    drawer.setAttribute('aria-hidden', 'true');
-                    backdrop.classList.remove('opacity-100');
-                    backdrop.classList.add('opacity-0');
-                    panel.classList.remove('translate-x-0');
-                    panel.classList.add('translate-x-full');
-                }
-
-                closeButton.addEventListener('click', closeTicket);
-                backdrop.addEventListener('click', closeTicket);
-
-                document.addEventListener('click', (event) => {
-                    const link = event.target.closest('[data-admin-ticket-link]');
-                    if (!link) return;
-                    event.preventDefault();
-                    const complaintId = link.getAttribute('data-admin-ticket-link');
-                    if (complaintId) openTicket(complaintId);
-                });
-            })();
-        </script>
     </div>
 </x-app-layout>

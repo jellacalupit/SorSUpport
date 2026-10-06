@@ -28,9 +28,9 @@
         </div>
 
         <!-- Status and classification -->
-        <div class="grid gap-3 md:grid-cols-2">
-            <x-donut-chart title="Status" :segments="$statusSegments" />
-            <x-donut-chart title="Classification" :segments="$classificationSegments" />
+        <div class="grid grid-cols-2 gap-2 sm:gap-3">
+            <x-donut-chart title="Status" :segments="$statusSegments" stack />
+            <x-donut-chart title="Classification" :segments="$classificationSegments" stack />
         </div>
 
         <!-- Volume -->

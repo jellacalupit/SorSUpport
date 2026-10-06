@@ -190,6 +190,9 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
         Route::put('/categories/{category}', [ComplaintCategoryController::class, 'update'])
             ->name('categories.update');
 
+        Route::put('/categories/{category}/escalation', [ComplaintCategoryController::class, 'updateEscalation'])
+            ->name('categories.escalation.update');
+
         Route::patch('/categories/{category}/toggle-status', [ComplaintCategoryController::class, 'toggleStatus'])
             ->name('categories.toggle-status');
         Route::delete('/categories/{category}', [ComplaintCategoryController::class, 'destroy'])

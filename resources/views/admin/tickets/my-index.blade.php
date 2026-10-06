@@ -10,20 +10,18 @@
                     </div>
                 </div>
 
-                <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-                    <div class="flex items-center gap-2">
-                        <label for="my-classification" class="w-40 shrink-0 text-sm font-medium sm:w-auto">Filter by classification</label>
+                <div class="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+                    <div class="min-w-0">
                         @php
-                            $classificationLabels = ['' => 'All', 'needs_resolution' => 'Needs Resolution', 'informational' => 'Informational', 'invalid' => 'Invalid'];
+                            $classificationLabels = ['' => 'All classifications', 'needs_resolution' => 'Needs Resolution', 'informational' => 'Informational', 'invalid' => 'Invalid'];
                             $selectedClassification = $classification ?? '';
                         @endphp
-                        <details x-data="{}" class="group relative min-w-0 flex-1 sm:w-40 sm:flex-none" x-on:click.outside="$el.removeAttribute('open')">
-                            <span aria-hidden="true" class="invisible block h-0 whitespace-nowrap">All</span>
+                        <details x-data="{}" class="group relative w-full sm:w-44" x-on:click.outside="$el.removeAttribute('open')">
                             <summary id="my-classification" class="flex h-9 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
-                                <span class="truncate">{{ $classificationLabels[$selectedClassification] ?? 'All' }}</span>
+                                <span class="truncate">{{ $classificationLabels[$selectedClassification] ?? 'All classifications' }}</span>
                                 <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                             </summary>
-                            <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                            <div class="absolute top-full z-50 mt-1 w-full min-w-max rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                                 @foreach ($classificationLabels as $value => $label)
                                     <a href="{{ route('admin.tickets.my', array_filter(['search' => request('search'), 'classification_filter' => $value, 'status_filter' => request('status_filter'), 'sort' => request('sort')])) }}" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedClassification === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                         @if ($selectedClassification === $value) <x-icons.check class="absolute right-2 h-4 w-4" /> @endif
@@ -34,19 +32,17 @@
                         </details>
                     </div>
 
-                    <div class="flex items-center gap-2">
-                        <label for="my-status" class="w-40 shrink-0 text-sm font-medium sm:w-auto">Filter by status</label>
+                    <div class="min-w-0">
                         @php
-                            $statusLabels = ['' => 'All', 'in_progress' => 'In Progress', 'escalated' => 'Escalated', 'closed' => 'Closed'];
+                            $statusLabels = ['' => 'All statuses', 'in_progress' => 'In Progress', 'escalated' => 'Escalated', 'closed' => 'Closed'];
                             $selectedStatus = $status ?? '';
                         @endphp
-                        <details x-data="{}" class="group relative min-w-0 flex-1 sm:w-32 sm:flex-none" x-on:click.outside="$el.removeAttribute('open')">
-                            <span aria-hidden="true" class="invisible block h-0 whitespace-nowrap">All</span>
+                        <details x-data="{}" class="group relative w-full sm:w-36" x-on:click.outside="$el.removeAttribute('open')">
                             <summary id="my-status" class="flex h-9 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
-                                <span class="truncate">{{ $statusLabels[$selectedStatus] ?? 'All' }}</span>
+                                <span class="truncate">{{ $statusLabels[$selectedStatus] ?? 'All statuses' }}</span>
                                 <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                             </summary>
-                            <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                            <div class="absolute top-full z-50 mt-1 w-full min-w-max rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                                 @foreach ($statusLabels as $value => $label)
                                     <a href="{{ route('admin.tickets.my', array_filter(['search' => request('search'), 'classification_filter' => request('classification_filter'), 'status_filter' => $value, 'sort' => request('sort')])) }}" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedStatus === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                         @if ($selectedStatus === $value) <x-icons.check class="absolute right-2 h-4 w-4" /> @endif
@@ -57,18 +53,16 @@
                         </details>
                     </div>
 
-                    <div class="flex items-center gap-2">
-                        <label for="my-sort" class="w-40 shrink-0 text-sm font-medium sm:w-auto">Sort by</label>
+                    <div class="min-w-0">
                         @php $sortValue = request('sort', 'newest'); @endphp
-                        <details x-data="{}" class="group relative min-w-0 flex-1 sm:w-36 sm:flex-none" x-on:click.outside="$el.removeAttribute('open')">
-                            <span aria-hidden="true" class="invisible block h-0 whitespace-nowrap">Newest First</span>
+                        <details x-data="{}" class="group relative w-full sm:w-36" x-on:click.outside="$el.removeAttribute('open')">
                             <summary id="my-sort" class="flex h-9 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
                                 <span class="truncate">{{ $sortValue === 'oldest' ? 'Oldest First' : 'Newest First' }}</span>
                                 <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                             </summary>
-                            <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                            <div class="absolute top-full right-0 z-50 mt-1 w-full min-w-max rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                                 @foreach (['newest' => 'Newest First', 'oldest' => 'Oldest First'] as $sortOption => $sortLabel)
-                                    <a href="{{ route('admin.tickets.my', array_filter(['search' => request('search'), 'status_filter' => request('status_filter'), 'sort' => $sortOption])) }}" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $sortValue === $sortOption ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
+                                    <a href="{{ route('admin.tickets.my', array_filter(['search' => request('search'), 'status_filter' => request('status_filter'), 'classification_filter' => request('classification_filter'), 'sort' => $sortOption])) }}" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $sortValue === $sortOption ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                         @if ($sortValue === $sortOption) <x-icons.check class="absolute right-2 h-4 w-4" /> @endif
                                         {{ $sortLabel }}
                                     </a>
@@ -87,9 +81,8 @@
             {{-- Phones: the same tappable cards students and recipients get. --}}
             <ul class="grid grid-cols-1 gap-0.5 md:hidden">
                 @foreach ($tickets as $ticket)
-                    @php $isUnread = app(\App\Services\TicketUnreadService::class)->unreadCountForTicket(Auth::user(), $ticket) > 0; @endphp
-                    <li data-my-ticket-row data-read-url="{{ route('admin.tickets.read', $ticket) }}" data-unread="{{ $isUnread ? 'true' : 'false' }}">
-                        <x-ticket-card :item="$ticket" role="admin" :first="$loop->first" :last="$loop->last" data-my-ticket-link="ticket-{{ $ticket->id }}">
+                    <li>
+                        <x-ticket-card :item="$ticket" role="admin" :first="$loop->first" :last="$loop->last">
                             Filed by {{ $ticket->complaint?->is_anonymous ? 'Anonymous' : ($ticket->complaint?->student?->user?->table_name ?? 'Anonymous') }}
                             @if ($ticket->escalated_at)
                                 <span class="font-semibold text-red-700">· Escalated {{ $ticket->escalated_at->copy()->setTimezone('Asia/Manila')->format('M d') }}</span>
@@ -138,12 +131,12 @@
                                 $isUnread = app(\App\Services\TicketUnreadService::class)->unreadCountForTicket(Auth::user(), $ticket) > 0;
                                 $studentCourseYearBlock = trim(($student?->course ?? 'Course not specified') . ' ' . ($student?->year_level ?? 'N/A') . (($student?->block ?? '') !== '' ? '-' . $student->block : ''));
                             @endphp
-                            <tr data-my-ticket-row data-read-url="{{ route('admin.tickets.read', $ticket) }}" data-unread="{{ $isUnread ? 'true' : 'false' }}" class="align-top transition-colors hover:bg-primary-soft {{ $isUnread ? 'bg-primary-soft/70' : '' }}">
+                            <tr class="align-top transition-colors hover:bg-primary-soft {{ $isUnread ? 'bg-primary-soft/70' : '' }}">
                                 <td class="whitespace-nowrap px-2 py-2 font-mono font-semibold text-primary sm:px-3">
-                                    <a href="#" data-my-ticket-link="ticket-{{ $ticket->id }}" class="hover:underline">{{ $ticket->complaint?->reference_number ?? $ticket->id }}</a>
+                                    <a href="{{ route('admin.complaints.show', $ticket->complaint) }}" class="hover:underline">{{ $ticket->complaint?->reference_number ?? $ticket->id }}</a>
                                 </td>
                                 <td class="px-2 py-2 sm:px-3 {{ $isUnread ? 'text-black' : 'text-muted-foreground' }}">
-                                    <a href="#" data-my-ticket-link="ticket-{{ $ticket->id }}" class="block truncate hover:text-primary hover:underline">{{ $ticket->complaint?->subject_title ?? 'Untitled' }}</a>
+                                    <a href="{{ route('admin.complaints.show', $ticket->complaint) }}" class="block truncate hover:text-primary hover:underline">{{ $ticket->complaint?->subject_title ?? 'Untitled' }}</a>
                                 </td>
                                 <td class="hidden px-2 py-2 sm:px-3 lg:table-cell"><x-classification-badge :classification="$classification" class="text-[10px]" /></td>
                                 <td class="px-2 py-2 sm:px-3"><x-status-badge :status="$statusDisplay" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px]" /></td>
@@ -185,115 +178,5 @@
             <div class="mt-6">{{ $tickets->links() }}</div>
         @endif
         </div>
-
-        <div id="my-ticket-drawer" class="pointer-events-none invisible fixed inset-0 z-50" aria-hidden="true">
-            <div data-my-ticket-backdrop class="absolute inset-0 bg-black/35 opacity-0 transition-opacity"></div>
-            <aside data-my-ticket-panel class="absolute top-0 right-0 flex h-full w-full max-w-full translate-x-full flex-col overflow-y-auto bg-background shadow-2xl transition-transform duration-200 lg:max-w-[72vw] xl:max-w-[58vw]" role="dialog" aria-modal="true" aria-label="Ticket details">
-                <div class="sticky top-0 z-10 flex items-start justify-between border-b border-border bg-card px-4 py-3">
-                    <div>
-                        <h2 class="font-display text-lg font-bold text-primary">Ticket Details</h2>
-                    </div>
-                    <button type="button" data-my-ticket-close class="grid h-8 w-8 shrink-0 place-items-center rounded-md text-xl leading-none text-muted-foreground hover:bg-muted hover:text-primary" aria-label="Close ticket details">&times;</button>
-                </div>
-                <div data-my-ticket-body class="p-4"></div>
-            </aside>
-        </div>
-
-        @foreach ($tickets as $ticket)
-            <template id="ticket-{{ $ticket->id }}">
-                <x-admin-ticket-view :ticket="$ticket" />
-            </template>
-        @endforeach
-
-        <script>
-            (() => {
-                const drawer = document.getElementById('my-ticket-drawer');
-                if (!drawer) {
-                    console.error('Drawer not found');
-                    return;
-                }
-                if (drawer.dataset.ready) return;
-                drawer.dataset.ready = 'true';
-
-                const panel = drawer.querySelector('[data-my-ticket-panel]');
-                const body = drawer.querySelector('[data-my-ticket-body]');
-                const backdrop = drawer.querySelector('[data-my-ticket-backdrop]');
-                const closeButton = drawer.querySelector('[data-my-ticket-close]');
-
-                console.log('Drawer initialized:', { drawer, panel, body, backdrop, closeButton });
-
-                function openTicket(ticketId) {
-                    console.log('Opening ticket:', ticketId);
-                    const template = document.getElementById(ticketId);
-                    console.log('Template found:', !!template);
-                    if (!template) {
-                        console.error('Template not found for:', ticketId);
-                        return;
-                    }
-
-                    body.innerHTML = '';
-                    const content = template.content.cloneNode(true);
-                    body.appendChild(content);
-
-                    console.log('Before opening - drawer classes:', drawer.className);
-                    drawer.classList.remove('pointer-events-none', 'invisible');
-                    drawer.setAttribute('aria-hidden', 'false');
-                    backdrop.classList.add('opacity-100');
-                    backdrop.classList.remove('opacity-0');
-                    panel.classList.add('translate-x-0');
-                    panel.classList.remove('translate-x-full');
-                    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
-                        const messageList = body.querySelector('[data-ticket-message-list]');
-                        if (messageList) messageList.scrollTop = messageList.scrollHeight;
-                    }));
-                    console.log('After opening - drawer classes:', drawer.className);
-                }
-
-                function closeTicket() {
-                    drawer.classList.add('pointer-events-none', 'invisible');
-                    drawer.setAttribute('aria-hidden', 'true');
-                    backdrop.classList.remove('opacity-100');
-                    backdrop.classList.add('opacity-0');
-                    panel.classList.remove('translate-x-0');
-                    panel.classList.add('translate-x-full');
-                }
-
-                closeButton.addEventListener('click', closeTicket);
-                backdrop.addEventListener('click', closeTicket);
-
-                document.addEventListener('click', (event) => {
-                    const link = event.target.closest('[data-my-ticket-link]');
-                    if (link) {
-                        console.log('Ticket link clicked:', link);
-                        event.preventDefault();
-                        const ticketId = link.getAttribute('data-my-ticket-link');
-                        const row = link.closest('[data-my-ticket-row]');
-                        if (row?.dataset.unread === 'true') {
-                            row.dataset.unread = 'false';
-                            row.classList.remove('bg-primary-soft/70');
-                            row.querySelector('[data-unread-badge]')?.remove();
-                            row.querySelector('a.surface')?.classList.replace('bg-primary-soft', 'bg-card');
-                            row.querySelector('td:first-child')?.classList.remove('font-bold');
-                            row.querySelector('td:nth-child(3)')?.classList.remove('font-bold');
-                            [2, 6, 7, 8].forEach((column) => {
-                                const cell = row.querySelector(`td:nth-child(${column})`);
-                                cell?.classList.remove('text-black');
-                                cell?.classList.add('text-muted-foreground');
-                            });
-                        }
-                        if (row?.dataset.readUrl) {
-                            fetch(row.dataset.readUrl, {
-                                method: 'POST',
-                                headers: {
-                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
-                                    'X-Requested-With': 'XMLHttpRequest',
-                                },
-                            }).catch(() => {});
-                        }
-                        openTicket(ticketId);
-                    }
-                });
-            })();
-        </script>
     </section>
 </x-app-layout>

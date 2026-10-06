@@ -1,16 +1,14 @@
 <x-app-layout :role="'admin'" title="System Settings">
     <div class="-mt-1 sm:-mt-2">
-    <div x-data="{ settingsTab: 'category', deleteModalOpen: false, deleteCategoryName: '', deleteCategoryUrl: '', addCategoryOpen: @js(request()->boolean('add_category')), editCategoryOpen: false, editCategory: { id: null, name: '', description: '', recipientId: '' }, suggestedRecipientsOpen: false, recipientSearch: '', selectedRecipientIds: [], recipientDraftIds: [], hierarchyLevels: [{ level: 1, recipientIds: [] }], recipientOptions: @js($recipients->map(fn ($recipient) => ['id' => $recipient->id, 'first_name' => $recipient->user?->first_name ?: $recipient->user?->name, 'name' => $recipient->user?->display_name, 'department' => $recipient->department, 'avatar' => $recipient->user?->avatar_path ? asset('storage/' . $recipient->user->avatar_path) : null])->values()), categoryOptions: @js($categories->map(fn ($category) => ['id' => $category->id, 'name' => $category->name, 'description' => $category->description, 'recipientId' => $category->recipient_id, 'suggestedRecipientIds' => $category->suggestedRecipients->pluck('id')->values(), 'hierarchyLevels' => $category->escalationHierarchies->groupBy('level')->map(fn ($items, $level) => ['level' => (int) $level, 'recipientIds' => $items->pluck('recipient_id')->values()])->values()])->values()), openEditCategory(categoryId) { const category = this.categoryOptions.find(item => item.id === categoryId); if (!category) return; this.selectedRecipientIds = [...(category.suggestedRecipientIds || [])]; this.hierarchyLevels = (category.hierarchyLevels?.length ? category.hierarchyLevels : [{ level: 1, recipientIds: [] }]).map(level => ({ level: level.level, recipientIds: [...level.recipientIds] })); this.recipientDraftIds = []; this.recipientSearch = ''; this.editCategory = { id: category.id, name: category.name, description: category.description || '', recipientId: category.recipientId || '' }; this.editCategoryOpen = true; }, resetEditCategory() { this.editCategory = { id: null, name: '', description: '', recipientId: '' }; this.hierarchyLevels = [{ level: 1, recipientIds: [] }]; }, closeEditCategory() { this.resetEditCategory(); this.selectedRecipientIds = []; this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; this.editCategoryOpen = false; }, addHierarchyLevel() { const highest = this.hierarchyLevels.reduce((max, level) => Math.max(max, Number(level.level) || 0), 0); this.hierarchyLevels.push({ level: highest + 1, recipientIds: [] }); }, removeHierarchyLevel(index) { if (this.hierarchyLevels.length > 1) this.hierarchyLevels.splice(index, 1); }, openSuggestedRecipients() { this.recipientDraftIds = [...this.selectedRecipientIds]; this.recipientSearch = ''; this.suggestedRecipientsOpen = true; }, selectSuggestedRecipients() { this.selectedRecipientIds = [...new Set(this.recipientDraftIds)]; this.suggestedRecipientsOpen = false; this.recipientSearch = ''; }, closeSuggestedRecipients() { this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; }, resetCategoryForm() { this.$refs.categoryForm?.reset(); this.selectedRecipientIds = []; this.hierarchyLevels = [{ level: 1, recipientIds: [] }]; this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; }, closeCategoryModal() { this.resetCategoryForm(); this.addCategoryOpen = false; } }" class="grid gap-6">
+    <div x-data="{ settingsTab: 'category', deleteModalOpen: false, deleteCategoryName: '', deleteCategoryUrl: '', addCategoryOpen: @js(request()->boolean('add_category')), editCategoryOpen: false, editCategory: { id: null, name: '', description: '', recipientId: '' }, suggestedRecipientsOpen: false, recipientSearch: '', selectedRecipientIds: [], recipientDraftIds: [], hierarchyLevels: [{ level: 1, recipientIds: [] }], recipientOptions: @js($recipients->map(fn ($recipient) => ['id' => $recipient->id, 'first_name' => $recipient->user?->first_name ?: $recipient->user?->name, 'name' => $recipient->user?->display_name, 'department' => $recipient->department, 'avatar' => $recipient->user?->avatar_path ? asset('storage/' . $recipient->user->avatar_path) : null])->values()), categoryOptions: @js($categories->map(fn ($category) => ['id' => $category->id, 'name' => $category->name, 'description' => $category->description, 'recipientId' => $category->recipient_id, 'suggestedRecipientIds' => $category->suggestedRecipients->pluck('id')->values(), 'hierarchyLevels' => $category->escalationHierarchies->groupBy('level')->map(fn ($items, $level) => ['level' => (int) $level, 'recipientIds' => $items->pluck('recipient_id')->values()])->values()])->values()), openEditCategory(categoryId) { const category = this.categoryOptions.find(item => item.id === categoryId); if (!category) return; this.selectedRecipientIds = [...(category.suggestedRecipientIds || [])]; this.hierarchyLevels = (category.hierarchyLevels?.length ? category.hierarchyLevels : [{ level: 1, recipientIds: [] }]).map(level => ({ level: level.level, recipientIds: [...level.recipientIds] })); this.recipientDraftIds = []; this.recipientSearch = ''; this.editCategory = { id: category.id, name: category.name, description: category.description || '', recipientId: category.recipientId || '' }; this.editCategoryOpen = true; }, resetEditCategory() { this.editCategory = { id: null, name: '', description: '', recipientId: '' }; this.hierarchyLevels = [{ level: 1, recipientIds: [] }]; }, closeEditCategory() { this.resetEditCategory(); this.selectedRecipientIds = []; this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; this.editCategoryOpen = false; }, addHierarchyLevel() { const highest = this.hierarchyLevels.reduce((max, level) => Math.max(max, Number(level.level) || 0), 0); this.hierarchyLevels.push({ level: highest + 1, recipientIds: [] }); }, removeHierarchyLevel(index) { if (this.hierarchyLevels.length > 1) this.hierarchyLevels.splice(index, 1); }, openSuggestedRecipients() { this.recipientDraftIds = [...this.selectedRecipientIds]; this.recipientSearch = ''; this.suggestedRecipientsOpen = true; }, selectSuggestedRecipients() { this.selectedRecipientIds = [...new Set(this.recipientDraftIds)]; this.suggestedRecipientsOpen = false; this.recipientSearch = ''; }, closeSuggestedRecipients() { this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; }, resetCategoryForm() { this.$refs.categoryForm?.reset(); this.selectedRecipientIds = []; this.hierarchyLevels = [{ level: 1, recipientIds: [] }]; this.recipientDraftIds = []; this.recipientSearch = ''; this.suggestedRecipientsOpen = false; }, closeCategoryModal() { this.resetCategoryForm(); this.addCategoryOpen = false; } }" class="grid gap-4">
         <span x-init="settingsTab = @js(request('settings_tab', 'category'))" class="hidden"></span>
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="inline-flex items-center gap-6 border-b border-border">
-                <button type="button" @click="settingsTab = 'category'" :aria-selected="settingsTab === 'category'" class="inline-flex items-center border-b-2 px-1 pb-2 text-sm transition-colors" :class="settingsTab === 'category' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Category</button>
-                <button type="button" @click="settingsTab = 'escalation'" :aria-selected="settingsTab === 'escalation'" class="inline-flex items-center border-b-2 px-1 pb-2 text-sm transition-colors" :class="settingsTab === 'escalation' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Escalation Hierarchy</button>
-                <button type="button" @click="settingsTab = 'department'" :aria-selected="settingsTab === 'department'" class="inline-flex items-center border-b-2 px-1 pb-2 text-sm transition-colors" :class="settingsTab === 'department' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Department</button>
+        <div class="flex items-end justify-between gap-2">
+            <div class="inline-flex min-w-0 items-center gap-3 border-b border-border sm:gap-6">
+                <button type="button" @click="settingsTab = 'category'" :aria-selected="settingsTab === 'category'" class="inline-flex items-center whitespace-nowrap border-b-2 px-0.5 pb-2 text-[13px] transition-colors sm:px-1 sm:text-sm" :class="settingsTab === 'category' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Category</button>
+                <button type="button" @click="settingsTab = 'escalation'" :aria-selected="settingsTab === 'escalation'" class="inline-flex items-center whitespace-nowrap border-b-2 px-0.5 pb-2 text-[13px] transition-colors sm:px-1 sm:text-sm" :class="settingsTab === 'escalation' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Escalation<span class="hidden min-[400px]:inline">&nbsp;Hierarchy</span></button>
+                <button type="button" @click="settingsTab = 'department'" :aria-selected="settingsTab === 'department'" class="inline-flex items-center whitespace-nowrap border-b-2 px-0.5 pb-2 text-[13px] transition-colors sm:px-1 sm:text-sm" :class="settingsTab === 'department' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Department</button>
             </div>
-            <div class="relative h-9 min-w-[150px]">
-                <button type="button" x-show="settingsTab === 'category'" x-cloak x-on:click.prevent.stop="addCategoryOpen = true" class="absolute top-0 right-0 inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition-opacity duration-150 hover:bg-primary/90"><x-icons.plus class="h-4 w-4" /> Add category</button>
-            </div>
+            <button type="button" x-bind:class="settingsTab === 'category' ? '' : 'invisible'" x-on:click.prevent.stop="addCategoryOpen = true" class="mb-1 inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-primary px-2.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 sm:h-9 sm:gap-1.5 sm:px-3 sm:text-sm"><x-icons.plus class="h-4 w-4" /> Add<span class="hidden sm:inline">&nbsp;category</span></button>
         </div>
 
         <div class="grid min-h-[28rem]">
@@ -72,250 +70,167 @@
             </ul>
         </div>
 
-        <div x-cloak x-data="{
-            categoryOptions: @js($categories->map(fn ($category) => [
+        @php
+            $escalationCategories = $categories->map(fn ($category) => [
                 'id' => $category->id,
                 'name' => $category->name,
-                'statusLabel' => $category->escalationHierarchies->isEmpty()
-                    ? 'Not configured'
-                    : $category->escalationHierarchies->count() . ' level' . ($category->escalationHierarchies->count() === 1 ? '' : 's') . ' configured',
-                'statusTone' => $category->escalationHierarchies->isEmpty() ? 'warning' : 'success',
-                'levels' => $category->escalationHierarchies
-                    ->sortBy('level')
+                'paths' => $category->escalationHierarchies
+                    ->groupBy('path_number')
+                    ->sortKeys()
                     ->values()
-                    ->map(fn ($level) => [
-                        'id' => $level->id,
-                        'type' => 'recipient',
-                        'recipientId' => $level->recipient_id,
-                        'role' => '',
-                        'isTerminal' => false,
+                    ->map(fn ($entries) => [
+                        'name' => (string) ($entries->first()->path_name ?? ''),
+                        'steps' => $entries->sortBy('level')->pluck('recipient_id')->map(fn ($id) => (string) $id)->values()->all(),
                     ])
                     ->all(),
-            ])->values()),
-            recipientOptions: @js($recipients->map(fn ($recipient) => [
-                'id' => $recipient->id,
-                'name' => trim(implode(' ', array_filter([
-                    $recipient->user?->first_name ?: $recipient->user?->name ?: $recipient->user?->username,
-                    $recipient->user?->middle_name ? strtoupper(substr(trim($recipient->user->middle_name), 0, 1)) . '.' : null,
-                    $recipient->user?->last_name,
-                ]))) ?: 'Recipient',
-                'department' => trim((string) $recipient->department) !== '' ? $recipient->department : 'Department not specified',
-                'position' => trim((string) $recipient->designation) !== '' ? $recipient->designation : 'Position not specified',
-                'designation' => trim((string) $recipient->designation) !== '' ? $recipient->designation : 'Position not specified',
-            ])->values()),
-            roleOptions: [
-                { value: 'Department Head', label: 'Department Head' },
-                { value: 'Dean', label: 'Dean' },
-                { value: 'Registrar', label: 'Registrar' },
-                { value: 'Vice Chancellor', label: 'Vice Chancellor' },
-            ],
-            selectedCategoryId: @js($categories->first()?->id ?? null),
-            selectedCategoryName: @js($categories->first()?->name ?? 'No category selected'),
-            levels: [],
-            isLoading: true,
-            hasUnsavedChanges: false,
+            ])->values();
+            $escalationRecipients = $recipients->map(fn ($recipient) => [
+                'id' => (string) $recipient->id,
+                'label' => trim(($recipient->user?->table_name ?? 'Recipient') . ' · ' . (trim((string) $recipient->designation) !== '' ? $recipient->designation : 'No position') . ', ' . (trim((string) $recipient->department) !== '' ? $recipient->department : 'No department')),
+            ])->values();
+        @endphp
+        <div x-cloak x-data="{
+            categories: @js($escalationCategories),
+            recipients: @js($escalationRecipients),
+            selectedId: @js((int) request('category') ?: ($categories->first()?->id)),
+            paths: [],
+            dirty: false,
             init() {
-                this.loadCategory(this.selectedCategoryId);
+                if (!this.categories.some((item) => item.id === this.selectedId)) this.selectedId = this.categories[0]?.id ?? null;
+                this.load();
             },
-            loadCategory(categoryId) {
-                const category = this.categoryOptions.find(item => item.id === categoryId) ?? this.categoryOptions[0] ?? null;
-                this.selectedCategoryId = category ? category.id : null;
-                this.selectedCategoryName = category ? category.name : 'No category selected';
-                this.isLoading = true;
-                this.hasUnsavedChanges = false;
-
-                if (!category) {
-                    this.levels = [];
-                    this.isLoading = false;
+            get category() {
+                return this.categories.find((item) => item.id === this.selectedId) ?? null;
+            },
+            load() {
+                this.paths = (this.category?.paths ?? []).map((path) => ({ name: path.name, steps: [...path.steps] }));
+                this.dirty = false;
+            },
+            select(id) {
+                id = Number(id);
+                if (id === this.selectedId) return;
+                if (this.dirty && !window.confirm('Leave this category without saving your changes?')) {
+                    this.$nextTick(() => { if (this.$refs.categorySelect) this.$refs.categorySelect.value = this.selectedId; });
                     return;
                 }
-
-                this.levels = (category.levels || []).map((level, index) => ({
-                    ...level,
-                    type: level.type ?? 'recipient',
-                    recipientId: level.recipientId ?? '',
-                    role: level.role ?? '',
-                    isTerminal: false,
-                }));
-
-                this.ensureTerminalState();
-                setTimeout(() => this.isLoading = false, 200);
+                this.selectedId = id;
+                this.load();
             },
-            addLevel() {
-                this.levels.push({
-                    id: Date.now() + Math.random(),
-                    type: 'recipient',
-                    recipientId: '',
-                    role: '',
-                    isTerminal: false,
-                });
-                this.ensureTerminalState();
-                this.hasUnsavedChanges = true;
+            summary(category) {
+                const paths = category.paths.filter((path) => path.steps.length);
+                if (!paths.length) return 'Not set';
+                const levels = paths.reduce((total, path) => total + path.steps.length, 0);
+                return `${paths.length} path${paths.length === 1 ? '' : 's'} · ${levels} level${levels === 1 ? '' : 's'}`;
             },
-            removeLevel(index) {
-                if (this.levels.length <= 1) {
-                    this.levels = [];
-                    this.hasUnsavedChanges = true;
-                    return;
-                }
-
-                this.levels.splice(index, 1);
-                this.ensureTerminalState();
-                this.hasUnsavedChanges = true;
-            },
-            ensureTerminalState() {
-                if (!this.levels.length) return;
-                this.levels = this.levels.map((level, index) => ({
-                    ...level,
-                    isTerminal: index === this.levels.length - 1,
-                }));
-            },
-            reorderLevel(fromIndex, toIndex) {
-                if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= this.levels.length || toIndex >= this.levels.length) {
-                    return;
-                }
-
-                const [moved] = this.levels.splice(fromIndex, 1);
-                this.levels.splice(toIndex, 0, moved);
-                this.ensureTerminalState();
-                this.hasUnsavedChanges = true;
-            },
-            markDirty() {
-                this.hasUnsavedChanges = true;
-            },
-            saveChanges() {
-                this.hasUnsavedChanges = false;
-            },
-            isLastLevel(index) {
-                return index === this.levels.length - 1;
+            addPath() { this.paths.push({ name: '', steps: [''] }); this.dirty = true; },
+            removePath(index) { this.paths.splice(index, 1); this.dirty = true; },
+            addStep(path) { path.steps.push(''); this.dirty = true; },
+            removeStep(path, index) { path.steps.splice(index, 1); this.dirty = true; },
+            moveStep(path, index, offset) {
+                const target = index + offset;
+                if (target < 0 || target >= path.steps.length) return;
+                const [moved] = path.steps.splice(index, 1);
+                path.steps.splice(target, 0, moved);
+                this.dirty = true;
             },
         }" x-bind:class="settingsTab === 'escalation' ? 'opacity-100' : 'pointer-events-none opacity-0'" class="col-start-1 row-start-1 transition-opacity duration-150 ease-out">
-            <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-panel lg:grid lg:grid-cols-[minmax(260px,0.9fr)_minmax(0,2.1fr)]">
-                <aside class="border-b border-border bg-muted/20 lg:border-b-0 lg:border-r">
-                    <div class="flex items-center justify-between border-b border-border px-4 py-3">
-                        <div>
-                            <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Escalation</p>
-                            <h2 class="mt-1 text-base font-bold text-foreground">Categories</h2>
-                        </div>
-                        <span class="rounded-full bg-primary-soft px-2 py-1 text-[10px] font-semibold text-primary" x-text="categoryOptions.length"></span>
-                    </div>
-                    <div class="max-h-[32rem] overflow-y-auto p-3">
-                        <ul class="space-y-2">
-                            <template x-for="category in categoryOptions" :key="category.id">
-                                <li>
-                                    <button type="button" @click="loadCategory(category.id)" class="flex w-full items-start justify-between gap-3 rounded-xl border px-3 py-3 text-left transition-colors" :class="selectedCategoryId === category.id ? 'border-primary bg-primary-soft shadow-sm' : 'border-transparent bg-transparent hover:bg-muted/60'">
-                                        <span class="min-w-0">
-                                            <span class="block truncate text-sm font-semibold text-foreground" x-text="category.name"></span>
-                                            <span class="mt-1 block text-[11px] text-muted-foreground" x-text="category.statusLabel"></span>
-                                        </span>
-                                        <span class="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold" :class="category.statusTone === 'success' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'" x-text="category.statusTone === 'success' ? 'Configured' : 'Pending'"></span>
-                                    </button>
-                                </li>
-                            </template>
-                        </ul>
-                    </div>
+            <div class="mb-3 rounded-xl border border-primary/15 bg-primary-soft/40 px-4 py-3 text-xs leading-relaxed text-foreground">
+                <p class="font-semibold text-primary">How escalation works</p>
+                <p class="mt-0.5 text-muted-foreground">When you tap <span class="font-semibold text-foreground">Escalate</span> on a ticket, only the people listed here for that ticket's category can be chosen. A <span class="font-semibold text-foreground">path</span> is one route a ticket can go up through, from Level 1 to the last level. Add another path when the same category can be escalated through a different office.</p>
+            </div>
+
+            <template x-if="categories.length === 0">
+                <p class="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">Add a category first, then set who its tickets can be escalated to.</p>
+            </template>
+
+            <div x-show="categories.length > 0" class="grid gap-3 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start">
+                <!-- Category picker: a dropdown on phones, a list on desktop -->
+                <div class="lg:hidden">
+                    <label for="escalation-category" class="mb-1 block text-xs font-semibold text-muted-foreground">Category</label>
+                    <select id="escalation-category" x-ref="categorySelect" x-on:change="select($event.target.value)" class="h-10 w-full rounded-md border border-input bg-white px-3 text-sm font-semibold text-foreground outline-none focus:ring-1 focus:ring-ring">
+                        <template x-for="item in categories" :key="item.id">
+                            <option :value="item.id" :selected="item.id === selectedId" x-text="`${item.name} (${summary(item)})`"></option>
+                        </template>
+                    </select>
+                </div>
+                <aside class="hidden overflow-hidden rounded-xl border border-border bg-card lg:block">
+                    <p class="border-b border-border bg-muted/40 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Categories</p>
+                    <ul class="max-h-[32rem] overflow-y-auto p-2">
+                        <template x-for="item in categories" :key="item.id">
+                            <li>
+                                <button type="button" x-on:click="select(item.id)" class="flex w-full items-start justify-between gap-2 rounded-lg px-3 py-2.5 text-left transition-colors" :class="selectedId === item.id ? 'bg-primary-soft' : 'hover:bg-muted/60'">
+                                    <span class="min-w-0">
+                                        <span class="block text-sm font-semibold leading-snug" :class="selectedId === item.id ? 'text-primary' : 'text-foreground'" x-text="item.name"></span>
+                                        <span class="mt-0.5 block text-[11px]" :class="summary(item) === 'Not set' ? 'text-amber-700' : 'text-muted-foreground'" x-text="summary(item)"></span>
+                                    </span>
+                                    <span class="mt-1 h-2 w-2 shrink-0 rounded-full" :class="summary(item) === 'Not set' ? 'bg-amber-400' : 'bg-emerald-500'"></span>
+                                </button>
+                            </li>
+                        </template>
+                    </ul>
                 </aside>
 
-                <section class="relative min-h-[30rem] bg-white">
-                    <div x-show="isLoading" x-transition class="flex min-h-[30rem] items-center justify-center">
-                        <div class="flex items-center gap-3 rounded-full border border-border bg-muted/40 px-4 py-2 text-sm text-muted-foreground">
-                            <span class="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></span>
-                            Loading escalation chain...
+                <!-- Paths of the selected category -->
+                <form method="POST" x-bind:action="`/admin/categories/${selectedId}/escalation`" class="min-w-0 rounded-xl border border-border bg-card">
+                    @csrf
+                    @method('PUT')
+                    <div class="flex flex-wrap items-start justify-between gap-2 border-b border-border px-4 py-3">
+                        <div class="min-w-0">
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Escalation hierarchy for</p>
+                            <h2 class="font-display text-lg font-bold leading-tight text-primary" x-text="category?.name"></h2>
                         </div>
+                        <span x-show="dirty" x-cloak class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700"><span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>Unsaved changes</span>
                     </div>
 
-                    <div x-show="!isLoading && levels.length === 0" x-transition class="flex min-h-[30rem] items-center justify-center p-6">
-                        <div class="max-w-md rounded-2xl border border-dashed border-border bg-muted/20 p-8 text-center">
-                            <p class="text-lg font-bold text-foreground">No escalation levels set up for this category yet</p>
-                            <p class="mt-2 text-sm text-muted-foreground">Create the first step in the escalation chain to define how cases should move forward.</p>
-                            <button type="button" @click="addLevel()" class="mt-5 inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90">Add first level</button>
+                    <div class="grid gap-3 p-4">
+                        <div x-show="paths.length === 0" class="rounded-lg border border-dashed border-border p-6 text-center">
+                            <p class="text-sm font-semibold text-foreground">No escalation path yet</p>
+                            <p class="mt-1 text-xs text-muted-foreground">Tickets in this category cannot be escalated until at least one path is added.</p>
                         </div>
+
+                        <template x-for="(path, pathIndex) in paths" :key="pathIndex">
+                            <section class="rounded-lg border border-border bg-background">
+                                <div class="flex items-center gap-2 border-b border-border px-3 py-2">
+                                    <span class="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-foreground" x-text="`Path ${pathIndex + 1}`"></span>
+                                    <input type="text" :name="`paths[${pathIndex}][name]`" x-model="path.name" x-on:input="dirty = true" maxlength="100" placeholder="Name this path, e.g. Through the Dean's office" aria-label="Path name" class="h-8 min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 text-sm font-semibold text-foreground outline-none placeholder:font-normal placeholder:text-muted-foreground hover:border-input focus:border-input focus:bg-white focus:ring-1 focus:ring-ring">
+                                    <button type="button" x-on:click="removePath(pathIndex)" class="grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive" aria-label="Delete path" title="Delete path"><x-icons.trash class="h-4 w-4" /></button>
+                                </div>
+
+                                <ol class="grid gap-2 p-3">
+                                    <template x-for="(recipientId, stepIndex) in path.steps" :key="stepIndex">
+                                        <li class="relative grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-2">
+                                            <span x-show="stepIndex < path.steps.length - 1" class="absolute top-8 -bottom-2 left-4 w-px bg-primary/25" aria-hidden="true"></span>
+                                            <span class="relative grid h-8 w-8 place-items-center rounded-full bg-primary-soft text-xs font-bold text-primary" :title="`Level ${stepIndex + 1}`" x-text="stepIndex + 1"></span>
+                                            <select :name="`paths[${pathIndex}][recipient_ids][]`" x-model="path.steps[stepIndex]" x-on:change="dirty = true" required :aria-label="`Level ${stepIndex + 1} recipient`" class="h-9 w-full min-w-0 rounded-md border border-input bg-white px-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring">
+                                                <option value="">Select recipient</option>
+                                                <template x-for="recipient in recipients" :key="recipient.id">
+                                                    <option :value="recipient.id" :selected="recipient.id === path.steps[stepIndex]" :disabled="path.steps.includes(recipient.id) && recipient.id !== path.steps[stepIndex]" x-text="recipient.label"></option>
+                                                </template>
+                                            </select>
+                                            <span class="flex shrink-0 items-center">
+                                                <button type="button" x-on:click="moveStep(path, stepIndex, -1)" :disabled="stepIndex === 0" class="grid h-8 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary disabled:opacity-30" aria-label="Move level up" title="Move up"><x-icons.arrow-down class="h-4 w-4" /></button>
+                                                <button type="button" x-on:click="moveStep(path, stepIndex, 1)" :disabled="stepIndex === path.steps.length - 1" class="grid h-8 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary disabled:opacity-30" aria-label="Move level down" title="Move down"><x-icons.arrow-down class="h-4 w-4 rotate-180" /></button>
+                                                <button type="button" x-on:click="removeStep(path, stepIndex)" class="grid h-8 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive" aria-label="Remove level" title="Remove level"><x-icons.x class="h-4 w-4" /></button>
+                                            </span>
+                                        </li>
+                                    </template>
+                                    <li x-show="path.steps.length === 0" class="text-xs text-muted-foreground">This path has no levels, so it will not be saved.</li>
+                                </ol>
+
+                                <div class="px-3 pb-3">
+                                    <button type="button" x-on:click="addStep(path)" class="inline-flex h-8 items-center gap-1.5 rounded-md border border-dashed border-primary/50 px-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary-soft"><x-icons.plus class="h-3.5 w-3.5" /> <span x-text="`Add level ${path.steps.length + 1}`"></span></button>
+                                </div>
+                            </section>
+                        </template>
+
+                        <button type="button" x-on:click="addPath()" class="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-dashed border-primary/60 bg-primary-soft/50 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary-soft"><x-icons.plus class="h-4 w-4" /> <span x-text="paths.length ? 'Add another path' : 'Add first path'"></span></button>
                     </div>
 
-                    <div x-show="!isLoading && levels.length > 0" x-transition class="flex min-h-[30rem] flex-col">
-                        <div class="flex items-center justify-between gap-4 border-b border-border px-5 py-4">
-                            <div class="min-w-0">
-                                <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Selected category</p>
-                                <h2 class="mt-1 truncate text-xl font-bold text-foreground" x-text="selectedCategoryName"></h2>
-                                <p class="mt-1 text-sm text-muted-foreground">Define the recipients suggested, in order, when the SDS admin escalates a ticket.</p>
-                            </div>
-                            <button type="button" x-show="hasUnsavedChanges" x-cloak class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-semibold text-amber-700">
-                                <span class="h-2 w-2 rounded-full bg-amber-500"></span>
-                                Unsaved changes
-                            </button>
-                        </div>
-
-                        <div class="relative flex-1 p-5">
-                            <div class="absolute left-[1.45rem] top-9 bottom-9 w-px bg-border"></div>
-                            <div class="space-y-4">
-                                <template x-for="(level, index) in levels" :key="level.id ?? index">
-                                    <div class="relative pl-12">
-                                        <div class="absolute left-0 top-1/2 flex -translate-y-1/2 items-center justify-center">
-                                            <span class="grid h-8 w-8 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground shadow-sm" x-text="index + 1"></span>
-                                        </div>
-
-                                        <div class="rounded-2xl border p-4 shadow-sm transition-colors" :class="isLastLevel(index) ? 'border-amber-200 bg-amber-50/30' : 'border-border bg-card'">
-                                            <div class="flex items-start gap-3">
-                                                <button type="button" draggable="true" @dragstart="$event.dataTransfer.setData('text/plain', index)" @dragover.prevent @drop="reorderLevel(Number($event.dataTransfer.getData('text/plain')), index)" class="mt-1 grid h-8 w-8 shrink-0 cursor-grab place-items-center rounded-md border border-border bg-white text-muted-foreground transition-colors hover:bg-muted" aria-label="Reorder escalation level" title="Reorder escalation level">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-4 w-4"><path d="M9 7h.01M9 12h.01M9 17h.01M15 7h.01M15 12h.01M15 17h.01"/></svg>
-                                                </button>
-
-                                                <div class="grid flex-1 gap-3 md:grid-cols-2">
-                                                    <div>
-                                                        <label class="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Assignment type</label>
-                                                        <select x-model="level.type" @change="markDirty()" class="h-9 w-full rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring">
-                                                            <option value="recipient">Specific Recipient</option>
-                                                            <option value="role">Generic Role</option>
-                                                        </select>
-                                                    </div>
-
-                                                    <div x-show="level.type === 'recipient'" x-cloak>
-                                                        <label class="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Recipient</label>
-                                                        <select x-model="level.recipientId" @change="markDirty()" class="h-9 w-full rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring">
-                                                            <option value="" disabled>Select recipient</option>
-                                                            <template x-for="recipient in recipientOptions" :key="recipient.id">
-                                                                <option :value="recipient.id" x-text="recipient.name + (recipient.department ? ' · ' + recipient.department : '')"></option>
-                                                            </template>
-                                                        </select>
-                                                    </div>
-
-                                                    <div x-show="level.type === 'role'" x-cloak>
-                                                        <label class="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Role label</label>
-                                                        <select x-model="level.role" @change="markDirty()" class="h-9 w-full rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring">
-                                                            <option value="" disabled>Select role</option>
-                                                            <template x-for="role in roleOptions" :key="role.value">
-                                                                <option :value="role.value" x-text="role.label"></option>
-                                                            </template>
-                                                        </select>
-                                                    </div>
-                                                </div>
-
-                                                <button type="button" @click="removeLevel(index)" class="mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-md border border-border bg-white text-muted-foreground transition-colors hover:border-destructive hover:text-destructive" aria-label="Remove escalation level" title="Remove escalation level">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>
-                                                </button>
-                                            </div>
-
-                                            <div x-show="isLastLevel(index)" x-cloak class="mt-4 rounded-xl border border-amber-200 bg-white/70 px-3 py-2">
-                                                <label class="flex items-start gap-3 text-sm text-amber-800">
-                                                    <input type="checkbox" x-model="level.isTerminal" @change="markDirty(); ensureTerminalState();" class="mt-1 h-4 w-4 rounded border-input text-amber-600 focus:ring-amber-500">
-                                                    <span>Last level. The SDS Administrator decides what happens next.</span>
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-
-                            <div class="mt-5 flex justify-center">
-                                <button type="button" @click="addLevel()" class="inline-flex h-10 items-center justify-center rounded-xl border border-dashed border-primary/60 bg-primary-soft px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/10">+ Add Escalation Level</button>
-                            </div>
-                        </div>
-
-                        <div class="sticky bottom-0 z-10 flex justify-end border-t border-border bg-white/95 px-5 py-4 backdrop-blur-sm">
-                            <button type="button" @click="saveChanges()" class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90">Save changes</button>
-                        </div>
+                    <div class="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
+                        <button type="button" x-show="dirty" x-cloak x-on:click="load()" class="inline-flex h-9 items-center justify-center rounded-full border border-border bg-white px-4 text-xs font-semibold text-foreground transition-colors hover:bg-muted">Discard</button>
+                        <button type="submit" class="inline-flex h-9 items-center justify-center rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Save hierarchy</button>
                     </div>
-                </section>
+                </form>
             </div>
         </div>
 

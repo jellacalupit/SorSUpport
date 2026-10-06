@@ -2,6 +2,8 @@
     'title',
     'segments' => [], // each: ['label' => ..., 'color' => ..., 'count' => ...]
     'totalLabel' => 'Tickets',
+    // Stack title, ring and legend on phones, for cards that sit two to a row there.
+    'stack' => false,
 ])
 
 @php
@@ -36,8 +38,9 @@
     }
 @endphp
 
-<div {{ $attributes->merge(['class' => 'flex min-w-0 items-center gap-3 rounded-[20px] border border-border bg-white p-3 shadow-sm']) }}>
-    <div class="relative h-28 w-28 shrink-0 sm:h-32 sm:w-32">
+<div {{ $attributes->merge(['class' => 'flex min-w-0 items-center rounded-[20px] border border-border bg-white shadow-sm ' . ($stack ? 'flex-col gap-2 p-2.5 sm:flex-row sm:gap-3 sm:p-3' : 'gap-3 p-3')]) }}>
+    @if ($stack)<h3 class="text-sm font-semibold text-black sm:hidden">{{ $title }}</h3>@endif
+    <div class="relative shrink-0 {{ $stack ? 'h-24 w-24' : 'h-28 w-28' }} sm:h-32 sm:w-32">
         <svg viewBox="0 0 100 100" class="h-full w-full drop-shadow-sm" aria-hidden="true">
             <circle cx="50" cy="50" r="{{ $radius }}" fill="none" stroke="#eef2f7" stroke-width="{{ $strokeWidth }}" />
             @foreach ($arcs as $arc)
@@ -60,9 +63,9 @@
         </div>
     </div>
 
-    <div class="min-w-0 flex-1">
-        <h3 class="text-sm font-semibold text-black">{{ $title }}</h3>
-        <ul class="mt-1.5 grid gap-1 text-[11px] text-foreground">
+    <div class="min-w-0 {{ $stack ? 'w-full sm:flex-1' : 'flex-1' }}">
+        <h3 class="{{ $stack ? 'hidden sm:block' : '' }} text-sm font-semibold text-black">{{ $title }}</h3>
+        <ul class="grid gap-1 text-[11px] text-foreground {{ $stack ? 'sm:mt-1.5' : 'mt-1.5' }}">
             @foreach ($segments as $segment)
                 <li class="flex items-center gap-1.5">
                     <span class="h-2.5 w-2.5 shrink-0 rounded-sm" style="background-color: {{ $segment['color'] }};"></span>

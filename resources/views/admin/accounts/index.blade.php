@@ -276,12 +276,12 @@
                     </div>
                 </div>
 
-                <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                <div class="flex w-full items-center gap-2 sm:w-auto">
-                    <span class="whitespace-nowrap text-xs font-semibold text-foreground">Sort by ID</span>
-                    <details x-data="{}" class="group relative w-full sm:w-[220px] sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
+                <div class="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center">
+                <div class="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+                    <span class="hidden whitespace-nowrap text-xs font-semibold text-foreground sm:inline">Sort by ID</span>
+                    <details x-data="{}" class="group relative w-full min-w-0 sm:w-[160px] sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
                         <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
-                            <span class="truncate">{{ $sortOptions[$selectedSort] ?? 'Ascending' }}</span>
+                            <span class="truncate"><span class="sm:hidden">ID · </span>{{ $sortOptions[$selectedSort] ?? 'Ascending' }}</span>
                             <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                         </summary>
                         <div class="absolute top-full left-0 z-50 mt-1 w-full min-w-32 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
@@ -297,12 +297,12 @@
                     </details>
                 </div>
 
-                <details x-data="{}" class="group relative w-full {{ $selectedCategory === 'recipients' ? 'sm:w-[320px]' : 'sm:w-[150px]' }} sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
+                <details x-data="{}" class="group relative w-full min-w-0 {{ $selectedCategory === 'recipients' ? 'sm:w-[240px]' : 'sm:w-[150px]' }} sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
                     <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
-                        <span class="whitespace-nowrap">{{ $departmentOptions[$selectedDepartment] ?? 'All Department' }}</span>
+                        <span class="truncate">{{ $departmentOptions[$selectedDepartment] ?? 'All Department' }}</span>
                         <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                     </summary>
-                    <div class="absolute top-full left-0 z-50 mt-1 w-full min-w-28 max-w-[calc(100vw-2rem)] whitespace-nowrap rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                    <div class="absolute top-full left-0 z-50 mt-1 w-full min-w-44 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                         @foreach ($departmentOptions as $value => $label)
                             <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'department_filter' => $value, 'course_filter' => '', 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedDepartment === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                 @if ($selectedDepartment === $value)
@@ -314,7 +314,7 @@
                     </div>
                 </details>
 
-                <details x-data="{}" x-show="tab === 'students'" x-cloak class="group relative w-full sm:w-[120px] sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
+                <details x-data="{}" x-show="tab === 'students'" x-cloak class="group relative w-full min-w-0 sm:w-[120px] sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
                     <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
                         <span class="truncate">{{ $courseOptions[$selectedCourse] ?? 'All Course' }}</span>
                         <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
@@ -331,7 +331,7 @@
                     </div>
                 </details>
 
-                <details x-data="{}" x-show="tab === 'students'" x-cloak class="group relative w-full sm:w-[120px] sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
+                <details x-data="{}" x-show="tab === 'students'" x-cloak class="group relative w-full min-w-0 sm:w-[120px] sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
                     <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
                         <span class="truncate">{{ $yearOptions[$selectedYear] ?? 'All Year' }}</span>
                         <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
@@ -348,7 +348,7 @@
                     </div>
                 </details>
 
-                <details x-data="{}" x-show="tab === 'students'" x-cloak class="group relative w-full sm:w-[120px] sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
+                <details x-data="{}" x-show="tab === 'students'" x-cloak class="group relative w-full min-w-0 sm:w-[120px] sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
                     <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
                         <span class="truncate">{{ $blockOptions[$selectedBlock] ?? 'All Block' }}</span>
                         <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
@@ -365,7 +365,7 @@
                     </div>
                 </details>
 
-                <details x-data="{}" class="group relative w-full sm:w-[120px] sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
+                <details x-data="{}" class="group relative w-full min-w-0 sm:w-[120px] sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
                     <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
                         <span class="truncate">{{ $statusOptions[$selectedStatus] ?? 'All Status' }}</span>
                         <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>

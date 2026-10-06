@@ -1,134 +1,362 @@
 <x-app-layout :role="'admin'" title="Analytics">
     @php
         $data = $dashboard;
-        $categoryLabels = array_keys($data['categoryCounts']);
-        $categoryValues = array_values($data['categoryCounts']);
-        $statusLabels = array_keys($data['statusCounts']);
-        $statusValues = array_values($data['statusCounts']);
+        $total = (int) $data['total'];
+        $percent = fn ($count, $of = null) => ($of ?? $total) > 0 ? round($count / ($of ?? $total) * 100, 1) : 0;
+        $formatDate = fn ($date) => $date ? \Illuminate\Support\Carbon::parse($date)->format('M j, Y') : null;
+        $hours = function ($value) {
+            $value = (float) $value;
+
+            return $value >= 48 ? round($value / 24, 1) . ' d' : round($value, 1) . ' h';
+        };
+
+        $periodLabel = ($filters['start_date'] ?? null) || ($filters['end_date'] ?? null)
+            ? ($formatDate($filters['start_date'] ?? null) ?? 'Start') . ' – ' . ($formatDate($filters['end_date'] ?? null) ?? 'Today')
+            : 'All time';
+        $activeFilters = collect([
+            ($filters['category_id'] ?? null) ? $categoryOptions->firstWhere('id', $filters['category_id'])?->name : null,
+            ($filters['classification'] ?? null) ? ucwords(str_replace('_', ' ', $filters['classification'])) : null,
+            ($filters['status'] ?? null) ? ucwords(str_replace('_', ' ', $filters['status'])) : null,
+            $filters['department'] ?? null,
+        ])->filter()->values();
+
+        $inProgress = (int) (($data['statusCounts']['Assigned'] ?? 0) + ($data['statusCounts']['In Progress'] ?? 0));
+        $open = (int) (($data['statusCounts']['Pending'] ?? 0) + $inProgress + ($data['statusCounts']['Escalated'] ?? 0));
+        $kpis = [
+            ['label' => 'Total tickets', 'value' => number_format($total), 'hint' => $periodLabel, 'icon' => 'ticket', 'tone' => 'bg-primary-soft text-primary'],
+            ['label' => 'Resolution rate', 'value' => $percent($data['resolved']) . '%', 'hint' => number_format($data['resolved']) . ' resolved or closed', 'icon' => 'check', 'tone' => 'bg-emerald-50 text-emerald-700'],
+            ['label' => 'Avg. resolution time', 'value' => $hours($data['averageHours']), 'hint' => 'From submission to resolution', 'icon' => 'clock', 'tone' => 'bg-blue-50 text-blue-700'],
+            ['label' => 'Escalation rate', 'value' => $data['escalations']['rate'] . '%', 'hint' => number_format($data['escalations']['tickets']) . ' ticket(s) escalated', 'icon' => 'alert-triangle', 'tone' => 'bg-red-50 text-red-700'],
+        ];
+        $pulse = [
+            ['label' => 'Open now', 'value' => $open],
+            ['label' => 'Awaiting review', 'value' => $data['statusCounts']['Pending'] ?? 0],
+            ['label' => 'In progress', 'value' => $inProgress],
+            ['label' => 'Invalid', 'value' => $data['classification']['Invalid'] ?? 0],
+        ];
+
+        $statusSegments = [
+            ['label' => 'Pending', 'color' => '#facc15', 'count' => (int) ($data['statusCounts']['Pending'] ?? 0)],
+            ['label' => 'In Progress', 'color' => '#2563eb', 'count' => $inProgress],
+            ['label' => 'Escalated', 'color' => '#dc2626', 'count' => (int) ($data['statusCounts']['Escalated'] ?? 0)],
+            ['label' => 'Resolved', 'color' => '#16a34a', 'count' => (int) ($data['statusCounts']['Resolved'] ?? 0)],
+            ['label' => 'Closed', 'color' => '#9ca3af', 'count' => (int) ($data['statusCounts']['Closed'] ?? 0)],
+        ];
+        $escalationSegments = [
+            ['label' => 'Never escalated', 'color' => '#10b981', 'count' => (int) $data['escalations']['never']],
+            ['label' => 'Escalated once', 'color' => '#fbbf24', 'count' => (int) $data['escalations']['once']],
+            ['label' => 'More than once', 'color' => '#ef4444', 'count' => (int) $data['escalations']['repeated']],
+        ];
+        $classificationBars = [
+            ['label' => 'Needs Resolution', 'color' => 'bg-primary', 'count' => (int) ($data['classification']['Needs Resolution'] ?? 0)],
+            ['label' => 'Informational', 'color' => 'bg-slate-800', 'count' => (int) ($data['classification']['Informational'] ?? 0)],
+            ['label' => 'Invalid', 'color' => 'bg-red-500', 'count' => (int) ($data['classification']['Invalid'] ?? 0)],
+        ];
+        $categoryBars = collect($data['categoryCounts'])->sortDesc();
+        $departmentBars = collect($data['departments'])->sortByDesc('total')->values();
+        $recipientRows = collect($data['recipients'])->sortByDesc('assigned')->values();
+
         $analyticsPayload = [
             'volume' => $data['volume'],
-            'categories' => ['labels' => $categoryLabels, 'data' => $categoryValues],
-            'status' => ['labels' => $statusLabels, 'data' => $statusValues],
             'resolution' => ['labels' => array_keys($data['resolutionByCategory']), 'data' => array_values($data['resolutionByCategory'])],
-            'escalation' => ['labels' => array_keys($data['escalations']['byCategory']), 'data' => array_values($data['escalations']['byCategory'])],
         ];
+
+        $filterDropdowns = [
+            ['name' => 'category_id', 'label' => 'Category', 'all' => 'All categories', 'options' => $categoryOptions->mapWithKeys(fn ($category) => [(string) $category->id => $category->name])->all()],
+            ['name' => 'classification', 'label' => 'Classification', 'all' => 'All classifications', 'options' => ['needs_resolution' => 'Needs Resolution', 'informational' => 'Informational', 'invalid' => 'Invalid', 'unclassified' => 'Unclassified']],
+            ['name' => 'status', 'label' => 'Status', 'all' => 'All statuses', 'options' => ['pending' => 'Pending', 'in_progress' => 'In Progress', 'escalated' => 'Escalated', 'resolved' => 'Resolved', 'closed' => 'Closed']],
+            ['name' => 'department', 'label' => 'Department', 'all' => 'All departments', 'options' => $departmentOptions->mapWithKeys(fn ($department) => [$department => $department])->all()],
+        ];
+        $cardClass = 'min-w-0 rounded-2xl border border-border bg-white p-4 shadow-sm';
+        $titleClass = 'font-display text-sm font-bold text-foreground';
+        $subtitleClass = 'mt-0.5 text-[11px] text-muted-foreground';
     @endphp
-    <div class="space-y-6 pb-10">
-        @php
-            $formatDate = fn ($date) => $date ? \Illuminate\Support\Carbon::parse($date)->format('F j, Y') : 'All time';
-            $activeFilterLabels = collect([
-                ($filters['category_id'] ?? null) ? $categoryOptions->firstWhere('id', $filters['category_id'])?->name : 'All Categories',
-                ($filters['classification'] ?? null) ? str_replace('_', ' ', ucfirst($filters['classification'])) : 'All Classifications',
-                ($filters['status'] ?? null) ? str_replace('_', ' ', ucfirst($filters['status'])) : 'All Statuses',
-                $filters['department'] ?? 'All Departments',
-            ]);
-        @endphp
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-            <div class="flex min-w-0 flex-1 flex-col gap-2 rounded-xl border border-border bg-primary-soft/30 p-2.5 sm:flex-row sm:items-center sm:justify-between sm:p-3">
-                <div class="min-w-0">
-                    <p class="text-sm font-bold text-primary">Showing results for:</p>
-                    <p class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        <span>{{ $formatDate($filters['start_date'] ?? null) }} – {{ $formatDate($filters['end_date'] ?? null) }}</span>
-                        @foreach ($activeFilterLabels as $label)
-                            <span class="before:mr-3 before:content-['•']">{{ $label }}</span>
-                        @endforeach
-                    </p>
-                </div>
-                <span class="inline-flex shrink-0 items-center gap-2 rounded-lg border border-primary/10 bg-white px-3 py-1.5 text-xs font-bold text-primary"><x-icons.ticket class="h-4 w-4" /> {{ number_format($data['total']) }} Filtered Tickets</span>
+
+    <div class="grid min-w-0 gap-3 pb-6 sm:gap-4">
+        <!-- What is being shown, and the report -->
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="min-w-0">
+                <p class="text-sm font-semibold text-foreground">{{ $periodLabel }}</p>
+                <p class="flex flex-wrap gap-x-2 text-[11px] text-muted-foreground">
+                    <span>{{ number_format($total) }} ticket(s)</span>
+                    @forelse ($activeFilters as $label)
+                        <span>· {{ $label }}</span>
+                    @empty
+                        <span>· No filters applied</span>
+                    @endforelse
+                </p>
             </div>
-            <a href="{{ route('admin.analytics.export.pdf', request()->query()) }}" class="inline-flex h-9 shrink-0 items-center justify-center gap-2 self-center rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 sm:self-center"><x-icons.download class="h-4 w-4" /> Generate Report</a>
+            <a href="{{ route('admin.analytics.export.pdf', request()->query()) }}" class="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90 sm:text-sm"><x-icons.download class="h-4 w-4" /> Generate Report</a>
         </div>
-        <form method="GET" class="surface p-4 sm:p-5">
-            <div class="mb-4 flex items-center gap-2 text-primary"><span class="grid h-7 w-7 place-items-center rounded-full bg-primary-soft"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6 7v5l-4 2v-7z" /></svg></span><h2 class="font-display text-base font-bold">Filter Analytics</h2></div>
-            <div class="grid gap-x-5 gap-y-4 md:grid-cols-2 xl:grid-cols-3">
-                <div><label class="mb-1.5 block text-xs font-semibold text-muted-foreground">Date Range</label><div class="flex items-center gap-2"><div class="min-w-0 flex-1"><input type="date" name="start_date" value="{{ $filters['start_date'] ?? '' }}" aria-label="Start date" class="h-9 w-full rounded-md border border-input bg-white px-2 text-sm"></div><span class="shrink-0 text-sm text-muted-foreground" aria-hidden="true">&mdash;</span><div class="min-w-0 flex-1"><input type="date" name="end_date" value="{{ $filters['end_date'] ?? '' }}" aria-label="End date" class="h-9 w-full rounded-md border border-input bg-white px-2 text-sm"></div></div></div>
-                <div><label class="mb-1.5 block text-xs font-semibold text-muted-foreground">Category</label><details x-data="{}" class="group relative" x-on:click.outside="$el.removeAttribute('open')"><summary class="flex h-9 cursor-pointer list-none items-center justify-between rounded-md border border-input bg-white px-3 py-2 text-sm shadow-sm transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden"><span class="truncate">{{ $categoryOptions->firstWhere('id', $filters['category_id'] ?? null)?->name ?? 'All Categories' }}</span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></summary><div class="absolute top-full z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md"><button type="button" data-analytics-filter="category_id" data-value="" data-label="All Categories" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-left text-sm {{ empty($filters['category_id']) ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if (empty($filters['category_id']))<x-icons.check class="absolute right-2 h-4 w-4" />@endif All Categories</button>@foreach ($categoryOptions as $category)<button type="button" data-analytics-filter="category_id" data-value="{{ $category->id }}" data-label="{{ $category->name }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-left text-sm {{ (string) ($filters['category_id'] ?? '') === (string) $category->id ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if ((string) ($filters['category_id'] ?? '') === (string) $category->id)<x-icons.check class="absolute right-2 h-4 w-4" />@endif<span class="whitespace-normal break-words">{{ $category->name }}</span></button>@endforeach</div></details><input type="hidden" name="category_id" value="{{ $filters['category_id'] ?? '' }}" data-analytics-filter-input="category_id"></div>
-                <div><label class="mb-1.5 block text-xs font-semibold text-muted-foreground">Classification</label><details x-data="{}" class="group relative" x-on:click.outside="$el.removeAttribute('open')"><summary class="flex h-9 cursor-pointer list-none items-center justify-between rounded-md border border-input bg-white px-3 py-2 text-sm shadow-sm transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden"><span class="truncate">{{ ($filters['classification'] ?? null) ? str_replace('_', ' ', ucfirst($filters['classification'])) : 'All Classifications' }}</span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></summary><div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">@foreach (['' => 'All Classifications', 'needs_resolution' => 'Needs Resolution', 'informational' => 'Informational', 'invalid' => 'Invalid', 'unclassified' => 'Unclassified'] as $value => $label)<button type="button" data-analytics-filter="classification" data-value="{{ $value }}" data-label="{{ $label }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-left text-sm {{ ($filters['classification'] ?? '') === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if (($filters['classification'] ?? '') === $value)<x-icons.check class="absolute right-2 h-4 w-4" />@endif{{ $label }}</button>@endforeach</div></details><input type="hidden" name="classification" value="{{ $filters['classification'] ?? '' }}" data-analytics-filter-input="classification"></div>
-                <div><label class="mb-1.5 block text-xs font-semibold text-muted-foreground">Status</label><details x-data="{}" class="group relative" x-on:click.outside="$el.removeAttribute('open')"><summary class="flex h-9 cursor-pointer list-none items-center justify-between rounded-md border border-input bg-white px-3 py-2 text-sm shadow-sm transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden"><span class="truncate">{{ ($filters['status'] ?? null) ? str_replace('_', ' ', ucfirst($filters['status'])) : 'All Statuses' }}</span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></summary><div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">@foreach (['' => 'All Statuses', 'pending' => 'Pending', 'in_progress' => 'In Progress', 'escalated' => 'Escalated', 'resolved' => 'Resolved', 'closed' => 'Closed'] as $value => $label)<button type="button" data-analytics-filter="status" data-value="{{ $value }}" data-label="{{ $label }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-left text-sm {{ ($filters['status'] ?? '') === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if (($filters['status'] ?? '') === $value)<x-icons.check class="absolute right-2 h-4 w-4" />@endif{{ $label }}</button>@endforeach</div></details><input type="hidden" name="status" value="{{ $filters['status'] ?? '' }}" data-analytics-filter-input="status"></div>
-                <div><label class="mb-1.5 block text-xs font-semibold text-muted-foreground">Department</label><details x-data="{}" class="group relative" x-on:click.outside="$el.removeAttribute('open')"><summary class="flex h-9 cursor-pointer list-none items-center justify-between rounded-md border border-input bg-white px-3 py-2 text-sm shadow-sm transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden"><span class="truncate">{{ $filters['department'] ?? 'All Departments' }}</span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></summary><div class="absolute top-full z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md"><button type="button" data-analytics-filter="department" data-value="" data-label="All Departments" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-left text-sm {{ empty($filters['department']) ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if (empty($filters['department']))<x-icons.check class="absolute right-2 h-4 w-4" />@endif All Departments</button>@foreach ($departmentOptions as $department)<button type="button" data-analytics-filter="department" data-value="{{ $department }}" data-label="{{ $department }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-left text-sm {{ ($filters['department'] ?? '') === $department ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if (($filters['department'] ?? '') === $department)<x-icons.check class="absolute right-2 h-4 w-4" />@endif{{ $department }}</button>@endforeach</div></details><input type="hidden" name="department" value="{{ $filters['department'] ?? '' }}" data-analytics-filter-input="department"></div>
-                <div class="flex items-end gap-3"><button class="inline-flex h-9 flex-1 items-center justify-center rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90">Apply Filters</button><a href="{{ route('admin.analytics.index') }}" class="inline-flex h-9 flex-1 items-center justify-center rounded-md border border-primary/40 px-3 text-sm font-semibold text-primary hover:bg-primary-soft">Reset</a></div>
+
+        <!-- Filters: folded away on phones, always open from tablet width -->
+        <form method="GET" x-data="{ open: window.innerWidth >= 768 }" class="{{ $cardClass }} relative z-20 p-3 sm:p-4">
+            <button type="button" x-on:click="open = !open" class="flex w-full items-center justify-between gap-2 text-left md:pointer-events-none">
+                <span class="flex items-center gap-2 text-sm font-bold text-primary">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6 7v5l-4 2v-7z" /></svg>
+                    Filters
+                    @if ($activeFilters->isNotEmpty())
+                        <span class="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-primary-foreground">{{ $activeFilters->count() }}</span>
+                    @endif
+                </span>
+                <x-icons.arrow-down class="h-4 w-4 text-muted-foreground transition-transform md:hidden" ::class="open ? '' : 'rotate-180'" />
+            </button>
+
+            <div x-show="open" x-cloak class="mt-3 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4 xl:grid-cols-[1.6fr_1fr_1fr_1fr_1fr_auto]">
+                <div class="col-span-2 lg:col-span-4 xl:col-span-1">
+                    <label class="mb-1 block text-[11px] font-semibold text-muted-foreground">Date range</label>
+                    <div class="flex items-center gap-1.5">
+                        <input type="date" name="start_date" value="{{ $filters['start_date'] ?? '' }}" aria-label="Start date" class="h-9 min-w-0 flex-1 rounded-md border border-input bg-white px-2 text-xs">
+                        <span class="shrink-0 text-xs text-muted-foreground">to</span>
+                        <input type="date" name="end_date" value="{{ $filters['end_date'] ?? '' }}" aria-label="End date" class="h-9 min-w-0 flex-1 rounded-md border border-input bg-white px-2 text-xs">
+                    </div>
+                </div>
+                @foreach ($filterDropdowns as $dropdown)
+                    @php $current = (string) ($filters[$dropdown['name']] ?? ''); @endphp
+                    <div class="min-w-0">
+                        <label class="mb-1 block text-[11px] font-semibold text-muted-foreground">{{ $dropdown['label'] }}</label>
+                        <details x-data="{}" class="group relative" x-on:click.outside="$el.removeAttribute('open')">
+                            <summary class="flex h-9 cursor-pointer list-none items-center justify-between gap-1 rounded-md border border-input bg-white px-2.5 text-xs shadow-sm transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
+                                <span class="truncate">{{ $dropdown['options'][$current] ?? $dropdown['all'] }}</span>
+                                <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                            </summary>
+                            <div class="absolute top-full z-50 mt-1 max-h-72 w-full min-w-44 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md {{ $loop->even ? 'right-0 lg:right-auto' : '' }}">
+                                @foreach (['' => $dropdown['all']] + $dropdown['options'] as $value => $label)
+                                    <button type="button" data-analytics-filter="{{ $dropdown['name'] }}" data-value="{{ $value }}" data-label="{{ $label }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-left text-xs {{ $current === (string) $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
+                                        @if ($current === (string) $value)<x-icons.check class="absolute right-2 h-4 w-4" />@endif
+                                        <span class="min-w-0 wrap-break-word">{{ $label }}</span>
+                                    </button>
+                                @endforeach
+                            </div>
+                        </details>
+                        <input type="hidden" name="{{ $dropdown['name'] }}" value="{{ $current }}" data-analytics-filter-input="{{ $dropdown['name'] }}">
+                    </div>
+                @endforeach
+                <div class="col-span-2 flex items-end gap-2 lg:col-span-4 xl:col-span-1">
+                    <button class="inline-flex h-9 flex-1 items-center justify-center rounded-md bg-primary px-4 text-xs font-semibold text-primary-foreground hover:bg-primary/90 xl:flex-none">Apply</button>
+                    <a href="{{ route('admin.analytics.index') }}" class="inline-flex h-9 flex-1 items-center justify-center rounded-md border border-primary/40 px-4 text-xs font-semibold text-primary hover:bg-primary-soft xl:flex-none">Reset</a>
+                </div>
             </div>
         </form>
-        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            @php
-                $summaryCards = [
-                    ['label' => 'Total Tickets', 'value' => $data['total'], 'hint' => 'Selected period', 'icon' => 'ticket', 'tone' => 'primary'],
-                    ['label' => 'Resolved', 'value' => $data['resolved'], 'hint' => 'Resolved or closed', 'icon' => 'check', 'tone' => 'green'],
-                    ['label' => 'Pending', 'value' => $data['statusCounts']['Pending'] ?? 0, 'hint' => 'Awaiting action', 'icon' => 'clock', 'tone' => 'primary'],
-                    ['label' => 'In Progress', 'value' => $data['statusCounts']['In Progress'] ?? 0, 'hint' => 'Currently assigned', 'icon' => 'loader2', 'tone' => 'blue'],
-                    ['label' => 'Invalid', 'value' => $data['classification']['Invalid'] ?? 0, 'hint' => 'Invalid classification', 'icon' => 'alert-triangle', 'tone' => 'red'],
-                    ['label' => 'Avg. Resolution Time', 'value' => $data['averageHours'] . 'h', 'hint' => 'Created to resolved', 'icon' => 'clock', 'tone' => 'primary'],
-                    ['label' => 'Escalated', 'value' => $data['escalations']['tickets'], 'hint' => $data['escalations']['rate'] . '% of tickets escalated', 'icon' => 'alert-triangle', 'tone' => 'red'],
-                    ['label' => 'Recipients', 'value' => count($data['recipients']), 'hint' => 'With ticket workload', 'icon' => 'users', 'tone' => 'primary'],
-                ];
-            @endphp
-            @foreach ($summaryCards as $card)
-                <div class="surface flex min-h-[7.25rem] items-start gap-3 bg-white p-4 shadow-md">
-                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full {{ $card['tone'] === 'green' ? 'bg-emerald-50 text-emerald-700' : ($card['tone'] === 'blue' ? 'bg-blue-50 text-blue-700' : ($card['tone'] === 'red' ? 'bg-red-50 text-red-700' : 'bg-primary-soft text-primary')) }}"><x-dynamic-component :component="'icons.' . $card['icon']" class="h-5 w-5" /></span>
-                    <div class="min-w-0"><p class="text-[11px] font-bold uppercase tracking-wide text-slate-600">{{ $card['label'] }}</p><p class="mt-1 font-display text-3xl font-bold text-primary">{{ $card['value'] }}</p><p class="mt-1 text-xs text-muted-foreground">{{ $card['hint'] }}</p></div>
+
+        <!-- Headline numbers -->
+        <div class="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
+            @foreach ($kpis as $kpi)
+                <div class="{{ $cardClass }} p-3 sm:p-4">
+                    <div class="flex items-start justify-between gap-2">
+                        <p class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[11px]">{{ $kpi['label'] }}</p>
+                        <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full sm:h-8 sm:w-8 {{ $kpi['tone'] }}"><x-dynamic-component :component="'icons.' . $kpi['icon']" class="h-4 w-4" /></span>
+                    </div>
+                    <p class="mt-1 font-display text-2xl font-bold leading-none text-primary sm:text-3xl">{{ $kpi['value'] }}</p>
+                    <p class="mt-1.5 truncate text-[11px] text-muted-foreground">{{ $kpi['hint'] }}</p>
                 </div>
             @endforeach
         </div>
-        <div class="grid gap-4 xl:grid-cols-[1.65fr_1fr]"><x-page-section title="Ticket Volume Over Time" class="min-h-[24rem]"><div class="h-80"><canvas id="volumeChart"></canvas></div></x-page-section><div class="grid justify-items-end gap-4"><x-page-section title="Ticket Status" class="w-full p-3 xl:max-w-[30rem]"><div class="grid grid-cols-[minmax(7.5rem,0.85fr)_minmax(10rem,1.15fr)] items-center gap-3"><div class="relative h-36"><canvas id="statusChart"></canvas><div class="pointer-events-none absolute inset-0 grid place-content-center text-center"><strong class="font-display text-xl text-foreground">{{ $data['total'] }}</strong><span class="text-[10px] text-muted-foreground">Tickets</span></div></div><div class="grid gap-2.5 text-[11px]">@foreach (['Pending' => 'bg-amber-400', 'In Progress' => 'bg-blue-500', 'Resolved' => 'bg-emerald-500', 'Closed' => 'bg-slate-400'] as $label => $dot)<div class="flex items-center justify-between gap-2"><span class="flex items-center gap-1.5 text-muted-foreground"><span class="h-2.5 w-2.5 shrink-0 rounded-full {{ $dot }}"></span>{{ $label }}</span><strong class="whitespace-nowrap text-muted-foreground">{{ $data['statusCounts'][$label] ?? 0 }} ({{ $data['total'] ? round(($data['statusCounts'][$label] ?? 0) / $data['total'] * 100, 1) : 0 }}%)</strong></div>@endforeach</div></div></x-page-section><x-page-section title="Classification Breakdown" class="w-full xl:max-w-[30rem]"><div class="grid gap-3">@foreach (['Needs Resolution' => 'bg-primary', 'Informational' => 'bg-black', 'Invalid' => 'bg-red-500'] as $label => $barColor) @php $count = $data['classification'][$label] ?? 0; @endphp<div><div class="mb-1 flex justify-between text-xs"><span class="text-muted-foreground">{{ $label }}</span><strong>{{ $count }} ({{ $data['total'] ? round($count / $data['total'] * 100, 1) : 0 }}%)</strong></div><div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full {{ $barColor }}" style="width: {{ $data['total'] ? ($count / $data['total'] * 100) : 0 }}%"></div></div></div>@endforeach</div></x-page-section></div></div>
-        @php
-            $categoryBars = collect($data['categoryCounts'])->sortDesc();
-            $departmentBars = collect($data['departments'])->sortByDesc('total');
-            $recipientBars = collect($data['recipients'])->sortByDesc('assigned');
-            $barMax = fn ($items, $key) => max(1, $items->max($key) ?: 1);
-        @endphp
-        <div class="grid gap-4 xl:grid-cols-2">
-            <x-page-section title="Tickets by Category"><div class="grid gap-3">@foreach ($categoryBars->take(6) as $label => $count)<div class="grid grid-cols-[minmax(0,1.2fr)_minmax(5rem,1.5fr)_auto] items-center gap-2 text-xs"><span class="truncate text-muted-foreground">{{ $label }}</span><div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full bg-primary" style="width: {{ $count / $barMax($categoryBars, null) * 100 }}%"></div></div><strong class="shrink-0 text-right text-muted-foreground">{{ $count }} ({{ $data['total'] ? round($count / $data['total'] * 100, 1) : 0 }}%)</strong></div>@endforeach</div></x-page-section>
-            <x-page-section title="Tickets by Department"><div class="grid gap-3">@foreach ($departmentBars->take(4) as $department)<div class="grid grid-cols-[minmax(0,1fr)_minmax(5rem,1.1fr)_auto] items-center gap-2 text-xs"><span class="truncate text-muted-foreground">{{ $department['name'] }}</span><div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full bg-primary" style="width: {{ $department['total'] / $barMax($departmentBars, 'total') * 100 }}%"></div></div><strong class="shrink-0 text-right text-muted-foreground">{{ $department['total'] }} ({{ $data['total'] ? round($department['total'] / $data['total'] * 100, 1) : 0 }}%)</strong></div>@endforeach</div></x-page-section>
-        </div>
-        <div class="grid items-stretch gap-4 xl:grid-cols-[1fr_3fr]"><x-page-section title="Escalations" class="h-full p-3"><div class="flex flex-col items-center"><div class="relative h-36 w-full max-w-[10rem]"><canvas id="escalationShareChart"></canvas><div class="pointer-events-none absolute inset-0 grid place-content-center text-center"><strong class="font-display text-xl text-foreground">{{ $data['escalations']['tickets'] }}</strong><span class="text-[10px] text-muted-foreground">Escalated</span></div></div><div class="mt-4 grid w-full gap-3 border-t pt-3 text-[11px]">@foreach ([['label' => 'Never escalated', 'value' => $data['escalations']['never'], 'dot' => 'bg-emerald-500'], ['label' => 'Escalated once', 'value' => $data['escalations']['once'], 'dot' => 'bg-amber-400'], ['label' => 'Escalated more than once', 'value' => $data['escalations']['repeated'], 'dot' => 'bg-red-500']] as $escalationItem)<div class="flex items-center justify-between gap-2"><span class="flex items-center gap-1.5 text-muted-foreground"><span class="h-2.5 w-2.5 shrink-0 rounded-full {{ $escalationItem['dot'] }}"></span>{{ $escalationItem['label'] }}</span><strong class="text-muted-foreground">{{ $escalationItem['value'] }}</strong></div>@endforeach</div></div></x-page-section>
-        <x-page-section title="Resolution Performance" class="h-full p-3"><div class="h-64"><canvas id="resolutionChart"></canvas></div><div class="mt-3 grid grid-cols-3 divide-x border-t pt-3 text-center">@foreach ([['label' => 'Avg. Resolution Time', 'value' => $data['averageHours'] . 'h'], ['label' => 'Fastest Resolution', 'value' => $data['fastestHours'] . 'h'], ['label' => 'Longest Resolution', 'value' => $data['longestHours'] . 'h']] as $resolutionItem)<div class="px-2"><p class="font-display text-lg font-bold text-primary">{{ $resolutionItem['value'] }}</p><p class="mt-0.5 text-[10px] text-muted-foreground">{{ $resolutionItem['label'] }}</p></div>@endforeach</div></x-page-section></div>
-        <x-page-section title="Recipient Performance"><div class="overflow-x-auto"><table class="w-full min-w-[52rem] text-sm"><thead class="border-b bg-muted"><tr class="text-left"><th class="px-3 py-3">Recipient</th><th class="px-3 py-3">Department</th><th class="px-3 py-3">Assigned</th><th class="px-3 py-3">Resolved</th><th class="px-3 py-3">Avg. Time</th><th class="px-3 py-3">Escalated</th></tr></thead><tbody class="divide-y">@forelse ($data['recipients'] as $recipient)<tr><td class="px-3 py-3 font-semibold">{{ $recipient['name'] }}</td><td class="px-3 py-3 text-muted-foreground">{{ $recipient['department'] }}</td><td class="px-3 py-3">{{ $recipient['assigned'] }}</td><td class="px-3 py-3">{{ $recipient['resolved'] }}</td><td class="px-3 py-3">{{ $recipient['average'] }} days</td><td class="px-3 py-3">{{ $recipient['escalated'] }}</td></tr>@empty<tr><td colspan="6" class="px-3 py-8 text-center text-muted-foreground">No recipient workload data.</td></tr>@endforelse</tbody></table></div></x-page-section>
-    </div>
-    <script>
-        document.querySelectorAll('[data-analytics-filter]').forEach((option) => {
-            option.addEventListener('click', () => {
-                const filter = option.dataset.analyticsFilter;
-                const dropdown = option.closest('details');
-                const input = document.querySelector(`[data-analytics-filter-input="${filter}"]`);
+        <dl class="grid grid-cols-4 divide-x divide-border rounded-2xl border border-border bg-white py-2.5 text-center shadow-sm">
+            @foreach ($pulse as $item)
+                <div class="min-w-0 px-1">
+                    <dd class="font-display text-lg font-bold leading-none text-foreground">{{ number_format($item['value']) }}</dd>
+                    <dt class="mt-1 truncate text-[10px] text-muted-foreground sm:text-[11px]">{{ $item['label'] }}</dt>
+                </div>
+            @endforeach
+        </dl>
 
-                if (input) input.value = option.dataset.value ?? '';
-                dropdown.querySelector('summary span').textContent = option.dataset.label ?? '';
-                dropdown.removeAttribute('open');
+        <!-- Trend -->
+        <section class="{{ $cardClass }}">
+            <h2 class="{{ $titleClass }}">Ticket volume over time</h2>
+            <p class="{{ $subtitleClass }}">Tickets submitted, resolved and closed in each period.</p>
+            <div class="mt-3 h-56 sm:h-72"><canvas id="volumeChart"></canvas></div>
+        </section>
+
+        <!-- Where tickets stand -->
+        <div class="grid gap-3 sm:gap-4 lg:grid-cols-3">
+            <x-donut-chart title="Status" :segments="$statusSegments" class="rounded-2xl p-4" />
+            <section class="{{ $cardClass }}">
+                <h2 class="{{ $titleClass }}">Classification</h2>
+                <p class="{{ $subtitleClass }}">How reviewed tickets were classified.</p>
+                <div class="mt-3 grid gap-3">
+                    @foreach ($classificationBars as $bar)
+                        <div>
+                            <div class="mb-1 flex justify-between gap-2 text-xs"><span class="text-muted-foreground">{{ $bar['label'] }}</span><strong class="tabular-nums">{{ $bar['count'] }} <span class="font-normal text-muted-foreground">({{ $percent($bar['count']) }}%)</span></strong></div>
+                            <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full {{ $bar['color'] }}" style="width: {{ $percent($bar['count']) }}%"></div></div>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+            <x-donut-chart title="Escalations" :segments="$escalationSegments" class="rounded-2xl p-4" />
+        </div>
+
+        <!-- Where tickets come from -->
+        <div class="grid gap-3 sm:gap-4 lg:grid-cols-2">
+            <section class="{{ $cardClass }}">
+                <h2 class="{{ $titleClass }}">Tickets by category</h2>
+                <p class="{{ $subtitleClass }}">Which concerns students raise most.</p>
+                <div class="mt-3 grid gap-2.5">
+                    @forelse ($categoryBars as $label => $count)
+                        <div>
+                            <div class="mb-1 flex justify-between gap-2 text-xs"><span class="min-w-0 truncate text-foreground">{{ $label }}</span><strong class="shrink-0 tabular-nums">{{ $count }} <span class="font-normal text-muted-foreground">({{ $percent($count) }}%)</span></strong></div>
+                            <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full bg-primary" style="width: {{ $percent($count, max(1, $categoryBars->max())) }}%"></div></div>
+                        </div>
+                    @empty
+                        <p class="py-6 text-center text-xs text-muted-foreground">No tickets in this period.</p>
+                    @endforelse
+                </div>
+            </section>
+            <section class="{{ $cardClass }}">
+                <h2 class="{{ $titleClass }}">Tickets by department</h2>
+                <p class="{{ $subtitleClass }}">Offices handling the most tickets.</p>
+                <div class="mt-3 grid gap-2.5">
+                    @forelse ($departmentBars as $department)
+                        <div>
+                            <div class="mb-1 flex justify-between gap-2 text-xs"><span class="min-w-0 truncate text-foreground">{{ $department['name'] }}</span><strong class="shrink-0 tabular-nums">{{ $department['total'] }} <span class="font-normal text-muted-foreground">({{ $percent($department['total']) }}%)</span></strong></div>
+                            <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full bg-[#c4785a]" style="width: {{ $percent($department['total'], max(1, $departmentBars->max('total'))) }}%"></div></div>
+                        </div>
+                    @empty
+                        <p class="py-6 text-center text-xs text-muted-foreground">No department data in this period.</p>
+                    @endforelse
+                </div>
+            </section>
+        </div>
+
+        <!-- How fast tickets are resolved -->
+        <section class="{{ $cardClass }}">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h2 class="{{ $titleClass }}">Resolution time by category</h2>
+                    <p class="{{ $subtitleClass }}">Average days from submission to resolution.</p>
+                </div>
+                <dl class="grid grid-cols-3 divide-x divide-border text-center">
+                    @foreach ([['Average', $data['averageHours']], ['Fastest', $data['fastestHours']], ['Longest', $data['longestHours']]] as [$label, $value])
+                        <div class="px-3 first:pl-0 last:pr-0">
+                            <dd class="font-display text-base font-bold leading-none text-primary">{{ $hours($value) }}</dd>
+                            <dt class="mt-1 text-[10px] text-muted-foreground">{{ $label }}</dt>
+                        </div>
+                    @endforeach
+                </dl>
+            </div>
+            <div data-resolution-box class="mt-3 h-64"><canvas id="resolutionChart"></canvas></div>
+        </section>
+
+        <!-- Who is handling them -->
+        <section class="{{ $cardClass }} p-0">
+            <div class="px-4 pt-4">
+                <h2 class="{{ $titleClass }}">Recipient performance</h2>
+                <p class="{{ $subtitleClass }}">Workload and results of everyone who handled tickets in this period.</p>
+            </div>
+            <div class="mt-3 overflow-x-auto">
+                <table class="w-full min-w-[40rem] text-xs">
+                    <thead class="border-y border-border bg-muted/50 text-[11px] uppercase tracking-wide text-muted-foreground">
+                        <tr class="text-left"><th class="px-4 py-2 font-semibold">Recipient</th><th class="px-3 py-2 font-semibold">Department</th><th class="px-3 py-2 text-right font-semibold">Assigned</th><th class="px-3 py-2 font-semibold">Resolved</th><th class="px-3 py-2 text-right font-semibold">Avg. time</th><th class="px-4 py-2 text-right font-semibold">Escalated</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-border">
+                        @forelse ($recipientRows as $recipient)
+                            @php $rate = $percent($recipient['resolved'], max(1, $recipient['assigned'])); @endphp
+                            <tr>
+                                <td class="whitespace-nowrap px-4 py-2.5 font-semibold text-foreground">{{ $recipient['name'] }}</td>
+                                <td class="px-3 py-2.5 text-muted-foreground">{{ $recipient['department'] }}</td>
+                                <td class="px-3 py-2.5 text-right tabular-nums">{{ $recipient['assigned'] }}</td>
+                                <td class="px-3 py-2.5">
+                                    <div class="flex items-center gap-2">
+                                        <div class="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full bg-emerald-500" style="width: {{ min(100, $rate) }}%"></div></div>
+                                        <span class="tabular-nums">{{ $recipient['resolved'] }} <span class="text-muted-foreground">({{ $rate }}%)</span></span>
+                                    </div>
+                                </td>
+                                <td class="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{{ $recipient['average'] }} d</td>
+                                <td class="px-4 py-2.5 text-right tabular-nums {{ $recipient['escalated'] > 0 ? 'font-semibold text-red-700' : 'text-muted-foreground' }}">{{ $recipient['escalated'] }}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">No recipient workload in this period.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        (() => {
+            document.querySelectorAll('[data-analytics-filter]').forEach((option) => {
+                option.addEventListener('click', () => {
+                    const dropdown = option.closest('details');
+                    const input = document.querySelector(`[data-analytics-filter-input="${option.dataset.analyticsFilter}"]`);
+
+                    if (input) input.value = option.dataset.value ?? '';
+                    dropdown.querySelector('summary span').textContent = option.dataset.label ?? '';
+                    dropdown.removeAttribute('open');
+                });
             });
-        });
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script><script>
-        const analyticsPayload = @json($analyticsPayload);
-        const chartBase = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#4b5563', boxWidth: 12, padding: 18 } } }, scales: { x: { ticks: { color: '#6b7280' }, grid: { display: false } }, y: { beginAtZero: true, ticks: { color: '#6b7280' }, grid: { color: '#e5e7eb' } } } };
-        const makeChart = (id, config) => { const canvas = document.getElementById(id); if (!canvas) return; new Chart(canvas, { ...config, options: { ...chartBase, ...config.options } }); };
-        const volumeLabels = analyticsPayload.volume.labels.map((label) => {
-            if (analyticsPayload.volume.period === 'monthly') return new Date(`${label}-01T00:00:00`).toLocaleDateString('en-US', { month: 'short' });
-            if (analyticsPayload.volume.period === 'weekly') return `Week ${label.split('-')[1]}`;
-            return new Date(`${label}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        });
-        const wrapCategoryName = (name) => {
-            const words = name.split(' ');
-            const lines = [];
-            let line = '';
-            words.forEach((word) => {
-                if (line && `${line} ${word}`.length > 18) {
-                    lines.push(line);
-                    line = word;
-                } else {
-                    line = line ? `${line} ${word}` : word;
-                }
+
+            if (typeof Chart === 'undefined') return;
+
+            const payload = @json($analyticsPayload);
+            const fontSans = "'Source Sans 3', ui-sans-serif, system-ui, sans-serif";
+            const muted = '#6b7280';
+            const narrow = window.innerWidth < 640;
+            Chart.defaults.font.family = fontSans;
+            Chart.defaults.font.size = 11;
+            Chart.defaults.color = muted;
+
+            const wrapLabel = (name, length) => {
+                const lines = [];
+                let line = '';
+                String(name).split(' ').forEach((word) => {
+                    if (line && `${line} ${word}`.length > length) {
+                        lines.push(line);
+                        line = word;
+                    } else {
+                        line = line ? `${line} ${word}` : word;
+                    }
+                });
+                if (line) lines.push(line);
+                return lines;
+            };
+
+            const volumeLabels = payload.volume.labels.map((label) => {
+                if (payload.volume.period === 'monthly') return new Date(`${label}-01T00:00:00`).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                if (payload.volume.period === 'weekly') return `Week ${label.split('-')[1]}`;
+                return new Date(`${label}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             });
-            if (line) lines.push(line);
-            return lines;
-        };
-        makeChart('volumeChart', { type: 'line', data: { labels: volumeLabels, datasets: [{ label: 'Tickets Submitted', data: analyticsPayload.volume.submitted, borderColor: '#7a1d2a', backgroundColor: '#7a1d2a20', borderWidth: 3, pointStyle: 'circle', pointRadius: 3, fill: true, tension: .3 }, { label: 'Tickets Resolved', data: analyticsPayload.volume.resolved, borderColor: '#16a34a', backgroundColor: '#16a34a15', borderWidth: 3, pointStyle: 'circle', pointRadius: 3, fill: true, tension: .3 }, { label: 'Tickets Closed', data: analyticsPayload.volume.closed, borderColor: '#f59e0b', backgroundColor: '#f59e0b15', borderWidth: 3, pointStyle: 'circle', pointRadius: 3, fill: false, tension: .3 }] }, options: { plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'line', pointStyleWidth: 28, padding: 18 } } } } });
-        makeChart('categoryChart', { type: 'bar', data: { labels: analyticsPayload.categories.labels, datasets: [{ label: 'Tickets', data: analyticsPayload.categories.data, backgroundColor: '#7a1d2a' }] }, options: { indexAxis: 'y' } });
-        const statusLabels = ['Pending', 'In Progress', 'Resolved', 'Closed'];
-        makeChart('statusChart', { type: 'doughnut', data: { labels: statusLabels, datasets: [{ data: statusLabels.map((label) => analyticsPayload.status.data[analyticsPayload.status.labels.indexOf(label)] || 0), backgroundColor: ['#facc15','#2563eb','#16a34a','#9ca3af'] }] }, options: { scales: {}, plugins: { legend: { display: false } } } });
-        const escalationValues = [{{ $data['escalations']['never'] }}, {{ $data['escalations']['once'] }}, {{ $data['escalations']['repeated'] }}];
-        const hasEscalationData = escalationValues.some((value) => value > 0);
-        makeChart('escalationShareChart', { type: 'doughnut', data: { labels: hasEscalationData ? ['Never escalated', 'Escalated once', 'Escalated more than once'] : ['No tickets yet'], datasets: [{ data: hasEscalationData ? escalationValues : [1], backgroundColor: hasEscalationData ? ['#10b981', '#fbbf24', '#ef4444'] : ['#d1d5db'] }] }, options: { cutout: '68%', scales: {}, plugins: { legend: { display: false } } } });
-        makeChart('resolutionChart', { type: 'bar', data: { labels: analyticsPayload.resolution.labels.map(wrapCategoryName), datasets: [{ label: 'Average days', data: analyticsPayload.resolution.data, backgroundColor: '#7a1d2a', borderRadius: 2, barPercentage: .55 }] }, options: { plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { autoSkip: false, maxRotation: 0, minRotation: 0, padding: 8 } }, y: { beginAtZero: true } } } });
-        makeChart('escalationChart', { type: 'bar', data: { labels: analyticsPayload.escalation.labels, datasets: [{ label: 'Escalated tickets', data: analyticsPayload.escalation.data, backgroundColor: '#dc2626' }] } });
+            const line = (label, data, color, fill) => ({ label, data, borderColor: color, backgroundColor: `${color}1a`, borderWidth: 2, pointRadius: narrow ? 0 : 3, pointHoverRadius: 4, pointBackgroundColor: '#ffffff', pointBorderWidth: 2, fill, tension: 0.3 });
+
+            const volumeCanvas = document.getElementById('volumeChart');
+            if (volumeCanvas) {
+                new Chart(volumeCanvas, {
+                    type: 'line',
+                    data: { labels: volumeLabels, datasets: [line('Submitted', payload.volume.submitted, '#7a1d2a', true), line('Resolved', payload.volume.resolved, '#16a34a', false), line('Closed', payload.volume.closed, '#f59e0b', false)] },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'line', boxWidth: 24, padding: 14 } } },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: narrow ? 5 : 12 } },
+                            y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#eef0f3' }, border: { display: false } },
+                        },
+                    },
+                });
+            }
+
+            // Sideways bars on phones so the category names stay readable.
+            const resolutionCanvas = document.getElementById('resolutionChart');
+            if (resolutionCanvas) {
+                const box = document.querySelector('[data-resolution-box]');
+                if (narrow && box) box.style.height = `${Math.max(200, payload.resolution.labels.length * 40 + 30)}px`;
+                const categoryAxis = { grid: { display: false }, ticks: { autoSkip: false, maxRotation: 0, callback: (value, index) => wrapLabel(payload.resolution.labels[index], narrow ? 16 : 18) }, border: { display: false } };
+                const valueAxis = { beginAtZero: true, grid: { color: '#eef0f3' }, border: { display: false }, title: { display: !narrow, text: 'Days' } };
+
+                new Chart(resolutionCanvas, {
+                    type: 'bar',
+                    data: { labels: payload.resolution.labels, datasets: [{ label: 'Average days', data: payload.resolution.data, backgroundColor: '#7a1d2a', borderRadius: 4, maxBarThickness: 28 }] },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: narrow ? 'y' : 'x',
+                        plugins: { legend: { display: false } },
+                        scales: narrow ? { x: valueAxis, y: categoryAxis } : { x: categoryAxis, y: valueAxis },
+                    },
+                });
+            }
+        })();
     </script>
 </x-app-layout>

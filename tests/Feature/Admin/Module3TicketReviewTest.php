@@ -476,8 +476,9 @@ class Module3TicketReviewTest extends TestCase
             'assigned_to' => null,
         ]);
 
+        // The review steps live on the ticket page.
         $response = $this->actingAs($admin)
-            ->get(route('admin.tickets.review.index'));
+            ->get(route('admin.complaints.show', $complaint));
 
         $response->assertOk();
         $response->assertSee($recipientUser->name);

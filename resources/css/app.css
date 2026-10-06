@@ -367,20 +367,20 @@
     }
 }
 
-/* Conversation inside an admin ticket drawer: a slightly denser version of the thread card.
-   Below desktop width it is its own tab filling the drawer; at desktop width it sits beside
+/* Conversation on the admin ticket page: a slightly denser version of the thread card.
+   Below desktop width it is its own tab filling the screen; at desktop width it sits beside
    the details and stays in view while they scroll. */
 .admin-ticket-thread .communication-card {
     padding: 0.75rem;
-    height: calc(100vh - 8.25rem);
-    height: calc(100dvh - 8.25rem);
+    height: calc(100vh - 8.75rem);
+    height: calc(100dvh - 8.75rem);
     min-height: 16rem;
 }
 
 @media (min-width: 1024px) {
     .admin-ticket-thread .communication-card {
-        height: calc(100vh - 8.5rem);
-        height: calc(100dvh - 8.5rem);
+        height: calc(100vh - 10.25rem);
+        height: calc(100dvh - 10.25rem);
         min-height: 20rem;
     }
 }
