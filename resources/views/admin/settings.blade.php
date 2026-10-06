@@ -254,7 +254,13 @@
                     .student-departments table th:nth-child(2),
                     .student-departments table td:nth-child(2),
                     .student-departments table th:nth-child(3),
-                    .student-departments table td:nth-child(3) { width: min(9.5rem, 30%); padding-left: 0.5rem; padding-right: 0.5rem; }
+                    .student-departments table td:nth-child(3) { width: 9.5rem; padding-left: 0.5rem; padding-right: 0.5rem; }
+                    @media (min-width: 1024px) and (max-width: 1279px) {
+                        .student-departments table th:nth-child(2),
+                        .student-departments table td:nth-child(2),
+                        .student-departments table th:nth-child(3),
+                        .student-departments table td:nth-child(3) { width: 7.5rem; }
+                    }
                     @media (min-width: 1024px) {
                         .student-departments table { min-width: 0; }
                     }
