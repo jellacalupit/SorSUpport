@@ -124,55 +124,40 @@ class CategorySettingsTest extends TestCase
         $this->assertFalse($nameRequired->fresh()->allows_hidden_identity);
     }
 
-    public function test_starter_categories_are_added_once_and_keep_existing_ones(): void
+    public function test_the_add_category_form_starts_with_no_option_selected(): void
     {
         $admin = $this->admin();
-        $existing = $this->category(['name' => 'Academic Concerns', 'description' => 'My own wording.']);
-
-        $this->actingAs($admin)
-            ->post(route('admin.categories.starters'))
-            ->assertRedirect(route('admin.settings'));
-
-        $starterCount = count(ComplaintCategory::starterCategories());
-        $this->assertSame($starterCount, ComplaintCategory::count());
-        $this->assertSame('My own wording.', $existing->fresh()->description);
-        $this->assertDatabaseHas('complaint_categories', [
-            'name' => 'Gender-Based Sexual Harassment',
-            'is_sensitive' => true,
-            'allows_hidden_identity' => true,
-            'is_active' => true,
-        ]);
-
-        $this->actingAs($admin)->post(route('admin.categories.starters'));
-
-        $this->assertSame($starterCount, ComplaintCategory::count());
-    }
-
-    public function test_settings_page_offers_the_starter_categories_only_when_there_are_none(): void
-    {
-        $admin = $this->admin();
-
-        $this->actingAs($admin)->get(route('admin.settings'))
-            ->assertOk()
-            ->assertSee('Add starter categories');
-
-        $this->category(['name' => 'Harassment', 'is_sensitive' => true]);
-        $this->category(['name' => 'Records', 'allows_hidden_identity' => false]);
 
         $this->actingAs($admin)->get(route('admin.settings'))
             ->assertOk()
             ->assertDontSee('Add starter categories')
-            ->assertSee('Sensitive')
-            ->assertSee('Name required');
+            ->assertSee('hiddenIdentity: false, sensitive: false', false);
+
+        // What the form sends when the admin ticks nothing.
+        $this->actingAs($admin)
+            ->post(route('admin.categories.store'), [
+                'name' => 'Facilities',
+                'allows_hidden_identity' => '0',
+                'is_sensitive' => '0',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('complaint_categories', [
+            'name' => 'Facilities',
+            'allows_hidden_identity' => false,
+            'is_sensitive' => false,
+        ]);
     }
 
-    public function test_only_the_admin_can_add_starter_categories(): void
+    public function test_category_cards_show_their_handling_options(): void
     {
-        $this->actingAs($this->student())
-            ->post(route('admin.categories.starters'))
-            ->assertForbidden();
+        $this->category(['name' => 'Harassment', 'is_sensitive' => true]);
+        $this->category(['name' => 'Records', 'allows_hidden_identity' => false]);
 
-        $this->assertSame(0, ComplaintCategory::count());
+        $this->actingAs($this->admin())->get(route('admin.settings'))
+            ->assertOk()
+            ->assertSee('Sensitive')
+            ->assertSee('Name required');
     }
 
     public function test_a_student_cannot_hide_their_identity_where_the_category_requires_a_name(): void

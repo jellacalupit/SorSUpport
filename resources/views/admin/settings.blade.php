@@ -8,7 +8,7 @@
                 <button type="button" @click="settingsTab = 'escalation'" :aria-selected="settingsTab === 'escalation'" class="inline-flex items-center whitespace-nowrap border-b-2 px-0.5 pb-2 text-[13px] transition-colors sm:px-1 sm:text-sm" :class="settingsTab === 'escalation' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Escalation<span class="hidden min-[400px]:inline">&nbsp;Hierarchy</span></button>
                 <button type="button" @click="settingsTab = 'units'" :aria-selected="settingsTab === 'units'" class="inline-flex items-center whitespace-nowrap border-b-2 px-0.5 pb-2 text-[13px] transition-colors sm:px-1 sm:text-sm" :class="settingsTab === 'units' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Colleges and Offices</button>
             </div>
-            <button type="button" x-bind:class="settingsTab === 'category' ? '' : 'invisible'" x-on:click.prevent.stop="addCategoryOpen = true" class="mb-1 inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-primary px-2.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 sm:h-9 sm:gap-1.5 sm:px-3 sm:text-sm"><x-icons.plus class="h-4 w-4" /> Add<span class="hidden sm:inline">&nbsp;category</span></button>
+            <button type="button" x-bind:class="settingsTab === 'category' ? '' : 'invisible'" x-on:click.prevent.stop="addCategoryOpen = true" class="mb-1 inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-primary px-2.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 sm:h-9 sm:gap-1.5 sm:px-3 sm:text-sm"><x-icons.plus class="h-4 w-4" /><span>Add<span class="hidden sm:inline"> Category</span></span></button>
         </div>
 
         <div class="grid min-h-[28rem]">
@@ -73,14 +73,7 @@
                         </div>
                     </li>
                 @empty
-                    <li class="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground lg:col-span-2">
-                        <p>No complaint categories configured.</p>
-                        <p class="mt-1 text-xs">Add your own, or start from the categories based on the student handbook and adjust them.</p>
-                        <form action="{{ route('admin.categories.starters') }}" method="POST" class="mt-4">
-                            @csrf
-                            <button type="submit" class="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90"><x-icons.plus class="h-3.5 w-3.5" /> Add starter categories</button>
-                        </form>
-                    </li>
+                    <li class="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground lg:col-span-2">No complaint categories configured.</li>
                 @endforelse
             </ul>
         </div>
@@ -554,16 +547,16 @@
                         <label for="settings-category-description" class="mb-1.5 block text-sm font-semibold text-foreground">Description</label>
                         <textarea id="settings-category-description" name="description" rows="4" class="w-full rounded-md border border-input bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"></textarea>
                     </div>
-                    <div class="grid gap-3 rounded-lg border border-border p-3">
-                        <label class="flex cursor-pointer items-start gap-2.5 text-sm">
+                    <div class="grid gap-3" x-data="{ hiddenIdentity: false, sensitive: false }" x-effect="if (sensitive) hiddenIdentity = true">
+                        <label class="flex cursor-pointer items-start gap-3 text-sm">
                             <input type="hidden" name="allows_hidden_identity" value="0">
-                            <input type="checkbox" name="allows_hidden_identity" value="1" checked class="mt-0.5 h-4 w-4 shrink-0" style="accent-color: #7a1d2a">
-                            <span><span class="font-semibold text-foreground">Allow hidden identity</span><span class="block text-[11px] leading-relaxed text-muted-foreground">Students may submit under this category without showing their name and student ID.</span></span>
+                            <input type="checkbox" name="allows_hidden_identity" value="1" x-model="hiddenIdentity" x-bind:disabled="sensitive" class="mt-0.5 h-4 w-4 shrink-0 rounded-[6px] accent-red-800">
+                            <span><span class="font-medium text-foreground">Allow hidden identity</span><span class="block text-xs text-muted-foreground">Students may submit under this category without showing their name and student ID.</span></span>
                         </label>
-                        <label class="flex cursor-pointer items-start gap-2.5 text-sm">
+                        <label class="flex cursor-pointer items-start gap-3 text-sm">
                             <input type="hidden" name="is_sensitive" value="0">
-                            <input type="checkbox" name="is_sensitive" value="1"  class="mt-0.5 h-4 w-4 shrink-0" style="accent-color: #7a1d2a">
-                            <span><span class="font-semibold text-foreground">Sensitive category</span><span class="block text-[11px] leading-relaxed text-muted-foreground">For harassment and similar concerns. Tickets are handled confidentially and always accept hidden identity.</span></span>
+                            <input type="checkbox" name="is_sensitive" value="1" x-model="sensitive" class="mt-0.5 h-4 w-4 shrink-0 rounded-[6px] accent-red-800">
+                            <span><span class="font-medium text-foreground">Sensitive category</span><span class="block text-xs text-muted-foreground">For harassment and similar concerns. Tickets are handled confidentially and always accept hidden identity.</span></span>
                         </label>
                     </div>
                     <div>
@@ -622,16 +615,16 @@
                         <textarea id="edit-settings-category-description" x-model="editCategory.description" name="description" rows="4" class="w-full rounded-md border border-input bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"></textarea>
                     </div>
                     <input type="hidden" name="recipient_id" :value="editCategory.recipientId || ''">
-                    <div class="grid gap-3 rounded-lg border border-border p-3">
-                        <label class="flex cursor-pointer items-start gap-2.5 text-sm">
+                    <div class="grid gap-3" x-effect="if (editCategory.isSensitive) editCategory.allowsHiddenIdentity = true">
+                        <label class="flex cursor-pointer items-start gap-3 text-sm">
                             <input type="hidden" name="allows_hidden_identity" value="0">
-                            <input type="checkbox" name="allows_hidden_identity" value="1" x-model="editCategory.allowsHiddenIdentity" x-bind:disabled="editCategory.isSensitive" class="mt-0.5 h-4 w-4 shrink-0" style="accent-color: #7a1d2a">
-                            <span><span class="font-semibold text-foreground">Allow hidden identity</span><span class="block text-[11px] leading-relaxed text-muted-foreground">Students may submit under this category without showing their name and student ID.</span></span>
+                            <input type="checkbox" name="allows_hidden_identity" value="1" x-model="editCategory.allowsHiddenIdentity" x-bind:disabled="editCategory.isSensitive" class="mt-0.5 h-4 w-4 shrink-0 rounded-[6px] accent-red-800">
+                            <span><span class="font-medium text-foreground">Allow hidden identity</span><span class="block text-xs text-muted-foreground">Students may submit under this category without showing their name and student ID.</span></span>
                         </label>
-                        <label class="flex cursor-pointer items-start gap-2.5 text-sm">
+                        <label class="flex cursor-pointer items-start gap-3 text-sm">
                             <input type="hidden" name="is_sensitive" value="0">
-                            <input type="checkbox" name="is_sensitive" value="1" x-model="editCategory.isSensitive" class="mt-0.5 h-4 w-4 shrink-0" style="accent-color: #7a1d2a">
-                            <span><span class="font-semibold text-foreground">Sensitive category</span><span class="block text-[11px] leading-relaxed text-muted-foreground">For harassment and similar concerns. Tickets are handled confidentially and always accept hidden identity.</span></span>
+                            <input type="checkbox" name="is_sensitive" value="1" x-model="editCategory.isSensitive" class="mt-0.5 h-4 w-4 shrink-0 rounded-[6px] accent-red-800">
+                            <span><span class="font-medium text-foreground">Sensitive category</span><span class="block text-xs text-muted-foreground">For harassment and similar concerns. Tickets are handled confidentially and always accept hidden identity.</span></span>
                         </label>
                     </div>
                     <div>

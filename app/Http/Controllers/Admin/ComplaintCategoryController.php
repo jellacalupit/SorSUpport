@@ -141,34 +141,6 @@ class ComplaintCategoryController extends Controller
             ->with('success', 'Escalation hierarchy saved.');
     }
 
-    /**
-     * Add the handbook-based starter categories that do not exist yet. Recipients and escalation
-     * paths are left for the admin to set, since they depend on the campus accounts.
-     */
-    public function storeStarters(): RedirectResponse
-    {
-        $existing = ComplaintCategory::query()->pluck('name')->map(fn (string $name) => mb_strtolower($name))->all();
-        $added = 0;
-
-        foreach (ComplaintCategory::starterCategories() as $starter) {
-            if (in_array(mb_strtolower($starter['name']), $existing, true)) {
-                continue;
-            }
-
-            ComplaintCategory::create($starter + ['resolution_deadline_days' => 15, 'is_active' => true]);
-            $added++;
-        }
-
-        if ($added > 0) {
-            AuditLog::activity('starter_categories_added', details: sprintf('Added %d starter complaint categories.', $added));
-        }
-
-        return redirect()->route('admin.settings')->with(
-            'success',
-            $added > 0 ? "Added {$added} starter categories. Review them and set their recipients." : 'All starter categories already exist.'
-        );
-    }
-
     public function toggleStatus(ComplaintCategory $category): RedirectResponse
     {
         $category->update(['is_active' => ! $category->is_active]);
