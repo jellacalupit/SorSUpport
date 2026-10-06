@@ -7,7 +7,8 @@
 ])
 
 {{--
-    The admin ticket page, laid out like the student and recipient one: a Back link, details,
+    The admin ticket page, used below desktop width (on desktop the lists open tickets in their
+    side panels). Laid out like the student and recipient one: a Back link, details,
     description, then the last five audit entries and the actions for the ticket's current state
     (on desktop the audit entries sit under the conversation, in the second column).
     Tickets with a conversation get a Details / Thread switch below desktop width.
@@ -95,7 +96,7 @@
                             </div>
 
                             <div x-ref="escalatePanel" x-show="action === 'escalate'" x-cloak>
-                                <x-ticket-escalate-form :ticket="$ticket" class="surface p-4" />
+                                <x-ticket-escalate-form :ticket="$ticket" :cancellable="true" class="surface p-4" />
                             </div>
 
                             @if ($canClose)
@@ -118,7 +119,7 @@
         @if ($hasThread)
             <!-- Conversation -->
             <div class="min-w-0 lg:block!" x-show="tab === 'thread'" x-cloak>
-                <div class="ticket-thread-pane admin-ticket-thread">
+                <div class="ticket-thread-pane admin-page-thread">
                     <x-ticket-thread :ticket="$ticket" viewerRole="admin" />
                 </div>
                 @include('admin.tickets.partials.audit-activity', ['class' => 'mt-3 hidden lg:block'])

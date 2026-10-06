@@ -370,7 +370,7 @@
 /* Conversation on the admin ticket page: a slightly denser version of the thread card.
    Below desktop width it is its own tab filling the screen; at desktop width it sits beside
    the details with the audit activity underneath. */
-.admin-ticket-thread .communication-card {
+.admin-page-thread .communication-card {
     padding: 0.75rem;
     height: calc(100vh - 8.75rem);
     height: calc(100dvh - 8.75rem);
@@ -378,44 +378,32 @@
 }
 
 @media (min-width: 1024px) {
-    .admin-ticket-thread .communication-card {
+    .admin-page-thread .communication-card {
         height: calc(100vh - 28rem);
         height: calc(100dvh - 28rem);
         min-height: 20rem;
     }
 }
 
-/* In the desktop side panel there is no Back row (the panel has its own close button). */
-.admin-ticket-drawer [data-ticket-back-row] {
-    display: none;
-}
-
-@media (min-width: 1024px) {
-    .admin-ticket-drawer .admin-ticket-thread .communication-card {
-        height: calc(100vh - 25.5rem);
-        height: calc(100dvh - 25.5rem);
-    }
-}
-
-.admin-ticket-thread #in-ticket-communication {
+.admin-page-thread #in-ticket-communication {
     margin-bottom: 0.25rem;
 }
 
-.admin-ticket-thread #ticket-reply-form textarea {
+.admin-page-thread #ticket-reply-form textarea {
     min-height: 2.25rem;
     padding: 0.5rem 0.875rem;
     font-size: 14px;
     line-height: 1.25rem;
 }
 
-.admin-ticket-thread #ticket-reply-form > label,
-.admin-ticket-thread #ticket-reply-form > button {
+.admin-page-thread #ticket-reply-form > label,
+.admin-page-thread #ticket-reply-form > button {
     height: 2.25rem;
     width: 2.25rem;
 }
 
-.admin-ticket-thread #ticket-reply-form > label svg,
-.admin-ticket-thread #ticket-reply-form > button svg {
+.admin-page-thread #ticket-reply-form > label svg,
+.admin-page-thread #ticket-reply-form > button svg {
     height: 1rem;
     width: 1rem;
 }

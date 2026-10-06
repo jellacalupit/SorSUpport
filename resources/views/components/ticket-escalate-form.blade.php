@@ -1,17 +1,20 @@
-@props(['ticket'])
+@props(['ticket', 'cancellable' => false])
 
 {{-- Shown when the admin taps Escalate. Only recipients configured in the category's escalation
-     hierarchy are offered, grouped by path and labelled with their level. Expects an Alpine
-     `action` variable on a parent so Cancel can fold it away. --}}
+     hierarchy are offered, grouped by path and labelled with their level. With `cancellable`, a
+     parent Alpine `action` variable is expected so Cancel can fold the form away. --}}
 
 @php
     $escalationService = app(\App\Services\TicketEscalationService::class);
     $escalationPaths = $escalationService->escalationOptions($ticket)->groupBy('path');
     $suggestedTargetId = $escalationService->getNextRecipient($ticket)?->id;
     $suggestionUsed = false;
+    $canEscalate = $ticket->classification === \App\Models\Ticket::CLASSIFICATION_NEEDS_RESOLUTION
+        && in_array($ticket->status, [\App\Models\Ticket::STATUS_ASSIGNED, \App\Models\Ticket::STATUS_IN_PROGRESS, \App\Models\Ticket::STATUS_ESCALATED], true);
 @endphp
 
-<form method="POST" action="{{ route('admin.tickets.escalate', $ticket) }}" {{ $attributes->merge(['class' => 'min-w-0']) }}>
+@if ($canEscalate)
+<form method="POST" action="{{ route('admin.tickets.escalate', $ticket) }}" {{ $attributes->merge(['class' => 'min-w-0 rounded-lg border border-border bg-card p-3']) }}>
     @csrf
     <p class="text-sm font-semibold text-foreground">Escalate ticket</p>
     <p class="mt-0.5 text-xs text-muted-foreground">
@@ -26,7 +29,9 @@
             No one else is set in the escalation hierarchy of “{{ $ticket->complaint?->category?->name ?? 'this category' }}”.
             <a href="{{ route('admin.settings', ['settings_tab' => 'escalation', 'category' => $ticket->complaint?->category_id]) }}" class="font-semibold underline">Set it up in System Settings</a>.
         </p>
-        <button type="button" x-on:click="action = null" class="mt-3 h-9 w-full rounded-full border border-border bg-white px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted">Back</button>
+        @if ($cancellable)
+            <button type="button" x-on:click="action = null" class="mt-3 h-9 w-full rounded-full border border-border bg-white px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted">Back</button>
+        @endif
     @else
         <label class="sr-only" for="escalate-recipient-{{ $ticket->id }}">Escalate to</label>
         <select id="escalate-recipient-{{ $ticket->id }}" name="recipient_id" required class="mt-2 h-9 w-full min-w-0 rounded-md border border-input bg-white px-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring">
@@ -46,9 +51,12 @@
         @error('recipient_id')
             <p class="mt-1 text-xs font-medium text-destructive">{{ $message }}</p>
         @enderror
-        <div class="mt-3 grid grid-cols-2 gap-2">
-            <button type="button" x-on:click="action = null" class="h-9 w-full rounded-full border border-border bg-white px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted">Cancel</button>
+        <div class="mt-3 grid gap-2 {{ $cancellable ? 'grid-cols-2' : '' }}">
+            @if ($cancellable)
+                <button type="button" x-on:click="action = null" class="h-9 w-full rounded-full border border-border bg-white px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted">Cancel</button>
+            @endif
             <button type="submit" class="h-9 w-full rounded-full bg-red-800 px-3 text-xs font-semibold text-white transition-colors hover:bg-red-900">Escalate</button>
         </div>
     @endif
 </form>
+@endif

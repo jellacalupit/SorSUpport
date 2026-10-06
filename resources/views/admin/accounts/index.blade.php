@@ -279,7 +279,7 @@
                 <div class="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center">
                 <div class="flex w-full min-w-0 items-center gap-2 sm:w-auto">
                     <span class="hidden whitespace-nowrap text-xs font-semibold text-foreground sm:inline">Sort by ID</span>
-                    <details x-data="{}" class="group relative w-full min-w-0 sm:w-[160px] sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
+                    <details x-data="{}" class="group relative w-full min-w-0 sm:w-[220px] sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
                         <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
                             <span class="truncate"><span class="sm:hidden">ID · </span>{{ $sortOptions[$selectedSort] ?? 'Ascending' }}</span>
                             <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
@@ -297,12 +297,12 @@
                     </details>
                 </div>
 
-                <details x-data="{}" class="group relative w-full min-w-0 {{ $selectedCategory === 'recipients' ? 'sm:w-[240px]' : 'sm:w-[150px]' }} sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
+                <details x-data="{}" class="group relative w-full min-w-0 {{ $selectedCategory === 'recipients' ? 'sm:w-[320px]' : 'sm:w-[150px]' }} sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
                     <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
                         <span class="truncate">{{ $departmentOptions[$selectedDepartment] ?? 'All Department' }}</span>
                         <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                     </summary>
-                    <div class="absolute top-full left-0 z-50 mt-1 w-full min-w-44 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                    <div class="absolute top-full left-0 z-50 mt-1 w-full min-w-44 rounded-md sm:min-w-28 sm:max-w-[calc(100vw-2rem)] sm:whitespace-nowrap border bg-popover p-1 text-popover-foreground shadow-md">
                         @foreach ($departmentOptions as $value => $label)
                             <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'department_filter' => $value, 'course_filter' => '', 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedDepartment === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                 @if ($selectedDepartment === $value)
@@ -386,7 +386,7 @@
         </form>
 
         <div data-account-table="students" x-show="tab === 'students'" x-cloak class="mx-auto mt-4 w-full overflow-x-auto rounded-lg border">
-            <table class="w-full min-w-max whitespace-nowrap text-[13px]">
+            <table class="w-full text-[13px] max-lg:min-w-max max-lg:whitespace-nowrap">
                 <thead class="border-b bg-primary text-white">
                     <tr class="text-left">
                         <th class="whitespace-nowrap rounded-tl-lg py-2 pl-4 pr-2 text-[13px] font-semibold">Student ID</th>
@@ -438,20 +438,33 @@
             </table>
             @if ($studentUsers->hasPages())
                 <nav class="mt-5 flex justify-end" aria-label="Student accounts pagination">
-                    <div class="flex items-center gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
+                    <div class="flex max-w-full flex-wrap items-center justify-end gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
                         @if ($studentUsers->onFirstPage())
                             <span class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground/50" aria-disabled="true">Previous</span>
                         @else
                             <a href="{{ $studentUsers->previousPageUrl() }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Previous</a>
                         @endif
 
-                        @foreach ($studentUsers->getUrlRange(1, $studentUsers->lastPage()) as $page => $url)
+                        {{-- Page numbers are shown in sets of ten so the row stays short however many pages there are. --}}
+                        <?php
+                            $setStart = (int) (floor(($studentUsers->currentPage() - 1) / 10) * 10) + 1;
+                            $setEnd = min($setStart + 9, $studentUsers->lastPage());
+                        ?>
+                        @if ($setStart > 1)
+                            <a href="{{ $studentUsers->url($setStart - 1) }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Previous 10 pages" title="Previous 10 pages">&laquo;</a>
+                        @endif
+
+                        @foreach ($studentUsers->getUrlRange($setStart, $setEnd) as $page => $url)
                             @if ($page === $studentUsers->currentPage())
                                 <span class="inline-flex h-8 min-w-8 items-center justify-center rounded bg-primary px-2 text-xs font-semibold text-primary-foreground" aria-current="page">{{ $page }}</span>
                             @else
                                 <a href="{{ $url }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded border border-transparent px-2 text-xs text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground">{{ $page }}</a>
                             @endif
                         @endforeach
+
+                        @if ($setEnd < $studentUsers->lastPage())
+                            <a href="{{ $studentUsers->url($setEnd + 1) }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Next 10 pages" title="Next 10 pages">&raquo;</a>
+                        @endif
 
                         @if ($studentUsers->hasMorePages())
                             <a href="{{ $studentUsers->nextPageUrl() }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Next</a>
@@ -910,7 +923,7 @@
 
         <div x-show="tab === 'recipients'" x-cloak class="mx-auto mt-4 w-full">
             <div data-account-table="recipients" class="w-full overflow-x-auto rounded-lg border">
-            <table class="w-full min-w-max whitespace-nowrap text-[13px]">
+            <table class="w-full text-[13px] max-lg:min-w-max max-lg:whitespace-nowrap">
                 <thead class="border-b bg-primary text-white">
                     <tr class="text-left">
                         <th class="whitespace-nowrap rounded-tl-lg py-2 pl-4 pr-2 text-[13px] font-semibold">Staff ID</th>
@@ -963,20 +976,33 @@
             </div>
             @if ($recipientUsers->hasPages())
                 <nav class="mt-5 flex justify-end" aria-label="Recipient accounts pagination">
-                    <div class="flex items-center gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
+                    <div class="flex max-w-full flex-wrap items-center justify-end gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
                         @if ($recipientUsers->onFirstPage())
                             <span class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground/50" aria-disabled="true">Previous</span>
                         @else
                             <a href="{{ $recipientUsers->previousPageUrl() }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Previous</a>
                         @endif
 
-                        @foreach ($recipientUsers->getUrlRange(1, $recipientUsers->lastPage()) as $page => $url)
+                        {{-- Page numbers are shown in sets of ten so the row stays short however many pages there are. --}}
+                        <?php
+                            $setStart = (int) (floor(($recipientUsers->currentPage() - 1) / 10) * 10) + 1;
+                            $setEnd = min($setStart + 9, $recipientUsers->lastPage());
+                        ?>
+                        @if ($setStart > 1)
+                            <a href="{{ $recipientUsers->url($setStart - 1) }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Previous 10 pages" title="Previous 10 pages">&laquo;</a>
+                        @endif
+
+                        @foreach ($recipientUsers->getUrlRange($setStart, $setEnd) as $page => $url)
                             @if ($page === $recipientUsers->currentPage())
                                 <span class="inline-flex h-8 min-w-8 items-center justify-center rounded bg-primary px-2 text-xs font-semibold text-primary-foreground" aria-current="page">{{ $page }}</span>
                             @else
                                 <a href="{{ $url }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded border border-transparent px-2 text-xs text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground">{{ $page }}</a>
                             @endif
                         @endforeach
+
+                        @if ($setEnd < $recipientUsers->lastPage())
+                            <a href="{{ $recipientUsers->url($setEnd + 1) }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Next 10 pages" title="Next 10 pages">&raquo;</a>
+                        @endif
 
                         @if ($recipientUsers->hasMorePages())
                             <a href="{{ $recipientUsers->nextPageUrl() }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Next</a>

@@ -661,8 +661,13 @@ class AdminTicketReviewController extends Controller
             );
         }
 
+        $fromTicketPage = str_contains((string) url()->previous(), '/admin/complaints/');
+        $destination = $fromTicketPage
+            ? redirect()->route('admin.complaints.show', $ticket->complaint)
+            : redirect()->route('admin.tickets.review.index');
+
         if ($changes === []) {
-            return redirect()->route('admin.complaints.show', $ticket->complaint);
+            return $destination;
         }
 
         DB::transaction(function () use ($ticket, $complaint, $category, $suggestedRecipient, $changes): void {
@@ -676,9 +681,7 @@ class AdminTicketReviewController extends Controller
             AuditLog::log($ticket->id, 'ticket_details_updated', Auth::id(), implode(' ', $changes));
         });
 
-        return redirect()
-            ->route('admin.complaints.show', $ticket->complaint)
-            ->with('success', 'Ticket details updated.');
+        return $destination->with('success', 'Ticket details updated.');
     }
 
     /**

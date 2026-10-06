@@ -90,20 +90,33 @@
 
         @if ($auditLogs->hasPages())
             <nav class="mt-5 flex justify-end" aria-label="Audit trail pagination">
-                <div class="flex items-center gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
+                <div class="flex max-w-full flex-wrap items-center justify-end gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
                     @if ($auditLogs->onFirstPage())
                         <span class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground/50" aria-disabled="true">Previous</span>
                     @else
                         <a href="{{ $auditLogs->previousPageUrl() }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Previous</a>
                     @endif
 
-                    @foreach ($auditLogs->getUrlRange(1, $auditLogs->lastPage()) as $page => $url)
+                    {{-- Page numbers are shown in sets of ten so the row stays short however many pages there are. --}}
+                    @php
+                        $setStart = (int) (floor(($auditLogs->currentPage() - 1) / 10) * 10) + 1;
+                        $setEnd = min($setStart + 9, $auditLogs->lastPage());
+                    @endphp
+                    @if ($setStart > 1)
+                        <a href="{{ $auditLogs->url($setStart - 1) }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Previous 10 pages" title="Previous 10 pages">&laquo;</a>
+                    @endif
+
+                    @foreach ($auditLogs->getUrlRange($setStart, $setEnd) as $page => $url)
                         @if ($page === $auditLogs->currentPage())
                             <span class="inline-flex h-8 min-w-8 items-center justify-center rounded bg-primary px-2 text-xs font-semibold text-primary-foreground" aria-current="page">{{ $page }}</span>
                         @else
                             <a href="{{ $url }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded border border-transparent px-2 text-xs text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground">{{ $page }}</a>
                         @endif
                     @endforeach
+
+                    @if ($setEnd < $auditLogs->lastPage())
+                        <a href="{{ $auditLogs->url($setEnd + 1) }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Next 10 pages" title="Next 10 pages">&raquo;</a>
+                    @endif
 
                     @if ($auditLogs->hasMorePages())
                         <a href="{{ $auditLogs->nextPageUrl() }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Next</a>
