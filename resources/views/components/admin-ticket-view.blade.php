@@ -8,7 +8,8 @@
 
 {{--
     The admin ticket page, laid out like the student and recipient one: a Back link, details,
-    description, then the last five audit entries and the actions for the ticket's current state.
+    description, then the last five audit entries and the actions for the ticket's current state
+    (on desktop the audit entries sit under the conversation, in the second column).
     Tickets with a conversation get a Details / Thread switch below desktop width.
     A ticket still waiting for review has no conversation or audit yet, so the review steps
     simply continue below the details.
@@ -65,26 +66,8 @@
                 <x-ticket-info-panel :ticket="$ticket" :show-filed-by="true" :show-closed-at="true" :editable="true" :categories="$categories" :recipients="$recipients" />
 
                 @unless ($isPendingReview)
-                    <div class="surface p-4">
-                        <h3 class="font-display text-sm font-semibold leading-tight text-foreground">Audit Activity</h3>
-                        <ol class="mt-2 grid gap-2">
-                            @forelse ($auditLogs as $log)
-                                <li class="flex min-w-0 gap-2">
-                                    <span class="mt-0.5 h-8 w-0.5 shrink-0 rounded-full bg-[#800000]"></span>
-                                    <div class="mt-0.5 min-w-0 flex-1">
-                                        <p class="truncate text-xs font-semibold leading-tight text-foreground">{{ $auditLabels[$log->action] ?? ucfirst(str_replace('_', ' ', (string) ($log->action ?? 'Action'))) }}</p>
-                                        <p class="mt-0.5 truncate text-[11px] leading-snug text-muted-foreground">
-                                            <span>{{ $log->performer?->table_name ?? 'System' }}</span>
-                                            <span class="text-border"> · </span>
-                                            <span>{{ $log->created_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}</span>
-                                        </p>
-                                    </div>
-                                </li>
-                            @empty
-                                <li class="py-3 text-center text-xs text-muted-foreground">No recent audit activity.</li>
-                            @endforelse
-                        </ol>
-                    </div>
+                    {{-- With a conversation, desktop shows this under the conversation instead. --}}
+                    @include('admin.tickets.partials.audit-activity', ['class' => $hasThread ? 'lg:hidden' : ''])
 
                     @if ($awaitingClosure)
                         <!-- Resolved by the holder: confirm it or send it back -->
@@ -134,8 +117,11 @@
 
         @if ($hasThread)
             <!-- Conversation -->
-            <div class="ticket-thread-pane admin-ticket-thread min-w-0 lg:sticky lg:top-0 lg:block!" x-show="tab === 'thread'" x-cloak>
-                <x-ticket-thread :ticket="$ticket" viewerRole="admin" />
+            <div class="min-w-0 lg:block!" x-show="tab === 'thread'" x-cloak>
+                <div class="ticket-thread-pane admin-ticket-thread">
+                    <x-ticket-thread :ticket="$ticket" viewerRole="admin" />
+                </div>
+                @include('admin.tickets.partials.audit-activity', ['class' => 'mt-3 hidden lg:block'])
             </div>
         @elseif ($isPendingReview)
             <div class="min-w-0">
