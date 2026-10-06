@@ -170,5 +170,7 @@
             <div class="mt-5">{{ $tickets->links() }}</div>
         @endif
         </div>
+
+        <x-admin-ticket-drawer />
     </div>
 </x-app-layout>

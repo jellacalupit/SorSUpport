@@ -385,6 +385,23 @@
     }
 }
 
+/* In the desktop side panel there is no Back row (the panel has its own close button) and the
+   conversation sticks below the panel's header. */
+.admin-ticket-drawer [data-ticket-back-row] {
+    display: none;
+}
+
+.admin-ticket-drawer .admin-ticket-thread {
+    top: 4.5rem;
+}
+
+@media (min-width: 1024px) {
+    .admin-ticket-drawer .admin-ticket-thread .communication-card {
+        height: calc(100vh - 8rem);
+        height: calc(100dvh - 8rem);
+    }
+}
+
 .admin-ticket-thread #in-ticket-communication {
     margin-bottom: 0.25rem;
 }

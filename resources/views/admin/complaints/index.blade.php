@@ -171,5 +171,7 @@
             }
 
         </style>
+
+        <x-admin-ticket-drawer />
     </div>
 </x-app-layout>

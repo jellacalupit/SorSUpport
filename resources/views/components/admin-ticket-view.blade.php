@@ -42,7 +42,7 @@
 
 <div x-data="{ tab: window.location.hash === '#in-ticket-communication' ? 'thread' : 'details', action: @js($errors->has('recipient_id') ? 'escalate' : null) }">
     <!-- Back link and section switch -->
-    <div class="mb-2 grid h-9 grid-cols-[1fr_auto_1fr] items-center gap-2">
+    <div data-ticket-back-row class="mb-2 grid h-9 grid-cols-[1fr_auto_1fr] items-center gap-2">
         <div class="justify-self-start">
             <a href="{{ $backUrl }}" aria-label="Back" onclick="event.preventDefault(); if (window.history.length > 1) { window.history.back(); } else { window.location.href = '{{ $backUrl }}'; }" class="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:text-base">
                 <span aria-hidden="true" class="scale-y-150 text-lg leading-none">&lt;</span>
