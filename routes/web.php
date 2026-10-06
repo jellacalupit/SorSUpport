@@ -251,6 +251,15 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
         Route::post('/tickets/{ticket}/acknowledge', [AdminTicketReviewController::class, 'acknowledge'])
             ->name('tickets.acknowledge');
 
+        Route::post('/tickets/{ticket}/clarification', [AdminTicketReviewController::class, 'requestClarification'])
+            ->name('tickets.clarification');
+
+        Route::post('/tickets/{ticket}/refer', [AdminTicketReviewController::class, 'refer'])
+            ->name('tickets.refer');
+
+        Route::post('/tickets/{ticket}/outcome', [AdminTicketReviewController::class, 'recordOutcome'])
+            ->name('tickets.outcome');
+
         Route::post('/tickets/{ticket}/resolve', [AdminTicketReviewController::class, 'resolve'])
             ->name('tickets.resolve');
 
@@ -372,6 +381,15 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:student'])
 
         Route::get('/complaints/{complaint}', [ComplaintController::class, 'show'])
             ->name('complaints.show');
+
+        Route::post('/complaints/{complaint}/accept-resolution', [ComplaintController::class, 'acceptResolution'])
+            ->name('complaints.accept-resolution');
+
+        Route::post('/complaints/{complaint}/further-action', [ComplaintController::class, 'requestFurtherAction'])
+            ->name('complaints.further-action');
+
+        Route::post('/complaints/{complaint}/withdraw', [ComplaintController::class, 'withdraw'])
+            ->name('complaints.withdraw');
 
         Route::post('/complaints/{complaint}/reply', [ComplaintController::class, 'storeReply'])
             ->name('complaints.reply');

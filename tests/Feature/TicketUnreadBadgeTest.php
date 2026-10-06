@@ -223,7 +223,7 @@ class TicketUnreadBadgeTest extends TestCase
             'subject_title' => $title,
             'description' => 'Unread badge coverage.',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         Ticket::create([

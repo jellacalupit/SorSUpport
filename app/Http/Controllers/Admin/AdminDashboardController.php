@@ -36,15 +36,9 @@ class AdminDashboardController extends Controller
             ->limit(5)
             ->get();
 
-        $statusBreakdown = [
-            'pending' => Ticket::query()->where('status', Ticket::STATUS_PENDING)->count(),
-            'assigned' => Ticket::query()->where('status', Ticket::STATUS_ASSIGNED)->count(),
-            'in_progress' => Ticket::query()->where('status', Ticket::STATUS_IN_PROGRESS)->count(),
-            'escalated' => Ticket::query()->where('status', Ticket::STATUS_ESCALATED)->count(),
-            'resolved' => Ticket::query()->where('status', Ticket::STATUS_RESOLVED)->count(),
-            'rejected' => Ticket::query()->where('status', Ticket::STATUS_REJECTED)->count(),
-            'closed' => Ticket::query()->where('status', Ticket::STATUS_CLOSED)->count(),
-        ];
+        $statusBreakdown = collect(array_keys(Ticket::STATUS_LABELS))
+            ->mapWithKeys(fn (string $status) => [$status => Ticket::query()->where('status', $status)->count()])
+            ->all();
 
         $classificationBreakdown = [
             'needs_resolution' => Ticket::query()->where('classification', 'needs_resolution')->count(),

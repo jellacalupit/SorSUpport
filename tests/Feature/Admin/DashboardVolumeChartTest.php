@@ -50,7 +50,7 @@ class DashboardVolumeChartTest extends TestCase
             'subject_title' => 'Grade dispute',
             'description' => 'Need review of final grade.',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $this->actingAs($admin)

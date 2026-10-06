@@ -1,6 +1,6 @@
 @php
     $complaint = $ticket->complaint;
-    $detailsEditable = $ticket->status === 'pending' && $ticket->classification === null;
+    $detailsEditable = $ticket->isAwaitingReview();
     $labelClass = 'text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase';
     $valueClass = 'wrap-break-word text-sm font-medium leading-tight text-foreground';
     $selectClass = 'mt-1 h-9 w-full rounded-md border border-input bg-white px-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring';

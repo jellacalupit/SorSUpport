@@ -146,7 +146,7 @@ class Module7EscalationTest extends TestCase
             'subject_title' => 'Needs escalation',
             'description' => 'Taking too long',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $ticket = Ticket::create([

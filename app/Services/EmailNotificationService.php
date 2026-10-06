@@ -112,25 +112,40 @@ class EmailNotificationService
             EmailNotification::TYPE_DAILY_REMINDER => 'Deadline reminder',
             EmailNotification::TYPE_CLOSED, EmailNotification::TYPE_COMPLAINT_CLOSED => 'Resolution update',
             EmailNotification::TYPE_MESSAGE_POSTED => 'New ticket message',
+            EmailNotification::TYPE_CLARIFICATION_REQUESTED => 'More details needed for your ticket',
+            EmailNotification::TYPE_CLARIFICATION_PROVIDED => 'Student replied with more details',
+            EmailNotification::TYPE_REFERRED => 'Ticket referred to a committee',
+            EmailNotification::TYPE_FURTHER_ACTION_REQUESTED => 'Further action requested',
+            EmailNotification::TYPE_RESOLUTION_ACCEPTED => 'Resolution accepted',
+            EmailNotification::TYPE_WITHDRAWN => 'Ticket withdrawn',
             default => 'SORSUPPORT update',
         };
     }
 
     protected function resolveBody(string $type, ?Ticket $ticket): string
     {
-        $reference = $ticket ? '#'.$ticket->id : 'your ticket';
+        $reference = $ticket?->complaint?->reference_number ?? ($ticket ? '#'.$ticket->id : 'your ticket');
+        $status = $ticket?->status_label;
 
         return match ($type) {
             EmailNotification::TYPE_VERIFICATION => "Please verify your account to continue using SORSUPPORT for {$reference}.",
             EmailNotification::TYPE_SUBMISSION_ACK => "Your complaint has been received and is being reviewed for {$reference}.",
-            EmailNotification::TYPE_INVALID_CLOSURE => "The latest closure request for {$reference} could not be processed automatically.",
+            EmailNotification::TYPE_INVALID_CLOSURE => "After review, the SDS Office closed {$reference} because it could not be acted on. Open the ticket in SORSUPPORT to read the reason.",
             EmailNotification::TYPE_ASSIGNMENT, EmailNotification::TYPE_RECIPIENT_ASSIGNMENT => "A new ticket has been assigned to you for {$reference}.",
             EmailNotification::TYPE_INFORMATIONAL_FORWARD => "An informational ticket has been forwarded to you for {$reference}.",
-            EmailNotification::TYPE_STATUS_UPDATE, EmailNotification::TYPE_STUDENT_STATUS_UPDATE, EmailNotification::TYPE_ACKNOWLEDGED, EmailNotification::TYPE_RECIPIENT_RESOLVED, EmailNotification::TYPE_RESOLVED => "The status for {$reference} has been updated.",
+            EmailNotification::TYPE_STATUS_UPDATE, EmailNotification::TYPE_STUDENT_STATUS_UPDATE, EmailNotification::TYPE_ACKNOWLEDGED, EmailNotification::TYPE_RECIPIENT_RESOLVED, EmailNotification::TYPE_RESOLVED => $status
+                ? "The status of {$reference} is now {$status}. Open the ticket in SORSUPPORT for the details."
+                : "The status for {$reference} has been updated.",
             EmailNotification::TYPE_ESCALATED => "This ticket has been escalated and needs your attention for {$reference}.",
             EmailNotification::TYPE_DAILY_REMINDER => "This is a reminder that {$reference} is approaching its deadline.",
-            EmailNotification::TYPE_CLOSED, EmailNotification::TYPE_COMPLAINT_CLOSED => "The ticket {$reference} has been resolved and closed.",
+            EmailNotification::TYPE_CLOSED, EmailNotification::TYPE_COMPLAINT_CLOSED => "The ticket {$reference} has been closed. Open it in SORSUPPORT to see the reason.",
             EmailNotification::TYPE_MESSAGE_POSTED => "A new message was posted on {$reference}.",
+            EmailNotification::TYPE_CLARIFICATION_REQUESTED => "The SDS Office needs more details before it can review {$reference}. Open the ticket in SORSUPPORT and reply in the conversation.",
+            EmailNotification::TYPE_CLARIFICATION_PROVIDED => "The student replied with more details on {$reference}. It is ready for review again.",
+            EmailNotification::TYPE_REFERRED => "The ticket {$reference} has been referred to " . ($ticket?->referred_to ?: 'a committee') . '. You will be notified when there is an outcome.',
+            EmailNotification::TYPE_FURTHER_ACTION_REQUESTED => "The student is asking for further action on {$reference}. It is back in progress.",
+            EmailNotification::TYPE_RESOLUTION_ACCEPTED => "The student accepted the resolution of {$reference}. The ticket is now closed.",
+            EmailNotification::TYPE_WITHDRAWN => "The student withdrew {$reference}. The ticket is now closed.",
             default => 'An update is available for your ticket.',
         };
     }

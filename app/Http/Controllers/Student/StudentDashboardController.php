@@ -24,11 +24,11 @@ class StudentDashboardController extends Controller
         // Calculate counts by status
         $totalCount = $complaints->count();
         $statusOf = fn ($complaint) => $complaint->ticket?->status ?? $complaint->status;
-        $pendingCount = $complaints->filter(fn($c) => $statusOf($c) === 'pending')->count();
-        $inProgressCount = $complaints->filter(fn($c) => in_array($statusOf($c), ['in_progress', 'assigned']))->count();
+        $pendingCount = $complaints->filter(fn($c) => in_array($statusOf($c), ['submitted', 'needs_clarification']))->count();
+        $inProgressCount = $complaints->filter(fn($c) => in_array($statusOf($c), ['in_progress', 'assigned', 'referred']))->count();
         $escalatedCount = $complaints->filter(fn($c) => $statusOf($c) === 'escalated')->count();
         $resolvedCount = $complaints->filter(fn($c) => $statusOf($c) === 'resolved')->count();
-        $closedCount = $complaints->filter(fn($c) => in_array($statusOf($c), ['rejected', 'closed']))->count();
+        $closedCount = $complaints->filter(fn($c) => $statusOf($c) === 'closed')->count();
         $recentTickets = $complaints
             ->sortByDesc(fn ($complaint) => $complaint->ticket?->updated_at?->timestamp ?? $complaint->created_at->timestamp)
             ->take(5);

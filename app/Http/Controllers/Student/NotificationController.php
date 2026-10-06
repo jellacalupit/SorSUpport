@@ -129,7 +129,7 @@ class NotificationController extends Controller
                         'complaint_id' => $complaint->id,
                         'performed_by' => $student->user_id,
                         'title' => $complaint->reference_number,
-                        'body' => "We received {$complaint->reference_number}. It is now pending review by the SDS Office.",
+                        'body' => "We received {$complaint->reference_number}. It is now waiting for review by the SDS Office.",
                         'at' => $complaint->created_at,
                         'displayAt' => $this->formatNotificationTime($complaint->created_at),
                     ]];
@@ -191,6 +191,12 @@ class NotificationController extends Controller
             'ticket_resolved' => 'Ticket resolved',
             'ticket_closed' => 'Ticket closed',
             'ticket_escalated' => 'Ticket escalated',
+            'clarification_requested' => 'More details needed',
+            'ticket_referred' => 'Ticket referred',
+            'referral_outcome_recorded' => 'Outcome recorded',
+            'complaint_resolved' => 'Ticket resolved',
+            'ticket_reopened_from_resolved' => 'Ticket back in progress',
+            'ticket_closed_invalid' => 'Ticket closed',
             'message_posted' => 'New message',
             default => ucfirst(str_replace('_', ' ', $action)),
         };

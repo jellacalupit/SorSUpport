@@ -17,13 +17,10 @@
 --}}
 
 @php
-    $isPendingReview = $ticket->status === 'pending' && $ticket->classification === null;
-    $hasThread = ! $isPendingReview && $ticket->classification === 'needs_resolution';
-    $isActive = $hasThread && in_array($ticket->status, ['assigned', 'in_progress', 'escalated'], true);
-    $isMine = (int) ($ticket->current_handler_id ?: $ticket->assigned_to) === (int) Auth::id();
-    $canEscalate = $isActive;
-    $canClose = $isActive && $isMine;
-    $awaitingClosure = $ticket->status === 'resolved';
+    $isPendingReview = $ticket->isAwaitingReview();
+    $hasConversation = $ticket->hasConversation();
+    // Under review the second column holds the review steps, so there is no Details / Thread switch.
+    $hasThread = $hasConversation && ! $isPendingReview;
     $hasSideColumn = $hasThread || $isPendingReview;
     $auditLogs = $isPendingReview
         ? collect()
@@ -42,7 +39,7 @@
     ];
 @endphp
 
-<div x-data="{ tab: window.location.hash === '#in-ticket-communication' ? 'thread' : 'details', action: @js($errors->has('recipient_id') ? 'escalate' : null) }">
+<div x-data="{ tab: @js($hasThread) && window.location.hash === '#in-ticket-communication' ? 'thread' : 'details' }">
     <!-- Back link and section switch -->
     <div data-ticket-back-row class="mb-2 grid h-9 grid-cols-[1fr_auto_1fr] items-center gap-2">
         <div class="justify-self-start">
@@ -70,48 +67,7 @@
                     {{-- With a conversation, desktop shows this under the conversation instead. --}}
                     @include('admin.tickets.partials.audit-activity', ['class' => $hasThread ? 'lg:hidden' : ''])
 
-                    @if ($awaitingClosure)
-                        <!-- Resolved by the holder: confirm it or send it back -->
-                        <div class="grid grid-cols-2 gap-2">
-                            <form method="POST" action="{{ route('admin.tickets.not-yet-resolved', $ticket) }}">
-                                @csrf
-                                <button type="submit" class="h-10 w-full rounded-full border border-primary bg-white px-3 text-center text-sm font-semibold text-primary transition-colors hover:bg-primary-soft">Not yet Resolved</button>
-                            </form>
-                            <form method="POST" action="{{ route('admin.tickets.close', $ticket) }}">
-                                @csrf
-                                <button type="submit" class="h-10 w-full rounded-full border border-primary bg-primary px-3 text-center text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Close Ticket</button>
-                            </form>
-                        </div>
-                    @elseif ($canEscalate || $canClose)
-                        <!-- Active ticket: escalate it, and close it when the admin is the one handling it -->
-                        <div>
-                            <div class="grid gap-2 {{ $canClose ? 'grid-cols-2' : '' }}" x-show="action === null">
-                                <button type="button" x-on:click="action = 'escalate'; $nextTick(() => $refs.escalatePanel.scrollIntoView({ block: 'nearest' }))" class="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full border border-red-800 bg-white px-3 text-sm font-semibold text-red-800 transition-colors hover:bg-red-50">
-                                    <x-icons.alert-triangle class="h-4 w-4" />
-                                    Escalate
-                                </button>
-                                @if ($canClose)
-                                    <button type="button" x-on:click="action = 'close'" class="h-10 w-full rounded-full border border-primary bg-primary px-3 text-center text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Close Ticket</button>
-                                @endif
-                            </div>
-
-                            <div x-ref="escalatePanel" x-show="action === 'escalate'" x-cloak>
-                                <x-ticket-escalate-form :ticket="$ticket" :cancellable="true" class="surface p-4" />
-                            </div>
-
-                            @if ($canClose)
-                                <form x-show="action === 'close'" x-cloak method="POST" action="{{ route('admin.tickets.close', $ticket) }}" class="surface p-4">
-                                    @csrf
-                                    <p class="text-sm font-semibold text-foreground">Close this ticket?</p>
-                                    <p class="mt-0.5 text-xs text-muted-foreground">The student is notified and the conversation is locked. This cannot be undone.</p>
-                                    <div class="mt-3 grid grid-cols-2 gap-2">
-                                        <button type="button" x-on:click="action = null" class="h-9 w-full rounded-full border border-border bg-white px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted">Cancel</button>
-                                        <button type="submit" class="h-9 w-full rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Yes, close ticket</button>
-                                    </div>
-                                </form>
-                            @endif
-                        </div>
-                    @endif
+                    <x-ticket-actions :ticket="$ticket" role="admin" />
                 @endunless
             </div>
         </div>
@@ -128,6 +84,11 @@
             <div class="min-w-0">
                 <h2 class="mb-0.5 hidden font-display text-base font-bold lg:block">Review</h2>
                 @include('admin.tickets.partials.review-steps', ['ticket' => $ticket])
+                @if ($hasConversation)
+                    <div class="ticket-thread-pane admin-page-thread mt-3">
+                        <x-ticket-thread :ticket="$ticket" viewerRole="admin" />
+                    </div>
+                @endif
             </div>
         @endif
     </div>

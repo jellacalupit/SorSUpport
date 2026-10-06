@@ -20,8 +20,9 @@
             $filters['unit'] ?? null,
         ])->filter()->values();
 
-        $inProgress = (int) (($data['statusCounts']['Assigned'] ?? 0) + ($data['statusCounts']['In Progress'] ?? 0));
-        $open = (int) (($data['statusCounts']['Pending'] ?? 0) + $inProgress + ($data['statusCounts']['Escalated'] ?? 0));
+        $inProgress = (int) (($data['statusCounts']['Assigned'] ?? 0) + ($data['statusCounts']['In Progress'] ?? 0) + ($data['statusCounts']['Referred'] ?? 0));
+        $awaitingReview = (int) (($data['statusCounts']['Submitted'] ?? 0) + ($data['statusCounts']['Needs Clarification'] ?? 0));
+        $open = (int) ($awaitingReview + $inProgress + ($data['statusCounts']['Escalated'] ?? 0));
         $kpis = [
             ['label' => 'Total tickets', 'value' => number_format($total), 'hint' => $periodLabel, 'icon' => 'ticket', 'tone' => 'bg-primary-soft text-primary'],
             ['label' => 'Resolution rate', 'value' => $percent($data['resolved']) . '%', 'hint' => number_format($data['resolved']) . ' resolved or closed', 'icon' => 'check', 'tone' => 'bg-emerald-50 text-emerald-700'],
@@ -30,13 +31,13 @@
         ];
         $pulse = [
             ['label' => 'Open now', 'value' => $open],
-            ['label' => 'Awaiting review', 'value' => $data['statusCounts']['Pending'] ?? 0],
+            ['label' => 'Awaiting review', 'value' => $awaitingReview],
             ['label' => 'In progress', 'value' => $inProgress],
             ['label' => 'Invalid', 'value' => $data['classification']['Invalid'] ?? 0],
         ];
 
         $statusSegments = [
-            ['label' => 'Pending', 'color' => '#facc15', 'count' => (int) ($data['statusCounts']['Pending'] ?? 0)],
+            ['label' => 'Submitted', 'color' => '#facc15', 'count' => $awaitingReview],
             ['label' => 'In Progress', 'color' => '#2563eb', 'count' => $inProgress],
             ['label' => 'Escalated', 'color' => '#dc2626', 'count' => (int) ($data['statusCounts']['Escalated'] ?? 0)],
             ['label' => 'Resolved', 'color' => '#16a34a', 'count' => (int) ($data['statusCounts']['Resolved'] ?? 0)],
@@ -64,7 +65,7 @@
         $filterDropdowns = [
             ['name' => 'category_id', 'label' => 'Category', 'all' => 'All categories', 'options' => $categoryOptions->mapWithKeys(fn ($category) => [(string) $category->id => $category->name])->all()],
             ['name' => 'classification', 'label' => 'Classification', 'all' => 'All classifications', 'options' => ['needs_resolution' => 'Needs Resolution', 'informational' => 'Informational', 'invalid' => 'Invalid', 'unclassified' => 'Unclassified']],
-            ['name' => 'status', 'label' => 'Status', 'all' => 'All statuses', 'options' => ['pending' => 'Pending', 'in_progress' => 'In Progress', 'escalated' => 'Escalated', 'resolved' => 'Resolved', 'closed' => 'Closed']],
+            ['name' => 'status', 'label' => 'Status', 'all' => 'All statuses', 'options' => \App\Models\Ticket::STATUS_LABELS],
             ['name' => 'unit', 'label' => 'College / Office', 'all' => 'All colleges and offices', 'options' => $unitOptions->mapWithKeys(fn ($unit) => [$unit => $unit])->all()],
         ];
         $cardClass = 'min-w-0 rounded-2xl border border-border bg-white p-4 shadow-sm';

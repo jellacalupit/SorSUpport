@@ -12,11 +12,11 @@
 @php
     $complaint = $ticket->complaint;
     $isInvalid = $ticket->classification === 'invalid';
-    $canEditDetails = $editable && $ticket->status === 'pending' && $ticket->classification === null;
+    $canEditDetails = $editable && $ticket->isAwaitingReview();
 
     $submittedAt = $complaint?->created_at?->copy()->setTimezone('Asia/Manila');
     $lastUpdate = 'Unknown';
-    $holder = $ticket->status === 'pending'
+    $holder = $ticket->isAwaitingReview()
         ? \App\Models\User::query()->where('role', \App\Models\User::ROLE_SDS_ADMIN)->orderBy('id')->first()
         : ($isInvalid ? null : ($ticket->currentHandler
             ?? $ticket->assignee
@@ -27,23 +27,7 @@
     $studentUser = $student?->user;
     $studentDisplayName = $complaint?->is_anonymous ? 'Anonymous' : ($studentUser?->table_name ?? 'Anonymous');
     $studentCourseYearBlock = trim(($student->program ?? 'Program not specified') . ' ' . ($student->year_level ?? 'N/A') . (($student->block ?? '') !== '' ? '-' . $student->block : ''));
-    $statusDisplay = $studentView && $ticket->classification === 'informational' && $ticket->status === 'pending'
-        ? 'Closed'
-        : ($studentView
-        ? match ($ticket->status) {
-            'assigned', 'in_progress' => 'In Progress',
-            'escalated' => 'Escalated',
-            'resolved' => 'Resolved',
-            'rejected', 'closed' => 'Closed',
-            default => 'Pending',
-        }
-        : match ($ticket->status) {
-            'assigned', 'in_progress' => 'In Progress',
-            'resolved' => 'Resolved',
-            'escalated' => 'Escalated',
-            'rejected', 'closed' => 'Closed',
-            default => ucfirst(str_replace('_', ' ', $ticket->status)),
-        });
+    $statusDisplay = $ticket->status_label;
     if ($ticket->updated_at) {
         $updatedAt = $ticket->updated_at->copy()->setTimezone('Asia/Manila');
         $nowInManila = now()->setTimezone('Asia/Manila');
@@ -115,7 +99,7 @@
             <p class="text-sm font-medium leading-tight wrap-break-word">{{ $complaint?->category?->name ?? 'Uncategorized' }}</p>
         </div>
 
-        @if ($ticket->status === 'pending')
+        @if ($ticket->isAwaitingReview())
             <!-- Suggested Recipient -->
             <div class="min-w-0">
                 <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Suggested Recipient</p>
@@ -163,6 +147,22 @@
                 <p class="text-sm font-medium leading-tight wrap-break-word">
                     {{ $ticket->escalated_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}
                 </p>
+            </div>
+        @endif
+
+        @if ($ticket->referred_to)
+            <div class="min-w-0">
+                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Referred To</p>
+                <p class="text-sm font-medium leading-tight wrap-break-word">
+                    {{ $ticket->referred_to }}@if ($ticket->referred_at) · {{ $ticket->referred_at->copy()->setTimezone('Asia/Manila')->format('M d, Y') }}@endif
+                </p>
+            </div>
+        @endif
+
+        @if ($ticket->resolution_label && in_array($ticket->status, ['resolved', 'closed'], true))
+            <div class="min-w-0">
+                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Resolution</p>
+                <p class="text-sm font-medium leading-tight wrap-break-word">{{ $ticket->resolution_label }}</p>
             </div>
         @endif
 
@@ -268,10 +268,15 @@
     @endif
 
     <!-- Closed Reason (if applicable) -->
-    @if ($ticket->status === 'closed' && $ticket->closure_reason)
+    @if ($ticket->status === 'closed' && ($ticket->closure_label || $ticket->closure_reason))
         <div class="mt-4 rounded-lg border bg-secondary p-3 text-sm">
             <p class="font-semibold">Closure Reason</p>
-            <p class="mt-1 text-muted-foreground">{{ $ticket->closure_reason }}</p>
+            @if ($ticket->closure_label)
+                <p class="mt-1 font-medium text-foreground">{{ $ticket->closure_label }}</p>
+            @endif
+            @if ($ticket->closure_reason)
+                <p class="mt-1 text-muted-foreground">{{ $ticket->closure_reason }}</p>
+            @endif
         </div>
     @endif
 </div>

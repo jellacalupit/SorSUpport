@@ -9,7 +9,7 @@
         </div>
     @endif
 
-    @php $hasThread = $complaint->ticket->classification === 'needs_resolution'; @endphp
+    @php $hasThread = $complaint->ticket->hasConversation(); @endphp
     <div x-data="{ tab: window.location.hash === '#in-ticket-communication' ? 'thread' : 'details' }">
         <!-- Back link, section switch and resolve action -->
         <div class="mb-2 grid h-9 grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -28,16 +28,6 @@
                 <span></span>
             @endif
             <div class="justify-self-end">
-            @if (in_array($complaint->ticket->status, ['assigned', 'in_progress'], true))
-                <form id="resolve-ticket-form" method="POST" action="{{ route('recipient.complaints.update-status', $complaint) }}">
-                    @csrf
-                    @method('PATCH')
-                    <input type="hidden" name="status" value="resolved">
-                    <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-md bg-green-800 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-green-900">
-                        <span class="sm:hidden">Resolve</span><span class="hidden sm:inline">Mark as Resolved</span>
-                    </button>
-                </form>
-            @endif
             </div>
         </div>
 
@@ -47,6 +37,7 @@
                 <h2 class="mb-0.5 hidden font-display text-base font-bold lg:block">Ticket Details</h2>
                 <div class="grid gap-3">
                     <x-ticket-info-panel :ticket="$complaint->ticket" :show-filed-by="true" />
+                    <x-ticket-actions :ticket="$complaint->ticket" role="recipient" />
                 </div>
             </div>
 

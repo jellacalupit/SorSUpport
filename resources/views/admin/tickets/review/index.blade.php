@@ -235,7 +235,7 @@
                         <div class="mb-1 flex items-center justify-between gap-3">
                             <p class="font-mono text-[11px] font-semibold leading-tight text-primary">{{ $ticket->complaint->reference_number }}</p>
                             <div class="shrink-0">
-                                <x-status-badge :status="match($ticket->status) { 'assigned', 'in_progress' => 'In Progress', 'resolved' => 'Resolved', 'escalated' => 'Escalated', 'rejected', 'closed' => 'Closed', default => ucfirst(str_replace('_', ' ', $ticket->status)), }" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" />
+                                <x-status-badge :status="$ticket->status_label" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" />
                             </div>
                         </div>
                         <h3 class="mt-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $ticket->complaint->subject_title }}</h3>
@@ -280,16 +280,7 @@
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Updated</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</p></div>
                         </div>
 
-                        <div class="mt-4 grid gap-2 sm:grid-cols-2">
-                            <form method="POST" action="{{ route('admin.tickets.not-yet-resolved', $ticket) }}">
-                                @csrf
-                                <button type="submit" class="w-full rounded-full border border-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary transition-colors hover:bg-primary-soft">Not yet Resolved</button>
-                            </form>
-                            <form method="POST" action="{{ route('admin.tickets.close', $ticket) }}">
-                                @csrf
-                                <button type="submit" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Close Ticket</button>
-                            </form>
-                        </div>
+                        <x-ticket-actions :ticket="$ticket" role="admin" class="mt-4" />
                     </div>
 
                     <div class="flex flex-col gap-4 overflow-hidden sm:h-[calc(100vh-6rem)]">
@@ -342,7 +333,7 @@
                     <div class="mb-1 flex items-center justify-between gap-3">
                         <p class="font-mono text-[11px] font-semibold leading-tight text-primary">{{ $ticket->complaint->reference_number }}</p>
                         <div class="shrink-0">
-                            <x-status-badge :status="match($ticket->status) { 'assigned', 'in_progress' => 'In Progress', 'resolved' => 'Resolved', 'escalated' => 'Escalated', 'rejected', 'closed' => 'Closed', default => ucfirst(str_replace('_', ' ', $ticket->status)), }" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" />
+                            <x-status-badge :status="$ticket->status_label" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" />
                         </div>
                     </div>
                     <h3 class="mt-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $ticket->complaint->subject_title }}</h3>
@@ -390,7 +381,9 @@
                     </div>
 
                 </div>
-                @if ($ticket->status === 'pending')
+                @if ($ticket->isAwaitingReview())
+                <div class="min-w-0">
+                <x-ticket-actions :ticket="$ticket" role="admin" class="mb-3" />
                 <div x-data="{ validity: null, classification: {{ $isAnonymousTicket ? "'informational'" : 'null' }}, jurisdiction: null, informationalDisposition: null, selectedRecipientId: null, selectedRecipient: '', invalidReason: '', invalidReasonError: false }">
                     <div class="rounded-lg border border-border bg-white p-4 text-foreground shadow-sm">
                     <h3 class="flex items-center gap-2 font-display text-base font-bold text-black">
@@ -472,6 +465,12 @@
 
                     <form x-show="validity === 'invalid'" x-cloak method="POST" action="{{ route('admin.tickets.reject', $ticket) }}" class="mt-5 border-t border-border pt-4" x-on:submit="if (!invalidReason.trim()) { invalidReasonError = true; $event.preventDefault(); }">
                         @csrf
+                        <label for="closure-type-review-{{ $ticket->id }}" class="text-sm font-semibold text-black">Why can it not be acted on?</label>
+                        <select id="closure-type-review-{{ $ticket->id }}" name="closure_type" class="mt-2 mb-3 h-9 w-full rounded-md border border-input bg-white px-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring">
+                            @foreach ([\App\Models\Ticket::CLOSURE_INVALID, \App\Models\Ticket::CLOSURE_DUPLICATE, \App\Models\Ticket::CLOSURE_OUT_OF_SCOPE, \App\Models\Ticket::CLOSURE_NO_RESPONSE] as $closureType)
+                                <option value="{{ $closureType }}">{{ \App\Models\Ticket::CLOSURE_LABELS[$closureType] }}</option>
+                            @endforeach
+                        </select>
                         <label for="closure-reason-{{ $ticket->id }}" class="text-sm font-semibold text-black">Reason of Invalidity <span class="text-destructive" aria-hidden="true">*</span></label>
                         <textarea id="closure-reason-{{ $ticket->id }}" name="closure_reason" rows="4" x-model="invalidReason" x-on:input="invalidReasonError = false" x-bind:class="invalidReasonError ? 'border-destructive' : 'border-input'" class="mt-2 w-full rounded-lg border bg-muted px-3 py-2.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" placeholder="Enter the reason for invalidity."></textarea>
                         <p x-show="invalidReasonError" x-cloak class="mt-1 text-xs font-medium text-destructive">This field is required.</p>
@@ -500,13 +499,17 @@
                         <button type="submit" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Forward &amp; Close Ticket</button>
                     </form>
                 </div>
+                @if ($ticket->hasConversation())
+                    <div class="admin-ticket-thread mt-3"><x-ticket-thread :ticket="$ticket" viewerRole="admin" /></div>
+                @endif
+                </div>
                 @elseif ($ticket->status === 'resolved')
                     <div class="grid items-start gap-4 sm:grid-cols-[1.35fr_1fr]">
                         <div class="min-w-0 rounded-lg border border-border bg-card p-4 sm:min-h-[calc(100vh-6rem)]">
                             <div class="mb-1 flex items-center justify-between gap-3">
                                 <p class="font-mono text-[11px] font-semibold leading-tight text-primary">{{ $ticket->complaint->reference_number }}</p>
                                 <div class="shrink-0">
-                                    <x-status-badge :status="match($ticket->status) { 'assigned', 'in_progress' => 'In Progress', 'resolved' => 'Resolved', 'escalated' => 'Escalated', 'rejected', 'closed' => 'Closed', default => ucfirst(str_replace('_', ' ', $ticket->status)), }" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" />
+                                    <x-status-badge :status="$ticket->status_label" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" />
                                 </div>
                             </div>
                             <h3 class="mt-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $ticket->complaint->subject_title }}</h3>
@@ -551,16 +554,7 @@
                                 <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Updated</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</p></div>
                             </div>
 
-                            <div class="mt-4 grid gap-2 sm:grid-cols-2">
-                                <form method="POST" action="{{ route('admin.tickets.not-yet-resolved', $ticket) }}">
-                                    @csrf
-                                    <button type="submit" class="w-full rounded-full border border-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary transition-colors hover:bg-primary-soft">Not yet Resolved</button>
-                                </form>
-                                <form method="POST" action="{{ route('admin.tickets.close', $ticket) }}">
-                                    @csrf
-                                    <button type="submit" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Close Ticket</button>
-                                </form>
-                            </div>
+                            <x-ticket-actions :ticket="$ticket" role="admin" class="mt-4" />
                         </div>
 
                         <div class="flex flex-col gap-4 overflow-hidden sm:h-[calc(100vh-6rem)]">

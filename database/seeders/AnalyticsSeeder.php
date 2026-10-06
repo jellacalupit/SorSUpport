@@ -20,7 +20,7 @@ class AnalyticsSeeder extends Seeder
         $admin = User::query()->firstWhere('role', User::ROLE_SDS_ADMIN);
 
         Ticket::query()
-            ->where('status', Ticket::STATUS_PENDING)
+            ->where('status', Ticket::STATUS_SUBMITTED)
             ->update([
                 'status' => Ticket::STATUS_ASSIGNED,
                 'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
@@ -179,15 +179,15 @@ class AnalyticsSeeder extends Seeder
                 ]);
 
                 $status = $count < 2
-                    ? Ticket::STATUS_PENDING
+                    ? Ticket::STATUS_SUBMITTED
                     : Arr::random($statuses);
                 $resolvedAt = null;
                 $closedAt = null;
                 $ticketCreatedAt = $complaintDate->copy()->addHours(1);
                 $timeline = collect([]);
 
-                if ($status === Ticket::STATUS_PENDING) {
-                    $timeline->push(['status' => Ticket::STATUS_PENDING, 'at' => $ticketCreatedAt]);
+                if ($status === Ticket::STATUS_SUBMITTED) {
+                    $timeline->push(['status' => Ticket::STATUS_SUBMITTED, 'at' => $ticketCreatedAt]);
                 }
 
                 if ($status === Ticket::STATUS_ASSIGNED) {

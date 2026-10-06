@@ -46,26 +46,9 @@
     
     // Get status from ticket if available, otherwise from complaint
     $status = $ticket ? $ticket->status : $item->status;
-    $statusDisplay = $role === 'student' && $ticket?->classification === 'informational' && $status === 'pending'
-        ? 'Closed'
-        : ($role === 'student'
-        ? match($status) {
-            'assigned', 'in_progress' => 'In Progress',
-            'escalated' => 'Escalated',
-            'resolved' => 'Resolved',
-            'rejected', 'closed' => 'Closed',
-            default => 'Pending',
-        }
-        : match($status) {
-        'pending' => 'Pending',
-        'assigned' => 'In Progress',
-        'in_progress' => 'In Progress',
-        'resolved' => 'Resolved',
-        'rejected' => 'Rejected',
-        'closed' => 'Closed',
-        'escalated' => 'Escalated',
-        default => ucfirst(str_replace('_', ' ', $status)),
-        });
+    $statusDisplay = $ticket
+        ? $ticket->status_label
+        : (\App\Models\Ticket::STATUS_LABELS[$status] ?? 'Submitted');
     $classification = $ticket?->classification;
     $studentUser = $complaint?->student?->user;
     $radiusClass = match (true) {
@@ -75,7 +58,7 @@
         default => 'rounded-none',
     };
     $recipientMetaText = null;
-    if ($role === 'recipient' && $ticket?->status !== 'pending' && ! in_array($ticket?->status, ['resolved', 'closed', 'rejected'], true)) {
+    if ($role === 'recipient' && $ticket?->isActive()) {
         if ($ticket?->escalated_at) {
             $recipientMetaText = 'Escalated ' . $ticket->escalated_at->copy()->setTimezone('Asia/Manila')->format('M d');
         }

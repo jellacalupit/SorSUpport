@@ -91,16 +91,14 @@ class TicketEscalationService
     public function escalate(Ticket $ticket, Recipient $targetRecipient, ?User $performedBy = null): void
     {
         DB::transaction(function () use ($ticket, $targetRecipient, $performedBy): void {
+            // Escalating again keeps the Escalated status and only changes who holds the ticket.
             $ticket->update([
-                'status' => Ticket::STATUS_ESCALATED,
+                ...($ticket->status === Ticket::STATUS_ESCALATED ? [] : ['status' => Ticket::STATUS_ESCALATED]),
                 'assigned_to' => $targetRecipient->user_id,
                 'current_handler_id' => $targetRecipient->user_id,
                 'escalated_at' => now(),
             ]);
 
-            if ($ticket->thread) {
-                $ticket->thread->update(['is_active' => true]);
-            }
 
             AuditLog::log(
                 $ticket->id,

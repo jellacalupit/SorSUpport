@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use App\Models\EmailNotification;
 use App\Services\TicketUnreadService;
+use App\Services\TicketWorkflow;
 
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -51,13 +52,7 @@ class ComplaintController extends Controller
                 });
             })
             ->when($status && $status !== 'All', function ($query) use ($status) {
-                $ticketStatuses = match ($status) {
-                    'in_progress' => [Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS],
-                    'assigned' => [Ticket::STATUS_ASSIGNED],
-                    'resolved' => [Ticket::STATUS_RESOLVED],
-                    'closed' => [Ticket::STATUS_CLOSED, Ticket::STATUS_REJECTED],
-                    default => [$status],
-                };
+                $ticketStatuses = [$status];
 
                 $query->where(function ($query) use ($status, $ticketStatuses) {
                     $query->whereHas('ticket', fn ($ticketQuery) => $ticketQuery->whereIn('status', $ticketStatuses))
@@ -223,13 +218,13 @@ class ComplaintController extends Controller
                 'description' => $validated['description'],
                 'file_attachment' => $attachmentPaths ? json_encode($attachmentPaths) : null,
                 'is_anonymous' => $isAnonymous,
-                'status' => Complaint::STATUS_PENDING,
+                'status' => Complaint::STATUS_SUBMITTED,
             ]);
 
             // Every submission, anonymous or not, waits for the SDS admin's review.
             $ticket = Ticket::create([
                 'complaint_id' => $complaint->id,
-                'status' => Ticket::STATUS_PENDING,
+                'status' => Ticket::STATUS_SUBMITTED,
                 'current_handler_id' => User::query()->where('role', User::ROLE_SDS_ADMIN)->orderBy('id')->value('id'),
             ]);
 
@@ -304,7 +299,7 @@ class ComplaintController extends Controller
             'suggested_recipient' => $complaint->suggestedRecipient?->user?->table_name,
             'attachment_count' => count($complaint->attachment_files),
             'is_anonymous' => (bool) $complaint->is_anonymous,
-            'status' => 'Pending',
+            'status' => 'Submitted',
         ];
     }
 
@@ -433,6 +428,12 @@ class ComplaintController extends Controller
                 'Student posted a reply message.'
             );
 
+            if ($ticket->status === Ticket::STATUS_NEEDS_CLARIFICATION) {
+                app(TicketWorkflow::class)->provideClarification($ticket, Auth::user());
+
+                return;
+            }
+
             $handler = $ticket->currentHandler ?? $ticket->assignee;
             if ($handler?->email) {
                 EmailNotification::create([
@@ -446,5 +447,75 @@ class ComplaintController extends Controller
 
         Log::debug('Student\\ComplaintController@storeReply returning redirect', ['user_id' => Auth::id()]);
         return redirect()->route('student.complaints.show', $complaint);
+    }
+
+    /**
+     * Accept the resolution, which closes the ticket.
+     */
+    public function acceptResolution(Complaint $complaint, TicketWorkflow $workflow): RedirectResponse
+    {
+        $workflow->acceptResolution($this->ownTicket($complaint), Auth::user());
+
+        return redirect()->route('student.complaints.show', $complaint)
+            ->with('success', 'Thank you. The ticket is now closed.');
+    }
+
+    /**
+     * Ask for further action on a resolved ticket, within the allowed number of days.
+     */
+    public function requestFurtherAction(Request $request, Complaint $complaint, TicketWorkflow $workflow): RedirectResponse
+    {
+        $ticket = $this->ownTicket($complaint);
+
+        if ($ticket->status === Ticket::STATUS_RESOLVED && ! $workflow->withinFurtherActionWindow($ticket)) {
+            return back()->withErrors([
+                'further_action_reason' => sprintf('Further action can only be requested within %d days after the ticket was resolved.', Ticket::FURTHER_ACTION_DAYS),
+            ]);
+        }
+
+        $workflow->authorize(Auth::user(), $ticket, TicketWorkflow::REQUEST_FURTHER_ACTION);
+
+        $validated = $request->validate([
+            'further_action_reason' => 'required|string|max:2000',
+        ], [
+            'further_action_reason.required' => 'Tell us what still needs to be addressed.',
+        ]);
+
+        $workflow->requestFurtherAction($ticket, Auth::user(), $validated['further_action_reason']);
+
+        return redirect()->route('student.complaints.show', $complaint)
+            ->with('success', 'Your request was sent. The ticket is in progress again.');
+    }
+
+    /**
+     * Withdraw a ticket before it is resolved.
+     */
+    public function withdraw(Request $request, Complaint $complaint, TicketWorkflow $workflow): RedirectResponse
+    {
+        $ticket = $this->ownTicket($complaint);
+
+        $workflow->authorize(Auth::user(), $ticket, TicketWorkflow::WITHDRAW);
+
+        $validated = $request->validate([
+            'withdraw_reason' => 'nullable|string|max:1000',
+        ]);
+
+        $workflow->withdraw($ticket, Auth::user(), $validated['withdraw_reason'] ?? null);
+
+        return redirect()->route('student.complaints.show', $complaint)
+            ->with('success', 'Your ticket was withdrawn and closed.');
+    }
+
+    /**
+     * The ticket of a complaint submitted by the signed-in student.
+     */
+    protected function ownTicket(Complaint $complaint): Ticket
+    {
+        $student = Auth::user()->student;
+
+        abort_unless($student && (int) $complaint->student_id === (int) $student->id, 403);
+        abort_unless($complaint->ticket, 404);
+
+        return $complaint->ticket;
     }
 }

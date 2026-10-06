@@ -18,7 +18,7 @@
     <!-- Stats Grid -->
     <div class="mt-5 grid grid-cols-1 gap-2 min-[220px]:grid-cols-2 min-[360px]:grid-cols-3 sm:grid-cols-6 sm:gap-3">
         <x-stat-card compact inline label="Total" :value="$totalCount" />
-        <x-stat-card compact inline label="Pending" :value="$pendingCount" value-tone="yellow" />
+        <x-stat-card compact inline label="Submitted" :value="$pendingCount" value-tone="yellow" />
         <x-stat-card
             compact
             inline

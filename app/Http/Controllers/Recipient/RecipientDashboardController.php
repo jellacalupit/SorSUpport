@@ -26,7 +26,7 @@ class RecipientDashboardController extends Controller
         // Get statistics
         $totalCount = Ticket::where('assigned_to', Auth::id())->count();
         $inProgressCount = Ticket::where('assigned_to', Auth::id())
-            ->whereIn('status', ['assigned', 'in_progress'])
+            ->whereIn('status', ['assigned', 'in_progress', 'referred'])
             ->count();
         $resolvedCount = Ticket::where('assigned_to', Auth::id())
             ->where('status', 'resolved')
@@ -35,7 +35,7 @@ class RecipientDashboardController extends Controller
             ->where('status', 'escalated')
             ->count();
         $closedCount = Ticket::where('assigned_to', Auth::id())
-            ->whereIn('status', ['closed', 'rejected'])
+            ->where('status', 'closed')
             ->count();
 
         // Only the five most recently updated tickets appear on the home page.

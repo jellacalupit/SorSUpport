@@ -37,7 +37,7 @@
                     <div class="min-w-0 sm:flex sm:items-center sm:gap-2">
                         <label for="my-status" class="hidden shrink-0 text-sm font-medium sm:block">Filter by status</label>
                         @php
-                            $statusLabels = ['' => 'All', 'in_progress' => 'In Progress', 'escalated' => 'Escalated', 'closed' => 'Closed'];
+                            $statusLabels = ['' => 'All'] + \Illuminate\Support\Arr::except(\App\Models\Ticket::STATUS_LABELS, ['submitted', 'needs_clarification']);
                             $selectedStatus = $status ?? '';
                         @endphp
                         <details x-data="{}" class="group relative w-full sm:w-32 sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
@@ -118,13 +118,7 @@
                                 $student = $ticket->complaint?->student;
                                 $studentUser = $student?->user;
                                 $studentTableName = $ticket->complaint?->is_anonymous ? 'Anonymous' : ($studentUser?->table_name ?? 'Anon');
-                                $statusDisplay = match ($ticket->status) {
-                                    'assigned', 'in_progress' => 'In Progress',
-                                    'resolved' => 'Resolved',
-                                    'escalated' => 'Escalated',
-                                    'rejected', 'closed' => 'Closed',
-                                    default => ucfirst(str_replace('_', ' ', $ticket->status)),
-                                };
+                                $statusDisplay = $ticket->status_label;
                                 $classification = $ticket->classification ?? ($ticket->complaint?->is_anonymous ? 'anonymous' : null);
                                 $classificationLabel = $classification ? ucwords(str_replace('_', ' ', $classification)) : '—';
                                 $classificationColor = match ($classification) {
@@ -217,7 +211,7 @@
                     <div class="min-w-0 rounded-lg border border-border bg-card p-4 sm:min-h-[calc(100vh-6rem)]">
                         <div class="flex items-center justify-between gap-3 mb-1">
                             <p class="font-mono text-[11px] font-semibold leading-tight text-primary">{{ $ticket->complaint?->reference_number ?? $ticket->id }}</p>
-                            <div class="shrink-0"><x-status-badge :status="match($ticket->status) { 'assigned', 'in_progress' => 'In Progress', 'resolved' => 'Resolved', 'escalated' => 'Escalated', 'rejected', 'closed' => 'Closed', default => ucfirst(str_replace('_', ' ', $ticket->status)), }" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" /></div>
+                            <div class="shrink-0"><x-status-badge :status="$ticket->status_label" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" /></div>
                         </div>
                         <h3 class="mt-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $ticket->complaint?->subject_title ?? 'Untitled' }}</h3>
                         <div class="mt-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
@@ -272,13 +266,7 @@
                             @endif
                             <div class="border-t border-border pt-2"><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Classification</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : '—' }}</p></div>
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Escalated On</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->escalated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? '—' }}</p></div>
-                            <x-ticket-escalate-form :ticket="$ticket" class="mt-1" />
-                            @if ($ticket->classification === 'needs_resolution' && in_array($ticket->status, ['assigned', 'in_progress', 'escalated'], true))
-                                <form method="POST" action="{{ route('admin.tickets.close', $ticket) }}" onsubmit="return confirm('Close this ticket? The student is notified and the conversation is locked.')">
-                                    @csrf
-                                    <button type="submit" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Close Ticket</button>
-                                </form>
-                            @endif
+                            <x-ticket-actions :ticket="$ticket" role="admin" class="mt-1" />
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Updated</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</p></div>
                         </div>
                     </div>

@@ -27,13 +27,7 @@ class AnalyticsService
 
     public function getTotalTicketsByStatus(array $filters = []): array
     {
-        $statuses = [
-            Ticket::STATUS_PENDING,
-            Ticket::STATUS_ASSIGNED,
-            Ticket::STATUS_IN_PROGRESS,
-            Ticket::STATUS_RESOLVED,
-            Ticket::STATUS_CLOSED,
-        ];
+        $statuses = array_keys(Ticket::STATUS_LABELS);
 
         $counts = $this->filterTickets(Ticket::query(), $filters)
             ->get(['status'])
@@ -158,7 +152,7 @@ class AnalyticsService
         $statusCounts = $this->getTotalTicketsByStatus($filters);
 
         return [
-            'labels' => array_map(fn ($status) => ucfirst(str_replace('_', ' ', $status)), array_keys($statusCounts)),
+            'labels' => array_map(fn ($status) => Ticket::STATUS_LABELS[$status] ?? ucfirst(str_replace('_', ' ', $status)), array_keys($statusCounts)),
             'data' => array_values($statusCounts),
         ];
     }
@@ -224,14 +218,14 @@ class AnalyticsService
         $classificationCounts = $tickets->groupBy(fn ($ticket) => $ticket->classification ?: 'unclassified')->map->count();
         $identified = $tickets->filter(fn ($ticket) => ! $ticket->complaint?->is_anonymous)->count();
         $subjects = $tickets->groupBy(fn ($ticket) => $ticket->complaint?->subject_title ?: 'Untitled')->map->count()->sortDesc()->take(10);
-        $openStatuses = [Ticket::STATUS_PENDING, Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED];
+        $openStatuses = [Ticket::STATUS_SUBMITTED, Ticket::STATUS_NEEDS_CLARIFICATION, Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED, Ticket::STATUS_REFERRED];
         $openTickets = $tickets->whereIn('status', $openStatuses);
         $unitRows = $tickets
             ->groupBy(function ($ticket) {
                 $handler = $ticket->assignee ?? $ticket->currentHandler;
                 return $handler?->recipient?->unit ?: 'Unassigned';
             })
-            ->map(function ($group, $unit) use ($resolvedStatuses) {
+            ->map(function ($group, $unit) use ($resolvedStatuses, $openStatuses) {
                 $resolvedGroup = $group->where('classification', Ticket::CLASSIFICATION_NEEDS_RESOLUTION)->whereIn('status', $resolvedStatuses);
                 $durations = $resolvedGroup
                     ->filter(fn ($ticket) => $ticket->resolved_at && $ticket->complaint?->created_at)
@@ -240,7 +234,7 @@ class AnalyticsService
                 return [
                     'name' => $unit,
                     'total' => $group->count(),
-                    'open' => $group->whereIn('status', [Ticket::STATUS_PENDING, Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED])->count(),
+                    'open' => $group->whereIn('status', $openStatuses)->count(),
                     'resolved' => $resolvedGroup->count(),
                     'average' => $durations->isNotEmpty() ? round($durations->avg() / 24, 1) : 0,
                 ];
@@ -258,7 +252,7 @@ class AnalyticsService
             'averageHours' => $resolutionHours->isNotEmpty() ? round($resolutionHours->avg(), 1) : 0, 'fastestHours' => $resolutionHours->min() ?? 0, 'longestHours' => $resolutionHours->max() ?? 0,
             'volume' => ['labels' => $submittedSeries['labels'], 'submitted' => $submittedSeries['data'], 'resolved' => $resolvedSeries['data'], 'closed' => $closedSeries['data'], 'period' => $period],
             'categoryCounts' => $categoryNames->mapWithKeys(fn ($name) => [$name => $categoryCounts[$name] ?? 0])->toArray(),
-            'statusCounts' => collect(['pending' => 'Pending', 'assigned' => 'Assigned', 'in_progress' => 'In Progress', 'escalated' => 'Escalated', 'resolved' => 'Resolved', 'closed' => 'Closed'])->mapWithKeys(fn ($label, $key) => [$label => ($statusCounts[$key] ?? 0)])->toArray(),
+            'statusCounts' => collect(Ticket::STATUS_LABELS)->mapWithKeys(fn ($label, $key) => [$label => ($statusCounts[$key] ?? 0)])->toArray(),
             'resolutionByCategory' => $this->resolutionByCategory($tickets, $categoryNames),
             'escalations' => ['total' => $escalationEvents->count(), 'tickets' => $escalatedTicketIds->count(), 'once' => $escalatedOnce, 'repeated' => $escalatedRepeatedly, 'never' => $neverEscalated, 'rate' => $tickets->count() ? round($escalatedTicketIds->count() / $tickets->count() * 100) : 0, 'averageLevel' => $escalationsPerTicket->avg() ?: 0, 'byCategory' => $escalationEvents->groupBy(fn ($log) => $tickets->firstWhere('id', $log->ticket_id)?->complaint?->category?->name ?? 'Uncategorized')->map->count()->toArray()],
             'recipients' => $recipientRows, 'classification' => ['Needs Resolution' => $classificationCounts['needs_resolution'] ?? 0, 'Informational' => $classificationCounts['informational'] ?? 0, 'Invalid' => $classificationCounts['invalid'] ?? 0, 'Unclassified' => $classificationCounts['unclassified'] ?? 0], 'submission' => ['Identified' => $identified, 'Anonymous' => $tickets->count() - $identified],

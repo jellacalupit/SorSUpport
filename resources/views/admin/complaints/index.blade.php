@@ -45,7 +45,7 @@
                                     <span class="truncate">{{ request('status_filter') ? ucfirst(str_replace('_', ' ', request('status_filter'))) : 'All statuses' }}</span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                                 </summary>
                                 <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md max-sm:right-0 max-sm:min-w-max">
-                                    @foreach (['' => 'All statuses', 'pending' => 'Pending', 'assigned' => 'Assigned', 'in_progress' => 'In Progress', 'escalated' => 'Escalated', 'resolved' => 'Resolved', 'closed' => 'Closed'] as $value => $label)
+                                    @foreach (['' => 'All statuses'] + \App\Models\Ticket::STATUS_LABELS as $value => $label)
                                         <a href="{{ $query(array_merge(request()->only(['search','category_filter','classification_filter','filed_from','filed_to','sort']), ['status_filter' => $value])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ request('status_filter', '') === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if (request('status_filter', '') === $value)<x-icons.check class="absolute right-2 h-4 w-4" />@endif{{ $label }}</a>
                                     @endforeach
                                 </div>
@@ -100,7 +100,7 @@
                 <li>
                     <x-ticket-card :item="$complaint->ticket ?? $complaint" role="admin" :first="$loop->first" :last="$loop->last">
                         Filed by {{ $complaint->is_anonymous ? 'Anonymous' : ($complaint->student?->user?->table_name ?? 'Unknown') }}
-                        @if ($complaint->ticket && $complaint->ticket->status !== 'pending' && ($complaint->ticket->currentHandler ?? $complaint->ticket->assignee))
+                        @if ($complaint->ticket && ! $complaint->ticket->isAwaitingReview() && ($complaint->ticket->currentHandler ?? $complaint->ticket->assignee))
                             <span>· Held by {{ ($complaint->ticket->currentHandler ?? $complaint->ticket->assignee)->table_name }}</span>
                         @endif
                     </x-ticket-card>
@@ -142,7 +142,7 @@
                     @forelse ($complaints as $complaint)
                         @php
                             $ticket = $complaint->ticket;
-                            $holderUser = $ticket?->status === 'pending'
+                            $holderUser = $ticket?->isAwaitingReview()
                                 ? ($pendingAdmin ?? $ticket?->currentHandler)
                                 : ($ticket?->currentHandler ?? $ticket?->assignee);
                             $holderRecipient = $holderUser?->recipient;
@@ -191,7 +191,7 @@
                 $studentUser = $student?->user;
                 $studentDisplayName = $complaint->is_anonymous ? 'Anonymous' : ($studentUser?->table_name ?? 'Anonymous');
                 $studentCourseYearBlock = trim(($student?->program ?? 'Program not specified') . ' ' . ($student?->year_level ?? 'N/A') . (($student?->block ?? '') !== '' ? '-' . $student->block : ''));
-                $holderUser = $ticket?->status === 'pending'
+                $holderUser = $ticket?->isAwaitingReview()
                     ? ($pendingAdmin ?? $ticket?->currentHandler)
                     : ($ticket?->currentHandler ?? $ticket?->assignee);
                 $currentHolderName = $holderUser?->table_name ?? '—';
@@ -209,7 +209,7 @@
                         <div class="mb-1 flex items-center justify-between gap-3">
                             <p class="font-mono text-[11px] font-semibold leading-tight text-primary">{{ $complaint->reference_number }}</p>
                             <div class="shrink-0">
-                                <x-status-badge :status="match($ticket?->status ?? 'pending') { 'assigned', 'in_progress' => 'In Progress', 'resolved' => 'Resolved', 'escalated' => 'Escalated', 'rejected', 'closed' => 'Closed', default => ucfirst(str_replace('_', ' ', ($ticket?->status ?? 'pending'))), }" :classification="$ticket?->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" />
+                                <x-status-badge :status="$ticket?->status_label ?? 'Submitted'" :classification="$ticket?->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" />
                             </div>
                         </div>
                         <h3 class="mt-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $complaint->subject_title ?? 'Untitled' }}</h3>

@@ -12,6 +12,7 @@ use App\Models\Ticket;
 use App\Models\TicketThread;
 use App\Services\TicketEscalationService;
 use App\Services\TicketUnreadService;
+use App\Services\TicketWorkflow;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -22,8 +23,10 @@ use Illuminate\View\View;
 
 class AdminTicketReviewController extends Controller
 {
-    public function __construct(protected TicketEscalationService $escalationService)
-    {
+    public function __construct(
+        protected TicketEscalationService $escalationService,
+        protected TicketWorkflow $workflow,
+    ) {
     }
 
     public function markRead(Ticket $ticket, TicketUnreadService $unreadService): Response
@@ -33,28 +36,12 @@ class AdminTicketReviewController extends Controller
         return response()->noContent();
     }
 
+    /**
+     * Send a resolved ticket back to its handler.
+     */
     public function notYetResolved(Ticket $ticket): RedirectResponse
     {
-        abort_unless($ticket->status === Ticket::STATUS_RESOLVED, 404);
-
-        DB::transaction(function () use ($ticket) {
-            $ticket->update([
-                'status' => Ticket::STATUS_IN_PROGRESS,
-                'resolved_at' => null,
-                'closed_at' => null,
-            ]);
-
-            if ($ticket->thread) {
-                $ticket->thread->update(['is_active' => true]);
-            }
-
-            AuditLog::log(
-                $ticket->id,
-                'ticket_reopened_from_resolved',
-                Auth::id(),
-                'Ticket reopened from resolved by admin and moved back to in-progress.'
-            );
-        });
+        $this->workflow->reopen($ticket, Auth::user());
 
         return redirect()->route('admin.complaints.show', $ticket->complaint)
             ->with('success', 'Ticket moved back to in-progress.');
@@ -66,7 +53,7 @@ class AdminTicketReviewController extends Controller
     public function index(Request $request): Response
     {
         $tickets = Ticket::query()
-            ->whereIn('status', [Ticket::STATUS_PENDING, Ticket::STATUS_RESOLVED])
+            ->whereIn('status', [Ticket::STATUS_SUBMITTED, Ticket::STATUS_NEEDS_CLARIFICATION, Ticket::STATUS_RESOLVED])
             ->with([
                 'complaint.student.user',
                 'complaint.suggestedRecipient.user',
@@ -128,6 +115,7 @@ class AdminTicketReviewController extends Controller
                 Ticket::STATUS_ASSIGNED,
                 Ticket::STATUS_IN_PROGRESS,
                 Ticket::STATUS_ESCALATED,
+                Ticket::STATUS_REFERRED,
                 Ticket::STATUS_RESOLVED,
                 Ticket::STATUS_CLOSED,
             ])
@@ -154,15 +142,17 @@ class AdminTicketReviewController extends Controller
 
         $statusCounts = [
             '' => (clone $baseQuery)->count(),
-            'in_progress' => (clone $baseQuery)->whereIn('status', [Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS])->count(),
+            'assigned' => (clone $baseQuery)->where('status', Ticket::STATUS_ASSIGNED)->count(),
+            'in_progress' => (clone $baseQuery)->where('status', Ticket::STATUS_IN_PROGRESS)->count(),
             'escalated' => (clone $baseQuery)->where('status', Ticket::STATUS_ESCALATED)->count(),
+            'referred' => (clone $baseQuery)->where('status', Ticket::STATUS_REFERRED)->count(),
+            'resolved' => (clone $baseQuery)->where('status', Ticket::STATUS_RESOLVED)->count(),
             'closed' => (clone $baseQuery)->where('status', Ticket::STATUS_CLOSED)->count(),
         ];
 
         $tickets = (clone $baseQuery)
             ->when($classification !== null && $classification !== '', fn ($query) => $query->where('classification', $classification))
-            ->when($status === 'in_progress', fn ($query) => $query->whereIn('status', [Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS]))
-            ->when($status && $status !== 'in_progress', fn ($query) => $query->where('status', $status))
+            ->when($status, fn ($query) => $query->where('status', $status))
             ->when($sort === 'oldest', fn ($query) => $query->orderBy('updated_at', 'asc'))
             ->when($sort !== 'oldest', fn ($query) => $query->orderByDesc('updated_at'))
             ->paginate(10)
@@ -176,43 +166,46 @@ class AdminTicketReviewController extends Controller
     }
 
     /**
-     * Reject (close invalid) a ticket with reason.
+     * Close a ticket under review that cannot be acted on, with the reason.
      */
     public function reject(Request $request, Ticket $ticket): RedirectResponse
     {
-        abort_unless($ticket->status === Ticket::STATUS_PENDING && $ticket->classification === null, 404);
+        abort_unless($ticket->isAwaitingReview(), 404);
 
         $validated = $request->validate([
             'closure_reason' => 'required|string|max:1000',
+            'closure_type' => ['nullable', Rule::in([Ticket::CLOSURE_INVALID, Ticket::CLOSURE_DUPLICATE, Ticket::CLOSURE_OUT_OF_SCOPE, Ticket::CLOSURE_NO_RESPONSE])],
         ]);
 
-        $ticket->update([
-            'status' => Ticket::STATUS_CLOSED,
-            'classification' => Ticket::CLASSIFICATION_INVALID,
-            'closed_at' => now(),
-            'closure_reason' => $validated['closure_reason'],
-        ]);
-
-        if (! $ticket->complaint?->is_anonymous && $ticket->complaint?->student?->user?->email) {
-            EmailNotification::create([
-                'ticket_id' => $ticket->id,
-                'recipient_email' => $ticket->complaint->student->user->email,
-                'type' => EmailNotification::TYPE_INVALID_CLOSURE,
-                'status' => EmailNotification::STATUS_PENDING,
-            ]);
-        }
-
-        // Log the action
-        AuditLog::log(
-            $ticket->id,
-            'ticket_closed_invalid',
-            Auth::id(),
-            "Ticket marked invalid. Reason: {$validated['closure_reason']}"
+        $this->workflow->close(
+            $ticket,
+            Auth::user(),
+            $validated['closure_type'] ?? Ticket::CLOSURE_INVALID,
+            $validated['closure_reason'],
+            ['classification' => Ticket::CLASSIFICATION_INVALID]
         );
 
         return redirect()
             ->route('admin.tickets.review.index')
-            ->with('success', 'Ticket rejected and student notified.');
+            ->with('success', 'Ticket closed and student notified.');
+    }
+
+    /**
+     * Ask the student for more details before reviewing the ticket.
+     */
+    public function requestClarification(Request $request, Ticket $ticket): RedirectResponse
+    {
+        abort_unless($ticket->classification === null, 404);
+
+        $validated = $request->validate([
+            'clarification_message' => 'required|string|max:2000',
+        ], [
+            'clarification_message.required' => 'Write what the student needs to clarify.',
+        ]);
+
+        $this->workflow->requestClarification($ticket, Auth::user(), $validated['clarification_message']);
+
+        return back()->with('success', 'The student was asked for more details.');
     }
 
     /**
@@ -220,7 +213,7 @@ class AdminTicketReviewController extends Controller
      */
     public function classify(Request $request, Ticket $ticket): RedirectResponse
     {
-        abort_unless($ticket->status === Ticket::STATUS_PENDING && $ticket->classification === null, 404);
+        abort_unless($ticket->isAwaitingReview(), 404);
 
         $validated = $request->validate([
             'classification' => 'required|in:needs_resolution,informational',
@@ -233,18 +226,6 @@ class AdminTicketReviewController extends Controller
             'Anonymous submissions can only be kept as informational records.'
         );
 
-        // If "Needs Resolution", activate thread immediately
-        if ($validated['classification'] === Ticket::CLASSIFICATION_NEEDS_RESOLUTION) {
-            // Thread should already exist (created during complaint submission)
-            // Just mark it as active/ready
-            $thread = $ticket->thread;
-            if (!$thread) {
-                // Shouldn't happen, but create one just in case
-                $ticket->thread()->create(['is_active' => true]);
-            } else {
-                $thread->update(['is_active' => true]);
-            }
-        }
 
         $ticket->update([
             'classification' => $validated['classification'],
@@ -279,7 +260,7 @@ class AdminTicketReviewController extends Controller
     public function forward(Request $request, Ticket $ticket): RedirectResponse
     {
         abort_unless(
-            $ticket->status === Ticket::STATUS_PENDING &&
+            $ticket->status === Ticket::STATUS_SUBMITTED &&
             $ticket->classification === Ticket::CLASSIFICATION_INFORMATIONAL &&
             $ticket->jurisdiction === Ticket::JURISDICTION_RECIPIENT &&
             $ticket->forwarded_at === null,
@@ -325,13 +306,16 @@ class AdminTicketReviewController extends Controller
      */
     public function retainInformational(Ticket $ticket): RedirectResponse
     {
-        abort_unless($ticket->status === Ticket::STATUS_PENDING && $ticket->classification === null, 404);
+        abort_unless($ticket->isAwaitingReview(), 404);
+
+        $this->workflow->authorize(Auth::user(), $ticket, TicketWorkflow::CLOSE);
 
         $ticket->update([
             'classification' => Ticket::CLASSIFICATION_INFORMATIONAL,
             'jurisdiction' => Ticket::JURISDICTION_SDS,
             'current_handler_id' => Auth::id(),
             'status' => Ticket::STATUS_CLOSED,
+            'closure_type' => Ticket::CLOSURE_INFORMATIONAL,
             'closed_at' => now(),
         ]);
 
@@ -354,7 +338,8 @@ class AdminTicketReviewController extends Controller
      */
     public function forwardInformationalAndClose(Request $request, Ticket $ticket): RedirectResponse
     {
-        abort_unless($ticket->status === Ticket::STATUS_PENDING && $ticket->classification === null, 404);
+        abort_unless($ticket->isAwaitingReview(), 404);
+        $this->workflow->authorize(Auth::user(), $ticket, TicketWorkflow::CLOSE);
 
         $validated = $request->validate(['recipient_id' => 'required|exists:recipients,id']);
         $recipient = Recipient::with('user')->findOrFail($validated['recipient_id']);
@@ -366,6 +351,7 @@ class AdminTicketReviewController extends Controller
             'forwarded_to' => $recipient->id,
             'forwarded_at' => now(),
             'status' => Ticket::STATUS_CLOSED,
+            'closure_type' => Ticket::CLOSURE_INFORMATIONAL,
             'closed_at' => now(),
         ]);
 
@@ -389,8 +375,7 @@ class AdminTicketReviewController extends Controller
     public function assign(Request $request, Ticket $ticket): RedirectResponse
     {
         abort_unless(
-            $ticket->classification === Ticket::CLASSIFICATION_NEEDS_RESOLUTION ||
-            ($ticket->status === Ticket::STATUS_PENDING && $ticket->classification === null),
+            $ticket->classification === Ticket::CLASSIFICATION_NEEDS_RESOLUTION || $ticket->isAwaitingReview(),
             404,
             'Only needs-resolution tickets can be assigned.'
         );
@@ -402,67 +387,16 @@ class AdminTicketReviewController extends Controller
         ]);
 
         $recipient = null;
-        $assignedUserId = Auth::id();
 
         if ($validated['assignment_mode'] === 'recipient') {
-            $recipient = Recipient::findOrFail($validated['recipient_id']);
+            $recipient = Recipient::with('user')->findOrFail($validated['recipient_id']);
+
             if ($ticket->classification === null) {
                 abort_unless($this->recipientIsConfiguredForTicketCategory($ticket, $recipient), 422, 'This recipient is not configured for the ticket category.');
             }
-            $assignedUserId = $recipient->user_id;
         }
 
-        DB::transaction(function () use ($ticket, $recipient, $assignedUserId): void {
-            $thread = $ticket->thread;
-
-            if (! $thread) {
-                $thread = TicketThread::create([
-                    'ticket_id' => $ticket->id,
-                    'is_active' => true,
-                ]);
-            } else {
-                $thread->update(['is_active' => true]);
-            }
-
-            $ticket->update([
-                'status' => $recipient ? Ticket::STATUS_IN_PROGRESS : Ticket::STATUS_ASSIGNED,
-                'classification' => $ticket->classification ?? Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
-                'jurisdiction' => $ticket->jurisdiction ?? Ticket::JURISDICTION_RECIPIENT,
-                'assigned_to' => $recipient ? $assignedUserId : null,
-                'current_handler_id' => $assignedUserId,
-                'deadline' => null,
-            ]);
-
-            $action = 'ticket_assigned';
-            $details = $recipient
-                ? "SDS Admin assigned the ticket {$ticket->complaint->reference_number} to {$recipient->user->display_name} for handling."
-                : 'Ticket assigned to SDS admin for direct handling.';
-
-            AuditLog::log(
-                $ticket->id,
-                $action,
-                Auth::id(),
-                $details
-            );
-
-            if ($recipient && $recipient->user?->email) {
-                EmailNotification::create([
-                    'ticket_id' => $ticket->id,
-                    'recipient_email' => $recipient->user->email,
-                    'type' => EmailNotification::TYPE_RECIPIENT_ASSIGNMENT,
-                    'status' => EmailNotification::STATUS_PENDING,
-                ]);
-            }
-
-            if ($ticket->complaint?->student?->user?->email) {
-                EmailNotification::create([
-                    'ticket_id' => $ticket->id,
-                    'recipient_email' => $ticket->complaint->student->user->email,
-                    'type' => EmailNotification::TYPE_STUDENT_STATUS_UPDATE,
-                    'status' => EmailNotification::STATUS_PENDING,
-                ]);
-            }
-        });
+        $this->workflow->assign($ticket, Auth::user(), $recipient);
 
         return redirect()
             ->route('admin.tickets.review.index')
@@ -488,103 +422,86 @@ class AdminTicketReviewController extends Controller
     }
 
     /**
-     * Acknowledge an assigned ticket by admin handler (Assigned -> In Progress)
+     * Take a ticket under review for direct handling, or acknowledge one assigned to this admin.
      */
     public function acknowledge(Request $request, Ticket $ticket): RedirectResponse
     {
-        abort_unless(
-            ($ticket->status === Ticket::STATUS_PENDING &&
-                in_array($ticket->classification, [null, Ticket::CLASSIFICATION_NEEDS_RESOLUTION], true) &&
-                ($ticket->classification === null || $ticket->jurisdiction === Ticket::JURISDICTION_SDS)) ||
-            ($ticket->status === Ticket::STATUS_ASSIGNED && $ticket->current_handler_id === Auth::id()),
-            404
-        );
         abort_if($ticket->complaint?->is_anonymous, 422, 'Anonymous submissions can only be kept as informational records.');
 
-        DB::transaction(function () use ($ticket) {
-            $thread = $ticket->thread;
-            if (! $thread) {
-                $ticket->thread()->create(['is_active' => true]);
-            } else {
-                $thread->update(['is_active' => true]);
-            }
+        if ($ticket->status === Ticket::STATUS_ASSIGNED) {
+            $this->workflow->acknowledge($ticket, Auth::user());
+        } else {
+            abort_unless($ticket->classification === null || $ticket->jurisdiction === Ticket::JURISDICTION_SDS, 404);
 
-            $ticket->update([
-                'status' => Ticket::STATUS_IN_PROGRESS,
-                'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
-                'jurisdiction' => Ticket::JURISDICTION_SDS,
-                'assigned_to' => null,
-                'current_handler_id' => Auth::id(),
-                'deadline' => null,
-                'acknowledged_at' => now(),
-            ]);
-
-            AuditLog::log(
-                $ticket->id,
-                'ticket_acknowledged',
-                Auth::id(),
-                'Ticket acknowledged by admin handler.'
-            );
-
-            if ($ticket->complaint?->student?->user?->email) {
-                EmailNotification::create([
-                    'ticket_id' => $ticket->id,
-                    'recipient_email' => $ticket->complaint->student->user->email,
-                    'type' => EmailNotification::TYPE_STUDENT_STATUS_UPDATE,
-                    'status' => EmailNotification::STATUS_PENDING,
-                ]);
-            }
-        });
+            $this->workflow->handleDirectly($ticket, Auth::user());
+        }
 
         return redirect()->route('admin.tickets.review.index')
             ->with('success', 'Ticket acknowledged.');
     }
 
     /**
-     * Mark an SDS-owned ticket as resolved.
+     * Mark a ticket this admin is handling as resolved.
      */
     public function resolve(Request $request, Ticket $ticket): RedirectResponse
     {
-        abort_unless(
-            $ticket->current_handler_id === Auth::id() &&
-            $ticket->classification === Ticket::CLASSIFICATION_NEEDS_RESOLUTION &&
-            $ticket->status === Ticket::STATUS_IN_PROGRESS,
-            403,
-            'You are not authorized to resolve this ticket.'
-        );
+        $this->workflow->authorize(Auth::user(), $ticket, TicketWorkflow::RESOLVE);
 
         $validated = $request->validate([
+            'resolution_type' => ['required', Rule::in(array_keys(Ticket::RESOLUTION_LABELS))],
             'resolution_message' => 'required|string|max:2000',
+        ], [
+            'resolution_type.required' => 'Select how the ticket was resolved.',
+            'resolution_message.required' => 'Describe the resolution for the student.',
         ]);
 
-        DB::transaction(function () use ($ticket, $validated): void {
-            $ticket->update([
-                'status' => Ticket::STATUS_RESOLVED,
-                'resolved_at' => now(),
-            ]);
-
-            if ($ticket->thread) {
-                $ticket->thread->update(['is_active' => false]);
-                $ticket->thread->messages()->create([
-                    'sender_id' => Auth::id(),
-                    'content' => $validated['resolution_message'],
-                ]);
-            }
-
-            AuditLog::log($ticket->id, 'complaint_resolved', Auth::id(), $validated['resolution_message']);
-
-            if ($ticket->complaint?->student?->user?->email) {
-                EmailNotification::create([
-                    'ticket_id' => $ticket->id,
-                    'recipient_email' => $ticket->complaint->student->user->email,
-                    'type' => EmailNotification::TYPE_STUDENT_STATUS_UPDATE,
-                    'status' => EmailNotification::STATUS_PENDING,
-                ]);
-            }
-        });
+        $this->workflow->resolve($ticket, Auth::user(), $validated['resolution_type'], $validated['resolution_message']);
 
         return redirect()->route('admin.complaints.show', $ticket->complaint)
             ->with('success', 'Ticket marked as resolved.');
+    }
+
+    /**
+     * Refer a ticket to a committee or board that decides it outside the system.
+     */
+    public function refer(Request $request, Ticket $ticket): RedirectResponse
+    {
+        $this->workflow->authorize(Auth::user(), $ticket, TicketWorkflow::REFER);
+
+        $validated = $request->validate([
+            'referred_to' => 'required|string|max:255',
+            'referral_note' => 'nullable|string|max:1000',
+        ], [
+            'referred_to.required' => 'Enter the committee or board the ticket is referred to.',
+        ]);
+
+        $this->workflow->refer($ticket, Auth::user(), $validated['referred_to'], $validated['referral_note'] ?? null);
+
+        return back()->with('success', sprintf('Ticket referred to %s.', $validated['referred_to']));
+    }
+
+    /**
+     * Record the outcome of a referred ticket.
+     */
+    public function recordOutcome(Request $request, Ticket $ticket): RedirectResponse
+    {
+        $this->workflow->authorize(Auth::user(), $ticket, TicketWorkflow::RECORD_OUTCOME);
+
+        $validated = $request->validate([
+            'outcome' => 'required|string|max:2000',
+            'resolution_type' => ['nullable', Rule::in(array_keys(Ticket::RESOLUTION_LABELS))],
+        ], [
+            'outcome.required' => 'Describe the outcome for the student.',
+        ]);
+
+        $this->workflow->recordOutcome(
+            $ticket,
+            Auth::user(),
+            $validated['outcome'],
+            $validated['resolution_type'] ?? Ticket::RESOLUTION_COMMITTEE_DECISION
+        );
+
+        return back()->with('success', 'Outcome recorded. The ticket is now resolved.');
     }
 
     /**
@@ -592,12 +509,8 @@ class AdminTicketReviewController extends Controller
      */
     public function escalate(Request $request, Ticket $ticket): RedirectResponse
     {
-        abort_unless(
-            $ticket->classification === Ticket::CLASSIFICATION_NEEDS_RESOLUTION &&
-            in_array($ticket->status, [Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED], true),
-            404,
-            'Only active tickets can be escalated.'
-        );
+        abort_unless($ticket->classification === Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 404, 'Only active tickets can be escalated.');
+        $this->workflow->authorize(Auth::user(), $ticket, TicketWorkflow::ESCALATE);
 
         $validated = $request->validate([
             'recipient_id' => 'required|exists:recipients,id',
@@ -623,7 +536,7 @@ class AdminTicketReviewController extends Controller
      */
     public function updateDetails(Request $request, Ticket $ticket): RedirectResponse
     {
-        abort_unless($ticket->status === Ticket::STATUS_PENDING && $ticket->classification === null, 404);
+        abort_unless($ticket->isAwaitingReview(), 404);
 
         $validated = $request->validate([
             'category_id' => ['required', Rule::exists('complaint_categories', 'id')->where('is_active', true)],
@@ -683,55 +596,27 @@ class AdminTicketReviewController extends Controller
     }
 
     /**
-     * Close a ticket (Admin-only) after resolution.
+     * Close a ticket. A resolved ticket is simply confirmed; any other needs the reason it is
+     * being closed without a resolution.
      */
     public function close(Request $request, Ticket $ticket): RedirectResponse
     {
-        // Only allow closing tickets that are resolved or in_progress
-        if (! in_array($ticket->status, [Ticket::STATUS_RESOLVED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ASSIGNED, Ticket::STATUS_ESCALATED])) {
-            abort(404);
-        }
+        $this->workflow->authorize(Auth::user(), $ticket, TicketWorkflow::CLOSE);
+        abort_if($ticket->isAwaitingReview(), 404);
 
-        DB::transaction(function () use ($ticket) {
-            $ticket->update([
-                'status' => Ticket::STATUS_CLOSED,
-                'closed_at' => now(),
+        if ($ticket->status === Ticket::STATUS_RESOLVED) {
+            $this->workflow->close($ticket, Auth::user(), Ticket::CLOSURE_RESOLVED);
+        } else {
+            $validated = $request->validate([
+                'closure_type' => ['required', Rule::in(Ticket::ADMIN_CLOSURE_TYPES)],
+                'closure_reason' => 'required|string|max:1000',
+            ], [
+                'closure_type.required' => 'Select why the ticket is being closed.',
+                'closure_reason.required' => 'Explain why the ticket is being closed.',
             ]);
 
-            if ($ticket->thread) {
-                $ticket->thread->update(['is_active' => false]);
-            }
-
-            AuditLog::log(
-                $ticket->id,
-                'ticket_closed',
-                Auth::id(),
-                'Ticket closed by admin.'
-            );
-
-            // Notify student
-            if ($ticket->complaint?->student?->user?->email) {
-                EmailNotification::create([
-                    'ticket_id' => $ticket->id,
-                    'recipient_email' => $ticket->complaint->student->user->email,
-                    'type' => EmailNotification::TYPE_COMPLAINT_CLOSED,
-                    'status' => EmailNotification::STATUS_PENDING,
-                ]);
-            }
-
-            // Notify recipient if assigned and is a recipient user
-            if ($ticket->assigned_to) {
-                $recipientModel = \App\Models\Recipient::query()->where('user_id', $ticket->assigned_to)->first();
-                if ($recipientModel && $recipientModel->user?->email) {
-                    EmailNotification::create([
-                        'ticket_id' => $ticket->id,
-                        'recipient_email' => $recipientModel->user->email,
-                        'type' => EmailNotification::TYPE_STATUS_UPDATE,
-                        'status' => EmailNotification::STATUS_PENDING,
-                    ]);
-                }
-            }
-        });
+            $this->workflow->close($ticket, Auth::user(), $validated['closure_type'], $validated['closure_reason']);
+        }
 
         return redirect()->route('admin.tickets.review.index')
             ->with('success', 'Ticket closed successfully.');

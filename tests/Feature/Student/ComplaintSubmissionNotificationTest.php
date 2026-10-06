@@ -48,7 +48,7 @@ class ComplaintSubmissionNotificationTest extends TestCase
             'subject_title' => 'Notification filter test',
             'description' => 'Notification filter test.',
             'is_anonymous' => false,
-            'status' => ComplaintModel::STATUS_PENDING,
+            'status' => ComplaintModel::STATUS_SUBMITTED,
         ]);
 
         $ticket = Ticket::create([
@@ -114,7 +114,7 @@ class ComplaintSubmissionNotificationTest extends TestCase
                 'subject_title' => $ticketData['subject_title'],
                 'description' => 'Status filter test.',
                 'is_anonymous' => false,
-                'status' => ComplaintModel::STATUS_PENDING,
+                'status' => ComplaintModel::STATUS_SUBMITTED,
             ]);
 
             Ticket::create([
@@ -182,7 +182,7 @@ class ComplaintSubmissionNotificationTest extends TestCase
             'subject_title' => 'Complaint submission notification test',
             'student_id' => $studentProfile->id,
             'category_id' => $category->id,
-            'status' => ComplaintModel::STATUS_PENDING,
+            'status' => ComplaintModel::STATUS_SUBMITTED,
         ]);
 
         $complaint = ComplaintModel::firstOrFail();

@@ -66,12 +66,12 @@ class Module4TicketRoutingTest extends TestCase
             'subject_title' => 'Needs resolution',
             'description' => 'Needs resolution description',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $ticket = Ticket::create([
             'complaint_id' => $complaint->id,
-            'status' => Ticket::STATUS_PENDING,
+            'status' => Ticket::STATUS_SUBMITTED,
             'assigned_to' => null,
         ]);
 
@@ -91,7 +91,8 @@ class Module4TicketRoutingTest extends TestCase
 
         $ticket->refresh();
 
-        $this->assertSame(Ticket::STATUS_IN_PROGRESS, $ticket->status);
+        // The ticket waits as Assigned until the recipient acknowledges it.
+        $this->assertSame(Ticket::STATUS_ASSIGNED, $ticket->status);
         $this->assertSame($recipient->user_id, $ticket->current_handler_id);
         $this->assertSame($recipient->user_id, $ticket->assigned_to);
         $this->assertNull($ticket->deadline);

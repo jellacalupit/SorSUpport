@@ -79,7 +79,7 @@ class AnalyticsController extends Controller
             ->values();
         $activeTickets = Ticket::query()
             ->with(['complaint', 'currentHandler', 'assignee'])
-            ->whereIn('status', ['assigned', 'in_progress', 'escalated'])
+            ->whereIn('status', \App\Models\Ticket::ACTIVE_STATUSES)
             ->when(! empty($filters['category_id']), fn ($query) => $query->whereHas('complaint', fn ($complaint) => $complaint->where('category_id', $filters['category_id'])))
             ->when(! empty($filters['start_date']), fn ($query) => $query->whereHas('complaint', fn ($complaint) => $complaint->whereDate('created_at', '>=', $filters['start_date'])))
             ->when(! empty($filters['end_date']), fn ($query) => $query->whereHas('complaint', fn ($complaint) => $complaint->whereDate('created_at', '<=', $filters['end_date'])))

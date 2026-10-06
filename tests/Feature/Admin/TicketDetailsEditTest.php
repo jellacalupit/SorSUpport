@@ -97,12 +97,12 @@ class TicketDetailsEditTest extends TestCase
             'subject_title' => 'Wrong category',
             'description' => 'This is really about my records.',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $ticket = Ticket::create([
             'complaint_id' => $complaint->id,
-            'status' => Ticket::STATUS_PENDING,
+            'status' => Ticket::STATUS_SUBMITTED,
             'current_handler_id' => $admin->id,
         ]);
 

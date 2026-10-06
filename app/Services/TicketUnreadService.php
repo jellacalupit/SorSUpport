@@ -20,6 +20,10 @@ class TicketUnreadService
         'ticket_closed_invalid',
         'ticket_escalated',
         'complaint_rejected',
+        'clarification_requested',
+        'ticket_referred',
+        'referral_outcome_recorded',
+        'ticket_reopened_from_resolved',
         'message_posted',
     ];
 
@@ -31,6 +35,12 @@ class TicketUnreadService
         'complaint_resolved',
         'ticket_closed',
         'ticket_escalated',
+        'ticket_referred',
+        'referral_outcome_recorded',
+        'ticket_reopened_from_resolved',
+        'further_action_requested',
+        'resolution_accepted',
+        'ticket_withdrawn',
         'message_posted',
     ];
 
@@ -49,6 +59,10 @@ class TicketUnreadService
         'ticket_closed_invalid',
         'ticket_escalated',
         'complaint_rejected',
+        'clarification_provided',
+        'further_action_requested',
+        'resolution_accepted',
+        'ticket_withdrawn',
         'message_posted',
     ];
 

@@ -19,6 +19,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Log;
 use App\Services\TicketUnreadService;
+use App\Services\TicketWorkflow;
 
 class ComplaintController extends Controller
 {
@@ -55,7 +56,7 @@ class ComplaintController extends Controller
 
         if ($request->filled('status_filter')) {
             $status = $request->input('status_filter');
-            $query->whereIn('status', $status === 'in_progress' ? ['assigned', 'in_progress'] : [$status]);
+            $query->where('status', $status);
         }
 
         $sort = $request->input('sort', 'newest');
@@ -203,161 +204,54 @@ class ComplaintController extends Controller
     /**
      * Acknowledge an assigned ticket (Assigned -> In Progress)
      */
-    public function acknowledge(Request $request, Complaint $complaint): RedirectResponse
+    public function acknowledge(Request $request, Complaint $complaint, TicketWorkflow $workflow): RedirectResponse
     {
-        $recipient = Auth::user()->recipient;
+        $ticket = $this->assignedTicket($complaint);
 
-        if (! $recipient) {
-            abort(403, 'Recipient profile not found.');
-        }
-
-        $ticket = $complaint->ticket;
-
-        if (! $ticket || $ticket->assigned_to !== Auth::id()) {
-            abort(403, 'You are not authorized to acknowledge this complaint.');
-        }
-
-        // Only acknowledge if assigned
-        if ($ticket->status !== Ticket::STATUS_ASSIGNED) {
+        if (! $workflow->can(Auth::user(), $ticket, TicketWorkflow::ACKNOWLEDGE)) {
             return back()->withErrors(['status' => 'Ticket cannot be acknowledged in its current state.']);
         }
 
-        DB::transaction(function () use ($ticket) {
-            $ticket->update([
-                'status' => Ticket::STATUS_IN_PROGRESS,
-                'acknowledged_at' => now(),
-                'current_handler_id' => Auth::id(),
-            ]);
-
-            AuditLog::log(
-                $ticket->id,
-                'ticket_acknowledged',
-                Auth::id(),
-                'Ticket acknowledged by recipient.'
-            );
-
-            // Notify student of status update
-            if ($ticket->complaint?->student?->user?->email) {
-                EmailNotification::create([
-                    'ticket_id' => $ticket->id,
-                    'recipient_email' => $ticket->complaint->student->user->email,
-                    'type' => EmailNotification::TYPE_STUDENT_STATUS_UPDATE,
-                    'status' => EmailNotification::STATUS_PENDING,
-                ]);
-            }
-        });
+        $workflow->acknowledge($ticket, Auth::user());
 
         return redirect()->route('recipient.complaints.show', $complaint)
             ->with('success', 'Ticket acknowledged.');
     }
 
     /**
-     * Update the complaint status.
+     * Mark the ticket resolved. A recipient cannot close or reject a ticket: the student accepts
+     * the resolution, or the SDS Office closes it.
      */
-    public function updateStatus(Request $request, Complaint $complaint): RedirectResponse
+    public function updateStatus(Request $request, Complaint $complaint, TicketWorkflow $workflow): RedirectResponse
     {
-        $recipient = Auth::user()->recipient;
-
-        if (! $recipient) {
-            abort(403, 'Recipient profile not found.');
-        }
-
-        // Authorization: ensure the complaint is assigned to this recipient (user)
-        $ticket = $complaint->ticket;
-
-        if (! $ticket || $ticket->assigned_to !== Auth::id()) {
-            abort(403, 'You are not authorized to update this complaint.');
-        }
+        $ticket = $this->assignedTicket($complaint);
 
         $validated = $request->validate([
-            'status' => [
-                'required',
-                Rule::in(['assigned', 'in_progress', 'resolved', 'rejected', 'closed']),
-            ],
-            'details' => 'nullable|string|max:1000',
-            'resolution_message' => 'nullable|string|max:2000',
+            'status' => ['required', Rule::in([Ticket::STATUS_RESOLVED])],
+            'resolution_type' => ['required', Rule::in(array_keys(Ticket::RESOLUTION_LABELS))],
+            'resolution_message' => 'required|string|max:2000',
+        ], [
+            'status.in' => 'Recipients can only mark a ticket as resolved.',
+            'resolution_type.required' => 'Select how the ticket was resolved.',
+            'resolution_message.required' => 'Describe the resolution for the student.',
         ]);
 
-        $oldStatus = $complaint->status;
-        $newStatus = $validated['status'];
+        $workflow->resolve($ticket, Auth::user(), $validated['resolution_type'], $validated['resolution_message']);
 
-        DB::transaction(function () use ($complaint, $ticket, $oldStatus, $newStatus, $validated) {
-            // Update complaint status
-            $complaint->update(['status' => $newStatus]);
+        return back()->with('success', 'Ticket marked as resolved.');
+    }
 
-            // Update ticket status
-            $ticket->update(['status' => $newStatus]);
+    /**
+     * The ticket of a complaint assigned to the signed-in recipient.
+     */
+    protected function assignedTicket(Complaint $complaint): Ticket
+    {
+        abort_unless(Auth::user()->recipient, 403, 'Recipient profile not found.');
 
-            // Close thread if ticket is being closed or resolved
-            if (in_array($newStatus, ['closed', 'resolved', 'rejected'])) {
-                if ($ticket->thread) {
-                    $ticket->thread->update(['is_active' => false]);
-                }
-            }
+        $ticket = $complaint->ticket;
 
-            // Determine action for audit log
-            $action = match($newStatus) {
-                'resolved' => 'complaint_resolved',
-                'rejected' => 'complaint_rejected',
-                'closed' => 'complaint_closed',
-                default => 'status_changed',
-            };
+        abort_unless($ticket && (int) $ticket->assigned_to === (int) Auth::id(), 403, 'You are not authorized to update this complaint.');
 
-            $details = $validated['details'] ?? "Status changed from {$oldStatus} to {$newStatus}";
-
-            // If resolved, record resolved_at and optionally create a thread message with the resolution
-            if ($newStatus === 'resolved') {
-                $ticket->update(['resolved_at' => now()]);
-
-                if (! empty($validated['resolution_message'])) {
-                    ThreadMessage::create([
-                        'thread_id' => $ticket->thread?->id,
-                        'sender_id' => Auth::id(),
-                        'content' => $validated['resolution_message'],
-                    ]);
-                }
-
-                // Notify admin (SDS admin) that recipient resolved the ticket
-                $sdsAdminUser = \App\Models\User::query()->where('role', \App\Models\User::ROLE_SDS_ADMIN)->first();
-
-                if ($sdsAdminUser && $sdsAdminUser->email) {
-                    EmailNotification::create([
-                        'ticket_id' => $ticket->id,
-                        'recipient_email' => $sdsAdminUser->email,
-                        'type' => EmailNotification::TYPE_RECIPIENT_RESOLVED,
-                        'status' => EmailNotification::STATUS_PENDING,
-                    ]);
-                }
-
-                // Notify student of resolution
-                if ($ticket->complaint?->student?->user?->email) {
-                    EmailNotification::create([
-                        'ticket_id' => $ticket->id,
-                        'recipient_email' => $ticket->complaint->student->user->email,
-                        'type' => EmailNotification::TYPE_STUDENT_STATUS_UPDATE,
-                        'status' => EmailNotification::STATUS_PENDING,
-                    ]);
-                }
-            }
-
-            if ($newStatus !== 'resolved' && $ticket->complaint?->student?->user?->email) {
-                EmailNotification::create([
-                    'ticket_id' => $ticket->id,
-                    'recipient_email' => $ticket->complaint->student->user->email,
-                    'type' => EmailNotification::TYPE_STUDENT_STATUS_UPDATE,
-                    'status' => EmailNotification::STATUS_PENDING,
-                ]);
-            }
-
-            // Create audit log
-            AuditLog::log(
-                $ticket->id,
-                $action,
-                Auth::id(),
-                $details
-            );
-        });
-
-        return back()->with('success', 'Complaint status updated successfully.');
+        return $ticket;
     }
 }

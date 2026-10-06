@@ -27,6 +27,12 @@ class EmailNotification extends Model
     public const TYPE_DAILY_REMINDER = 'daily_reminder';
     public const TYPE_INFORMATIONAL_FORWARD = 'informational_forward';
     public const TYPE_MESSAGE_POSTED = 'message_posted';
+    public const TYPE_CLARIFICATION_REQUESTED = 'clarification_requested';
+    public const TYPE_CLARIFICATION_PROVIDED = 'clarification_provided';
+    public const TYPE_REFERRED = 'referred';
+    public const TYPE_FURTHER_ACTION_REQUESTED = 'further_action_requested';
+    public const TYPE_RESOLUTION_ACCEPTED = 'resolution_accepted';
+    public const TYPE_WITHDRAWN = 'withdrawn';
 
     // Status constants
     public const STATUS_PENDING = 'pending';

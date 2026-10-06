@@ -3,7 +3,8 @@
 @php
     $thread = $ticket->thread;
     $messages = $thread?->messages()->with('sender')->orderBy('created_at')->orderBy('id')->get() ?? collect([]);
-    $isPendingReview = $ticket->status === 'pending' && $ticket->classification === null;
+    // A ticket under review has no conversation yet, unless the SDS Office asked for more details.
+    $isPendingReview = $ticket->isAwaitingReview() && ! $ticket->hasConversation();
     $conversationHeight = $isPendingReview
         ? 'min-h-[10rem]'
         : ($viewerRole === 'admin' ? 'h-[28rem] min-h-0' : 'h-[28rem] min-h-0');
@@ -212,13 +213,11 @@
 
         <!-- Reply Form -->
         @php
-            $isClosedOrResolved = in_array($ticket->status, ['closed', 'resolved', 'rejected'], true);
-            $isReadOnly = $isClosedOrResolved || $isPendingReview;
+            $isReadOnly = ! $ticket->acceptsMessages();
             $messagePlaceholder = match (true) {
-                $isPendingReview => 'Waiting for admin review',
+                $ticket->status === 'submitted' => 'Waiting for admin review',
                 $ticket->status === 'resolved' => 'This ticket is resolved',
                 $ticket->status === 'closed' => 'This ticket is closed',
-                $ticket->status === 'rejected' => 'This ticket was rejected',
                 default => 'Type your message...',
             };
             $replyRouteName = match($viewerRole) {

@@ -11,15 +11,8 @@ class Complaint extends Model
 {
     use HasFactory;
 
-    public const STATUS_PENDING = 'pending';
-
-    public const STATUS_IN_PROGRESS = 'in_progress';
-
-    public const STATUS_RESOLVED = 'resolved';
-
-    public const STATUS_REJECTED = 'rejected';
-
-    public const STATUS_CLOSED = 'closed';
+    // A complaint mirrors the status of its ticket; see Ticket::STATUS_LABELS.
+    public const STATUS_SUBMITTED = Ticket::STATUS_SUBMITTED;
 
     protected $fillable = [
         'reference_number',

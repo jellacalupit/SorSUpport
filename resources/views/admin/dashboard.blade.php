@@ -1,11 +1,11 @@
 <x-app-layout :role="'admin'" title="Dashboard">
     @php
         $statusSegments = [
-            ['label' => 'Pending', 'color' => '#facc15', 'count' => (int) ($statusBreakdown['pending'] ?? 0)],
-            ['label' => 'In Progress', 'color' => '#2563eb', 'count' => (int) (($statusBreakdown['assigned'] ?? 0) + ($statusBreakdown['in_progress'] ?? 0))],
+            ['label' => 'Submitted', 'color' => '#facc15', 'count' => (int) (($statusBreakdown['submitted'] ?? 0) + ($statusBreakdown['needs_clarification'] ?? 0))],
+            ['label' => 'In Progress', 'color' => '#2563eb', 'count' => (int) (($statusBreakdown['assigned'] ?? 0) + ($statusBreakdown['in_progress'] ?? 0) + ($statusBreakdown['referred'] ?? 0))],
             ['label' => 'Escalated', 'color' => '#dc2626', 'count' => (int) ($statusBreakdown['escalated'] ?? 0)],
             ['label' => 'Resolved', 'color' => '#16a34a', 'count' => (int) ($statusBreakdown['resolved'] ?? 0)],
-            ['label' => 'Closed', 'color' => '#9ca3af', 'count' => (int) (($statusBreakdown['closed'] ?? 0) + ($statusBreakdown['rejected'] ?? 0))],
+            ['label' => 'Closed', 'color' => '#9ca3af', 'count' => (int) ($statusBreakdown['closed'] ?? 0)],
         ];
         $classificationSegments = [
             ['label' => 'Needs Resolution', 'color' => '#7a1d2a', 'count' => (int) ($classificationBreakdown['needs_resolution'] ?? 0)],
@@ -134,12 +134,7 @@
                             </td>
                             <td class="px-3 py-2 text-center">
                                 @php
-                                    $recentStatusLabel = match ($ticket->status) {
-                                        'assigned', 'in_progress' => 'In Progress',
-                                        'rejected' => 'Rejected',
-                                        'closed' => 'Closed',
-                                        default => ucfirst(str_replace('_', ' ', $ticket->status)),
-                                    };
+                                    $recentStatusLabel = $ticket->status_label;
                                 @endphp
                                 <x-status-badge :status="$recentStatusLabel" :show-icon="false" class="px-2 py-0 text-[11px]" />
                             </td>
@@ -302,11 +297,11 @@
                 <div class="w-[257px] shrink-0">
                     @php
                         $statusLegend = [
-                            'pending' => ['label' => 'Pending', 'color' => '#facc15', 'count' => (int) ($statusBreakdown['pending'] ?? 0)],
-                            'in_progress' => ['label' => 'In Progress', 'color' => '#2563eb', 'count' => (int) (($statusBreakdown['assigned'] ?? 0) + ($statusBreakdown['in_progress'] ?? 0))],
+                            'submitted' => ['label' => 'Submitted', 'color' => '#facc15', 'count' => (int) (($statusBreakdown['submitted'] ?? 0) + ($statusBreakdown['needs_clarification'] ?? 0))],
+                            'in_progress' => ['label' => 'In Progress', 'color' => '#2563eb', 'count' => (int) (($statusBreakdown['assigned'] ?? 0) + ($statusBreakdown['in_progress'] ?? 0) + ($statusBreakdown['referred'] ?? 0))],
                             'escalated' => ['label' => 'Escalated', 'color' => '#dc2626', 'count' => (int) ($statusBreakdown['escalated'] ?? 0)],
                             'resolved' => ['label' => 'Resolved', 'color' => '#16a34a', 'count' => (int) ($statusBreakdown['resolved'] ?? 0)],
-                            'closed' => ['label' => 'Closed', 'color' => '#9ca3af', 'count' => (int) (($statusBreakdown['closed'] ?? 0) + ($statusBreakdown['rejected'] ?? 0))],
+                            'closed' => ['label' => 'Closed', 'color' => '#9ca3af', 'count' => (int) ($statusBreakdown['closed'] ?? 0)],
                         ];
                         $statusSegments = collect($statusLegend)->values()->all();
                         $statusTotal = array_sum(array_column($statusSegments, 'count')) ?: 0;
@@ -408,12 +403,7 @@
                                     </td>
                                     <td class="px-3 py-2 text-center">
                                         @php
-                                            $recentStatusLabel = match ($ticket->status) {
-                                                'assigned', 'in_progress' => 'In Progress',
-                                                'rejected' => 'Rejected',
-                                                'closed' => 'Closed',
-                                                default => ucfirst(str_replace('_', ' ', $ticket->status)),
-                                            };
+                                            $recentStatusLabel = $ticket->status_label;
                                         @endphp
                                         <x-status-badge :status="$recentStatusLabel" :show-icon="false" class="px-2 py-0 text-[11px]" />
                                     </td>

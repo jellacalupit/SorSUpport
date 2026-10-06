@@ -1,5 +1,5 @@
 <x-app-layout :role="'student'" :title="$complaint->reference_number">
-    @php $hasThread = $complaint->ticket?->classification === 'needs_resolution'; @endphp
+    @php $hasThread = (bool) $complaint->ticket?->hasConversation(); @endphp
     <div x-data="{ tab: window.location.hash === '#in-ticket-communication' ? 'thread' : 'details' }">
         <!-- Back link and section switch -->
         <div class="mb-2 grid h-9 grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -24,6 +24,7 @@
                 <h2 class="mb-0.5 hidden font-display text-base font-bold lg:block">Ticket Details</h2>
                 <div class="grid gap-3">
                     <x-ticket-info-panel :ticket="$complaint->ticket" student-view />
+                    <x-ticket-actions :ticket="$complaint->ticket" role="student" />
                 </div>
             </div>
 

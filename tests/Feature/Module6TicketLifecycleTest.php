@@ -56,10 +56,10 @@ class Module6TicketLifecycleTest extends TestCase
             'subject_title' => 'Lifecycle test',
             'description' => 'Testing lifecycle',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
-        $ticket = Ticket::create(['complaint_id' => $complaint->id, 'status' => Ticket::STATUS_PENDING]);
+        $ticket = Ticket::create(['complaint_id' => $complaint->id, 'status' => Ticket::STATUS_SUBMITTED]);
 
         // Classify and assign to recipient
         $this->actingAs($admin)
@@ -75,23 +75,34 @@ class Module6TicketLifecycleTest extends TestCase
             ]);
 
         $ticket->refresh();
-        $this->assertEquals(Ticket::STATUS_IN_PROGRESS, $ticket->status);
+        $this->assertEquals(Ticket::STATUS_ASSIGNED, $ticket->status);
         $this->assertDatabaseHas('audit_logs', [
             'ticket_id' => $ticket->id,
             'action' => 'ticket_assigned',
             'details' => "SDS Admin assigned the ticket {$complaint->reference_number} to {$recipientUser->display_name} for handling.",
         ]);
 
-        // Recipient resolves with a resolution message
+        // Recipient acknowledges the ticket
+        $this->actingAs($recipientUser)
+            ->post(route('recipient.complaints.acknowledge', $complaint))
+            ->assertRedirect();
+
+        $ticket->refresh();
+        $this->assertEquals(Ticket::STATUS_IN_PROGRESS, $ticket->status);
+        $this->assertNotNull($ticket->acknowledged_at);
+
+        // Recipient resolves with a resolution type and message
         $this->actingAs($recipientUser)
             ->patch(route('recipient.complaints.update-status', $complaint), [
                 'status' => 'resolved',
+                'resolution_type' => Ticket::RESOLUTION_ACTION_TAKEN,
                 'resolution_message' => 'Issue resolved by recipient',
             ])
             ->assertRedirect();
 
         $ticket->refresh();
         $this->assertEquals(Ticket::STATUS_RESOLVED, $ticket->status);
+        $this->assertEquals(Ticket::RESOLUTION_ACTION_TAKEN, $ticket->resolution_type);
         $this->assertNotNull($ticket->resolved_at);
 
         $this->assertDatabaseHas('thread_messages', ['content' => 'Issue resolved by recipient', 'sender_id' => $recipientUser->id]);
@@ -105,6 +116,7 @@ class Module6TicketLifecycleTest extends TestCase
 
         $ticket->refresh();
         $this->assertEquals(Ticket::STATUS_CLOSED, $ticket->status);
+        $this->assertEquals(Ticket::CLOSURE_RESOLVED, $ticket->closure_type);
         $this->assertNotNull($ticket->closed_at);
         $this->assertFalse($ticket->thread->is_active);
         $this->assertDatabaseHas('email_notifications', ['ticket_id' => $ticket->id, 'type' => \App\Models\EmailNotification::TYPE_COMPLAINT_CLOSED]);
@@ -145,7 +157,7 @@ class Module6TicketLifecycleTest extends TestCase
             'subject_title' => 'Pending status test',
             'description' => 'Attempting invalid recipient status.',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $ticket = Ticket::create([

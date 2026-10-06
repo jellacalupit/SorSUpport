@@ -135,12 +135,12 @@ class Module8EmailNotificationsTest extends TestCase
             'subject_title' => 'Module 8 test',
             'description' => 'Testing notification delivery.',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         return Ticket::create(array_merge([
             'complaint_id' => $complaint->id,
-            'status' => Ticket::STATUS_PENDING,
+            'status' => Ticket::STATUS_SUBMITTED,
         ], $overrides));
     }
 }

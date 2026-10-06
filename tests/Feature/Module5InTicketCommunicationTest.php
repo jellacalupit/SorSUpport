@@ -51,7 +51,7 @@ class Module5InTicketCommunicationTest extends TestCase
             'subject_title' => 'Complaint without a ticket',
             'description' => 'The admin list should still render this complaint.',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $this->actingAs($admin)
@@ -119,12 +119,12 @@ class Module5InTicketCommunicationTest extends TestCase
             'subject_title' => 'Issue with course',
             'description' => 'I have an issue',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $ticket = Ticket::create([
             'complaint_id' => $complaint->id,
-            'status' => Ticket::STATUS_PENDING,
+            'status' => Ticket::STATUS_SUBMITTED,
         ]);
 
         // Classify as Needs Resolution
@@ -242,12 +242,12 @@ class Module5InTicketCommunicationTest extends TestCase
             'subject_title' => 'Fifteen day policy check',
             'description' => 'Deadline should start at submission.',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $ticket = Ticket::create([
             'complaint_id' => $complaint->id,
-            'status' => Ticket::STATUS_PENDING,
+            'status' => Ticket::STATUS_SUBMITTED,
             'deadline' => now()->addDays(15),
         ]);
 
@@ -297,12 +297,12 @@ class Module5InTicketCommunicationTest extends TestCase
             'subject_title' => 'Unread activity count',
             'description' => 'Should show five new messages from others.',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $ticket = Ticket::create([
             'complaint_id' => $complaint->id,
-            'status' => Ticket::STATUS_PENDING,
+            'status' => Ticket::STATUS_SUBMITTED,
         ]);
 
         $thread = $ticket->thread()->create(['is_active' => true]);
@@ -365,12 +365,12 @@ class Module5InTicketCommunicationTest extends TestCase
             'subject_title' => 'Explicitly marked read',
             'description' => 'The ticket should stay clear if it was already marked read.',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $ticket = Ticket::create([
             'complaint_id' => $complaint->id,
-            'status' => Ticket::STATUS_PENDING,
+            'status' => Ticket::STATUS_SUBMITTED,
             'assigned_to' => $recipientUser->id,
         ]);
 
@@ -436,12 +436,12 @@ class Module5InTicketCommunicationTest extends TestCase
             'subject_title' => 'Badge clears after open',
             'description' => 'Should clear once opened.',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $ticket = Ticket::create([
             'complaint_id' => $complaint->id,
-            'status' => Ticket::STATUS_PENDING,
+            'status' => Ticket::STATUS_SUBMITTED,
             'assigned_to' => $recipientUser->id,
         ]);
 
@@ -506,12 +506,12 @@ class Module5InTicketCommunicationTest extends TestCase
             'subject_title' => 'Recency test',
             'description' => 'This should update ticket time.',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $ticket = Ticket::create([
             'complaint_id' => $complaint->id,
-            'status' => Ticket::STATUS_PENDING,
+            'status' => Ticket::STATUS_SUBMITTED,
             'assigned_to' => null,
         ]);
 
@@ -587,12 +587,12 @@ class Module5InTicketCommunicationTest extends TestCase
             'subject_title' => 'Issue with course',
             'description' => 'I have an issue',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $ticket = Ticket::create([
             'complaint_id' => $complaint->id,
-            'status' => Ticket::STATUS_PENDING,
+            'status' => Ticket::STATUS_SUBMITTED,
         ]);
 
         // Classify and assign
@@ -616,13 +616,19 @@ class Module5InTicketCommunicationTest extends TestCase
 
         $this->assertDatabaseCount('thread_messages', 1);
 
-        // Recipient closes the ticket
+        // Recipient acknowledges and resolves the ticket
         $complaint->refresh();
+        $this->actingAs($recipientUser)
+            ->post(route('recipient.complaints.acknowledge', $complaint))
+            ->assertRedirect();
         $this->actingAs($recipientUser)
             ->patch(route('recipient.complaints.update-status', $complaint), [
                 'status' => 'resolved',
+                'resolution_type' => Ticket::RESOLUTION_ACTION_TAKEN,
+                'resolution_message' => 'Resolved by the office.',
             ])
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
 
         // Verify thread is now inactive
         $ticket->refresh();
@@ -655,8 +661,8 @@ class Module5InTicketCommunicationTest extends TestCase
         $recipientPostAfterClose->assertRedirect();
         $recipientPostAfterClose->assertSessionHasErrors('content');
 
-        // Verify only the original message exists
-        $this->assertDatabaseCount('thread_messages', 1);
+        // Only the original message and the resolution exist
+        $this->assertDatabaseCount('thread_messages', 2);
 
         // ===== VERIFY ALL THREE CAN STILL VIEW MESSAGES (READ-ONLY) =====
         $complaint->refresh();

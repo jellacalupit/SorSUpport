@@ -54,12 +54,12 @@ class Module3TicketReviewTest extends TestCase
             'subject_title' => 'Test complaint',
             'description' => 'Test description',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $ticket = Ticket::create([
             'complaint_id' => $complaint->id,
-            'status' => Ticket::STATUS_PENDING,
+            'status' => Ticket::STATUS_SUBMITTED,
             'assigned_to' => null,
         ]);
 
@@ -137,7 +137,7 @@ class Module3TicketReviewTest extends TestCase
             'subject_title' => 'Searchable Academic Concern',
             'description' => 'This one should match the search.',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $otherComplaint = Complaint::create([
@@ -147,18 +147,18 @@ class Module3TicketReviewTest extends TestCase
             'subject_title' => 'Unrelated Facilities Request',
             'description' => 'This one should not match the search.',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         Ticket::create([
             'complaint_id' => $matchingComplaint->id,
-            'status' => Ticket::STATUS_PENDING,
+            'status' => Ticket::STATUS_SUBMITTED,
             'assigned_to' => null,
         ]);
 
         Ticket::create([
             'complaint_id' => $otherComplaint->id,
-            'status' => Ticket::STATUS_PENDING,
+            'status' => Ticket::STATUS_SUBMITTED,
             'assigned_to' => null,
         ]);
 
@@ -213,7 +213,7 @@ class Module3TicketReviewTest extends TestCase
             'subject_title' => 'Priority Academic Request',
             'description' => 'This complaint should match all filters.',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $otherComplaint = Complaint::create([
@@ -223,7 +223,7 @@ class Module3TicketReviewTest extends TestCase
             'subject_title' => 'Other Facilities Request',
             'description' => 'This should not appear.',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $matchingTicket = Ticket::create([
@@ -300,12 +300,12 @@ class Module3TicketReviewTest extends TestCase
             'subject_title' => 'Needs resolution',
             'description' => 'Needs resolution description',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $ticket = Ticket::create([
             'complaint_id' => $complaint->id,
-            'status' => Ticket::STATUS_PENDING,
+            'status' => Ticket::STATUS_SUBMITTED,
             'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
             'jurisdiction' => Ticket::JURISDICTION_SDS,
             'assigned_to' => null,
@@ -360,12 +360,12 @@ class Module3TicketReviewTest extends TestCase
             'subject_title' => 'Needs resolution',
             'description' => 'Needs resolution description',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $ticket = Ticket::create([
             'complaint_id' => $complaint->id,
-            'status' => Ticket::STATUS_PENDING,
+            'status' => Ticket::STATUS_SUBMITTED,
             'assigned_to' => null,
         ]);
 
@@ -376,6 +376,11 @@ class Module3TicketReviewTest extends TestCase
             ]);
 
         $response->assertRedirect(route('admin.tickets.review.index'));
+
+        // The conversation opens once someone takes the ticket.
+        $this->actingAs($admin)->post(route('admin.tickets.acknowledge', $ticket))->assertRedirect();
+
+        $this->assertSame(Ticket::STATUS_IN_PROGRESS, $ticket->fresh()->status);
         $this->assertDatabaseHas('ticket_threads', [
             'ticket_id' => $ticket->id,
             'is_active' => true,
@@ -467,12 +472,12 @@ class Module3TicketReviewTest extends TestCase
             'subject_title' => 'Informational',
             'description' => 'Informational description',
             'is_anonymous' => false,
-            'status' => Complaint::STATUS_PENDING,
+            'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
         $ticket = Ticket::create([
             'complaint_id' => $complaint->id,
-            'status' => Ticket::STATUS_PENDING,
+            'status' => Ticket::STATUS_SUBMITTED,
             'assigned_to' => null,
         ]);
 

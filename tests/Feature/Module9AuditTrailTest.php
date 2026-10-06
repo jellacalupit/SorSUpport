@@ -109,6 +109,10 @@ class Module9AuditTrailTest extends TestCase
             ])
             ->assertRedirect();
 
+        $this->actingAs($recipientOneUser)
+            ->post(route('recipient.complaints.acknowledge', $complaint))
+            ->assertRedirect();
+
         $this->actingAs($studentUser)
             ->post(route('student.complaints.reply', $complaint), [
                 'content' => 'Student reply for audit tracking.',
@@ -121,7 +125,6 @@ class Module9AuditTrailTest extends TestCase
             ])
             ->assertRedirect();
 
-        // Assigning to a recipient moves the ticket straight to in progress, so there is no acknowledge step.
         $this->actingAs($admin)
             ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $recipientTwo->id])
             ->assertRedirect();
@@ -131,7 +134,7 @@ class Module9AuditTrailTest extends TestCase
         $this->actingAs($recipientTwoUser)
             ->patch(route('recipient.complaints.update-status', $complaint), [
                 'status' => 'resolved',
-                'details' => 'Resolved after escalation.',
+                'resolution_type' => Ticket::RESOLUTION_ACTION_TAKEN,
                 'resolution_message' => 'Resolved by second recipient.',
             ])
             ->assertRedirect();
@@ -146,6 +149,7 @@ class Module9AuditTrailTest extends TestCase
             'complaint_submitted',
             'ticket_classified',
             'ticket_assigned',
+            'ticket_acknowledged',
             'message_posted',
             'message_posted',
             'ticket_escalated',
@@ -323,7 +327,7 @@ class Module9AuditTrailTest extends TestCase
 
         $this->assertDatabaseHas('tickets', [
             'complaint_id' => $complaint->id,
-            'status' => Ticket::STATUS_PENDING,
+            'status' => Ticket::STATUS_SUBMITTED,
             'classification' => null,
             'current_handler_id' => $admin->id,
         ]);
