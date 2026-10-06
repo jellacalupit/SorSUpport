@@ -239,8 +239,8 @@
                 <style>
                     .student-departments table thead th { padding-top: 0.5rem; padding-bottom: 0.5rem; }
                     .student-departments table tbody td { padding-top: 0.375rem; padding-bottom: 0.375rem; }
-                    .student-departments table tbody td > div { display: grid; grid-template-columns: repeat(5, minmax(0, 1.25rem)); gap: 0.25rem; }
-                    .student-departments table tbody td span.grid { width: 100%; height: auto; aspect-ratio: 1; font-size: 0.625rem; }
+                    .student-departments table tbody td > div { display: grid; grid-template-columns: repeat(5, minmax(0, 1.5rem)); gap: 0.25rem; }
+                    .student-departments table tbody td span.grid { width: 100%; height: auto; aspect-ratio: 1; font-size: 0.6875rem; }
                     .student-departments table tbody td > div > span:not(.grid) { grid-column: 1 / -1; }
                     .student-departments table tbody td p:last-child { margin-top: -0.5rem; font-size: 0.6875rem; line-height: 1.1; }
                     .student-departments table tbody td:not(:first-child) { vertical-align: middle; }
@@ -250,11 +250,11 @@
                     .student-departments table thead,
                     .recipient-departments table thead { background-color: #F5F2F3; color: var(--primary); }
                     .student-departments table th:first-child,
-                    .student-departments table td:first-child { width: 40%; }
+                    .student-departments table td:first-child { width: auto; }
                     .student-departments table th:nth-child(2),
                     .student-departments table td:nth-child(2),
                     .student-departments table th:nth-child(3),
-                    .student-departments table td:nth-child(3) { width: 30%; padding-left: 0.5rem; padding-right: 0.5rem; }
+                    .student-departments table td:nth-child(3) { width: min(9.5rem, 30%); padding-left: 0.5rem; padding-right: 0.5rem; }
                     @media (min-width: 1024px) {
                         .student-departments table { min-width: 0; }
                     }
