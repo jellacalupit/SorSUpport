@@ -217,6 +217,28 @@
             </p>
         </div>
 
+        <!-- Days open and time since the last action -->
+        <div class="min-w-0">
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">{{ $ticket->status === 'closed' ? 'Days To Close' : 'Days Open' }}</p>
+            <p class="text-sm font-medium leading-tight wrap-break-word" data-ticket-days-open>{{ $ticket->daysOpen() }} {{ \Illuminate\Support\Str::plural('day', $ticket->daysOpen()) }}</p>
+        </div>
+        @if ($ticket->daysSinceLastAction() !== null)
+            <div class="min-w-0">
+                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Action</p>
+                <p class="text-sm font-medium leading-tight wrap-break-word {{ $ticket->daysSinceLastAction() >= 3 ? 'text-red-700' : '' }}" data-ticket-last-action>
+                    {{ $ticket->daysSinceLastAction() === 0 ? 'Today' : $ticket->daysSinceLastAction() . ' ' . \Illuminate\Support\Str::plural('day', $ticket->daysSinceLastAction()) . ' ago' }}
+                </p>
+            </div>
+        @endif
+        @if ($ticket->satisfaction_rating)
+            <div class="min-w-0">
+                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Student Rating</p>
+                <p class="text-sm font-medium leading-tight wrap-break-word" data-ticket-rating>{{ $ticket->satisfaction_rating }} out of 5</p>
+                @if ($ticket->satisfaction_comment)
+                    <p class="mt-0.5 text-xs leading-snug text-muted-foreground">“{{ $ticket->satisfaction_comment }}”</p>
+                @endif
+            </div>
+        @endif
         <!-- Last Updated -->
         <div class="min-w-0">
             <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Updated</p>

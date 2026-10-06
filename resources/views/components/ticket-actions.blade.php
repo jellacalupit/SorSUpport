@@ -84,6 +84,25 @@
     </div>
 @endif
 
+@if ($role === 'student' && $ticket->canBeRated() && $workflow->isOwner(Auth::user(), $ticket))
+    <form method="POST" action="{{ route('student.complaints.rate', $complaint) }}" class="surface p-4" x-data="{ rating: @js((int) old('satisfaction_rating', 0)) }" data-ticket-rating-form>
+        @csrf
+        <p class="{{ $panelTitle }}">How satisfied are you with how this was handled?</p>
+        <p class="{{ $panelHint }}">Your rating helps the SDS Office improve. 1 is very dissatisfied and 5 is very satisfied.</p>
+        <input type="hidden" name="satisfaction_rating" x-bind:value="rating || ''">
+        <div class="mt-3 flex gap-2" role="radiogroup" aria-label="Satisfaction rating">
+            @foreach (range(1, 5) as $value)
+                <button type="button" role="radio" x-bind:aria-checked="rating === {{ $value }}" x-on:click="rating = {{ $value }}" class="grid h-10 w-10 place-items-center rounded-full border text-sm font-semibold transition-colors" x-bind:class="rating >= {{ $value }} ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-white text-foreground hover:bg-muted'">{{ $value }}</button>
+            @endforeach
+        </div>
+        @error('satisfaction_rating')
+            <p class="mt-1 text-xs font-medium text-destructive">{{ $message }}</p>
+        @enderror
+        <textarea name="satisfaction_comment" rows="2" maxlength="1000" class="{{ $input }}" placeholder="Anything you want to add? (optional)">{{ old('satisfaction_comment') }}</textarea>
+        <button type="submit" class="{{ $smallPrimary }} mt-3" x-bind:disabled="! rating" x-bind:class="rating ? '' : 'opacity-50'">Submit Rating</button>
+    </form>
+@endif
+
 @if ($buttons->isNotEmpty())
 <div {{ $attributes->merge(['class' => 'min-w-0']) }} x-data="{ action: @js($openPanel) }" data-ticket-actions>
     @if ($errors->hasAny($fields))

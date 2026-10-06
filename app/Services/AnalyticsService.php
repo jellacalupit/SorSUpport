@@ -259,6 +259,60 @@ class AnalyticsService
             'subjects' => $subjects, 'insights' => $this->buildInsights($categoryCounts, $resolutionHours, $escalationEvents, $tickets, $identified),
             'openCount' => $openTickets->count(), 'units' => $unitRows,
             'oldestOpenTickets' => $oldestOpenTickets,
+            'breakdowns' => $this->getBreakdowns($filters, $tickets),
+        ];
+    }
+
+    /**
+     * Counts by where tickets come from and how they end: the student's college and program,
+     * how tickets were resolved and closed, how far they were escalated, and how students rated
+     * the handling. Students who hid their identity are counted as "Not disclosed".
+     */
+    public function getBreakdowns(array $filters = [], ?Collection $tickets = null): array
+    {
+        $tickets ??= $this->filterTickets(Ticket::query(), $filters)->with(['complaint.student', 'auditLogs'])->get();
+        $tickets->loadMissing(['complaint.student', 'auditLogs']);
+
+        $origin = fn (string $field) => $tickets
+            ->groupBy(fn ($ticket) => $ticket->complaint?->is_anonymous
+                ? 'Not disclosed'
+                : ($ticket->complaint?->student?->{$field} ?: 'Not specified'))
+            ->map->count()
+            ->sortDesc()
+            ->toArray();
+
+        $labelled = fn (string $field, array $labels) => collect($labels)
+            ->mapWithKeys(fn ($label, $key) => [$label => $tickets->where($field, $key)->count()])
+            ->filter()
+            ->sortDesc()
+            ->toArray();
+
+        $escalations = $tickets->mapWithKeys(fn ($ticket) => [
+            $ticket->id => $ticket->auditLogs->where('action', 'ticket_escalated')->count(),
+        ]);
+        $handled = $tickets->where('classification', Ticket::CLASSIFICATION_NEEDS_RESOLUTION)->pluck('id');
+        $levels = $escalations->only($handled->all());
+
+        $rated = $tickets->whereNotNull('satisfaction_rating');
+
+        return [
+            'colleges' => $origin('college'),
+            'programs' => $origin('program'),
+            'resolution_types' => $labelled('resolution_type', Ticket::RESOLUTION_LABELS),
+            'closure_reasons' => $labelled('closure_type', Ticket::CLOSURE_LABELS),
+            'escalation_levels' => [
+                'Not escalated' => $levels->filter(fn ($count) => $count === 0)->count(),
+                'Escalated once' => $levels->filter(fn ($count) => $count === 1)->count(),
+                'Escalated twice' => $levels->filter(fn ($count) => $count === 2)->count(),
+                'Escalated three or more times' => $levels->filter(fn ($count) => $count >= 3)->count(),
+            ],
+            'satisfaction' => [
+                'count' => $rated->count(),
+                'average' => $rated->isNotEmpty() ? round($rated->avg('satisfaction_rating'), 1) : null,
+                'distribution' => collect(range(5, 1))
+                    ->mapWithKeys(fn ($rating) => [$rating => $rated->where('satisfaction_rating', $rating)->count()])
+                    ->toArray(),
+            ],
         ];
     }
 
@@ -321,6 +375,7 @@ class AnalyticsService
             'average_resolution_time' => $this->getAverageResolutionTimePerCategory($filters),
             'escalation_frequency' => $this->getEscalationFrequency($filters),
             'status_distribution' => $this->getActiveTicketStatuses($filters),
+            'breakdowns' => $this->getBreakdowns($filters),
             'filters' => $filters,
         ];
     }

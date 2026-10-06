@@ -152,6 +152,9 @@ class Ticket extends Model
         'closed_at',
         'forwarded_at',
         'forwarded_to',
+        'satisfaction_rating',
+        'satisfaction_comment',
+        'rated_at',
     ];
 
     protected function casts(): array
@@ -165,6 +168,8 @@ class Ticket extends Model
             'forwarded_at' => 'datetime',
             'referred_at' => 'datetime',
             'clarification_requested_at' => 'datetime',
+            'rated_at' => 'datetime',
+            'satisfaction_rating' => 'integer',
         ];
     }
 
@@ -259,6 +264,53 @@ class Ticket extends Model
         return $this->classification === self::CLASSIFICATION_NEEDS_RESOLUTION
             || $this->status === self::STATUS_NEEDS_CLARIFICATION
             || $this->clarification_requested_at !== null;
+    }
+
+    /**
+     * Whole days from submission until now, or until the ticket was closed.
+     */
+    public function daysOpen(): int
+    {
+        $from = $this->complaint?->created_at ?? $this->created_at;
+        $until = $this->closed_at ?? now();
+
+        return $from ? max(0, (int) floor($from->diffInDays($until))) : 0;
+    }
+
+    /**
+     * When someone last did something on the ticket. Emails the system sent do not count.
+     */
+    public function lastActionAt(): ?\Illuminate\Support\Carbon
+    {
+        $latest = $this->relationLoaded('auditLogs')
+            ? $this->auditLogs->where('action', '!=', 'email_notification_sent')->max('created_at')
+            : $this->auditLogs()->where('action', '!=', 'email_notification_sent')->max('created_at');
+
+        return $latest ? \Illuminate\Support\Carbon::parse($latest) : ($this->updated_at ?? $this->created_at);
+    }
+
+    /**
+     * Whole days since the last action, for tickets that are still open.
+     */
+    public function daysSinceLastAction(): ?int
+    {
+        if ($this->status === self::STATUS_CLOSED) {
+            return null;
+        }
+
+        $last = $this->lastActionAt();
+
+        return $last ? max(0, (int) floor($last->diffInDays(now()))) : null;
+    }
+
+    /**
+     * A closed ticket that was actually resolved can be rated once by the student.
+     */
+    public function canBeRated(): bool
+    {
+        return $this->status === self::STATUS_CLOSED
+            && in_array($this->closure_type, [self::CLOSURE_RESOLVED, self::CLOSURE_RESOLVED_ACCEPTED], true)
+            && $this->satisfaction_rating === null;
     }
 
     /**

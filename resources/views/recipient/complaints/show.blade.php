@@ -36,6 +36,12 @@
             <div class="min-w-0 lg:block!" x-show="tab === 'details'">
                 <h2 class="mb-0.5 hidden font-display text-base font-bold lg:block">Ticket Details</h2>
                 <div class="grid gap-3">
+                    @if ((int) $complaint->ticket->assigned_to !== (int) Auth::id())
+                        <div class="rounded-lg border border-border bg-muted px-3 py-2 text-xs text-muted-foreground" data-ticket-notice="forwarded">
+                            <p class="font-semibold text-foreground">Forwarded for your information</p>
+                            <p class="mt-0.5">The SDS Office shared this concern with your office. It is a record only: no reply or action is needed.</p>
+                        </div>
+                    @endif
                     <x-ticket-info-panel :ticket="$complaint->ticket" :show-filed-by="true" />
                     <x-ticket-actions :ticket="$complaint->ticket" role="recipient" />
                 </div>

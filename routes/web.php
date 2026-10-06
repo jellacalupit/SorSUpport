@@ -391,6 +391,9 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:student'])
         Route::post('/complaints/{complaint}/withdraw', [ComplaintController::class, 'withdraw'])
             ->name('complaints.withdraw');
 
+        Route::post('/complaints/{complaint}/rating', [ComplaintController::class, 'rate'])
+            ->name('complaints.rate');
+
         Route::post('/complaints/{complaint}/reply', [ComplaintController::class, 'storeReply'])
             ->name('complaints.reply');
     });

@@ -60,6 +60,31 @@ class AnalyticsReportExport implements FromArray, WithHeadings, ShouldAutoSize
             $rows[] = [$label, $this->reportData['status_distribution']['data'][$index] ?? 0];
         }
 
+        $breakdowns = $this->reportData['breakdowns'] ?? [];
+
+        foreach ([
+            'colleges' => ['Tickets by College', 'College'],
+            'programs' => ['Tickets by Program', 'Program'],
+            'resolution_types' => ['How Tickets Were Resolved', 'Resolution'],
+            'closure_reasons' => ['Why Tickets Were Closed', 'Reason'],
+            'escalation_levels' => ['Escalation Level', 'Level'],
+        ] as $key => [$title, $column]) {
+            $rows[] = [];
+            $rows[] = [$title];
+            $rows[] = [$column, 'Count'];
+            foreach ($breakdowns[$key] ?? [] as $label => $count) {
+                $rows[] = [$label, $count];
+            }
+        }
+
+        $rows[] = [];
+        $rows[] = ['Student Satisfaction'];
+        $rows[] = ['Average rating', $breakdowns['satisfaction']['average'] ?? 'No ratings yet'];
+        $rows[] = ['Tickets rated', $breakdowns['satisfaction']['count'] ?? 0];
+        foreach ($breakdowns['satisfaction']['distribution'] ?? [] as $rating => $count) {
+            $rows[] = [$rating . ' out of 5', $count];
+        }
+
         if (! empty($this->reportData['filters'])) {
             $rows[] = [];
             $rows[] = ['Applied Filters'];

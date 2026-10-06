@@ -35,8 +35,11 @@ class ComplaintController extends Controller
             abort(403, 'Recipient profile not found.');
         }
 
+        // Tickets assigned to this recipient, and informational ones forwarded to them to read.
         $query = Ticket::query()
-            ->where('assigned_to', Auth::id())
+            ->where(fn ($tickets) => $tickets
+                ->where('assigned_to', Auth::id())
+                ->orWhere('forwarded_to', $recipient->id))
             ->with([
                 'complaint.student.user',
                 'complaint.category',
@@ -86,10 +89,10 @@ class ComplaintController extends Controller
             abort(403, 'Recipient profile not found.');
         }
 
-        // Authorization: ensure the complaint is assigned to this recipient (user)
+        // Open to the recipient handling the ticket, or the one it was forwarded to for information.
         $ticket = $complaint->ticket;
 
-        if (! $ticket || $ticket->assigned_to !== Auth::id()) {
+        if (! $ticket || ! app(TicketAccess::class)->isRecipientOf(Auth::user(), $ticket)) {
             abort(403, 'You are not authorized to view this complaint.');
         }
 

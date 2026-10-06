@@ -149,5 +149,42 @@
             </tbody>
         </table>
     </div>
+    @php $breakdowns = $reportData['breakdowns'] ?? []; @endphp
+    @foreach ([
+        'colleges' => ['Tickets by College', 'College'],
+        'programs' => ['Tickets by Program', 'Program'],
+        'resolution_types' => ['How Tickets Were Resolved', 'Resolution'],
+        'closure_reasons' => ['Why Tickets Were Closed', 'Reason'],
+        'escalation_levels' => ['Escalation Level', 'Level'],
+    ] as $key => [$title, $column])
+        <div class="section">
+            <h2>{{ $title }}</h2>
+            <table class="table">
+                <thead>
+                    <tr><th>{{ $column }}</th><th>Count</th></tr>
+                </thead>
+                <tbody>
+                    @forelse ($breakdowns[$key] ?? [] as $label => $count)
+                        <tr><td>{{ $label }}</td><td>{{ $count }}</td></tr>
+                    @empty
+                        <tr><td colspan="2">No data for this period.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    @endforeach
+
+    <div class="section">
+        <h2>Student Satisfaction</h2>
+        <table class="table">
+            <tbody>
+                <tr><th>Average rating</th><td>{{ ($breakdowns['satisfaction']['average'] ?? null) !== null ? $breakdowns['satisfaction']['average'] . ' out of 5' : 'No ratings yet' }}</td></tr>
+                <tr><th>Tickets rated</th><td>{{ $breakdowns['satisfaction']['count'] ?? 0 }}</td></tr>
+                @foreach ($breakdowns['satisfaction']['distribution'] ?? [] as $rating => $count)
+                    <tr><th>{{ $rating }} out of 5</th><td>{{ $count }}</td></tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
 </body>
 </html>

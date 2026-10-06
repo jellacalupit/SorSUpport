@@ -41,6 +41,7 @@ class TicketUnreadService
         'further_action_requested',
         'resolution_accepted',
         'ticket_withdrawn',
+        'satisfaction_rated',
         'message_posted',
     ];
 
@@ -63,6 +64,7 @@ class TicketUnreadService
         'further_action_requested',
         'resolution_accepted',
         'ticket_withdrawn',
+        'satisfaction_rated',
         'message_posted',
     ];
 

@@ -63,6 +63,12 @@
             $recipientMetaText = 'Escalated ' . $ticket->escalated_at->copy()->setTimezone('Asia/Manila')->format('M d');
         }
     }
+    // How long the ticket has been open and idle, for the admin and recipients.
+    $ageText = null;
+    if ($role !== 'student' && $ticket && $ticket->status !== 'closed') {
+        $idleDays = $ticket->daysSinceLastAction();
+        $ageText = 'Open ' . $ticket->daysOpen() . 'd' . ($idleDays ? ' · no action for ' . $idleDays . 'd' : '');
+    }
     $unreadService = app(\App\Services\TicketUnreadService::class);
     $badgeCount = Auth::user() ? $unreadService->unreadCountForTicket(Auth::user(), $ticket) : 0;
     $isUnread = $badgeCount > 0;
@@ -110,6 +116,9 @@
         <p class="truncate text-xs text-muted-foreground">
             {{ $complaint?->description ?? 'No description provided.' }}
         </p>
+        @if ($ageText)
+            <p class="truncate text-[11px] {{ ($idleDays ?? 0) >= 3 ? 'font-semibold text-red-700' : 'text-muted-foreground' }}" data-ticket-age>{{ $ageText }}</p>
+        @endif
         </div>
     </div>
     @if ($slot->isNotEmpty())

@@ -511,6 +511,34 @@ class ComplaintController extends Controller
     }
 
     /**
+     * Rate how a resolved and closed ticket was handled. One rating per ticket.
+     */
+    public function rate(Request $request, Complaint $complaint): RedirectResponse
+    {
+        $ticket = $this->ownTicket($complaint);
+
+        abort_unless($ticket->canBeRated(), 403, 'This ticket cannot be rated.');
+
+        $validated = $request->validate([
+            'satisfaction_rating' => 'required|integer|between:1,5',
+            'satisfaction_comment' => 'nullable|string|max:1000',
+        ], [
+            'satisfaction_rating.required' => 'Choose a rating from 1 to 5.',
+        ]);
+
+        $ticket->update([
+            'satisfaction_rating' => $validated['satisfaction_rating'],
+            'satisfaction_comment' => $validated['satisfaction_comment'] ?? null,
+            'rated_at' => now(),
+        ]);
+
+        AuditLog::log($ticket->id, 'satisfaction_rated', Auth::id(), sprintf('The student rated the handling of the ticket %d out of 5.', $validated['satisfaction_rating']));
+
+        return redirect()->route('student.complaints.show', $complaint)
+            ->with('success', 'Thank you for your feedback.');
+    }
+
+    /**
      * The ticket of a complaint submitted by the signed-in student.
      */
     protected function ownTicket(Complaint $complaint): Ticket

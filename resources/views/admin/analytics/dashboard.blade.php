@@ -238,6 +238,54 @@
             <div data-resolution-box class="mt-3 h-64"><canvas id="resolutionChart"></canvas></div>
         </section>
 
+        <!-- Who raises tickets, and how they end -->
+        @php
+            $breakdowns = $data['breakdowns'];
+            $breakdownCards = [
+                ['title' => 'Tickets by college', 'hint' => 'Where the students raising tickets belong. Students who hid their identity are not disclosed.', 'rows' => $breakdowns['colleges'], 'color' => 'bg-primary', 'empty' => 'No tickets in this period.'],
+                ['title' => 'Tickets by program', 'hint' => 'The programs students raising tickets are enrolled in.', 'rows' => $breakdowns['programs'], 'color' => 'bg-[#c4785a]', 'empty' => 'No tickets in this period.'],
+                ['title' => 'How tickets were resolved', 'hint' => 'The type of resolution the handler recorded.', 'rows' => $breakdowns['resolution_types'], 'color' => 'bg-emerald-600', 'empty' => 'No resolved tickets in this period.'],
+                ['title' => 'Why tickets were closed', 'hint' => 'The reason recorded when each ticket was closed.', 'rows' => $breakdowns['closure_reasons'], 'color' => 'bg-slate-600', 'empty' => 'No closed tickets in this period.'],
+                ['title' => 'Escalation level', 'hint' => 'How many times tickets needing resolution were escalated.', 'rows' => $breakdowns['escalation_levels'], 'color' => 'bg-red-600', 'empty' => 'No tickets needing resolution in this period.'],
+            ];
+            $satisfaction = $breakdowns['satisfaction'];
+        @endphp
+        <div class="grid gap-3 sm:gap-4 lg:grid-cols-2" data-analytics-breakdowns>
+            @foreach ($breakdownCards as $card)
+                @php $cardTotal = max(1, array_sum($card['rows'])); $cardMax = max(1, max($card['rows'] ?: [0])); @endphp
+                <section class="{{ $cardClass }}">
+                    <h2 class="{{ $titleClass }}">{{ $card['title'] }}</h2>
+                    <p class="{{ $subtitleClass }}">{{ $card['hint'] }}</p>
+                    <div class="mt-3 grid gap-2.5">
+                        @forelse (array_filter($card['rows']) as $label => $count)
+                            <div>
+                                <div class="mb-1 flex justify-between gap-2 text-xs"><span class="min-w-0 truncate text-foreground">{{ $label }}</span><strong class="shrink-0 tabular-nums">{{ $count }} <span class="font-normal text-muted-foreground">({{ round($count / $cardTotal * 100) }}%)</span></strong></div>
+                                <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full {{ $card['color'] }}" style="width: {{ round($count / $cardMax * 100) }}%"></div></div>
+                            </div>
+                        @empty
+                            <p class="py-6 text-center text-xs text-muted-foreground">{{ $card['empty'] }}</p>
+                        @endforelse
+                    </div>
+                </section>
+            @endforeach
+            <section class="{{ $cardClass }}">
+                <h2 class="{{ $titleClass }}">Student satisfaction</h2>
+                <p class="{{ $subtitleClass }}">Ratings students gave after their tickets were closed.</p>
+                @if ($satisfaction['count'] > 0)
+                    <p class="mt-3 text-2xl font-bold text-foreground">{{ number_format($satisfaction['average'], 1) }} <span class="text-sm font-normal text-muted-foreground">out of 5 · {{ $satisfaction['count'] }} rating(s)</span></p>
+                    <div class="mt-3 grid gap-2.5">
+                        @foreach ($satisfaction['distribution'] as $rating => $count)
+                            <div>
+                                <div class="mb-1 flex justify-between gap-2 text-xs"><span class="text-foreground">{{ $rating }} out of 5</span><strong class="tabular-nums">{{ $count }}</strong></div>
+                                <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full bg-amber-500" style="width: {{ round($count / max(1, max($satisfaction['distribution'])) * 100) }}%"></div></div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="py-6 text-center text-xs text-muted-foreground">No ratings in this period.</p>
+                @endif
+            </section>
+        </div>
         <!-- Who is handling them -->
         <section class="{{ $cardClass }} p-0">
             <div class="px-4 pt-4">
