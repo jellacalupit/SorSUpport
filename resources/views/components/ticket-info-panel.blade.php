@@ -26,7 +26,7 @@
     $student = $complaint?->student;
     $studentUser = $student?->user;
     $studentDisplayName = $complaint?->is_anonymous ? 'Anonymous' : ($studentUser?->table_name ?? 'Anonymous');
-    $studentCourseYearBlock = trim(($student->course ?? 'Course not specified') . ' ' . ($student->year_level ?? 'N/A') . (($student->block ?? '') !== '' ? '-' . $student->block : ''));
+    $studentCourseYearBlock = trim(($student->program ?? 'Program not specified') . ' ' . ($student->year_level ?? 'N/A') . (($student->block ?? '') !== '' ? '-' . $student->block : ''));
     $statusDisplay = $studentView && $ticket->classification === 'informational' && $ticket->status === 'pending'
         ? 'Closed'
         : ($studentView
@@ -85,7 +85,7 @@
                                     </span>
                                     <span class="min-w-0">
                                         <span class="block wrap-break-word text-sm font-bold">{{ $studentDisplayName }}</span>
-                                        <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $student->student_id ?? 'N/A' }} · {{ $student->department ?? 'Department not specified' }} · {{ $studentCourseYearBlock }}</span>
+                                        <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $student->student_id ?? 'N/A' }} · {{ $student->college ?? 'College not specified' }} · {{ $studentCourseYearBlock }}</span>
                                     </span>
                                 </span>
                                 <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">Student</span>
@@ -142,7 +142,7 @@
                                     </span>
                                     <span class="min-w-0">
                                         <span class="block wrap-break-word text-sm font-bold">{{ $holderDisplayName }}</span>
-                                        <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $holderRecipient->staff_id }} · {{ $holderRecipient->department }} · {{ $holderRecipient->designation }}</span>
+                                        <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $holderRecipient->staff_id }} · {{ $holderRecipient->unit }} · {{ $holderRecipient->designation }}</span>
                                     </span>
                                 </span>
                                 <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">{{ $holder?->role === \App\Models\User::ROLE_SDS_ADMIN ? 'Admin' : 'Recipient' }}</span>
@@ -218,7 +218,7 @@
                 <select name="suggested_recipient_id" class="mt-1 h-9 w-full rounded-md border border-input bg-white px-2 text-xs font-normal text-foreground outline-none focus:ring-1 focus:ring-ring">
                     <option value="">None</option>
                     @foreach ($recipients as $recipientOption)
-                        <option value="{{ $recipientOption->id }}" @selected((int) $recipientOption->id === (int) $complaint->suggested_recipient_id)>{{ $recipientOption->user?->table_name }} · {{ $recipientOption->designation }}, {{ $recipientOption->department }}</option>
+                        <option value="{{ $recipientOption->id }}" @selected((int) $recipientOption->id === (int) $complaint->suggested_recipient_id)>{{ $recipientOption->user?->table_name }} · {{ $recipientOption->designation }}, {{ $recipientOption->unit }}</option>
                     @endforeach
                 </select>
             </label>

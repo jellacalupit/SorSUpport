@@ -32,8 +32,8 @@ class Module9AuditTrailTest extends TestCase
         $student = Student::create([
             'user_id' => $studentUser->id,
             'student_id' => 'S9001',
-            'department' => 'IT',
-            'course' => 'BSCS',
+            'college' => 'IT',
+            'program' => 'BSCS',
             'year_level' => '4th Year',
             'block' => 'D',
         ]);
@@ -42,7 +42,7 @@ class Module9AuditTrailTest extends TestCase
         $recipientOne = Recipient::create([
             'user_id' => $recipientOneUser->id,
             'staff_id' => 'R9001',
-            'department' => 'Student Affairs',
+            'unit' => 'Student Affairs',
             'designation' => 'Officer',
         ]);
 
@@ -50,7 +50,7 @@ class Module9AuditTrailTest extends TestCase
         $recipientTwo = Recipient::create([
             'user_id' => $recipientTwoUser->id,
             'staff_id' => 'R9002',
-            'department' => 'Student Affairs',
+            'unit' => 'Student Affairs',
             'designation' => 'Senior Officer',
         ]);
 
@@ -121,10 +121,7 @@ class Module9AuditTrailTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->actingAs($recipientOneUser)
-            ->post(route('recipient.complaints.acknowledge', $complaint))
-            ->assertRedirect();
-
+        // Assigning to a recipient moves the ticket straight to in progress, so there is no acknowledge step.
         $this->actingAs($admin)
             ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $recipientTwo->id])
             ->assertRedirect();
@@ -151,7 +148,6 @@ class Module9AuditTrailTest extends TestCase
             'ticket_assigned',
             'message_posted',
             'message_posted',
-            'ticket_acknowledged',
             'ticket_escalated',
             'complaint_resolved',
             'ticket_closed',
@@ -167,12 +163,6 @@ class Module9AuditTrailTest extends TestCase
             'ticket_id' => $ticket->id,
             'action' => 'ticket_assigned',
             'performed_by' => $admin->id,
-        ]);
-
-        $this->assertDatabaseHas('audit_logs', [
-            'ticket_id' => $ticket->id,
-            'action' => 'ticket_acknowledged',
-            'performed_by' => $recipientOneUser->id,
         ]);
 
         $this->assertDatabaseHas('audit_logs', [
@@ -227,8 +217,8 @@ class Module9AuditTrailTest extends TestCase
         $student = Student::create([
             'user_id' => $studentUser->id,
             'student_id' => 'S9002',
-            'department' => 'IT',
-            'course' => 'BSCS',
+            'college' => 'IT',
+            'program' => 'BSCS',
             'year_level' => '4th Year',
             'block' => 'D',
         ]);
@@ -238,7 +228,7 @@ class Module9AuditTrailTest extends TestCase
         $recipient = Recipient::create([
             'user_id' => $recipientUser->id,
             'staff_id' => 'R9003',
-            'department' => 'Student Affairs',
+            'unit' => 'Student Affairs',
             'designation' => 'Officer',
         ]);
 
@@ -295,8 +285,8 @@ class Module9AuditTrailTest extends TestCase
         $student = Student::create([
             'user_id' => $studentUser->id,
             'student_id' => 'S9003',
-            'department' => 'IT',
-            'course' => 'BSCS',
+            'college' => 'IT',
+            'program' => 'BSCS',
             'year_level' => '4th Year',
             'block' => 'D',
         ]);
@@ -306,7 +296,7 @@ class Module9AuditTrailTest extends TestCase
         $recipient = Recipient::create([
             'user_id' => $recipientUser->id,
             'staff_id' => 'R9004',
-            'department' => 'Student Affairs',
+            'unit' => 'Student Affairs',
             'designation' => 'Officer',
         ]);
 
@@ -386,8 +376,8 @@ class Module9AuditTrailTest extends TestCase
         $student = Student::create([
             'user_id' => $studentUser->id,
             'student_id' => 'S9004',
-            'department' => 'IT',
-            'course' => 'BSCS',
+            'college' => 'IT',
+            'program' => 'BSCS',
             'year_level' => '4th Year',
             'block' => 'D',
         ]);
@@ -396,7 +386,7 @@ class Module9AuditTrailTest extends TestCase
         $recipient = Recipient::create([
             'user_id' => $recipientUser->id,
             'staff_id' => 'R9005',
-            'department' => 'Student Affairs',
+            'unit' => 'Student Affairs',
             'designation' => 'Officer',
         ]);
 
@@ -436,25 +426,16 @@ class Module9AuditTrailTest extends TestCase
         /** @var \App\Models\Complaint $complaint */
         $complaint = Complaint::query()->firstOrFail();
 
-        $this->actingAs($recipientUser)
-            ->post(route('recipient.complaints.acknowledge', $complaint), [])
-            ->assertRedirect();
-
         $response = $this->actingAs($admin)
-            ->get(route('admin.tickets.review.show', $ticket));
+            ->get(route('admin.complaints.show', $complaint));
 
         $response->assertOk();
-        $response->assertSee('complaint submitted');
-        $response->assertSee('ticket classified');
-        $response->assertSee('ticket assigned');
-        $response->assertSee('ticket acknowledged');
 
-        $content = $response->getContent();
-        $this->assertStringContainsInOrder($content, [
-            'complaint submitted',
-            'ticket classified',
-            'ticket assigned',
-            'ticket acknowledged',
+        // The admin ticket view lists the latest audit entries, newest first.
+        $this->assertStringContainsInOrder($response->getContent(), [
+            'Ticket assigned',
+            'Ticket classified',
+            'Complaint submitted',
         ]);
     }
 

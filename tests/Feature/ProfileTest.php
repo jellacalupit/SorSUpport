@@ -56,12 +56,17 @@ class ProfileTest extends TestCase
             ->assertSee('profile-username')
             ->assertSee('id="profile-photo-overlay"', false)
             ->assertSee('id="recipient-profile-photo"', false)
-            ->assertSee('First Name *')
-            ->assertSee('Last Name *')
-            ->assertSee('Email *')
-            ->assertSee('Staff ID *')
-            ->assertSee('Department *')
-            ->assertSee('Position *');
+            ->assertSeeText('First Name *')
+            ->assertSeeText('Last Name *')
+            ->assertSeeText('Email *')
+            ->assertSeeText('Staff ID *')
+            ->assertSeeText('College / Office')
+            ->assertSeeText('Position');
+
+        // The office and designation must be ones configured in System Settings.
+        \App\Models\Unit::create(['name' => 'Student Development Services', 'type' => \App\Models\Unit::TYPE_OFFICE])
+            ->designations()
+            ->create(['name' => 'Administrator']);
 
         $response = $this
             ->actingAs($user)
@@ -72,7 +77,7 @@ class ProfileTest extends TestCase
                 'extension' => 'Sr.',
                 'email' => 'updated-admin@example.com',
                 'username' => '1002',
-                'department' => 'Student Development Services',
+                'unit' => 'Student Development Services',
                 'designation' => 'Administrator',
                 'role' => User::ROLE_SDS_ADMIN,
             ]);
@@ -83,12 +88,36 @@ class ProfileTest extends TestCase
 
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
-            'name' => 'Updated S. Admin Sr.',
+            'name' => 'Updated SDS Admin Sr.',
             'email' => 'updated-admin@example.com',
             'username' => '1002',
-            'department' => 'Student Development Services',
+        ]);
+
+        $this->assertDatabaseHas('recipients', [
+            'user_id' => $user->id,
+            'unit' => 'Student Development Services',
             'designation' => 'Administrator',
         ]);
+    }
+
+    public function test_sds_admin_cannot_change_their_own_role_from_the_profile_form(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_SDS_ADMIN,
+            'username' => '1001',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch('/profile', [
+                'first_name' => 'Still',
+                'last_name' => 'Admin',
+                'email' => 'still-admin@example.com',
+                'username' => '1001',
+                'role' => User::ROLE_STUDENT,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(User::ROLE_SDS_ADMIN, $admin->fresh()->role);
     }
 
     public function test_sds_admin_profile_photo_control_starts_hidden_until_edit_mode(): void

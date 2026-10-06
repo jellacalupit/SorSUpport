@@ -4,11 +4,13 @@ namespace App\Imports;
 
 use App\Models\Recipient;
 use App\Models\Student;
+use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
@@ -42,7 +44,7 @@ class AccountsImport implements ToCollection, WithHeadingRow
             }
 
             $this->total++;
-            $validation = Validator::make($row, $this->rules());
+            $validation = Validator::make($row, $this->rules($row), $this->messages());
 
             if ($validation->fails()) {
                 $this->recordFailure($rowNumber, $validation->errors()->toArray());
@@ -110,15 +112,15 @@ class AccountsImport implements ToCollection, WithHeadingRow
                     if ($this->accountType === User::ROLE_STUDENT) {
                         Student::updateOrCreate(['user_id' => $user->id], [
                             'student_id' => $row['student_id'],
-                            'department' => $row['department'],
-                            'course' => $row['course'],
+                            'college' => $row['college'],
+                            'program' => $row['program'],
                             'year_level' => $row['year_level'],
                             'block' => $row['block'] ?? '',
                         ]);
                     } else {
                         Recipient::updateOrCreate(['user_id' => $user->id], [
                             'staff_id' => $row['staff_id'],
-                            'department' => $row['department'] ?? '',
+                            'unit' => $row['unit'] ?? '',
                             'designation' => $row['designation'] ?? '',
                         ]);
                     }
@@ -173,7 +175,10 @@ class AccountsImport implements ToCollection, WithHeadingRow
             }
         }
 
-        $row['department'] = $row['department'] ?? $row['recipient_department'] ?? null;
+        // Older templates used "department" and "course"; keep reading them.
+        $row['college'] = $row['college'] ?? $row['department'] ?? null;
+        $row['program'] = $row['program'] ?? $row['course'] ?? null;
+        $row['unit'] = $row['unit'] ?? $row['college_office'] ?? $row['office'] ?? $row['college'] ?? $row['recipient_department'] ?? null;
         $row['year_level'] = $this->normalizeYear($row['year_level'] ?? null);
         $row['is_active'] = $this->normalizeStatus($row['status'] ?? 'active');
         $row['name'] = trim(implode(' ', array_filter([
@@ -188,8 +193,8 @@ class AccountsImport implements ToCollection, WithHeadingRow
     protected function isBlankRow(array $row): bool
     {
         $fields = $this->accountType === User::ROLE_STUDENT
-            ? ['student_id', 'last_name', 'first_name', 'middle_name', 'email', 'department', 'course', 'year_level', 'block', 'status']
-            : ['staff_id', 'last_name', 'first_name', 'middle_name', 'email', 'department', 'designation', 'status'];
+            ? ['student_id', 'last_name', 'first_name', 'middle_name', 'email', 'college', 'program', 'year_level', 'block', 'status']
+            : ['staff_id', 'last_name', 'first_name', 'middle_name', 'email', 'unit', 'designation', 'status'];
 
         foreach ($fields as $field) {
             if (isset($row[$field]) && trim((string) $row[$field]) !== '') {
@@ -200,21 +205,23 @@ class AccountsImport implements ToCollection, WithHeadingRow
         return true;
     }
 
-    protected function rules(): array
+    protected function rules(array $row): array
     {
         $rules = [
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'middle_name' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
-            'department' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'in:active,inactive,1,0'],
         ];
 
         if ($this->accountType === User::ROLE_STUDENT) {
+            $collegeId = Unit::query()->colleges()->where('name', $row['college'] ?? null)->value('id');
+
             return array_merge($rules, [
                 'student_id' => ['required', 'regex:/^\d{8}$/'],
-                'course' => ['required', 'string', 'max:255'],
+                'college' => ['required', 'string', Rule::exists('units', 'name')->where('type', Unit::TYPE_COLLEGE)],
+                'program' => ['required', 'string', Rule::exists('programs', 'name')->where('unit_id', $collegeId)],
                 'year_level' => ['required', 'regex:/^[1-4](?:st|nd|rd|th)?(?:\s+year)?$/i'],
                 'block' => ['nullable', 'string', 'max:255'],
             ]);
@@ -222,8 +229,18 @@ class AccountsImport implements ToCollection, WithHeadingRow
 
         return array_merge($rules, [
             'staff_id' => ['required', 'string', 'max:50'],
+            'unit' => ['nullable', 'string', Rule::exists('units', 'name')],
             'designation' => ['nullable', 'string', 'max:255'],
         ]);
+    }
+
+    protected function messages(): array
+    {
+        return [
+            'college.exists' => 'The college is not configured in System Settings.',
+            'program.exists' => 'The program is not offered by the selected college.',
+            'unit.exists' => 'The college or office is not configured in System Settings.',
+        ];
     }
 
     protected function normalizeYear(mixed $year): mixed

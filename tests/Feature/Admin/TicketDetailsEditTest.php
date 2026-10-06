@@ -74,8 +74,8 @@ class TicketDetailsEditTest extends TestCase
         $student = Student::create([
             'user_id' => User::factory()->create(['role' => User::ROLE_STUDENT])->id,
             'student_id' => 'S3301',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -83,7 +83,7 @@ class TicketDetailsEditTest extends TestCase
         $recipient = Recipient::create([
             'user_id' => User::factory()->create(['role' => User::ROLE_RECIPIENT])->id,
             'staff_id' => 'R3301',
-            'department' => 'Registrar',
+            'unit' => 'Registrar',
             'designation' => 'Registrar',
         ]);
 

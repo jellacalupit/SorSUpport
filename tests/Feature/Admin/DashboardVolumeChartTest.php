@@ -31,8 +31,8 @@ class DashboardVolumeChartTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $student->id,
             'student_id' => 'S9001',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);

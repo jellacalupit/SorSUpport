@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\AuditLog;
-use App\Models\Department;
+use App\Models\Unit;
 use App\Notifications\AccountUpdateNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,9 +23,8 @@ class ProfileController extends Controller
         $user = $request->user()->load('recipient');
         $savedNameParts = $request->session()->get('profile_name_parts', []);
 
-        $recipientDepartments = Department::query()
-            ->forRecipients()
-            ->with('positions')
+        $units = Unit::query()
+            ->with('designations')
             ->orderBy('name')
             ->get();
 
@@ -35,7 +34,7 @@ class ProfileController extends Controller
             'editable' => $user->isSdsAdmin(),
             'nameParts' => array_pad(explode(' ', trim($user->name), 3), 3, ''),
             'savedNameParts' => $savedNameParts,
-            'departments' => $recipientDepartments,
+            'units' => $units,
         ]);
     }
 
@@ -90,7 +89,6 @@ class ProfileController extends Controller
             $user->first_name = $firstName;
             $user->middle_name = $middleName !== '' ? $middleName : null;
             $user->last_name = $lastName;
-            $user->role = $validated['role'];
         }
 
         if (! $user->isSdsAdmin() && $request->user()->isDirty('email')) {
@@ -102,15 +100,15 @@ class ProfileController extends Controller
         if ($user->isSdsAdmin() || $user->isRecipient()) {
             $recipientData = array_intersect_key(
                 $validated,
-                array_flip(['staff_id', 'department', 'designation'])
+                array_flip(['staff_id', 'unit', 'designation'])
             );
 
             if (empty($recipientData['staff_id'])) {
                 $recipientData['staff_id'] = $user->username;
             }
 
-            if (empty($recipientData['department'])) {
-                $recipientData['department'] = '';
+            if (empty($recipientData['unit'])) {
+                $recipientData['unit'] = '';
             }
 
             if (empty($recipientData['designation'])) {

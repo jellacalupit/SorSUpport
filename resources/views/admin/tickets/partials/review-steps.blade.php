@@ -51,11 +51,11 @@
                 </summary>
                 <div class="absolute top-full z-40 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-border bg-white p-1 text-foreground shadow-lg">
                     @forelse ($availableRecipients as $recipient)
-                        @php $recipientName = $recipient->user?->display_name ?? $recipient->user?->name ?? $recipient->department; @endphp
+                        @php $recipientName = $recipient->user?->display_name ?? $recipient->user?->name ?? $recipient->unit; @endphp
                         <button type="button" x-on:click="selectedRecipientId = {{ $recipient->id }}; selectedRecipient = @js($recipientName); $el.closest('details').removeAttribute('open')" class="flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-primary-soft" x-bind:class="selectedRecipientId === {{ $recipient->id }} ? 'bg-primary-soft text-primary' : ''">
                             <span class="min-w-0">
                                 <span class="block truncate font-semibold">{{ $recipientName }}</span>
-                                <span class="block truncate text-muted-foreground">{{ $recipient->staff_id }} · {{ $recipient->department }} · {{ $recipient->designation }}</span>
+                                <span class="block truncate text-muted-foreground">{{ $recipient->staff_id }} · {{ $recipient->unit }} · {{ $recipient->designation }}</span>
                             </span>
                         </button>
                     @empty
@@ -77,11 +77,11 @@
                 </summary>
                 <div class="absolute top-full z-40 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-border bg-white p-1 text-foreground shadow-lg">
                     @forelse ($availableRecipients as $recipient)
-                        @php $recipientName = $recipient->user?->display_name ?? $recipient->user?->name ?? $recipient->department; @endphp
+                        @php $recipientName = $recipient->user?->display_name ?? $recipient->user?->name ?? $recipient->unit; @endphp
                         <button type="button" x-on:click="selectedRecipientId = {{ $recipient->id }}; selectedRecipient = @js($recipientName); $el.closest('details').removeAttribute('open')" class="flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-primary-soft">
                             <span class="min-w-0">
                                 <span class="block truncate font-semibold">{{ $recipientName }}</span>
-                                <span class="block truncate text-muted-foreground">{{ $recipient->staff_id }} · {{ $recipient->department }} · {{ $recipient->designation }}</span>
+                                <span class="block truncate text-muted-foreground">{{ $recipient->staff_id }} · {{ $recipient->unit }} · {{ $recipient->designation }}</span>
                             </span>
                         </button>
                     @empty

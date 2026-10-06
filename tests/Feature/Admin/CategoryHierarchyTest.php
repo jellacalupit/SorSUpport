@@ -32,7 +32,7 @@ class CategoryHierarchyTest extends TestCase
             return Recipient::create([
                 'user_id' => $user->id,
                 'staff_id' => "R-{$index}",
-                'department' => $index < 3 ? 'CICT' : 'CBME',
+                'unit' => $index < 3 ? 'CICT' : 'CBME',
                 'designation' => 'Instructor',
             ]);
         });
@@ -89,7 +89,7 @@ class CategoryHierarchyTest extends TestCase
         $recipient = Recipient::create([
             'user_id' => $recipientUser->id,
             'staff_id' => 'R-DUP',
-            'department' => 'CICT',
+            'unit' => 'CICT',
             'designation' => 'Instructor',
         ]);
 

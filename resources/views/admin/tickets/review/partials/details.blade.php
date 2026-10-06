@@ -44,7 +44,7 @@
                 <select name="suggested_recipient_id" class="{{ $selectClass }} normal-case tracking-normal">
                     <option value="">None</option>
                     @foreach ($recipients as $recipientOption)
-                        <option value="{{ $recipientOption->id }}" @selected((int) $recipientOption->id === (int) $complaint->suggested_recipient_id)>{{ $recipientOption->user?->table_name }} · {{ $recipientOption->designation }}, {{ $recipientOption->department }}</option>
+                        <option value="{{ $recipientOption->id }}" @selected((int) $recipientOption->id === (int) $complaint->suggested_recipient_id)>{{ $recipientOption->user?->table_name }} · {{ $recipientOption->designation }}, {{ $recipientOption->unit }}</option>
                     @endforeach
                 </select>
             </label>

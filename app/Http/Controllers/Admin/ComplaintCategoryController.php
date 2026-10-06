@@ -53,7 +53,7 @@ class ComplaintCategoryController extends Controller
 
     public function edit(ComplaintCategory $category): View
     {
-        $recipients = Recipient::query()->activeVerified()->with('user')->orderBy('department')->get();
+        $recipients = Recipient::query()->activeVerified()->with('user')->orderBy('unit')->get();
 
         return view('admin.categories.edit', compact('category', 'recipients'));
     }

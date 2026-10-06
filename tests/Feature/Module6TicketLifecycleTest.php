@@ -30,8 +30,8 @@ class Module6TicketLifecycleTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $studentUser->id,
             'student_id' => 'S3001',
-            'department' => 'IT',
-            'course' => 'BSCS',
+            'college' => 'IT',
+            'program' => 'BSCS',
             'year_level' => '3rd Year',
             'block' => 'B',
         ]);
@@ -39,7 +39,7 @@ class Module6TicketLifecycleTest extends TestCase
         $recipient = Recipient::create([
             'user_id' => $recipientUser->id,
             'staff_id' => 'R3001',
-            'department' => 'Student Affairs',
+            'unit' => 'Student Affairs',
             'designation' => 'Officer',
         ]);
 
@@ -119,8 +119,8 @@ class Module6TicketLifecycleTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $studentUser->id,
             'student_id' => 'S3002',
-            'department' => 'IT',
-            'course' => 'BSCS',
+            'college' => 'IT',
+            'program' => 'BSCS',
             'year_level' => '3rd Year',
             'block' => 'A',
         ]);
@@ -128,7 +128,7 @@ class Module6TicketLifecycleTest extends TestCase
         $recipient = Recipient::create([
             'user_id' => $recipientUser->id,
             'staff_id' => 'R3002',
-            'department' => 'Student Affairs',
+            'unit' => 'Student Affairs',
             'designation' => 'Officer',
         ]);
 
@@ -151,7 +151,7 @@ class Module6TicketLifecycleTest extends TestCase
         $ticket = Ticket::create([
             'complaint_id' => $complaint->id,
             'status' => Ticket::STATUS_ASSIGNED,
-            'assigned_to' => $recipient->id,
+            'assigned_to' => $recipientUser->id,
         ]);
 
         $this->actingAs($recipientUser)

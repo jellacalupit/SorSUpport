@@ -9,14 +9,14 @@
             editStudentModalOpen: false,
             editRecipientModalOpen: false,
             department: '',
-            courseOptions: @js($studentDepartments->mapWithKeys(fn ($department) => [$department->name => $department->courses->pluck('course')->unique()->values()])->all()),
-            studentCourseDetails: @js($studentDepartments->mapWithKeys(fn ($department) => [
-                $department->name => $department->courses->groupBy('course')->mapWithKeys(fn ($courses, $course) => [$course => [
+            courseOptions: @js($colleges->mapWithKeys(fn ($department) => [$department->name => $department->programs->pluck('name')->unique()->values()])->all()),
+            studentCourseDetails: @js($colleges->mapWithKeys(fn ($department) => [
+                $department->name => $department->programs->groupBy('name')->mapWithKeys(fn ($courses, $course) => [$course => [
                     'years' => collect(($maxYear = (int) $courses->max('year_level')) > 0 ? range(1, $maxYear) : [])->map(fn ($year) => (string) $year)->values(),
                     'blocks' => collect(($maxBlock = (int) $courses->max('block')) > 0 ? range(1, $maxBlock) : [])->map(fn ($block) => (string) $block)->values(),
                 ]])->all(),
             ])->all()),
-            recipientDepartmentOptions: @js($recipientDepartments->mapWithKeys(fn ($department) => [$department->name => $department->positions->pluck('name')->values()])->all()),
+            recipientDepartmentOptions: @js($units->mapWithKeys(fn ($department) => [$department->name => $department->designations->pluck('name')->values()])->all()),
             selectedCourse: '',
             yearValue: '',
             blockValue: '',
@@ -232,29 +232,29 @@
             $statusOptions = ['' => 'All Status', 'active' => 'Active', 'inactive' => 'Inactive'];
             $sortOptions = ['asc' => 'Ascending', 'desc' => 'Descending'];
             $selectedCategory = request('category_filter', 'students');
-            $configuredDepartmentOptions = ($selectedCategory === 'recipients' ? $recipientDepartments : $studentDepartments)->pluck('name')->mapWithKeys(fn ($name) => [$name => $name])->all();
-            $departmentOptions = ['' => 'All Department'] + $configuredDepartmentOptions;
-            $selectedCourse = request('course_filter', '');
+            $configuredDepartmentOptions = ($selectedCategory === 'recipients' ? $units : $colleges)->pluck('name')->mapWithKeys(fn ($name) => [$name => $name])->all();
+            $departmentOptions = ['' => ($selectedCategory === 'recipients' ? 'All Colleges and Offices' : 'All Colleges')] + $configuredDepartmentOptions;
+            $selectedCourse = request('program_filter', '');
             $selectedStatus = request('status_filter', '');
             $selectedSort = request('sort_id', 'asc');
-            $courseDepartmentMap = $studentDepartments
-                ->flatMap(fn ($department) => $department->courses
-                    ->pluck('course')
+            $courseDepartmentMap = $colleges
+                ->flatMap(fn ($department) => $department->programs
+                    ->pluck('name')
                     ->unique()
                     ->mapWithKeys(fn ($course) => [$course => $department->name]))
                 ->all();
-            $selectedDepartment = request('department_filter', '') ?: ($courseDepartmentMap[$selectedCourse] ?? '');
-            $selectedStudentDepartment = $studentDepartments->firstWhere('name', $selectedDepartment);
-            $selectedStudentCourses = $selectedStudentDepartment?->courses ?? $studentDepartments->flatMap(fn ($department) => $department->courses);
-            $selectedCourseRows = $selectedStudentCourses->when($selectedCourse !== '', fn ($courses) => $courses->where('course', $selectedCourse));
+            $selectedDepartment = request('unit_filter', '') ?: ($courseDepartmentMap[$selectedCourse] ?? '');
+            $selectedStudentDepartment = $colleges->firstWhere('name', $selectedDepartment);
+            $selectedStudentCourses = $selectedStudentDepartment?->programs ?? $colleges->flatMap(fn ($department) => $department->programs);
+            $selectedCourseRows = $selectedStudentCourses->when($selectedCourse !== '', fn ($courses) => $courses->where('name', $selectedCourse));
             $configuredYears = collect(($maxConfiguredYear = (int) $selectedCourseRows->max('year_level')) > 0 ? range(1, $maxConfiguredYear) : [])->map(fn ($year) => (string) $year)->values();
             $configuredBlocks = collect(($maxConfiguredBlock = (int) $selectedCourseRows->max('block')) > 0 ? range(1, $maxConfiguredBlock) : [])->map(fn ($block) => (string) $block)->values();
             $yearOptions = ['' => 'All Year'] + $configuredYears->mapWithKeys(fn ($year) => [$year => $year])->all();
             $blockOptions = ['' => 'All Block'] + $configuredBlocks->mapWithKeys(fn ($block) => [$block => $block])->all();
             $configuredCourses = $selectedDepartment !== ''
-                ? ($studentDepartments->firstWhere('name', $selectedDepartment)?->courses->pluck('course')->unique()->values() ?? collect())
-                : $studentDepartments->flatMap(fn ($department) => $department->courses->pluck('course'))->unique()->sort()->values();
-            $courseOptions = ['' => 'All Course'] + $configuredCourses->mapWithKeys(fn ($course) => [$course => $course])->all();
+                ? ($colleges->firstWhere('name', $selectedDepartment)?->programs->pluck('name')->unique()->values() ?? collect())
+                : $colleges->flatMap(fn ($department) => $department->programs->pluck('name'))->unique()->sort()->values();
+            $courseOptions = ['' => 'All Programs'] + $configuredCourses->mapWithKeys(fn ($course) => [$course => $course])->all();
             $selectedYear = request('year_filter', '');
             $selectedBlock = request('block_filter', '');
             $splitAccountName = function ($name, $user = null): array {
@@ -286,7 +286,7 @@
                         </summary>
                         <div class="absolute top-full left-0 z-50 mt-1 w-full min-w-32 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                             @foreach ($sortOptions as $value => $label)
-                                <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => $value, 'department_filter' => request('department_filter'), 'course_filter' => request('course_filter'), 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedSort === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
+                                <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => $value, 'unit_filter' => request('unit_filter'), 'program_filter' => request('program_filter'), 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedSort === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                     @if ($selectedSort === $value)
                                         <x-icons.check class="absolute right-2 h-4 w-4" />
                                     @endif
@@ -299,12 +299,12 @@
 
                 <details x-data="{}" class="group relative w-full min-w-0 {{ $selectedCategory === 'recipients' ? 'sm:w-[320px]' : 'sm:w-[150px]' }} sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
                     <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
-                        <span class="truncate">{{ $departmentOptions[$selectedDepartment] ?? 'All Department' }}</span>
+                        <span class="truncate">{{ $departmentOptions[$selectedDepartment] ?? $departmentOptions[''] }}</span>
                         <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                     </summary>
                     <div class="absolute top-full left-0 z-50 mt-1 w-full min-w-44 rounded-md sm:min-w-28 sm:max-w-[calc(100vw-2rem)] sm:whitespace-nowrap border bg-popover p-1 text-popover-foreground shadow-md">
                         @foreach ($departmentOptions as $value => $label)
-                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'department_filter' => $value, 'course_filter' => '', 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedDepartment === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
+                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'unit_filter' => $value, 'program_filter' => '', 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedDepartment === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                 @if ($selectedDepartment === $value)
                                     <x-icons.check class="absolute right-2 h-4 w-4" />
                                 @endif
@@ -316,12 +316,12 @@
 
                 <details x-data="{}" x-show="tab === 'students'" x-cloak class="group relative w-full min-w-0 sm:w-[120px] sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
                     <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
-                        <span class="truncate">{{ $courseOptions[$selectedCourse] ?? 'All Course' }}</span>
+                        <span class="truncate">{{ $courseOptions[$selectedCourse] ?? 'All Programs' }}</span>
                         <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                     </summary>
                     <div class="absolute top-full left-0 z-50 mt-1 w-full min-w-28 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                         @foreach ($courseOptions as $value => $label)
-                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'department_filter' => $courseDepartmentMap[$value] ?? request('department_filter'), 'course_filter' => $value, 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedCourse === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
+                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'unit_filter' => $courseDepartmentMap[$value] ?? request('unit_filter'), 'program_filter' => $value, 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedCourse === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                 @if ($selectedCourse === $value)
                                     <x-icons.check class="absolute right-2 h-4 w-4" />
                                 @endif
@@ -338,7 +338,7 @@
                     </summary>
                     <div class="absolute top-full left-0 z-50 mt-1 w-full min-w-24 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                         @foreach ($yearOptions as $value => $label)
-                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'department_filter' => request('department_filter'), 'course_filter' => request('course_filter'), 'year_filter' => $value, 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedYear === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
+                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'unit_filter' => request('unit_filter'), 'program_filter' => request('program_filter'), 'year_filter' => $value, 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedYear === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                 @if ($selectedYear === $value)
                                     <x-icons.check class="absolute right-2 h-4 w-4" />
                                 @endif
@@ -355,7 +355,7 @@
                     </summary>
                     <div class="absolute top-full left-0 z-50 mt-1 w-full min-w-24 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                         @foreach ($blockOptions as $value => $label)
-                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'department_filter' => request('department_filter'), 'course_filter' => request('course_filter'), 'year_filter' => request('year_filter'), 'block_filter' => $value, 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedBlock === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
+                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'unit_filter' => request('unit_filter'), 'program_filter' => request('program_filter'), 'year_filter' => request('year_filter'), 'block_filter' => $value, 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedBlock === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                 @if ($selectedBlock === $value)
                                     <x-icons.check class="absolute right-2 h-4 w-4" />
                                 @endif
@@ -372,7 +372,7 @@
                     </summary>
                     <div class="absolute top-full right-0 z-50 mt-1 w-full min-w-28 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                         @foreach ($statusOptions as $value => $label)
-                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'department_filter' => request('department_filter'), 'course_filter' => request('course_filter'), 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => $value, 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedStatus === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
+                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'unit_filter' => request('unit_filter'), 'program_filter' => request('program_filter'), 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => $value, 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedStatus === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                 @if ($selectedStatus === $value)
                                     <x-icons.check class="absolute right-2 h-4 w-4" />
                                 @endif
@@ -394,8 +394,8 @@
                         <th class="px-2 py-2 text-[13px] font-semibold">First Name</th>
                         <th class="px-2 py-2 text-[13px] font-semibold">Middle Name</th>
                         <th class="px-2 py-2 text-[13px] font-semibold">Email</th>
-                        <th class="px-2 py-2 text-[13px] font-semibold">Department</th>
-                        <th class="px-2 py-2 text-[13px] font-semibold">Course</th>
+                        <th class="px-2 py-2 text-[13px] font-semibold">College</th>
+                        <th class="px-2 py-2 text-[13px] font-semibold">Program</th>
                         <th class="px-2 py-2 text-[13px] font-semibold">Year</th>
                         <th class="px-2 py-2 text-[13px] font-semibold">Block</th>
                         <th class="px-2 py-2 text-[13px] font-semibold">Status</th>
@@ -411,8 +411,8 @@
                             <td class="px-2 py-1.5 font-normal">{{ $accountName['first'] ?: '—' }}</td>
                             <td class="px-2 py-1.5">{{ $accountName['middle'] ?: '—' }}</td>
                             <td class="px-2 py-1.5 text-[13px] text-foreground">{{ $user->email ?? '—' }}</td>
-                            <td class="px-2 py-1.5 text-[13px] text-foreground">{{ $user->student?->department ?? '—' }}</td>
-                            <td class="px-2 py-1.5 text-[13px] text-foreground">{{ $user->student?->course ?? '—' }}</td>
+                            <td class="px-2 py-1.5 text-[13px] text-foreground">{{ $user->student?->college ?? '—' }}</td>
+                            <td class="px-2 py-1.5 text-[13px] text-foreground">{{ $user->student?->program ?? '—' }}</td>
                             <td class="px-2 py-1.5 text-[13px] text-foreground">{{ $user->student?->year_level ?? '—' }}</td>
                             <td class="px-2 py-1.5 text-[13px] text-foreground">{{ $user->student?->block ?? '—' }}</td>
                             <td class="px-2 py-1.5">
@@ -424,7 +424,7 @@
                             </td>
                             <td class="w-24 min-w-24 whitespace-nowrap py-1.5 pl-2 pr-4 text-left">
                                 <div class="flex items-center gap-2">
-                                    <button type="button" @click="openEditStudent({ id: {{ $user->id }}, name: @js($user->name), first_name: @js($user->first_name), middle_name: @js($user->middle_name), last_name: @js($user->last_name), email: @js($user->email), student_id: @js($user->student?->student_id ?? ''), department: @js($user->student?->department ?? ''), course: @js($user->student?->course ?? ''), year_level: @js($user->student?->year_level ?? ''), block: @js($user->student?->block ?? ''), student: { student_id: @js($user->student?->student_id ?? ''), department: @js($user->student?->department ?? ''), course: @js($user->student?->course ?? ''), year_level: @js($user->student?->year_level ?? ''), block: @js($user->student?->block ?? '') } })" class="inline-flex h-6 items-center justify-center rounded-md bg-[#7a1d2a] px-2 text-[11px] font-semibold text-white transition-colors hover:bg-[#651923]" aria-label="Edit account">
+                                    <button type="button" @click="openEditStudent({ id: {{ $user->id }}, name: @js($user->name), first_name: @js($user->first_name), middle_name: @js($user->middle_name), last_name: @js($user->last_name), email: @js($user->email), student_id: @js($user->student?->student_id ?? ''), department: @js($user->student?->college ?? ''), course: @js($user->student?->program ?? ''), year_level: @js($user->student?->year_level ?? ''), block: @js($user->student?->block ?? ''), student: { student_id: @js($user->student?->student_id ?? ''), department: @js($user->student?->college ?? ''), course: @js($user->student?->program ?? ''), year_level: @js($user->student?->year_level ?? ''), block: @js($user->student?->block ?? '') } })" class="inline-flex h-6 items-center justify-center rounded-md bg-[#7a1d2a] px-2 text-[11px] font-semibold text-white transition-colors hover:bg-[#651923]" aria-label="Edit account">
                                         Edit
                                     </button>
                                     @include('admin.accounts.partials.status-action', ['user' => $user])
@@ -526,8 +526,8 @@
 
                     <div class="grid gap-3 md:grid-cols-2">
                             <div class="grid min-h-[74px] gap-0.5">
-                            <label class="text-[11px] font-medium text-muted-foreground">Department <span class="text-destructive">*</span></label>
-                            <input type="hidden" name="department" x-model="department">
+                            <label class="text-[11px] font-medium text-muted-foreground">College <span class="text-destructive">*</span></label>
+                            <input type="hidden" name="college" x-model="department">
                             <details id="new-student-department-field" x-data="{}" class="group relative w-full" x-on:click.outside="$el.removeAttribute('open')">
                                 <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted/80 [&::-webkit-details-marker]:hidden">
                                     <span x-text="department || 'Select'" :class="department ? '' : 'text-muted-foreground'"></span>
@@ -542,8 +542,8 @@
                             <p id="new-student-department-empty-error" class="invisible min-h-[14px] text-[11px] font-medium text-destructive opacity-0">Please select an option.</p>
                         </div>
                         <div class="grid min-h-[74px] gap-0.5">
-                            <label class="text-[11px] font-medium text-muted-foreground">Course <span class="text-destructive">*</span></label>
-                            <input type="hidden" name="course" x-model="selectedCourse">
+                            <label class="text-[11px] font-medium text-muted-foreground">Program <span class="text-destructive">*</span></label>
+                            <input type="hidden" name="program" x-model="selectedCourse">
                             <details id="new-student-course-field" x-data="{}" class="group relative w-full" x-on:click.outside="$el.removeAttribute('open')">
                                 <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted/80 [&::-webkit-details-marker]:hidden">
                                     <span x-text="selectedCourse || 'Select'" :class="selectedCourse ? '' : 'text-muted-foreground'"></span>
@@ -655,8 +655,8 @@
 
                     <div class="grid gap-3 md:grid-cols-2">
                         <div class="grid min-h-[74px] gap-0.5">
-                            <label class="text-[11px] font-medium text-muted-foreground">Department <span class="text-destructive">*</span></label>
-                            <input type="hidden" name="department" x-model="editStudentDepartment">
+                            <label class="text-[11px] font-medium text-muted-foreground">College <span class="text-destructive">*</span></label>
+                            <input type="hidden" name="college" x-model="editStudentDepartment">
                             <details id="edit-student-department-field" x-data="{}" class="group relative w-full" x-on:click.outside="$el.removeAttribute('open')">
                                 <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted/80 [&::-webkit-details-marker]:hidden">
                                     <span x-text="editStudentDepartment || 'Select'" :class="editStudentDepartment ? '' : 'text-muted-foreground'"></span>
@@ -672,8 +672,8 @@
                             <p id="edit-student-department-empty-error" class="invisible min-h-[14px] text-[11px] font-medium text-destructive opacity-0">Please select an option.</p>
                         </div>
                         <div class="grid min-h-[74px] gap-0.5">
-                            <label class="text-[11px] font-medium text-muted-foreground">Course <span class="text-destructive">*</span></label>
-                            <input type="hidden" name="course" x-model="editStudentCourse">
+                            <label class="text-[11px] font-medium text-muted-foreground">Program <span class="text-destructive">*</span></label>
+                            <input type="hidden" name="program" x-model="editStudentCourse">
                             <details id="edit-student-course-field" x-data="{}" class="group relative w-full" x-on:click.outside="$el.removeAttribute('open')">
                                 <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted/80 [&::-webkit-details-marker]:hidden">
                                     <span x-text="editStudentCourse || 'Select'" :class="editStudentCourse ? '' : 'text-muted-foreground'"></span>
@@ -785,16 +785,16 @@
 
                     <div class="grid gap-3 md:grid-cols-2">
                         <div class="grid min-h-[74px] gap-0.5">
-                            <label class="text-[11px] font-medium text-muted-foreground">Department <span class="text-destructive">*</span></label>
-                            <input type="hidden" name="recipient_department" x-model="editRecipientDepartment">
+                            <label class="text-[11px] font-medium text-muted-foreground">College / Office <span class="text-destructive">*</span></label>
+                            <input type="hidden" name="unit" x-model="editRecipientDepartment">
                             <details id="edit-recipient-department-field" x-data="{}" class="group relative w-full" x-on:click.outside="$el.removeAttribute('open')">
                                 <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted/80 [&::-webkit-details-marker]:hidden">
-                                    <span x-text="editRecipientDepartment || 'Select department'" :class="editRecipientDepartment ? '' : 'text-muted-foreground'"></span>
+                                    <span x-text="editRecipientDepartment || 'Select college or office'" :class="editRecipientDepartment ? '' : 'text-muted-foreground'"></span>
                                     <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                                 </summary>
                                 <div class="absolute top-full z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                                     <button type="button" @click="editRecipientDepartment = ''; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="editRecipientDepartment === '' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">Select department</button>
-                                    @foreach ($recipientDepartments as $department)
+                                    @foreach ($units as $department)
                                         <button type="button" @click="editRecipientDepartment = @js($department->name); editRecipientDesignation = ''; $event.target.closest('details').removeAttribute('open')" class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="editRecipientDepartment === @js($department->name) ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">{{ $department->name }}</button>
                                     @endforeach
                                 </div>
@@ -870,20 +870,20 @@
 
                     <div class="grid gap-3 md:grid-cols-2">
                         <div class="grid min-h-[74px] gap-0.5">
-                            <label for="new-recipient-department" class="text-[11px] font-medium text-muted-foreground">Department <span class="text-destructive">*</span></label>
+                            <label for="new-recipient-department" class="text-[11px] font-medium text-muted-foreground">College / Office <span class="text-destructive">*</span></label>
                             <div class="relative">
-                                <input type="hidden" name="recipient_department" x-model="recipientDepartment" />
+                                <input type="hidden" name="unit" x-model="recipientDepartment" />
                                 <details id="new-recipient-department-field" x-data="{}" class="group relative w-full" x-on:click.outside="$el.removeAttribute('open')">
                                     <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted/80 [&::-webkit-details-marker]:hidden">
-                                        <span class="truncate" x-text="recipientDepartment || 'Select department'" :class="recipientDepartment ? '' : 'text-muted-foreground'"></span>
+                                        <span class="truncate" x-text="recipientDepartment || 'Select college or office'" :class="recipientDepartment ? '' : 'text-muted-foreground'"></span>
                                         <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                                     </summary>
                                     <div class="absolute top-full z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                                         <button type="button" @click="recipientDepartment = ''; $event.target.closest('details').removeAttribute('open')" class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="!recipientDepartment ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">
                                             <svg x-show="!recipientDepartment" class="absolute right-2 h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 10 3 3 7-7" /></svg>
-                                            <span>Select department</span>
+                                            <span>Select college or office</span>
                                         </button>
-                                        @foreach ($recipientDepartments as $department)
+                                        @foreach ($units as $department)
                                             <button type="button" @click="recipientDepartment = @js($department->name); recipientDesignation = ''; $event.target.closest('details').removeAttribute('open')" class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="recipientDepartment === @js($department->name) ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">
                                                 <svg x-show="recipientDepartment === @js($department->name)" class="absolute right-2 h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 10 3 3 7-7" /></svg>
                                                 {{ $department->name }}
@@ -906,8 +906,8 @@
                     </div>
 
                     <datalist id="configured-position-options">
-                        @foreach ($recipientDepartments as $department)
-                            @foreach ($department->positions as $position)
+                        @foreach ($units as $department)
+                            @foreach ($department->designations as $position)
                                 <option value="{{ $position->name }}">{{ $department->name }}</option>
                             @endforeach
                         @endforeach
@@ -931,7 +931,7 @@
                         <th class="px-2 py-2 text-[13px] font-semibold">First Name</th>
                         <th class="px-2 py-2 text-[13px] font-semibold">Middle Name</th>
                         <th class="px-2 py-2 text-[13px] font-semibold">Email</th>
-                        <th class="px-2 py-2 text-[13px] font-semibold">Department</th>
+                        <th class="px-2 py-2 text-[13px] font-semibold">College / Office</th>
                         <th class="px-2 py-2 text-[13px] font-semibold">Position</th>
                         <th class="px-2 py-2 text-[13px] font-semibold">Status</th>
                         <th class="w-24 min-w-24 whitespace-nowrap rounded-tr-lg py-2 pl-2 pr-4 text-left text-[13px] font-semibold">Actions</th>
@@ -946,7 +946,7 @@
                             <td class="px-2 py-1.5 font-normal">{{ $accountName['first'] ?: '—' }}</td>
                             <td class="px-2 py-1.5">{{ $accountName['middle'] ?: '—' }}</td>
                             <td class="px-2 py-1.5 text-[13px] text-foreground">{{ $user->email ?? '—' }}</td>
-                            <td class="px-2 py-1.5 text-[13px] text-foreground">{{ $user->recipient?->department ?? '—' }}</td>
+                            <td class="px-2 py-1.5 text-[13px] text-foreground">{{ $user->recipient?->unit ?? '—' }}</td>
                             <td class="px-2 py-1.5 text-[13px] text-foreground">{{ $user->recipient?->designation ?? '—' }}</td>
                             <td class="px-2 py-1.5">
                                 @if ($user->is_active)
@@ -960,7 +960,7 @@
                                     @if ($user->role === \App\Models\User::ROLE_SDS_ADMIN)
                                         <span class="text-[11px] font-semibold text-muted-foreground">Administrator</span>
                                     @else
-                                        <button type="button" @click="openEditRecipient({ id: {{ $user->id }}, name: @js($user->name), first_name: @js($user->first_name), middle_name: @js($user->middle_name), last_name: @js($user->last_name), email: @js($user->email), staff_id: @js($user->recipient?->staff_id ?? ''), department: @js($user->recipient?->department ?? ''), designation: @js($user->recipient?->designation ?? ''), recipient: { staff_id: @js($user->recipient?->staff_id ?? ''), department: @js($user->recipient?->department ?? ''), designation: @js($user->recipient?->designation ?? '') } })" class="inline-flex h-6 items-center justify-center rounded-md bg-[#7a1d2a] px-2 text-[11px] font-semibold text-white transition-colors hover:bg-[#651923]" aria-label="Edit account">
+                                        <button type="button" @click="openEditRecipient({ id: {{ $user->id }}, name: @js($user->name), first_name: @js($user->first_name), middle_name: @js($user->middle_name), last_name: @js($user->last_name), email: @js($user->email), staff_id: @js($user->recipient?->staff_id ?? ''), department: @js($user->recipient?->unit ?? ''), designation: @js($user->recipient?->designation ?? ''), recipient: { staff_id: @js($user->recipient?->staff_id ?? ''), department: @js($user->recipient?->unit ?? ''), designation: @js($user->recipient?->designation ?? '') } })" class="inline-flex h-6 items-center justify-center rounded-md bg-[#7a1d2a] px-2 text-[11px] font-semibold text-white transition-colors hover:bg-[#651923]" aria-label="Edit account">
                                             Edit
                                         </button>
                                         @include('admin.accounts.partials.status-action', ['user' => $user])
@@ -1043,8 +1043,8 @@
                 { input: document.getElementById('new-student-last-name'), error: document.getElementById('new-student-last-name-empty-error'), isDropdown: false },
                 { input: document.getElementById('new-student-id'), error: document.getElementById('new-student-id-empty-error'), isDropdown: false },
                 { input: document.getElementById('new-student-email'), error: document.getElementById('new-student-email-empty-error'), isDropdown: false },
-                { value: () => document.getElementById('admin-student-account-form')?.querySelector('input[name="department"]')?.value ?? '', error: document.getElementById('new-student-department-empty-error'), field: document.getElementById('new-student-department-field'), isDropdown: true },
-                { value: () => document.getElementById('admin-student-account-form')?.querySelector('input[name="course"]')?.value ?? '', error: document.getElementById('new-student-course-empty-error'), field: document.getElementById('new-student-course-field'), isDropdown: true },
+                { value: () => document.getElementById('admin-student-account-form')?.querySelector('input[name="college"]')?.value ?? '', error: document.getElementById('new-student-department-empty-error'), field: document.getElementById('new-student-department-field'), isDropdown: true },
+                { value: () => document.getElementById('admin-student-account-form')?.querySelector('input[name="program"]')?.value ?? '', error: document.getElementById('new-student-course-empty-error'), field: document.getElementById('new-student-course-field'), isDropdown: true },
                 { value: () => document.getElementById('admin-student-account-form')?.querySelector('input[name="year_level"]')?.value ?? '', error: document.getElementById('new-student-year-empty-error'), field: document.getElementById('new-student-year-field'), isDropdown: true },
             ]
         },
@@ -1055,7 +1055,7 @@
                 { input: document.getElementById('new-recipient-last-name'), error: document.getElementById('new-recipient-last-name-empty-error'), isDropdown: false },
                 { input: document.getElementById('new-recipient-staff-id'), error: document.getElementById('new-recipient-staff-id-empty-error'), isDropdown: false },
                 { input: document.getElementById('new-recipient-email'), error: document.getElementById('new-recipient-email-empty-error'), isDropdown: false },
-                { value: () => document.getElementById('admin-recipient-account-form')?.querySelector('input[name="recipient_department"]')?.value ?? '', error: document.getElementById('new-recipient-department-empty-error'), field: document.getElementById('new-recipient-department-field'), isDropdown: true },
+                { value: () => document.getElementById('admin-recipient-account-form')?.querySelector('input[name="unit"]')?.value ?? '', error: document.getElementById('new-recipient-department-empty-error'), field: document.getElementById('new-recipient-department-field'), isDropdown: true },
                 { input: document.getElementById('new-recipient-designation'), error: document.getElementById('new-recipient-designation-empty-error'), isDropdown: false },
             ]
         },
@@ -1066,8 +1066,8 @@
                 { input: document.getElementById('edit-student-last-name'), error: document.getElementById('edit-student-last-name-empty-error'), isDropdown: false },
                 { input: document.getElementById('edit-student-email'), error: document.getElementById('edit-student-email-empty-error'), isDropdown: false },
                 { input: document.getElementById('edit-student-id'), error: document.getElementById('edit-student-id-empty-error'), isDropdown: false },
-                { value: () => document.getElementById('edit-student-account-form')?.querySelector('input[name="department"]')?.value ?? '', error: document.getElementById('edit-student-department-empty-error'), field: document.getElementById('edit-student-department-field'), isDropdown: true },
-                { value: () => document.getElementById('edit-student-account-form')?.querySelector('input[name="course"]')?.value ?? '', error: document.getElementById('edit-student-course-empty-error'), field: document.getElementById('edit-student-course-field'), isDropdown: true },
+                { value: () => document.getElementById('edit-student-account-form')?.querySelector('input[name="college"]')?.value ?? '', error: document.getElementById('edit-student-department-empty-error'), field: document.getElementById('edit-student-department-field'), isDropdown: true },
+                { value: () => document.getElementById('edit-student-account-form')?.querySelector('input[name="program"]')?.value ?? '', error: document.getElementById('edit-student-course-empty-error'), field: document.getElementById('edit-student-course-field'), isDropdown: true },
                 { value: () => document.getElementById('edit-student-account-form')?.querySelector('input[name="year_level"]')?.value ?? '', error: document.getElementById('edit-student-year-empty-error'), field: document.getElementById('edit-student-year-field'), isDropdown: true },
             ]
         },
@@ -1078,7 +1078,7 @@
                 { input: document.getElementById('edit-recipient-last-name'), error: document.getElementById('edit-recipient-last-name-empty-error'), isDropdown: false },
                 { input: document.getElementById('edit-recipient-email'), error: document.getElementById('edit-recipient-email-empty-error'), isDropdown: false },
                 { input: document.getElementById('edit-recipient-staff-id'), error: document.getElementById('edit-recipient-staff-id-empty-error'), isDropdown: false },
-                { value: () => document.getElementById('edit-recipient-account-form')?.querySelector('input[name="recipient_department"]')?.value ?? '', error: document.getElementById('edit-recipient-department-empty-error'), field: document.getElementById('edit-recipient-department-field'), isDropdown: true },
+                { value: () => document.getElementById('edit-recipient-account-form')?.querySelector('input[name="unit"]')?.value ?? '', error: document.getElementById('edit-recipient-department-empty-error'), field: document.getElementById('edit-recipient-department-field'), isDropdown: true },
                 { input: document.getElementById('edit-recipient-designation'), error: document.getElementById('edit-recipient-designation-empty-error'), isDropdown: false },
             ]
         }

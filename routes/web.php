@@ -11,7 +11,7 @@ use App\Http\Controllers\Admin\AccountManagementController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Auth\ForcePasswordController;
 use App\Http\Controllers\Admin\ComplaintCategoryController;
-use App\Http\Controllers\Admin\DepartmentController;
+use App\Http\Controllers\Admin\UnitController;
 use App\Http\Controllers\Admin\AdminComplaintController;
 use App\Http\Controllers\Admin\AdminTicketReviewController;
 use App\Http\Controllers\Student\NotificationController;
@@ -55,8 +55,8 @@ if (app()->environment(['local', 'testing'])) {
 
             $user->student()->create([
                 'student_id' => '23581616',
-                'department' => 'Student Development Services',
-                'course' => 'Prototype Account',
+                'college' => 'Student Development Services',
+                'program' => 'Prototype Account',
                 'year_level' => '4',
                 'block' => 'A',
             ]);
@@ -71,8 +71,8 @@ if (app()->environment(['local', 'testing'])) {
             ['user_id' => $user->id],
             [
                 'student_id' => '23175866',
-                'department' => 'CICT',
-                'course' => 'BSIT',
+                'college' => 'CICT',
+                'program' => 'BSIT',
                 'year_level' => '4',
                 'block' => '5',
             ]
@@ -124,7 +124,7 @@ if (app()->environment(['local', 'testing'])) {
 
             $user->recipient()->create([
                 'staff_id' => '2465',
-                'department' => 'CICT',
+                'unit' => 'CICT',
                 'designation' => 'Program Chair',
             ]);
         }
@@ -137,7 +137,7 @@ if (app()->environment(['local', 'testing'])) {
             ['user_id' => $user->id],
             [
                 'staff_id' => '2465',
-                'department' => 'CICT',
+                'unit' => 'CICT',
                 'designation' => 'Program Chair',
             ]
         );
@@ -198,12 +198,13 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
         Route::delete('/categories/{category}', [ComplaintCategoryController::class, 'destroy'])
             ->name('categories.destroy');
 
-        Route::post('/departments', [DepartmentController::class, 'store'])
-            ->name('departments.store');
-        Route::put('/departments/{department}', [DepartmentController::class, 'update'])
-            ->name('departments.update');
-        Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])
-            ->name('departments.destroy');
+        // Colleges and offices
+        Route::post('/units', [UnitController::class, 'store'])
+            ->name('units.store');
+        Route::put('/units/{unit}', [UnitController::class, 'update'])
+            ->name('units.update');
+        Route::delete('/units/{unit}', [UnitController::class, 'destroy'])
+            ->name('units.destroy');
 
         // Complaint Queue (identified)
         Route::get('/complaints', [AdminComplaintController::class, 'index'])
@@ -309,10 +310,10 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
                 'recipients' => \App\Models\Recipient::query()
                     ->active()
                     ->with('user')
-                    ->orderBy('department')
+                    ->orderBy('unit')
                     ->get(),
-                'departments' => \App\Models\Department::query()
-                    ->with(['positions', 'courses'])
+                'units' => \App\Models\Unit::query()
+                    ->with(['designations', 'programs'])
                     ->orderBy('name')
                     ->get(),
             ]);

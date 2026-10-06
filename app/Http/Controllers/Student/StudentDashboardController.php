@@ -35,14 +35,14 @@ class StudentDashboardController extends Controller
 
         // Keep the user's given name readable without displaying the surname.
         $firstName = $user->given_name;
-        $department = strtoupper(trim((string) ($student->department ?? '')));
-        $department = str_contains($department, 'INFORMATION') || $department === 'CICT'
+        $college = strtoupper(trim((string) ($student->college ?? '')));
+        $college = str_contains($college, 'INFORMATION') || $college === 'CICT'
             ? 'CICT'
-            : (str_contains($department, 'BUSINESS') || $department === 'CBME' ? 'CBME' : ($department !== '' ? $department : 'N/A'));
-        $course = trim((string) ($student->course ?? ''));
-        $courseLabel = preg_match('/^[A-Za-z]+$/', $course)
-            ? strtoupper($course)
-            : collect(preg_split('/\s+/', $course) ?: [])
+            : (str_contains($college, 'BUSINESS') || $college === 'CBME' ? 'CBME' : ($college !== '' ? $college : 'N/A'));
+        $program = trim((string) ($student->program ?? ''));
+        $programLabel = preg_match('/^[A-Za-z]+$/', $program)
+            ? strtoupper($program)
+            : collect(preg_split('/\s+/', $program) ?: [])
                 ->reject(fn ($word) => in_array(strtolower($word), ['of', 'in', 'and', 'the'], true))
                 ->map(fn ($word) => preg_replace('/[^A-Za-z]/', '', $word))
                 ->filter()
@@ -50,13 +50,13 @@ class StudentDashboardController extends Controller
                 ->join('');
         $year = preg_replace('/\D/', '', (string) ($student->year_level ?? ''));
         $block = preg_replace('/\D/', '', (string) ($student->block ?? ''));
-        $courseYearBlock = trim(($courseLabel !== '' ? $courseLabel : 'N/A') . ' ' . $year . ($block !== '' ? "-{$block}" : ''));
+        $programYearBlock = trim(($programLabel !== '' ? $programLabel : 'N/A') . ' ' . $year . ($block !== '' ? "-{$block}" : ''));
 
         return view('student.dashboard', [
             'firstName' => $firstName,
             'studentId' => $student->student_id ?: 'N/A',
-            'department' => $department,
-            'courseYearBlock' => $courseYearBlock,
+            'college' => $college,
+            'programYearBlock' => $programYearBlock,
             'totalCount' => $totalCount,
             'pendingCount' => $pendingCount,
             'inProgressCount' => $inProgressCount,

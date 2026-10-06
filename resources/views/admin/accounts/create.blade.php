@@ -109,23 +109,23 @@
 
                             <div>
                                 <label class="block font-semibold text-gray-900 mb-2">
-                                    Department
+                                    College
                                 </label>
 
                                 <input
                                     type="text"
-                                    name="department"
+                                    name="college"
                                     class="w-full border border-gray-300 rounded-lg p-3 text-gray-900 bg-white">
                             </div>
 
                             <div>
                                 <label class="block font-semibold text-gray-900 mb-2">
-                                    Course
+                                    Program
                                 </label>
 
                                 <input
                                     type="text"
-                                    name="course"
+                                    name="program"
                                     class="w-full border border-gray-300 rounded-lg p-3 text-gray-900 bg-white">
                             </div>
 
@@ -187,20 +187,20 @@
                             <div>
 
                                 <label class="block font-semibold text-gray-900 mb-2">
-                                    Department
+                                    College
                                 </label>
 
-                                <div x-data="{ selected: '{{ old('recipient_department', '') }}', options: ['Administrative', 'Maintenance', 'CICT', 'CBME', 'Student Organization'] }" class="relative">
-                                    <input type="hidden" name="recipient_department" :value="selected" />
+                                <div x-data="{ selected: '{{ old('unit', '') }}', options: ['Administrative', 'Maintenance', 'CICT', 'CBME', 'Student Organization'] }" class="relative">
+                                    <input type="hidden" name="unit" :value="selected" />
                                     <details x-data="{}" class="group relative w-full" x-on:click.outside="$el.removeAttribute('open')">
                                         <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted/80 [&::-webkit-details-marker]:hidden">
-                                            <span class="truncate" x-text="selected || 'Select department'" :class="selected ? '' : 'text-muted-foreground'"></span>
+                                            <span class="truncate" x-text="selected || 'Select college or office'" :class="selected ? '' : 'text-muted-foreground'"></span>
                                             <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                                         </summary>
                                         <div class="absolute top-full z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                                             <button type="button" @click="selected = ''; $event.target.closest('details').removeAttribute('open')" class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="!selected ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">
                                                 <svg x-show="!selected" class="absolute right-2 h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 10 3 3 7-7" /></svg>
-                                                <span>Select department</span>
+                                                <span>Select college or office</span>
                                             </button>
                                             <template x-for="option in options" :key="option">
                                                 <button type="button" @click="selected = option; $event.target.closest('details').removeAttribute('open')" class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-left text-xs" :class="selected === option ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground'">

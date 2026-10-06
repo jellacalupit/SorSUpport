@@ -321,13 +321,6 @@ class ComplaintController extends Controller
                 $sdsAdminUser = \App\Models\User::query()->where('role', \App\Models\User::ROLE_SDS_ADMIN)->first();
 
                 if ($sdsAdminUser && $sdsAdminUser->email) {
-                    Log::debug('Creating EmailNotification for admin', ['ticket_id' => $ticket->id, 'email' => $sdsAdminUser->email, 'type' => EmailNotification::TYPE_STATUS_UPDATE]);
-                    try {
-                        $schema = DB::select("SELECT sql FROM sqlite_master WHERE name = 'email_notifications'");
-                        Log::debug('email_notifications schema', ['schema' => $schema]);
-                    } catch (\Exception $e) {
-                        Log::debug('Unable to read sqlite schema', ['error' => $e->getMessage()]);
-                    }
                     EmailNotification::create([
                         'ticket_id' => $ticket->id,
                         'recipient_email' => $sdsAdminUser->email,

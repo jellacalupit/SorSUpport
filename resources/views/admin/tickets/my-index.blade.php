@@ -135,7 +135,7 @@
                                     default => 'text-muted-foreground',
                                 };
                                 $isUnread = app(\App\Services\TicketUnreadService::class)->unreadCountForTicket(Auth::user(), $ticket) > 0;
-                                $studentCourseYearBlock = trim(($student?->course ?? 'Course not specified') . ' ' . ($student?->year_level ?? 'N/A') . (($student?->block ?? '') !== '' ? '-' . $student->block : ''));
+                                $studentCourseYearBlock = trim(($student?->program ?? 'Program not specified') . ' ' . ($student?->year_level ?? 'N/A') . (($student?->block ?? '') !== '' ? '-' . $student->block : ''));
                             @endphp
                             <tr data-my-ticket-row data-read-url="{{ route('admin.tickets.read', $ticket) }}" data-unread="{{ $isUnread ? 'true' : 'false' }}" class="align-top transition-colors hover:bg-primary-soft {{ $isUnread ? 'bg-primary-soft/70' : '' }}">
                                 <td class="whitespace-nowrap px-2 py-2 font-mono font-semibold text-primary sm:px-3">
@@ -162,7 +162,7 @@
                                                     </span>
                                                     <span class="min-w-0">
                                                         <span class="block wrap-break-word text-sm font-bold">{{ $studentTableName }}</span>
-                                                        <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $student?->student_id ?? 'N/A' }} · {{ $student?->department ?? 'Department not specified' }} · {{ $studentCourseYearBlock }}</span>
+                                                        <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $student?->student_id ?? 'N/A' }} · {{ $student?->college ?? 'College not specified' }} · {{ $studentCourseYearBlock }}</span>
                                                     </span>
                                                 </span>
                                                 <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">Student</span>
@@ -203,7 +203,7 @@
                 $student = $ticket->complaint?->student;
                 $studentUser = $student?->user;
                 $studentDisplayName = $ticket->complaint?->is_anonymous ? 'Anonymous' : ($studentUser?->table_name ?? 'Anonymous');
-                $studentCourseYearBlock = trim(($student?->course ?? 'Course not specified') . ' ' . ($student?->year_level ?? 'N/A') . (($student?->block ?? '') !== '' ? '-' . $student->block : ''));
+                $studentCourseYearBlock = trim(($student?->program ?? 'Program not specified') . ' ' . ($student?->year_level ?? 'N/A') . (($student?->block ?? '') !== '' ? '-' . $student->block : ''));
                 $auditLogs = $ticket->auditLogs()
                     ->orderByDesc('created_at')
                     ->limit(5)
@@ -244,7 +244,7 @@
                                             </span>
                                             <span class="min-w-0">
                                                 <span class="block wrap-break-word text-sm font-bold">{{ $studentDisplayName }}</span>
-                                                <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $student?->student_id ?? 'N/A' }} · {{ $student?->department ?? 'Department not specified' }} · {{ $studentCourseYearBlock }}</span>
+                                                <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $student?->student_id ?? 'N/A' }} · {{ $student?->college ?? 'College not specified' }} · {{ $studentCourseYearBlock }}</span>
                                             </span>
                                         </span>
                                         <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">Student</span>

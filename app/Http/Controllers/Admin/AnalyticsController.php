@@ -28,7 +28,7 @@ class AnalyticsController extends Controller
             'category_id' => ['nullable', 'exists:complaint_categories,id'],
             'classification' => ['nullable', 'in:needs_resolution,informational,invalid,unclassified'],
             'status' => ['nullable', 'string'],
-            'department' => ['nullable', 'string', 'max:255'],
+            'unit' => ['nullable', 'string', 'max:255'],
             'recipient_id' => ['nullable', 'exists:users,id'],
             'year' => ['nullable', 'integer', 'min:2020', 'max:2100'],
             'filter_year' => ['nullable', 'integer', 'min:2020', 'max:2100'],
@@ -123,12 +123,12 @@ class AnalyticsController extends Controller
                 ->with('recipient')
                 ->orderBy('first_name')
                 ->get(),
-            'departmentOptions' => \App\Models\Recipient::query()
-                ->whereNotNull('department')
-                ->where('department', '<>', '')
+            'unitOptions' => \App\Models\Recipient::query()
+                ->whereNotNull('unit')
+                ->where('unit', '<>', '')
                 ->distinct()
-                ->orderBy('department')
-                ->pluck('department'),
+                ->orderBy('unit')
+                ->pluck('unit'),
         ]);
     }
 
@@ -174,7 +174,7 @@ class AnalyticsController extends Controller
             'category_id' => ['nullable', 'exists:complaint_categories,id'],
             'classification' => ['nullable', 'in:needs_resolution,informational,invalid,unclassified'],
             'status' => ['nullable', 'string'],
-            'department' => ['nullable', 'string', 'max:255'],
+            'unit' => ['nullable', 'string', 'max:255'],
             'recipient_id' => ['nullable', 'exists:users,id'],
             'year' => ['nullable', 'integer', 'min:2020', 'max:2100'],
             'filter_year' => ['nullable', 'integer', 'min:2020', 'max:2100'],

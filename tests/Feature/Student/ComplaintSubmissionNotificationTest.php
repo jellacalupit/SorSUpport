@@ -29,8 +29,8 @@ class ComplaintSubmissionNotificationTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $student->id,
             'student_id' => 'S2003',
-            'department' => 'IT',
-            'course' => 'BSCS',
+            'college' => 'IT',
+            'program' => 'BSCS',
             'year_level' => '3rd Year',
             'block' => 'A',
         ]);
@@ -74,7 +74,7 @@ class ComplaintSubmissionNotificationTest extends TestCase
             ->assertSee('Ticket assigned')
             ->assertSee('Ticket assigned details.')
             ->assertSee($complaint->reference_number)
-            ->assertSee('Jamie M. Santos sent you a message.')
+            ->assertSee('Jamie Marie Santos sent you a message.')
             ->assertDontSee('Internal classification details.')
             ->assertDontSee('Student sent a message to themself.');
     }
@@ -91,8 +91,8 @@ class ComplaintSubmissionNotificationTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $student->id,
             'student_id' => 'S2002',
-            'department' => 'IT',
-            'course' => 'BSCS',
+            'college' => 'IT',
+            'program' => 'BSCS',
             'year_level' => '3rd Year',
             'block' => 'A',
         ]);
@@ -142,8 +142,8 @@ class ComplaintSubmissionNotificationTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $student->id,
             'student_id' => 'S2001',
-            'department' => 'IT',
-            'course' => 'BSCS',
+            'college' => 'IT',
+            'program' => 'BSCS',
             'year_level' => '3rd Year',
             'block' => 'A',
         ]);
@@ -157,7 +157,7 @@ class ComplaintSubmissionNotificationTest extends TestCase
         $recipient = Recipient::create([
             'user_id' => $recipientUser->id,
             'staff_id' => 'R2001',
-            'department' => 'IT',
+            'unit' => 'IT',
             'designation' => 'Recipient',
         ]);
 

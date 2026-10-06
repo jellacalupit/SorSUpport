@@ -34,8 +34,8 @@ class Module4TicketRoutingTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $student->id,
             'student_id' => 'S2001',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -49,7 +49,7 @@ class Module4TicketRoutingTest extends TestCase
         $recipient = Recipient::create([
             'user_id' => $recipientUser->id,
             'staff_id' => 'R1001',
-            'department' => 'Student Affairs',
+            'unit' => 'Student Affairs',
             'designation' => 'Officer',
         ]);
 

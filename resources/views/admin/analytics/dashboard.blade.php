@@ -17,7 +17,7 @@
             ($filters['category_id'] ?? null) ? $categoryOptions->firstWhere('id', $filters['category_id'])?->name : null,
             ($filters['classification'] ?? null) ? ucwords(str_replace('_', ' ', $filters['classification'])) : null,
             ($filters['status'] ?? null) ? ucwords(str_replace('_', ' ', $filters['status'])) : null,
-            $filters['department'] ?? null,
+            $filters['unit'] ?? null,
         ])->filter()->values();
 
         $inProgress = (int) (($data['statusCounts']['Assigned'] ?? 0) + ($data['statusCounts']['In Progress'] ?? 0));
@@ -53,7 +53,7 @@
             ['label' => 'Invalid', 'color' => 'bg-red-500', 'count' => (int) ($data['classification']['Invalid'] ?? 0)],
         ];
         $categoryBars = collect($data['categoryCounts'])->sortDesc();
-        $departmentBars = collect($data['departments'])->sortByDesc('total')->values();
+        $departmentBars = collect($data['units'])->sortByDesc('total')->values();
         $recipientRows = collect($data['recipients'])->sortByDesc('assigned')->values();
 
         $analyticsPayload = [
@@ -65,7 +65,7 @@
             ['name' => 'category_id', 'label' => 'Category', 'all' => 'All categories', 'options' => $categoryOptions->mapWithKeys(fn ($category) => [(string) $category->id => $category->name])->all()],
             ['name' => 'classification', 'label' => 'Classification', 'all' => 'All classifications', 'options' => ['needs_resolution' => 'Needs Resolution', 'informational' => 'Informational', 'invalid' => 'Invalid', 'unclassified' => 'Unclassified']],
             ['name' => 'status', 'label' => 'Status', 'all' => 'All statuses', 'options' => ['pending' => 'Pending', 'in_progress' => 'In Progress', 'escalated' => 'Escalated', 'resolved' => 'Resolved', 'closed' => 'Closed']],
-            ['name' => 'department', 'label' => 'Department', 'all' => 'All departments', 'options' => $departmentOptions->mapWithKeys(fn ($department) => [$department => $department])->all()],
+            ['name' => 'unit', 'label' => 'College / Office', 'all' => 'All colleges and offices', 'options' => $unitOptions->mapWithKeys(fn ($unit) => [$unit => $unit])->all()],
         ];
         $cardClass = 'min-w-0 rounded-2xl border border-border bg-white p-4 shadow-sm';
         $titleClass = 'font-display text-sm font-bold text-foreground';
@@ -203,7 +203,7 @@
                 </div>
             </section>
             <section class="{{ $cardClass }}">
-                <h2 class="{{ $titleClass }}">Tickets by department</h2>
+                <h2 class="{{ $titleClass }}">Tickets by college / office</h2>
                 <p class="{{ $subtitleClass }}">Offices handling the most tickets.</p>
                 <div class="mt-3 grid gap-2.5">
                     @forelse ($departmentBars as $department)
@@ -212,7 +212,7 @@
                             <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full bg-[#c4785a]" style="width: {{ $percent($department['total'], max(1, $departmentBars->max('total'))) }}%"></div></div>
                         </div>
                     @empty
-                        <p class="py-6 text-center text-xs text-muted-foreground">No department data in this period.</p>
+                        <p class="py-6 text-center text-xs text-muted-foreground">No college or office data in this period.</p>
                     @endforelse
                 </div>
             </section>
@@ -246,14 +246,14 @@
             <div class="mt-3 overflow-x-auto">
                 <table class="w-full min-w-[40rem] text-xs">
                     <thead class="border-y border-border bg-muted/50 text-[11px] uppercase tracking-wide text-muted-foreground">
-                        <tr class="text-left"><th class="px-4 py-2 font-semibold">Recipient</th><th class="px-3 py-2 font-semibold">Department</th><th class="px-3 py-2 text-right font-semibold">Assigned</th><th class="px-3 py-2 font-semibold">Resolved</th><th class="px-3 py-2 text-right font-semibold">Avg. time</th><th class="px-4 py-2 text-right font-semibold">Escalated</th></tr>
+                        <tr class="text-left"><th class="px-4 py-2 font-semibold">Recipient</th><th class="px-3 py-2 font-semibold">College / Office</th><th class="px-3 py-2 text-right font-semibold">Assigned</th><th class="px-3 py-2 font-semibold">Resolved</th><th class="px-3 py-2 text-right font-semibold">Avg. time</th><th class="px-4 py-2 text-right font-semibold">Escalated</th></tr>
                     </thead>
                     <tbody class="divide-y divide-border">
                         @forelse ($recipientRows as $recipient)
                             @php $rate = $percent($recipient['resolved'], max(1, $recipient['assigned'])); @endphp
                             <tr>
                                 <td class="whitespace-nowrap px-4 py-2.5 font-semibold text-foreground">{{ $recipient['name'] }}</td>
-                                <td class="px-3 py-2.5 text-muted-foreground">{{ $recipient['department'] }}</td>
+                                <td class="px-3 py-2.5 text-muted-foreground">{{ $recipient['unit'] }}</td>
                                 <td class="px-3 py-2.5 text-right tabular-nums">{{ $recipient['assigned'] }}</td>
                                 <td class="px-3 py-2.5">
                                     <div class="flex items-center gap-2">

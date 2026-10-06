@@ -105,7 +105,7 @@ class ComplaintController extends Controller
         $recipientOptions = $recipients->map(fn (Recipient $recipient) => [
             'id' => (string) $recipient->id,
             'name' => $recipient->user->table_name,
-            'detail' => implode(' · ', array_filter([$recipient->designation, $recipient->department])),
+            'detail' => implode(' · ', array_filter([$recipient->designation, $recipient->unit])),
         ]);
 
         // Recipients the admin configured as suggestions for each category.

@@ -56,6 +56,6 @@ class ComplaintCategory extends Model
             'complaint_category_suggested_recipients',
             'complaint_category_id',
             'recipient_id'
-        )->with('user')->orderBy('department');
+        )->with('user')->orderBy('unit');
     }
 }

@@ -116,8 +116,8 @@ class Module8EmailNotificationsTest extends TestCase
         $student = Student::create([
             'user_id' => $studentUser->id,
             'student_id' => 'S3001',
-            'department' => 'IT',
-            'course' => 'BSCS',
+            'college' => 'IT',
+            'program' => 'BSCS',
             'year_level' => '3rd Year',
             'block' => 'B',
         ]);

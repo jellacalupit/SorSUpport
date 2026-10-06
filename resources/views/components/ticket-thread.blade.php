@@ -161,7 +161,7 @@
                                             </span>
                                             <span class="min-w-0">
                                                 <span class="block wrap-break-word text-sm font-bold">{{ $message->sender->display_name }}</span>
-                                                <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $message->sender->recipient->staff_id }} · {{ $message->sender->recipient->department }} · {{ $message->sender->recipient->designation }}</span>
+                                                <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $message->sender->recipient->staff_id }} · {{ $message->sender->recipient->unit }} · {{ $message->sender->recipient->designation }}</span>
                                             </span>
                                         </span>
                                         <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">Recipient</span>

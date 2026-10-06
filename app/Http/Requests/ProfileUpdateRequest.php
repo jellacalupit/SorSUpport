@@ -3,7 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\User;
-use App\Models\Department;
+use App\Models\Unit;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -28,24 +28,22 @@ class ProfileUpdateRequest extends FormRequest
                     Rule::unique(User::class)->ignore($this->user()->id),
                 ],
                 'username' => ['required', 'digits_between:1,20', Rule::unique(User::class)->ignore($this->user()->id)],
-                'department' => [
+                'unit' => [
                     'nullable',
                     'string',
-                    Rule::exists('departments', 'name')->where(fn ($query) => $query->where('type', 'recipient')),
+                    Rule::exists('units', 'name'),
                 ],
                 'designation' => [
                     'nullable',
                     'string',
-                    Rule::exists('department_positions', 'name')->where(function ($query) {
-                        $departmentId = Department::query()
-                            ->forRecipients()
-                            ->where('name', $this->input('department'))
+                    Rule::exists('unit_designations', 'name')->where(function ($query) {
+                        $unitId = Unit::query()
+                            ->where('name', $this->input('unit'))
                             ->value('id');
 
-                        $query->where('department_id', $departmentId);
+                        $query->where('unit_id', $unitId);
                     }),
                 ],
-                'role' => ['required', 'in:recipient,student,sds_admin'],
             ];
         }
 
@@ -61,7 +59,7 @@ class ProfileUpdateRequest extends FormRequest
             ],
             'username' => ['sometimes', 'required', 'string', 'max:255', Rule::unique(User::class)->ignore($this->user()->id)],
             'staff_id' => ['sometimes', 'required', 'string', 'max:255'],
-            'department' => ['sometimes', 'required', 'string', 'max:255'],
+            'unit' => ['sometimes', 'required', 'string', 'max:255'],
             'designation' => ['sometimes', 'required', 'string', 'max:255'],
         ];
 
@@ -78,9 +76,8 @@ class ProfileUpdateRequest extends FormRequest
             'last_name.regex' => 'Last name may only contain letters, spaces, and hyphen.',
             'email.required' => 'This field is required.',
             'username.required' => 'This field is required.',
-            'department.required' => 'This field is required.',
+            'unit.required' => 'This field is required.',
             'designation.required' => 'This field is required.',
-            'role.required' => 'This field is required.',
         ];
     }
 }

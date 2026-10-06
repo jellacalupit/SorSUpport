@@ -80,7 +80,7 @@
         ? 'A'
         : (Auth::user()?->name_initials ?: 'A');
     $adminInSetupMode = Auth::check() && Auth::user()->role === 'sds_admin' && Auth::user()->must_change_password;
-    $adminIdentityDepartment = $adminInSetupMode ? '—' : (blank(Auth::user()->recipient?->department) ? '—' : Auth::user()->recipient?->department);
+    $adminIdentityDepartment = $adminInSetupMode ? '—' : (blank(Auth::user()->recipient?->unit) ? '—' : Auth::user()->recipient?->unit);
     $adminIdentityDesignation = $adminInSetupMode ? '—' : (blank(Auth::user()->recipient?->designation) ? '—' : Auth::user()->recipient?->designation);
     $adminIdentityId = $adminInSetupMode ? '—' : (Auth::user()->username ?? Auth::user()->id);
     $adminHeaderGreeting = Auth::user()->must_change_password

@@ -34,8 +34,8 @@ class Module5InTicketCommunicationTest extends TestCase
         $student = Student::create([
             'user_id' => $studentUser->id,
             'student_id' => 'S9001',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -86,8 +86,8 @@ class Module5InTicketCommunicationTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $studentUser->id,
             'student_id' => 'S2001',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -102,7 +102,7 @@ class Module5InTicketCommunicationTest extends TestCase
         $recipient = Recipient::create([
             'user_id' => $recipientUser->id,
             'staff_id' => 'R1001',
-            'department' => 'Student Affairs',
+            'unit' => 'Student Affairs',
             'designation' => 'Officer',
         ]);
 
@@ -223,8 +223,8 @@ class Module5InTicketCommunicationTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $studentUser->id,
             'student_id' => 'S2030',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -272,8 +272,8 @@ class Module5InTicketCommunicationTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $studentUser->id,
             'student_id' => 'S2004',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -333,8 +333,8 @@ class Module5InTicketCommunicationTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $studentUser->id,
             'student_id' => 'S2007',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -348,7 +348,7 @@ class Module5InTicketCommunicationTest extends TestCase
         $recipient = Recipient::create([
             'user_id' => $recipientUser->id,
             'staff_id' => 'R1007',
-            'department' => 'Student Affairs',
+            'unit' => 'Student Affairs',
             'designation' => 'Officer',
         ]);
 
@@ -404,8 +404,8 @@ class Module5InTicketCommunicationTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $studentUser->id,
             'student_id' => 'S2006',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -419,7 +419,7 @@ class Module5InTicketCommunicationTest extends TestCase
         $recipient = Recipient::create([
             'user_id' => $recipientUser->id,
             'staff_id' => 'R1006',
-            'department' => 'Student Affairs',
+            'unit' => 'Student Affairs',
             'designation' => 'Officer',
         ]);
 
@@ -487,8 +487,8 @@ class Module5InTicketCommunicationTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $studentUser->id,
             'student_id' => 'S2003',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -554,8 +554,8 @@ class Module5InTicketCommunicationTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $studentUser->id,
             'student_id' => 'S2002',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -570,7 +570,7 @@ class Module5InTicketCommunicationTest extends TestCase
         $recipient = Recipient::create([
             'user_id' => $recipientUser->id,
             'staff_id' => 'R1002',
-            'department' => 'Student Affairs',
+            'unit' => 'Student Affairs',
             'designation' => 'Officer',
         ]);
 

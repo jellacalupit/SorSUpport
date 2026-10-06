@@ -188,7 +188,7 @@
                                         </span>
                                         <span class="min-w-0">
                                             <span class="block wrap-break-word text-sm font-bold">{{ $recipient->display_name ?? 'Unknown' }}</span>
-                                            <span class="mt-0.5 block wrap-break-word text-[10px] leading-relaxed opacity-95">ID {{ $recipient->staff_id }} · {{ $recipient->department }} · {{ $recipient->designation }}</span>
+                                            <span class="mt-0.5 block wrap-break-word text-[10px] leading-relaxed opacity-95">ID {{ $recipient->staff_id }} · {{ $recipient->unit }} · {{ $recipient->designation }}</span>
                                         </span>
                                     </span>
                                     <span class="mt-2 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-2 py-0.5 text-[9px] font-semibold">{{ $recipient->role }}</span>
@@ -544,7 +544,7 @@
                                                 </span>
                                                 <span class="min-w-0">
                                                     <span class="block wrap-break-word text-sm font-bold">{{ $recipient->display_name ?? 'Unknown' }}</span>
-                                                    <span class="mt-0.5 block wrap-break-word text-[10px] leading-relaxed opacity-95">ID {{ $recipient->staff_id }} · {{ $recipient->department }} · {{ $recipient->designation }}</span>
+                                                    <span class="mt-0.5 block wrap-break-word text-[10px] leading-relaxed opacity-95">ID {{ $recipient->staff_id }} · {{ $recipient->unit }} · {{ $recipient->designation }}</span>
                                                 </span>
                                             </span>
                                             <span class="mt-2 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-2 py-0.5 text-[9px] font-semibold">{{ $recipient->role }}</span>

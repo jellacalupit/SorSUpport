@@ -47,7 +47,7 @@ class AnalyticsSeeder extends Seeder
                 $recipients->push(Recipient::create([
                     'user_id' => $user->id,
                     'staff_id' => 'REC' . str_pad($index, 3, '0', STR_PAD_LEFT),
-                    'department' => 'Department ' . $index,
+                    'unit' => 'Office ' . $index,
                     'designation' => 'Officer',
                 ]));
             }
@@ -107,8 +107,8 @@ class AnalyticsSeeder extends Seeder
                     [
                     'user_id' => $user->id,
                     'student_id' => 'STU' . str_pad($index, 4, '0', STR_PAD_LEFT),
-                    'department' => 'Department ' . ($index % 4 + 1),
-                    'course' => 'Course ' . ($index % 3 + 1),
+                    'college' => 'College ' . ($index % 4 + 1),
+                    'program' => 'Program ' . ($index % 3 + 1),
                     'year_level' => (string) (($index % 4) + 1),
                     'block' => (string) (($index % 4) + 1),
                     ]

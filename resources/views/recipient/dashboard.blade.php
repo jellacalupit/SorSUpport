@@ -2,7 +2,7 @@
     <div class="-mt-1 mb-4 sm:-mt-2">
         <h2 class="font-display text-lg font-bold text-primary sm:text-xl">Welcome back, {{ $firstName }}!</h2>
         <p class="-mt-1 text-sm text-muted-foreground">
-            ID {{ $recipient->staff_id }} · {{ $recipient->department }} · {{ $recipient->designation }}
+            ID {{ $recipient->staff_id }} · {{ $recipient->unit }} · {{ $recipient->designation }}
         </p>
     </div>
 

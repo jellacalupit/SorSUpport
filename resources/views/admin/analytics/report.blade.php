@@ -46,8 +46,8 @@
                     <td>{{ ucfirst(str_replace('_', ' ', $filters['status'] ?? 'All')) }}</td>
                 </tr>
                 <tr>
-                    <th>Department</th>
-                    <td>{{ $filters['department'] ?? 'All' }}</td>
+                    <th>College / Office</th>
+                    <td>{{ $filters['unit'] ?? 'All' }}</td>
                 </tr>
             </tbody>
         </table>

@@ -17,11 +17,11 @@
             $middleName !== '' ? strtoupper(substr($middleName, 0, 1)) . '.' : '',
             $lastName,
         ])));
-        $department = strtoupper(trim($student?->department ?? ''));
+        $department = strtoupper(trim($student?->college ?? ''));
         $department = str_contains($department, 'INFORMATION') || $department === 'CICT'
             ? 'CICT'
             : (str_contains($department, 'BUSINESS') || $department === 'CBME' ? 'CBME' : ($department ?: 'Student'));
-        $course = trim($student?->course ?? '');
+        $course = trim($student?->program ?? '');
         $courseAcronym = preg_match('/^[A-Za-z]+$/', $course)
             ? strtoupper($course)
             : collect(preg_split('/\s+/', $course) ?: [])

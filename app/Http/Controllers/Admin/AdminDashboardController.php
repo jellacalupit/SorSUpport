@@ -102,7 +102,7 @@ class AdminDashboardController extends Controller
                 
                 $performancePercentage = $assignedCount > 0 ? round(($resolvedCount / $assignedCount) * 100) : 0;
                 
-                $department = $user->recipient?->department ?? 'Not assigned';
+                $unit = $user->recipient?->unit ?? 'Not assigned';
                 $designation = $user->recipient?->designation ?? 'Not assigned';
                 $staffId = $user->recipient?->staff_id ?? $user->username ?? 'N/A';
                 
@@ -136,7 +136,7 @@ class AdminDashboardController extends Controller
                 return (object) [
                     'user' => $user,
                     'display_name' => $displayName,
-                    'department' => $department,
+                    'unit' => $unit,
                     'designation' => $designation,
                     'staff_id' => $staffId,
                     'role' => $user->role === User::ROLE_SDS_ADMIN ? 'Admin' : 'Recipient',

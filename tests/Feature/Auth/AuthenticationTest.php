@@ -43,14 +43,16 @@ class AuthenticationTest extends TestCase
             ->assertSee('Welcome back');
 
         $this->get(route('prototype.admin.dashboard'))
+            ->assertRedirect(route('admin.dashboard', absolute: false));
+        $this->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertSee('SDS Administrator Dashboard');
+            ->assertSee('Dashboard');
 
         $this->get(route('prototype.recipient.dashboard'))
             ->assertRedirect(route('recipient.dashboard', absolute: false));
         $this->get(route('recipient.dashboard'))
             ->assertOk()
-            ->assertSee('Latest assigned tickets');
+            ->assertSee('Recent Tickets');
     }
 
     public function test_users_can_authenticate_using_the_login_screen(): void
@@ -86,7 +88,7 @@ class AuthenticationTest extends TestCase
         $response->assertSessionHasErrors(['password' => 'Incorrrect ID or password. Try again.']);
     }
 
-    public function test_users_can_authenticate_without_email_verification(): void
+    public function test_unverified_users_are_sent_to_email_verification_after_login(): void
     {
         /** @var User $user */
         $user = User::factory()->create([
@@ -99,7 +101,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('student.dashboard', absolute: false));
+        $response->assertRedirect(route('verification.notice', absolute: false));
     }
 
     public function test_users_can_not_authenticate_with_invalid_password(): void
@@ -134,7 +136,7 @@ class AuthenticationTest extends TestCase
         Recipient::create([
             'user_id' => $activeRecipientUser->id,
             'staff_id' => 'R-1001',
-            'department' => 'Student Affairs',
+            'unit' => 'Student Affairs',
             'designation' => 'Recipient',
         ]);
 
@@ -147,7 +149,7 @@ class AuthenticationTest extends TestCase
         Recipient::create([
             'user_id' => $inactiveRecipientUser->id,
             'staff_id' => 'R-1002',
-            'department' => 'Student Affairs',
+            'unit' => 'Student Affairs',
             'designation' => 'Recipient',
         ]);
 
@@ -160,7 +162,7 @@ class AuthenticationTest extends TestCase
         Recipient::create([
             'user_id' => $unverifiedRecipientUser->id,
             'staff_id' => 'R-1003',
-            'department' => 'Student Affairs',
+            'unit' => 'Student Affairs',
             'designation' => 'Recipient',
         ]);
 
@@ -181,7 +183,7 @@ class AuthenticationTest extends TestCase
         $response = $this->actingAs($user)->post('/logout');
 
         $this->assertGuest();
-        $response->assertRedirect('/');
+        $response->assertRedirect(route('login', absolute: false));
     }
 
     public function test_users_can_logout_via_navigation_link(): void

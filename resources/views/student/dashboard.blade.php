@@ -6,7 +6,7 @@
                 Welcome back, {{ $firstName }}!
             </h2>
             <p class="-mt-1 text-sm text-muted-foreground">
-                ID {{ $studentId }} · {{ $department }} · {{ $courseYearBlock }}
+                ID {{ $studentId }} · {{ $college }} · {{ $programYearBlock }}
             </p>
         </div>
         <a href="{{ route('student.complaints.create') }}" class="hidden h-10 items-center justify-center gap-2 rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 sm:inline-flex">

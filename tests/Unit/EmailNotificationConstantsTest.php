@@ -27,9 +27,9 @@ class EmailNotificationConstantsTest extends TestCase
     }
 
     #[Test]
-    public function verification_notification_is_sent_immediately_but_account_update_notification_stays_queueable(): void
+    public function verification_and_account_update_notifications_are_queueable(): void
     {
-        $this->assertNotContains(ShouldQueue::class, class_implements(VerifyEmailNotification::class));
+        $this->assertContains(ShouldQueue::class, class_implements(VerifyEmailNotification::class));
         $this->assertContains(ShouldQueue::class, class_implements(AccountUpdateNotification::class));
     }
 

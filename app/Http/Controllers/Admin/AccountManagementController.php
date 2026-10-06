@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Imports\AccountsImport;
 use App\Models\Recipient;
-use App\Models\Department;
+use App\Models\Unit;
 use App\Models\Student;
 use App\Models\AuditLog;
 use App\Models\User as AppUser;
@@ -42,6 +42,19 @@ class AccountManagementController extends Controller
     }
 
     /**
+     * A student's college must be configured in System Settings, and the program must be one it offers.
+     */
+    protected function collegeAndProgramRules(Request $request): array
+    {
+        $collegeId = Unit::query()->colleges()->where('name', $request->input('college'))->value('id');
+
+        return [
+            'college' => ['required', 'string', Rule::exists('units', 'name')->where('type', Unit::TYPE_COLLEGE)],
+            'program' => ['required', 'string', Rule::exists('programs', 'name')->where('unit_id', $collegeId)],
+        ];
+    }
+
+    /**
      * Display all accounts.
      */
     public function index(Request $request): View
@@ -62,18 +75,18 @@ class AccountManagementController extends Controller
                 $query->where('is_active', $request->input('status_filter') === 'active');
             }
 
-            if ($request->filled('department_filter')) {
-                $department = $request->input('department_filter');
+            if ($request->filled('unit_filter')) {
+                $unit = $request->input('unit_filter');
 
                 if ($request->input('category_filter', 'students') === 'recipients') {
-                    $query->whereHas('recipient', fn ($recipientQuery) => $recipientQuery->where('department', $department));
+                    $query->whereHas('recipient', fn ($recipientQuery) => $recipientQuery->where('unit', $unit));
                 } else {
-                    $query->whereHas('student', fn ($studentQuery) => $studentQuery->where('department', $department));
+                    $query->whereHas('student', fn ($studentQuery) => $studentQuery->where('college', $unit));
                 }
             }
 
-            if ($request->filled('course_filter')) {
-                $query->whereHas('student', fn ($studentQuery) => $studentQuery->where('course', $request->input('course_filter')));
+            if ($request->filled('program_filter')) {
+                $query->whereHas('student', fn ($studentQuery) => $studentQuery->where('program', $request->input('program_filter')));
             }
 
             if ($request->filled('year_filter')) {
@@ -112,14 +125,14 @@ class AccountManagementController extends Controller
             ->paginate(15, ['*'], 'recipients_page')
             ->appends($request->query());
 
-        $departments = Department::query()
-            ->with(['positions', 'courses'])
+        // Students pick from the colleges; recipients may belong to a college or an office.
+        $units = Unit::query()
+            ->with(['designations', 'programs'])
             ->orderBy('name')
             ->get();
-        $studentDepartments = $departments->where('type', 'student')->values();
-        $recipientDepartments = $departments->where('type', 'recipient')->values();
+        $colleges = $units->where('type', Unit::TYPE_COLLEGE)->values();
 
-        return view('admin.accounts.index', compact('studentUsers', 'recipientUsers', 'departments', 'studentDepartments', 'recipientDepartments'));
+        return view('admin.accounts.index', compact('studentUsers', 'recipientUsers', 'units', 'colleges'));
     }
 
     /**
@@ -141,8 +154,7 @@ class AccountManagementController extends Controller
         if ($validated['role'] === AppUser::ROLE_STUDENT) {
             $studentData = $request->validate([
                 'student_id' => ['required', 'regex:/^\d{8}$/'],
-                'department' => 'required|string|max:255',
-                'course' => 'required|string|max:255',
+                ...$this->collegeAndProgramRules($request),
                 'year_level' => 'required|integer|between:1,4',
                 'block' => 'nullable|integer|min:1',
             ]);
@@ -152,7 +164,7 @@ class AccountManagementController extends Controller
         if ($validated['role'] === AppUser::ROLE_RECIPIENT) {
             $recipientData = $request->validate([
                 'staff_id' => ['required', 'string', 'max:255'],
-                'recipient_department' => ['required', 'string', Rule::exists('departments', 'name')->where(fn ($query) => $query->where('type', 'recipient'))],
+                'unit' => ['required', 'string', Rule::exists('units', 'name')],
                 'designation' => ['required', 'string', 'max:255'],
             ]);
             $username = $request->staff_id;
@@ -179,10 +191,10 @@ class AccountManagementController extends Controller
             Student::create([
                 'user_id' => $user->id,
                 'student_id' => $studentData['student_id'],
-                'department' => $studentData['department'],
-                'course' => $studentData['course'],
+                'college' => $studentData['college'],
+                'program' => $studentData['program'],
                 'year_level' => $studentData['year_level'],
-                'block' => $studentData['block'] ?? null,
+                'block' => $studentData['block'] ?? '',
             ]);
 
         }
@@ -192,7 +204,7 @@ class AccountManagementController extends Controller
             Recipient::create([
                 'user_id' => $user->id,
                 'staff_id' => $recipientData['staff_id'],
-                'department' => $recipientData['recipient_department'],
+                'unit' => $recipientData['unit'],
                 'designation' => $recipientData['designation'],
             ]);
 
@@ -234,8 +246,7 @@ class AccountManagementController extends Controller
         if ($user->role === AppUser::ROLE_STUDENT) {
             $studentData = $request->validate([
                 'student_id' => ['required', 'regex:/^\d{8}$/'],
-                'department' => 'required|string|max:255',
-                'course' => 'required|string|max:255',
+                ...$this->collegeAndProgramRules($request),
                 'year_level' => 'required|integer|between:1,4',
                 'block' => 'nullable|integer|min:1',
             ]);
@@ -247,18 +258,18 @@ class AccountManagementController extends Controller
             if ($user->student) {
                 $user->student->update([
                     'student_id' => $studentData['student_id'],
-                    'department' => $studentData['department'],
-                    'course' => $studentData['course'],
+                    'college' => $studentData['college'],
+                    'program' => $studentData['program'],
                     'year_level' => $studentData['year_level'],
-                    'block' => $studentData['block'] ?? null,
+                    'block' => $studentData['block'] ?? '',
                 ]);
             } else {
                 $user->student()->create([
                     'student_id' => $studentData['student_id'],
-                    'department' => $studentData['department'],
-                    'course' => $studentData['course'],
+                    'college' => $studentData['college'],
+                    'program' => $studentData['program'],
                     'year_level' => $studentData['year_level'],
-                    'block' => $studentData['block'] ?? null,
+                    'block' => $studentData['block'] ?? '',
                 ]);
             }
         }
@@ -266,7 +277,7 @@ class AccountManagementController extends Controller
         if ($user->role === AppUser::ROLE_RECIPIENT) {
             $recipientData = $request->validate([
                 'staff_id' => ['required', 'string', 'max:255'],
-                'recipient_department' => ['required', 'string', Rule::exists('departments', 'name')->where(fn ($query) => $query->where('type', 'recipient'))],
+                'unit' => ['required', 'string', Rule::exists('units', 'name')],
                 'designation' => ['required', 'string', 'max:255'],
             ]);
             $user->update([
@@ -276,13 +287,13 @@ class AccountManagementController extends Controller
             if ($user->recipient) {
                 $user->recipient->update([
                     'staff_id' => $recipientData['staff_id'],
-                    'department' => $recipientData['recipient_department'],
+                    'unit' => $recipientData['unit'],
                     'designation' => $recipientData['designation'],
                 ]);
             } else {
                 $user->recipient()->create([
                     'staff_id' => $recipientData['staff_id'],
-                    'department' => $recipientData['recipient_department'],
+                    'unit' => $recipientData['unit'],
                     'designation' => $recipientData['designation'],
                 ]);
             }

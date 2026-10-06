@@ -102,7 +102,7 @@ class AdminTicketReviewController extends Controller
             ->whereHas('user', fn ($query) => $query
                 ->where('is_active', true)
                 ->whereNotNull('email_verified_at'))
-            ->orderBy('department')
+            ->orderBy('unit')
             ->get();
 
         return response()
@@ -314,8 +314,6 @@ class AdminTicketReviewController extends Controller
                 'status' => EmailNotification::STATUS_PENDING,
             ]);
         }
-
-        // TODO: Send InformationalForwardedMail to recipient (Module 4)
 
         return redirect()
             ->route('admin.tickets.review.index')

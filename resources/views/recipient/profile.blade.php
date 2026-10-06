@@ -1,4 +1,4 @@
-@props(['editable' => false, 'nameParts' => ['', '', ''], 'departments' => []])
+@props(['editable' => false, 'nameParts' => ['', '', ''], 'units' => []])
 
 @php
     $profileExtensionOptions = ['' => 'None', 'Jr.' => 'Jr.', 'Sr.' => 'Sr.', 'II' => 'II', 'III' => 'III', 'IV' => 'IV', 'V' => 'V'];
@@ -53,14 +53,14 @@
     $profileRole = $user->role === 'sds_admin' ? 'Administrator' : ($user->role === 'student' ? 'Student' : 'Recipient');
     $profileStatus = $user->is_active ? 'Active' : 'Inactive';
     $profileStatusClass = $user->is_active ? 'text-emerald-600' : 'text-red-600';
-    $showMinimalAdminProfile = $user->role === 'sds_admin' && blank($user->first_name) && blank($user->last_name) && blank($user->recipient?->department) && blank($user->recipient?->designation);
+    $showMinimalAdminProfile = $user->role === 'sds_admin' && blank($user->first_name) && blank($user->last_name) && blank($user->recipient?->unit) && blank($user->recipient?->designation);
     $adminIsInSetupPlaceholderState = $user->role === 'sds_admin'
         && $user->must_change_password
         && blank($user->recipient?->staff_id)
-        && blank($user->recipient?->department)
+        && blank($user->recipient?->unit)
         && blank($user->recipient?->designation);
     $profileId = $adminIsInSetupPlaceholderState ? '—' : ($recipient?->staff_id ?? $user->recipient?->staff_id ?? $user->username ?? 'Not assigned');
-    $profileDepartment = $adminIsInSetupPlaceholderState ? '—' : ($recipient?->department ?? $user->recipient?->department ?? ($user->department ?? '—'));
+    $profileDepartment = $adminIsInSetupPlaceholderState ? '—' : ($recipient?->unit ?? $user->recipient?->unit ?? ($user->department ?? '—'));
     $profileDesignation = $adminIsInSetupPlaceholderState ? '—' : ($recipient?->designation ?? $user->recipient?->designation ?? ($user->designation ?? '—'));
     $profileFullName = $isInitialAdminSetup || $adminHasEmptyProfile ? $profileFirstName : $user->name;
     $profileEmail = filled($user->email) ? $user->email : ($isInitialAdminSetup ? 'sorsu.support@gmail.com' : '—');
@@ -68,11 +68,11 @@
     $passwordUpdateHasErrors = $errors->getBag('updatePassword')->any();
     $currentPasswordServerError = $errors->getBag('updatePassword')->first('current_password');
     $currentPasswordServerErrorIsRequired = $currentPasswordServerError && str_contains(strtolower($currentPasswordServerError), 'required');
-    $profileDepartmentValue = old('department', $isInitialAdminSetup ? '' : ($profileDepartment !== '—' ? $profileDepartment : ''));
+    $profileDepartmentValue = old('unit', $isInitialAdminSetup ? '' : ($profileDepartment !== '—' ? $profileDepartment : ''));
     $profileDesignationValue = old('designation', $isInitialAdminSetup ? '' : ($profileDesignation !== '—' ? $profileDesignation : ''));
-    $profileDepartmentOptions = collect($departments)->map(fn ($department) => [
-        'name' => $department->name,
-        'positions' => $department->positions->pluck('name')->values(),
+    $profileDepartmentOptions = collect($units)->map(fn ($unit) => [
+        'name' => $unit->name,
+        'positions' => $unit->designations->pluck('name')->values(),
     ])->values();
 @endphp
 
@@ -129,7 +129,7 @@
                                         ['Full Name', $profileFullName],
                                         ['Email', $profileEmail],
                                         ['Staff ID', $profileId],
-                                        ['Department', $profileDepartment],
+                                        ['College / Office', $profileDepartment],
                                         ['Position', $profileDesignation],
                                         ['Account Type', $profileRole],
                                         ['Status', '<span class="text-[11px] font-semibold ' . $profileStatusClass . '">' . $profileStatus . '</span>'],
@@ -139,7 +139,7 @@
                                             ['Full Name', $profileFullName],
                                             ['Email', $profileEmail],
                                             ['Staff ID', $profileId],
-                                            ['Department', '—'],
+                                            ['College / Office', '—'],
                                             ['Position', '—'],
                                             ['Account Type', $profileRole],
                                             ['Status', '<span class="text-[11px] font-semibold ' . $profileStatusClass . '">' . $profileStatus . '</span>'],
@@ -149,7 +149,7 @@
                                             ['Email', $profileEmail],
                                             ...($user->role === 'recipient' ? [] : [
                                                 ['Staff ID', $profileId],
-                                                ['Department', $profileDepartment],
+                                                ['College / Office', $profileDepartment],
                                                 ['Position', $profileDesignation],
                                             ]),
                                             ['Account Type', $profileRole],
@@ -237,21 +237,21 @@
 
                                 <div class="grid items-start gap-1.5 md:grid-cols-2">
                                     <div class="grid gap-0.5">
-                                        <label for="profile-department" class="text-[11px] font-medium text-muted-foreground">Department</label>
+                                        <label for="profile-department" class="text-[11px] font-medium text-muted-foreground">College / Office</label>
                                         <details id="profile-department-menu" class="group relative" x-data="{}" x-on:click.outside="$el.removeAttribute('open')">
                                             <summary class="flex h-8 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-muted px-2 py-1 text-[12px] font-medium text-foreground [&::-webkit-details-marker]:hidden">
-                                                <span id="profile-department-label" class="truncate">{{ $profileDepartmentValue !== '' ? $profileDepartmentValue : 'Select department' }}</span>
+                                                <span id="profile-department-label" class="truncate">{{ $profileDepartmentValue !== '' ? $profileDepartmentValue : 'Select college or office' }}</span>
                                                 <svg class="h-3.5 w-3.5 shrink-0 opacity-60 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                                             </summary>
                                             <div class="absolute top-full z-[100] mt-1 w-max min-w-full max-w-[calc(100vw-2rem)] overflow-visible rounded-md border border-border bg-white p-1 text-foreground shadow-lg">
-                                                <button type="button" data-profile-department-option="" class="relative flex w-full items-center rounded-md px-2 py-1.5 text-left text-[12px] hover:bg-muted">Select department</button>
+                                                <button type="button" data-profile-department-option="" class="relative flex w-full items-center rounded-md px-2 py-1.5 text-left text-[12px] hover:bg-muted">Select college or office</button>
                                                 @foreach ($profileDepartmentOptions as $departmentOption)
                                                     <button type="button" data-profile-department-option="{{ $departmentOption['name'] }}" class="relative flex w-full items-center rounded-md px-2 py-1.5 text-left text-[12px] hover:bg-muted">{{ $departmentOption['name'] }}</button>
                                                 @endforeach
                                             </div>
                                         </details>
-                                        <input type="hidden" id="profile-department" name="department" data-profile-department value="{{ $profileDepartmentValue }}">
-                                        <div data-error-slot class="{{ $errors->has('department') ? 'min-h-4' : 'hidden' }}">@error('department') <p data-server-error class="text-[11px] text-destructive">{{ $message }}</p> @enderror</div>
+                                        <input type="hidden" id="profile-department" name="unit" data-profile-department value="{{ $profileDepartmentValue }}">
+                                        <div data-error-slot class="{{ $errors->has('unit') ? 'min-h-4' : 'hidden' }}">@error('unit') <p data-server-error class="text-[11px] text-destructive">{{ $message }}</p> @enderror</div>
                                     </div>
 
                                     <div class="grid gap-0.5">
@@ -268,7 +268,6 @@
                                     </div>
                                 </div>
 
-                                <input type="hidden" name="role" value="sds_admin" />
                                 <input type="hidden" name="is_active" value="1" />
 
                                 <div class="flex flex-wrap items-center gap-2 pt-2">
@@ -304,7 +303,7 @@
                                     };
                                     departmentOptions.forEach((option) => option.addEventListener('click', () => {
                                         departmentInput.value = option.dataset.profileDepartmentOption;
-                                        departmentLabel.textContent = departmentInput.value || 'Select department';
+                                        departmentLabel.textContent = departmentInput.value || 'Select college or office';
                                         positionInput.value = '';
                                         positionLabel.textContent = 'Select position';
                                         option.closest('details')?.removeAttribute('open');

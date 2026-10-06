@@ -46,7 +46,7 @@
                 value="{{ $recipient->id }}"
                 @selected(old('recipient_id', $category->recipient_id ?? '') == $recipient->id)>
 
-                {{ $recipient->department }}
+                {{ $recipient->unit }}
                 —
                 {{ $recipient->user->name }}
 

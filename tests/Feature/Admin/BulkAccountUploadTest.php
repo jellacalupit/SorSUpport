@@ -3,7 +3,7 @@
 namespace Tests\Feature\Admin;
 
 use App\Models\Recipient;
-use App\Models\Department;
+use App\Models\Unit;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,6 +15,158 @@ use Tests\TestCase;
 class BulkAccountUploadTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Students can only be placed in a college and program configured in System Settings.
+        $this->configureCollege('CICT', ['BSIT', 'BSCS']);
+        $this->configureCollege('Engineering', ['CS']);
+        $this->configureCollege('Technology', ['IT']);
+    }
+
+    protected function configureCollege(string $name, array $programs): Unit
+    {
+        $college = Unit::create(['name' => $name, 'type' => Unit::TYPE_COLLEGE]);
+
+        foreach ($programs as $program) {
+            $college->programs()->create(['name' => $program, 'year_level' => 4, 'block' => 5]);
+        }
+
+        return $college;
+    }
+
+    protected function admin(): User
+    {
+        return User::factory()->create([
+            'role' => User::ROLE_SDS_ADMIN,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+    }
+
+    public function test_bulk_upload_reads_the_college_and_program_columns(): void
+    {
+        $file = UploadedFile::fake()->createWithContent('students.csv', "Student ID,Last Name,First Name,Email,College,Program,Year,Block\n20245001,Cruz,Ana,ana@student.test,CICT,BSCS,2,1\n");
+
+        $this->actingAs($this->admin())->post(route('admin.accounts.upload.store'), [
+            'account_type' => User::ROLE_STUDENT,
+            'file' => $file,
+        ]);
+
+        $this->assertSame(1, session('upload_summary')['imported']);
+        $this->assertDatabaseHas('students', ['student_id' => '20245001', 'college' => 'CICT', 'program' => 'BSCS']);
+    }
+
+    public function test_bulk_upload_reports_unknown_colleges_and_programs(): void
+    {
+        $file = UploadedFile::fake()->createWithContent('students.csv', "Student ID,Last Name,First Name,Email,College,Program,Year,Block\n20246001,Unknown,College,one@student.test,Not A College,BSIT,1,1\n20246002,Unknown,Program,two@student.test,CICT,Not A Program,1,1\n20246003,Wrong,College,three@student.test,Engineering,BSIT,1,1\n");
+
+        $this->actingAs($this->admin())->post(route('admin.accounts.upload.store'), [
+            'account_type' => User::ROLE_STUDENT,
+            'file' => $file,
+        ]);
+
+        $summary = session('upload_summary');
+        $this->assertSame(0, $summary['imported']);
+        $this->assertSame(3, $summary['failed']);
+        $this->assertContains('The college is not configured in System Settings.', $summary['errors'][0]['messages']);
+        $this->assertContains('The program is not offered by the selected college.', $summary['errors'][1]['messages']);
+        $this->assertContains('The program is not offered by the selected college.', $summary['errors'][2]['messages']);
+        $this->assertDatabaseCount('students', 0);
+    }
+
+    public function test_bulk_upload_places_recipients_in_a_college_or_an_office_and_rejects_unknown_ones(): void
+    {
+        Unit::create(['name' => 'Registrar Office', 'type' => Unit::TYPE_OFFICE]);
+
+        $file = UploadedFile::fake()->createWithContent('recipients.csv', "Staff ID,Full Name,Email,College / Office,Designation\nR5001,Dean Reyes,dean@recipient.test,CICT,Dean\nR5002,Rita Registrar,rita@recipient.test,Registrar Office,Office Head\nR5003,Nora Nowhere,nora@recipient.test,Unknown Office,Clerk\n");
+
+        $this->actingAs($this->admin())->post(route('admin.accounts.upload.store'), [
+            'account_type' => User::ROLE_RECIPIENT,
+            'file' => $file,
+        ]);
+
+        $summary = session('upload_summary');
+        $this->assertSame(2, $summary['imported']);
+        $this->assertContains('The college or office is not configured in System Settings.', $summary['errors'][0]['messages']);
+        $this->assertDatabaseHas('recipients', ['staff_id' => 'R5001', 'unit' => 'CICT', 'designation' => 'Dean']);
+        $this->assertDatabaseHas('recipients', ['staff_id' => 'R5002', 'unit' => 'Registrar Office', 'designation' => 'Office Head']);
+        $this->assertDatabaseMissing('recipients', ['staff_id' => 'R5003']);
+    }
+
+    public function test_a_student_account_needs_a_configured_college_and_one_of_its_programs(): void
+    {
+        $admin = $this->admin();
+        $student = [
+            'first_name' => 'Sam',
+            'last_name' => 'Student',
+            'email' => 'sam@student.test',
+            'role' => User::ROLE_STUDENT,
+            'student_id' => '20247001',
+            'year_level' => 1,
+        ];
+
+        $this->actingAs($admin)
+            ->post(route('admin.accounts.store'), $student + ['college' => 'Not A College', 'program' => 'BSIT'])
+            ->assertSessionHasErrors('college');
+
+        // CS is offered by Engineering, not by CICT.
+        $this->actingAs($admin)
+            ->post(route('admin.accounts.store'), $student + ['college' => 'CICT', 'program' => 'CS'])
+            ->assertSessionHasErrors('program');
+
+        $this->assertDatabaseMissing('users', ['email' => 'sam@student.test']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.accounts.store'), $student + ['college' => 'CICT', 'program' => 'BSIT'])
+            ->assertRedirect(route('admin.accounts.index', ['category_filter' => 'students']));
+
+        $this->assertDatabaseHas('students', ['student_id' => '20247001', 'college' => 'CICT', 'program' => 'BSIT']);
+    }
+
+    public function test_a_recipient_account_can_belong_to_a_college_or_an_office(): void
+    {
+        $admin = $this->admin();
+        Unit::create(['name' => 'Guidance Office', 'type' => Unit::TYPE_OFFICE]);
+
+        $recipient = fn (string $staffId, string $unit) => [
+            'first_name' => 'Rae',
+            'last_name' => 'Recipient',
+            'email' => strtolower($staffId) . '@recipient.test',
+            'role' => User::ROLE_RECIPIENT,
+            'staff_id' => $staffId,
+            'unit' => $unit,
+            'designation' => 'Head',
+        ];
+
+        $this->actingAs($admin)->post(route('admin.accounts.store'), $recipient('R6001', 'CICT'))->assertSessionHasNoErrors();
+        $this->actingAs($admin)->post(route('admin.accounts.store'), $recipient('R6002', 'Guidance Office'))->assertSessionHasNoErrors();
+        $this->actingAs($admin)->post(route('admin.accounts.store'), $recipient('R6003', 'Unknown Office'))->assertSessionHasErrors('unit');
+
+        $this->assertDatabaseHas('recipients', ['staff_id' => 'R6001', 'unit' => 'CICT']);
+        $this->assertDatabaseHas('recipients', ['staff_id' => 'R6002', 'unit' => 'Guidance Office']);
+        $this->assertDatabaseMissing('recipients', ['staff_id' => 'R6003']);
+    }
+
+    public function test_accounts_can_be_filtered_by_college_and_program(): void
+    {
+        $make = function (string $id, string $college, string $program): void {
+            $user = User::factory()->create(['role' => User::ROLE_STUDENT, 'username' => $id, 'name' => 'Student ' . $id]);
+            Student::create(['user_id' => $user->id, 'student_id' => $id, 'college' => $college, 'program' => $program, 'year_level' => '1', 'block' => '1']);
+        };
+        $make('20248001', 'CICT', 'BSIT');
+        $make('20248002', 'CICT', 'BSCS');
+        $make('20248003', 'Engineering', 'CS');
+
+        $this->actingAs($this->admin())
+            ->get(route('admin.accounts.index', ['unit_filter' => 'CICT', 'program_filter' => 'BSCS']))
+            ->assertOk()
+            ->assertSee('20248002')
+            ->assertDontSee('20248001')
+            ->assertDontSee('20248003');
+    }
 
     public function test_bulk_upload_creates_updates_and_deactivates_accounts(): void
     {
@@ -37,8 +189,8 @@ class BulkAccountUploadTest extends TestCase
         Student::create([
             'user_id' => $existingStudent->id,
             'student_id' => '20241001',
-            'department' => 'Technology',
-            'course' => 'IT',
+            'college' => 'Technology',
+            'program' => 'IT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -75,7 +227,7 @@ class BulkAccountUploadTest extends TestCase
 
         $response->assertRedirect(route('admin.accounts.index', ['category_filter' => 'recipients']));
         $this->assertDatabaseHas('users', ['email' => 'rey@recipient.test', 'role' => User::ROLE_RECIPIENT, 'must_change_password' => true]);
-        $this->assertDatabaseHas('recipients', ['staff_id' => 'R2001', 'department' => 'CICT', 'designation' => 'Coordinator']);
+        $this->assertDatabaseHas('recipients', ['staff_id' => 'R2001', 'unit' => 'CICT', 'designation' => 'Coordinator']);
     }
 
     public function test_bulk_upload_page_accepts_selected_account_type(): void
@@ -122,7 +274,7 @@ class BulkAccountUploadTest extends TestCase
         ]);
         $this->assertDatabaseHas('recipients', [
             'staff_id' => 'R2002',
-            'department' => '',
+            'unit' => '',
             'designation' => '',
         ]);
     }
@@ -217,8 +369,8 @@ class BulkAccountUploadTest extends TestCase
                 'email' => 'new.student@test.local',
                 'role' => User::ROLE_STUDENT,
                 'student_id' => '20245001',
-                'department' => 'CICT',
-                'course' => 'BSIT',
+                'college' => 'CICT',
+                'program' => 'BSIT',
                 'year_level' => 2,
                 'block' => 1,
             ]);
@@ -243,8 +395,6 @@ class BulkAccountUploadTest extends TestCase
             'must_change_password' => false,
         ]);
 
-        Department::create(['name' => 'CICT', 'type' => 'recipient']);
-
         $response = $this->actingAs($admin)
             ->post(route('admin.accounts.store'), [
                 'first_name' => 'Lian',
@@ -253,7 +403,7 @@ class BulkAccountUploadTest extends TestCase
                 'email' => 'lian.fulgosino@test.local',
                 'role' => User::ROLE_RECIPIENT,
                 'staff_id' => 'R9001',
-                'recipient_department' => 'CICT',
+                'unit' => 'CICT',
                 'designation' => 'Coordinator',
             ]);
 
@@ -271,7 +421,7 @@ class BulkAccountUploadTest extends TestCase
             'must_change_password' => false,
         ]);
 
-        Department::create(['name' => 'CBME', 'type' => 'recipient']);
+        Unit::create(['name' => 'CBME', 'type' => Unit::TYPE_OFFICE]);
 
         /** @var User $recipient */
         $recipient = User::factory()->create([
@@ -285,7 +435,7 @@ class BulkAccountUploadTest extends TestCase
         Recipient::create([
             'user_id' => $recipient->id,
             'staff_id' => 'R1001',
-            'department' => 'CICT',
+            'unit' => 'CICT',
             'designation' => 'Old Designation',
         ]);
 
@@ -296,13 +446,13 @@ class BulkAccountUploadTest extends TestCase
                 'last_name' => 'Recipient',
                 'email' => 'updated.recipient@test.local',
                 'staff_id' => 'R2002',
-                'recipient_department' => 'CBME',
+                'unit' => 'CBME',
                 'designation' => 'New Designation',
             ]);
 
         $response->assertRedirect(route('admin.accounts.index', ['category_filter' => 'recipients']));
         $this->assertDatabaseHas('users', ['id' => $recipient->id, 'name' => 'Updated Recipient', 'email' => 'updated.recipient@test.local', 'username' => 'R2002']);
-        $this->assertDatabaseHas('recipients', ['user_id' => $recipient->id, 'staff_id' => 'R2002', 'department' => 'CBME', 'designation' => 'New Designation']);
+        $this->assertDatabaseHas('recipients', ['user_id' => $recipient->id, 'staff_id' => 'R2002', 'unit' => 'CBME', 'designation' => 'New Designation']);
 
         $page = $this->actingAs($admin)
             ->get(route('admin.accounts.index', ['category_filter' => 'recipients']));
@@ -323,7 +473,7 @@ class BulkAccountUploadTest extends TestCase
             'must_change_password' => false,
         ]);
 
-        Department::create(['name' => 'BIOS', 'type' => 'recipient']);
+        Unit::create(['name' => 'BIOS', 'type' => Unit::TYPE_OFFICE]);
 
         /** @var User $recipient */
         $recipient = User::factory()->create([
@@ -342,13 +492,13 @@ class BulkAccountUploadTest extends TestCase
                 'last_name' => 'Fulgosino',
                 'email' => 'lian.updated@test.local',
                 'staff_id' => 'R9001',
-                'recipient_department' => 'BIOS',
+                'unit' => 'BIOS',
                 'designation' => 'Coordinator',
             ]);
 
         $response->assertRedirect(route('admin.accounts.index', ['category_filter' => 'recipients']));
         $this->assertDatabaseHas('users', ['id' => $recipient->id, 'email' => 'lian.updated@test.local', 'username' => 'R9001']);
-        $this->assertDatabaseHas('recipients', ['user_id' => $recipient->id, 'staff_id' => 'R9001', 'department' => 'BIOS', 'designation' => 'Coordinator']);
+        $this->assertDatabaseHas('recipients', ['user_id' => $recipient->id, 'staff_id' => 'R9001', 'unit' => 'BIOS', 'designation' => 'Coordinator']);
 
         $page = $this->actingAs($admin)
             ->get(route('admin.accounts.index', ['category_filter' => 'recipients']));
@@ -380,8 +530,8 @@ class BulkAccountUploadTest extends TestCase
         Student::create([
             'user_id' => $student->id,
             'student_id' => '20246002',
-            'department' => 'CICT',
-            'course' => 'BSCS',
+            'college' => 'CICT',
+            'program' => 'BSCS',
             'year_level' => '2',
             'block' => 2,
         ]);
@@ -397,7 +547,7 @@ class BulkAccountUploadTest extends TestCase
         Recipient::create([
             'user_id' => $recipient->id,
             'staff_id' => 'R1002',
-            'department' => 'Administrative',
+            'unit' => 'Administrative',
             'designation' => 'Coordinator',
         ]);
 
@@ -411,7 +561,7 @@ class BulkAccountUploadTest extends TestCase
         $response->assertSee('Edit Recipient Account');
     }
 
-    public function test_admin_accounts_uses_departments_configured_in_system_settings(): void
+    public function test_admin_accounts_uses_colleges_and_offices_configured_in_system_settings(): void
     {
         $admin = User::factory()->create([
             'role' => User::ROLE_SDS_ADMIN,
@@ -419,14 +569,14 @@ class BulkAccountUploadTest extends TestCase
             'must_change_password' => false,
         ]);
 
-        Department::create(['name' => 'Configured Student Department', 'type' => 'student']);
-        Department::create(['name' => 'Configured Recipient Department', 'type' => 'recipient']);
+        Unit::create(['name' => 'Configured College', 'type' => Unit::TYPE_COLLEGE]);
+        Unit::create(['name' => 'Configured Office', 'type' => Unit::TYPE_OFFICE]);
 
         $response = $this->actingAs($admin)->get(route('admin.accounts.index'));
 
         $response->assertOk();
-        $response->assertSee('Configured Student Department');
-        $response->assertSee('Configured Recipient Department');
+        $response->assertSee('Configured College');
+        $response->assertSee('Configured Office');
     }
 
     public function test_incomplete_recipient_cannot_be_activated(): void
@@ -443,7 +593,7 @@ class BulkAccountUploadTest extends TestCase
         Recipient::create([
             'user_id' => $recipient->id,
             'staff_id' => 'R3001',
-            'department' => '',
+            'unit' => '',
             'designation' => '',
         ]);
 
@@ -474,7 +624,7 @@ class BulkAccountUploadTest extends TestCase
         Recipient::create([
             'user_id' => $recipient->id,
             'staff_id' => 'R3002',
-            'department' => 'Configured Department',
+            'unit' => 'Configured Department',
             'designation' => 'Coordinator',
         ]);
 

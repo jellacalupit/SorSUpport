@@ -186,8 +186,8 @@ class TicketUnreadBadgeTest extends TestCase
         Student::create([
             'user_id' => $studentUser->id,
             'student_id' => 'S9001',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -201,7 +201,7 @@ class TicketUnreadBadgeTest extends TestCase
         Recipient::create([
             'user_id' => $recipientUser->id,
             'staff_id' => 'R9001',
-            'department' => 'Student Affairs',
+            'unit' => 'Student Affairs',
             'designation' => 'Officer',
         ]);
 

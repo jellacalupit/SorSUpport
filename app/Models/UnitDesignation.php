@@ -5,16 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class DepartmentPosition extends Model
+class UnitDesignation extends Model
 {
     protected $fillable = [
-        'department_id',
+        'unit_id',
         'name',
         'description',
     ];
 
-    public function department(): BelongsTo
+    public function unit(): BelongsTo
     {
-        return $this->belongsTo(Department::class);
+        return $this->belongsTo(Unit::class);
     }
 }

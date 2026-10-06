@@ -12,7 +12,7 @@ class Recipient extends Model
     protected $fillable = [
         'user_id',
         'staff_id',
-        'department',
+        'unit',
         'designation',
     ];
 

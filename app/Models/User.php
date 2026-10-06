@@ -244,13 +244,13 @@ class User extends Authenticatable implements MustVerifyEmailContract
     {
         if ($this->role === self::ROLE_STUDENT) {
             return $this->student !== null
-                && collect(['student_id', 'department', 'course', 'year_level'])
+                && collect(['student_id', 'college', 'program', 'year_level'])
                     ->every(fn (string $field) => trim((string) $this->student->{$field}) !== '');
         }
 
         if ($this->role === self::ROLE_RECIPIENT) {
             return $this->recipient !== null
-                && collect(['staff_id', 'department', 'designation'])
+                && collect(['staff_id', 'unit', 'designation'])
                     ->every(fn (string $field) => trim((string) $this->recipient->{$field}) !== '');
         }
 

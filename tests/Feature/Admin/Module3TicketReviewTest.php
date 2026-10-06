@@ -35,8 +35,8 @@ class Module3TicketReviewTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $student->id,
             'student_id' => 'S1001',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -112,8 +112,8 @@ class Module3TicketReviewTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $student->id,
             'student_id' => 'S1002',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -188,8 +188,8 @@ class Module3TicketReviewTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $student->id,
             'student_id' => 'S1009',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -281,8 +281,8 @@ class Module3TicketReviewTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $student->id,
             'student_id' => 'S1002',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -341,8 +341,8 @@ class Module3TicketReviewTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $student->id,
             'student_id' => 'S1002',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -400,8 +400,8 @@ class Module3TicketReviewTest extends TestCase
         $studentProfile = Student::create([
             'user_id' => $student->id,
             'student_id' => 'S1003',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -433,21 +433,21 @@ class Module3TicketReviewTest extends TestCase
         $recipient = Recipient::create([
             'user_id' => $recipientUser->id,
             'staff_id' => 'R-1001',
-            'department' => 'Academic Affairs',
+            'unit' => 'Academic Affairs',
             'designation' => 'Academic Coordinator',
         ]);
 
         $recipientTwo = Recipient::create([
             'user_id' => $recipientUserTwo->id,
             'staff_id' => 'R-1002',
-            'department' => 'Academic Affairs',
+            'unit' => 'Academic Affairs',
             'designation' => 'Academic Coordinator',
         ]);
 
         $otherRecipient = Recipient::create([
             'user_id' => $otherRecipientUser->id,
             'staff_id' => 'R-1003',
-            'department' => 'Academic Affairs',
+            'unit' => 'Academic Affairs',
             'designation' => 'Other Office',
         ]);
 

@@ -36,7 +36,7 @@ class Module2AuthenticationFlowTest extends TestCase
 
         $response->assertRedirect(route('verification.notice'));
         $this->assertAuthenticatedAs($user);
-        Notification::assertSentTo($user, \Illuminate\Auth\Notifications\VerifyEmail::class);
+        Notification::assertSentTo($user, \App\Notifications\VerifyEmailNotification::class);
     }
 
     public function test_activated_student_and_recipient_are_redirected_to_password_change_without_email_verification(): void
@@ -90,23 +90,15 @@ class Module2AuthenticationFlowTest extends TestCase
             'is_active' => true,
         ]);
 
-        $admin->recipient()->updateOrCreate(['user_id' => $admin->id], [
-            'staff_id' => '2648',
-            'department' => 'Student Development Services',
-            'designation' => 'SDS Coordinator',
-        ]);
-
+        // The seeded admin has no staff profile yet, so the page shows placeholders instead of the seed ID.
         $this->actingAs($admin)
             ->get(route('profile.edit'))
             ->assertOk()
             ->assertSee('Administrator')
             ->assertSee('sorsu.support@gmail.com')
-            ->assertSee('ID —')
-            ->assertSee('Department')
+            ->assertSee('Staff ID')
+            ->assertSee('College / Office')
             ->assertSee('Position')
-            ->assertDontSee('2648')
-            ->assertDontSee('Student Development Services')
-            ->assertDontSee('SDS Coordinator')
             ->assertDontSee('12345');
     }
 

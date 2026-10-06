@@ -212,7 +212,7 @@ class AnalyticsService
 
                 return [
                     'name' => $user->table_name ?: 'Unassigned',
-                    'department' => $user->recipient?->department ?: 'Unassigned',
+                    'unit' => $user->recipient?->unit ?: 'Unassigned',
                     'assigned' => $ticketGroup->count(),
                     'resolved' => $resolved->count(),
                     'escalated' => $ticketGroup->whereIn('id', $escalatedTicketIds)->count(),
@@ -226,19 +226,19 @@ class AnalyticsService
         $subjects = $tickets->groupBy(fn ($ticket) => $ticket->complaint?->subject_title ?: 'Untitled')->map->count()->sortDesc()->take(10);
         $openStatuses = [Ticket::STATUS_PENDING, Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED];
         $openTickets = $tickets->whereIn('status', $openStatuses);
-        $departmentRows = $tickets
+        $unitRows = $tickets
             ->groupBy(function ($ticket) {
                 $handler = $ticket->assignee ?? $ticket->currentHandler;
-                return $handler?->recipient?->department ?: 'Unassigned';
+                return $handler?->recipient?->unit ?: 'Unassigned';
             })
-            ->map(function ($group, $department) use ($resolvedStatuses) {
+            ->map(function ($group, $unit) use ($resolvedStatuses) {
                 $resolvedGroup = $group->where('classification', Ticket::CLASSIFICATION_NEEDS_RESOLUTION)->whereIn('status', $resolvedStatuses);
                 $durations = $resolvedGroup
                     ->filter(fn ($ticket) => $ticket->resolved_at && $ticket->complaint?->created_at)
                     ->map(fn ($ticket) => $ticket->complaint->created_at->floatDiffInHours($ticket->resolved_at));
 
                 return [
-                    'name' => $department,
+                    'name' => $unit,
                     'total' => $group->count(),
                     'open' => $group->whereIn('status', [Ticket::STATUS_PENDING, Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED])->count(),
                     'resolved' => $resolvedGroup->count(),
@@ -263,7 +263,7 @@ class AnalyticsService
             'escalations' => ['total' => $escalationEvents->count(), 'tickets' => $escalatedTicketIds->count(), 'once' => $escalatedOnce, 'repeated' => $escalatedRepeatedly, 'never' => $neverEscalated, 'rate' => $tickets->count() ? round($escalatedTicketIds->count() / $tickets->count() * 100) : 0, 'averageLevel' => $escalationsPerTicket->avg() ?: 0, 'byCategory' => $escalationEvents->groupBy(fn ($log) => $tickets->firstWhere('id', $log->ticket_id)?->complaint?->category?->name ?? 'Uncategorized')->map->count()->toArray()],
             'recipients' => $recipientRows, 'classification' => ['Needs Resolution' => $classificationCounts['needs_resolution'] ?? 0, 'Informational' => $classificationCounts['informational'] ?? 0, 'Invalid' => $classificationCounts['invalid'] ?? 0, 'Unclassified' => $classificationCounts['unclassified'] ?? 0], 'submission' => ['Identified' => $identified, 'Anonymous' => $tickets->count() - $identified],
             'subjects' => $subjects, 'insights' => $this->buildInsights($categoryCounts, $resolutionHours, $escalationEvents, $tickets, $identified),
-            'openCount' => $openTickets->count(), 'departments' => $departmentRows,
+            'openCount' => $openTickets->count(), 'units' => $unitRows,
             'oldestOpenTickets' => $oldestOpenTickets,
         ];
     }
@@ -428,10 +428,10 @@ class AnalyticsService
             $query->where('classification', $filters['classification']);
         }
 
-        if (filled($filters['department'] ?? null)) {
+        if (filled($filters['unit'] ?? null)) {
             $query->where(function ($tickets) use ($filters) {
-                $tickets->whereHas('assignee.recipient', fn ($recipient) => $recipient->where('department', $filters['department']))
-                    ->orWhereHas('currentHandler.recipient', fn ($recipient) => $recipient->where('department', $filters['department']));
+                $tickets->whereHas('assignee.recipient', fn ($recipient) => $recipient->where('unit', $filters['unit']))
+                    ->orWhereHas('currentHandler.recipient', fn ($recipient) => $recipient->where('unit', $filters['unit']));
             });
         }
 

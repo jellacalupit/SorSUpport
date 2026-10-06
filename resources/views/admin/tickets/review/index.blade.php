@@ -115,7 +115,7 @@
                                     $student = $ticket->complaint->student;
                                     $studentUser = $ticket->complaint->student?->user;
                                     $studentTableName = $ticket->complaint->is_anonymous ? 'Anonymous' : ($studentUser?->table_name ?? 'Anonymous');
-                                    $studentCourseYearBlock = trim(($student?->course ?? 'Course not specified') . ' ' . ($student?->year_level ?? 'N/A') . (($student?->block ?? '') !== '' ? '-' . $student->block : ''));
+                                    $studentCourseYearBlock = trim(($student?->program ?? 'Program not specified') . ' ' . ($student?->year_level ?? 'N/A') . (($student?->block ?? '') !== '' ? '-' . $student->block : ''));
                                 @endphp
                                 <td class="hidden break-words px-2 py-2 sm:px-3 lg:table-cell {{ $isUnread ? 'text-black' : 'text-muted-foreground' }}">
                                     <span class="relative inline-block" x-data="{ holderProfileOpen: false }" x-on:mouseenter="holderProfileOpen = true" x-on:mouseleave="holderProfileOpen = false">
@@ -132,7 +132,7 @@
                                                     </span>
                                                     <span class="min-w-0">
                                                         <span class="block wrap-break-word text-sm font-bold">{{ $holderName }}</span>
-                                                        <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $holderRecipient?->staff_id ?? $holderUser->username ?? $holderUser->id }} · {{ $holderRecipient?->department ?? 'Department not specified' }} · {{ $holderRecipient?->designation ?? 'Designation not specified' }}</span>
+                                                        <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $holderRecipient?->staff_id ?? $holderUser->username ?? $holderUser->id }} · {{ $holderRecipient?->unit ?? 'College or office not specified' }} · {{ $holderRecipient?->designation ?? 'Designation not specified' }}</span>
                                                     </span>
                                                 </span>
                                                 <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">{{ $holderUser->role === \App\Models\User::ROLE_SDS_ADMIN ? 'Admin' : 'Recipient' }}</span>
@@ -155,7 +155,7 @@
                                                     </span>
                                                     <span class="min-w-0">
                                                         <span class="block wrap-break-word text-sm font-bold">{{ $studentTableName }}</span>
-                                                        <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $student?->student_id ?? 'N/A' }} · {{ $student?->department ?? 'Department not specified' }} · {{ $studentCourseYearBlock }}</span>
+                                                        <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $student?->student_id ?? 'N/A' }} · {{ $student?->college ?? 'College not specified' }} · {{ $studentCourseYearBlock }}</span>
                                                     </span>
                                                 </span>
                                                 <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">Student</span>
@@ -211,7 +211,7 @@
             $pendingHolderName = $holderUser?->table_name ?? '—';
             $holderRole = $holderUser?->role === \App\Models\User::ROLE_SDS_ADMIN ? 'Admin' : 'Recipient';
             $studentDisplayName = $ticket->complaint->is_anonymous ? 'Anonymous' : ($studentUser?->table_name ?? 'Anonymous');
-            $studentCourseYearBlock = trim(($student?->course ?? 'Course not specified') . ' ' . ($student?->year_level ?? 'N/A') . (($student?->block ?? '') !== '' ? '-' . $student->block : ''));
+            $studentCourseYearBlock = trim(($student?->program ?? 'Program not specified') . ' ' . ($student?->year_level ?? 'N/A') . (($student?->block ?? '') !== '' ? '-' . $student->block : ''));
 
             $category = $ticket->complaint->category;
             $categoryRecipients = collect();
@@ -368,7 +368,7 @@
                                         </span>
                                         <span class="min-w-0">
                                             <span class="block wrap-break-word text-sm font-bold">{{ $studentDisplayName }}</span>
-                                            <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $student?->student_id ?? 'N/A' }} · {{ $student?->department ?? 'Department not specified' }} · {{ $studentCourseYearBlock }}</span>
+                                            <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $student?->student_id ?? 'N/A' }} · {{ $student?->college ?? 'College not specified' }} · {{ $studentCourseYearBlock }}</span>
                                         </span>
                                     </span>
                                     <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">Student</span>
@@ -429,11 +429,11 @@
                                 </summary>
                                 <div class="absolute top-full z-40 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-border bg-white p-1 text-foreground shadow-lg">
                                     @forelse ($availableRecipients as $recipient)
-                                        @php $recipientName = $recipient->user?->display_name ?? $recipient->user?->name ?? $recipient->department; @endphp
+                                        @php $recipientName = $recipient->user?->display_name ?? $recipient->user?->name ?? $recipient->unit; @endphp
                                         <button type="button" x-on:click="selectedRecipientId = {{ $recipient->id }}; selectedRecipient = @js($recipientName); $el.closest('details').removeAttribute('open')" class="flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-primary-soft" x-bind:class="selectedRecipientId === {{ $recipient->id }} ? 'bg-primary-soft text-primary' : ''">
                                             <span class="min-w-0">
                                                 <span class="block truncate font-semibold">{{ $recipientName }}</span>
-                                                <span class="block truncate text-muted-foreground">{{ $recipient->staff_id }} · {{ $recipient->department }} · {{ $recipient->designation }}</span>
+                                                <span class="block truncate text-muted-foreground">{{ $recipient->staff_id }} · {{ $recipient->unit }} · {{ $recipient->designation }}</span>
                                             </span>
                                         </button>
                                     @empty
@@ -455,11 +455,11 @@
                                 </summary>
                                 <div class="absolute top-full z-40 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-border bg-white p-1 text-foreground shadow-lg">
                                     @forelse ($availableRecipients as $recipient)
-                                        @php $recipientName = $recipient->user?->display_name ?? $recipient->user?->name ?? $recipient->department; @endphp
+                                        @php $recipientName = $recipient->user?->display_name ?? $recipient->user?->name ?? $recipient->unit; @endphp
                                         <button type="button" x-on:click="selectedRecipientId = {{ $recipient->id }}; selectedRecipient = @js($recipientName); $el.closest('details').removeAttribute('open')" class="flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-primary-soft">
                                             <span class="min-w-0">
                                                 <span class="block truncate font-semibold">{{ $recipientName }}</span>
-                                                <span class="block truncate text-muted-foreground">{{ $recipient->staff_id }} · {{ $recipient->department }} · {{ $recipient->designation }}</span>
+                                                <span class="block truncate text-muted-foreground">{{ $recipient->staff_id }} · {{ $recipient->unit }} · {{ $recipient->designation }}</span>
                                             </span>
                                         </button>
                                     @empty

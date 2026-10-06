@@ -108,8 +108,8 @@ class Module7EscalationTest extends TestCase
         $student = Student::create([
             'user_id' => $studentUser->id,
             'student_id' => 'S7001',
-            'department' => 'IT',
-            'course' => 'BSIT',
+            'college' => 'IT',
+            'program' => 'BSIT',
             'year_level' => '2nd Year',
             'block' => 'A',
         ]);
@@ -126,7 +126,7 @@ class Module7EscalationTest extends TestCase
             $recipient = Recipient::create([
                 'user_id' => User::factory()->create(['role' => User::ROLE_RECIPIENT])->id,
                 'staff_id' => 'R700' . ($index + 1),
-                'department' => 'Student Affairs',
+                'unit' => 'Student Affairs',
                 'designation' => $designation,
             ]);
 

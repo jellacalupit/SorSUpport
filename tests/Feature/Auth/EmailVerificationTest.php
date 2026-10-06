@@ -27,6 +27,10 @@ class EmailVerificationTest extends TestCase
             'must_change_password' => false,
         ]);
 
+        \App\Models\Unit::create(['name' => 'CICT', 'type' => \App\Models\Unit::TYPE_COLLEGE])
+            ->programs()
+            ->create(['name' => 'BSIT', 'year_level' => 4, 'block' => 5]);
+
         $this->actingAs($admin)
             ->post(route('admin.accounts.store'), [
                 'first_name' => 'Jane',
@@ -35,8 +39,8 @@ class EmailVerificationTest extends TestCase
                 'email' => 'janedoe@example.com',
                 'role' => User::ROLE_STUDENT,
                 'student_id' => '12345678',
-                'department' => 'CICT',
-                'course' => 'BSIT',
+                'college' => 'CICT',
+                'program' => 'BSIT',
                 'year_level' => 1,
                 'block' => 1,
             ])
