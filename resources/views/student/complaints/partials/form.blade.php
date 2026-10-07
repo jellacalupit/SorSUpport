@@ -156,7 +156,7 @@
                 <span class="text-sm font-semibold">Declaration <span class="text-destructive" aria-hidden="true">*</span></span>
                 <label class="flex cursor-pointer items-start gap-3 text-sm">
                     <input id="declaration" name="declaration" type="checkbox" value="1" @checked(old('declaration')) class="mt-0.5 h-4 w-4 shrink-0 rounded-[6px] accent-red-800" />
-                    <span class="text-xs leading-relaxed text-muted-foreground">I declare that the information I am submitting is true and correct to the best of my knowledge, and I understand that a false or malicious complaint may be dealt with under the Student Handbook. I consent to the collection and use of this information by Sorsogon State University to act on my concern, in accordance with the Data Privacy Act of 2012.</span>
+                    <span class="text-xs leading-relaxed text-muted-foreground">{{ \App\Models\Setting::declaration() }}</span>
                 </label>
                 <x-input-error :messages="$errors->get('declaration')" />
             </div>

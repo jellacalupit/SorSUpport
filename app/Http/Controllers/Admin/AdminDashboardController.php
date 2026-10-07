@@ -31,6 +31,7 @@ class AdminDashboardController extends Controller
             ->orderByDesc('ticket_count')
             ->get();
         $recentActivity = AuditLog::query()
+            ->forAuditTrail()
             ->with(['performer', 'ticket.complaint.category'])
             ->latest()
             ->limit(5)

@@ -276,14 +276,17 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
             ->name('analytics.index');
 
         Route::get('/audit', function (\Illuminate\Http\Request $request) {
-            $query = \App\Models\AuditLog::query()->with(['performer', 'ticket.complaint'])->latest();
+            $query = \App\Models\AuditLog::query()->forAuditTrail()->with(['performer', 'ticket.complaint.student'])->latest();
 
             if ($request->filled('search')) {
                 $search = trim($request->input('search'));
                 $query->where(function ($audit) use ($search) {
                     $audit->where('action', 'like', '%' . $search . '%')
                         ->orWhere('details', 'like', '%' . $search . '%')
-                        ->orWhereHas('performer', fn ($performer) => $performer->where('name', 'like', '%' . $search . '%'))
+                        // A name search must not find what a student did on a ticket where they hid their identity.
+                        ->orWhere(fn ($named) => $named
+                            ->whereHas('performer', fn ($performer) => $performer->where('name', 'like', '%' . $search . '%'))
+                            ->whereDoesntHave('ticket.complaint', fn ($complaint) => $complaint->where('is_anonymous', true)))
                         ->orWhere('ticket_id', 'like', '%' . $search . '%')
                         ->orWhereHas('ticket.complaint', fn ($complaint) => $complaint->where('reference_number', 'like', '%' . $search . '%'));
                 });
@@ -310,6 +313,27 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
 
             return view('admin.audit', compact('auditLogs', 'actions'));
         })->name('audit');
+
+        Route::put('/settings/declaration', function (\Illuminate\Http\Request $request) {
+            if ($request->boolean('restore_default')) {
+                \App\Models\Setting::write(\App\Models\Setting::DECLARATION, null);
+                \App\Models\AuditLog::activity('declaration_updated', details: 'Restored the default ticket declaration.');
+
+                return redirect()->route('admin.settings', ['settings_tab' => 'declaration'])->with('success', 'The default declaration was restored.');
+            }
+
+            $validated = $request->validate([
+                'declaration' => 'required|string|min:20|max:2000',
+            ], [
+                'declaration.required' => 'The declaration cannot be empty.',
+                'declaration.min' => 'The declaration is too short to be a meaningful statement.',
+            ]);
+
+            \App\Models\Setting::write(\App\Models\Setting::DECLARATION, trim($validated['declaration']));
+            \App\Models\AuditLog::activity('declaration_updated', details: 'Updated the ticket declaration students agree to.');
+
+            return redirect()->route('admin.settings', ['settings_tab' => 'declaration'])->with('success', 'Declaration saved.');
+        })->name('settings.declaration');
 
         Route::get('/settings', function () {
             return view('admin.settings', [

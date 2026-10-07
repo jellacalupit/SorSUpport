@@ -47,6 +47,17 @@ class AuditLog extends Model
     }
 
     /**
+     * Entries shown in the audit trail. Student sign-ins are left out: listed next to a
+     * hidden-identity submission made a minute later, they would give the student away.
+     */
+    public function scopeForAuditTrail($query)
+    {
+        return $query->where(fn ($entries) => $entries
+            ->where('action', '!=', 'user_logged_in')
+            ->orWhereHas('performer', fn ($performer) => $performer->where('role', '!=', User::ROLE_STUDENT)));
+    }
+
+    /**
      * The performer as the signed-in user may see them: the student behind a hidden-identity
      * ticket appears as Anonymous to everyone else.
      */
