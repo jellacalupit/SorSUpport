@@ -48,7 +48,7 @@
                             <span class="truncate" data-volume-category-label>All categories</span>
                             <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                         </summary>
-                        <div class="absolute top-full z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                        <div class="absolute top-full right-0 z-50 mt-1 max-h-72 w-full min-w-56 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                             <button type="button" class="relative flex w-full items-center rounded-sm py-1 pl-2 pr-8 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-category-option="" data-selected="true">
                                 <x-icons.check class="absolute right-2 h-4 w-4" />
                                 All categories
@@ -431,16 +431,15 @@
                 data-volume-chart
                 class="flex min-h-0 flex-col overflow-visible rounded-[20px] border border-border bg-white p-3 shadow-sm"
             >
-                <div class="relative z-40 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
-                    <h3 data-volume-title class="font-display text-sm font-semibold leading-tight text-foreground">Volume by category</h3>
-                    <div class="flex min-w-0 flex-wrap items-center justify-end gap-1.5">
-                        <details x-data="{}" class="group relative w-64 shrink-0" x-on:click.outside="$el.removeAttribute('open')" data-volume-category-wrapper>
-                            <span aria-hidden="true" class="invisible block h-0 whitespace-nowrap">All categories</span>
+                <div class="relative z-40 flex items-center justify-between gap-2">
+                    <h3 data-volume-title class="shrink-0 whitespace-nowrap font-display text-sm font-semibold leading-tight text-foreground">Volume by category</h3>
+                    <div class="flex min-w-0 flex-1 items-center justify-end gap-1.5">
+                        <details x-data="{}" class="group relative min-w-0 max-w-64 flex-1" x-on:click.outside="$el.removeAttribute('open')" data-volume-category-wrapper>
                             <summary class="flex h-8 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-1.5 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden" data-volume-category-summary>
                                 <span class="truncate" data-volume-category-label>All categories</span>
                                 <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                             </summary>
-                            <div class="absolute top-full z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                            <div class="absolute top-full right-0 z-50 mt-1 max-h-72 w-full min-w-56 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                                 <button type="button" class="relative flex w-full items-center rounded-sm py-1 pl-2 pr-8 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-category-option="" data-selected="true">
                                     <x-icons.check class="absolute right-2 h-4 w-4" />
                                     All categories
@@ -448,14 +447,14 @@
                                 @foreach ($volumeChart['categories'] as $category)
                                     <button type="button" class="relative flex w-full items-center rounded-sm py-1 pl-2 pr-8 text-left text-xs leading-snug hover:bg-accent hover:text-accent-foreground" data-category-option="{{ $category['id'] }}">
                                         <x-icons.check class="absolute right-2 h-4 w-4 hidden" />
-                                        <span class="whitespace-nowrap">{{ $category['name'] }}</span>
+                                        <span class="min-w-0 wrap-break-word">{{ $category['name'] }}</span>
                                     </button>
                                 @endforeach
                             </div>
                             <select id="volume-chart-category" data-volume-category class="hidden" aria-hidden="true"></select>
                         </details>
 
-                        <details x-data="{}" class="group relative w-32 shrink-0" x-on:click.outside="$el.removeAttribute('open')" data-volume-month-wrapper>
+                        <details x-data="{}" class="group relative w-28 shrink-0" x-on:click.outside="$el.removeAttribute('open')" data-volume-month-wrapper>
                             <span aria-hidden="true" class="invisible block h-0 whitespace-nowrap">All months</span>
                             <summary class="flex h-8 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-1.5 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden" data-volume-month-summary>
                                 <span class="truncate" data-volume-month-label>All months</span>
@@ -476,7 +475,7 @@
                             <select id="volume-chart-month" data-volume-month class="hidden" aria-hidden="true"></select>
                         </details>
 
-                        <details x-data="{}" class="group relative w-24 shrink-0" x-on:click.outside="$el.removeAttribute('open')" data-volume-year-wrapper>
+                        <details x-data="{}" class="group relative w-20 shrink-0" x-on:click.outside="$el.removeAttribute('open')" data-volume-year-wrapper>
                             <span aria-hidden="true" class="invisible block h-0 whitespace-nowrap">2026</span>
                             <summary class="flex h-8 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-1.5 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden" data-volume-year-summary>
                                 <span class="truncate" data-volume-year-label>{{ (int) $volumeChart['currentYear'] }}</span>
@@ -493,7 +492,7 @@
                             <select id="volume-chart-year" data-volume-year class="hidden" aria-hidden="true"></select>
                         </details>
 
-                        <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
+                        <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="shrink-0 whitespace-nowrap text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
                 </div>
                 <div class="relative z-0 mt-2 h-40 w-full">
@@ -731,7 +730,7 @@
                     const values = monthLabels.map((_, index) => filtered.filter((point) => point.month === index + 1).length);
                     return {
                         type: 'line',
-                        title: `${category.name} trend`,
+                        title: 'Volume over time',
                         labels: monthLabels,
                         tooltipLabels: monthLabels,
                         values,
@@ -745,7 +744,7 @@
 
                 return {
                     type: 'line',
-                    title: `${category.name} trend`,
+                    title: 'Volume over time',
                     labels,
                     tooltipLabels: labels,
                     values,
