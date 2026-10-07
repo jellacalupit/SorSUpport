@@ -434,7 +434,7 @@
                 <div class="relative z-40 flex items-center justify-between gap-2">
                     <h3 data-volume-title class="shrink-0 whitespace-nowrap font-display text-sm font-semibold leading-tight text-foreground">Volume by category</h3>
                     <div class="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-                        <details x-data="{}" class="group relative min-w-0 max-w-64 flex-1" x-on:click.outside="$el.removeAttribute('open')" data-volume-category-wrapper>
+                        <details x-data="{}" class="group relative min-w-0 max-w-80 flex-1" x-on:click.outside="$el.removeAttribute('open')" data-volume-category-wrapper>
                             <summary class="flex h-8 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-1.5 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden" data-volume-category-summary>
                                 <span class="truncate" data-volume-category-label>All categories</span>
                                 <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
@@ -454,7 +454,7 @@
                             <select id="volume-chart-category" data-volume-category class="hidden" aria-hidden="true"></select>
                         </details>
 
-                        <details x-data="{}" class="group relative w-28 shrink-0" x-on:click.outside="$el.removeAttribute('open')" data-volume-month-wrapper>
+                        <details x-data="{}" class="group relative w-32 shrink-0" x-on:click.outside="$el.removeAttribute('open')" data-volume-month-wrapper>
                             <span aria-hidden="true" class="invisible block h-0 whitespace-nowrap">All months</span>
                             <summary class="flex h-8 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-1.5 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden" data-volume-month-summary>
                                 <span class="truncate" data-volume-month-label>All months</span>
