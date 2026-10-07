@@ -7,7 +7,6 @@
                 <button type="button" @click="settingsTab = 'category'" :aria-selected="settingsTab === 'category'" class="inline-flex items-center whitespace-nowrap border-b-2 px-0.5 pb-2 text-[13px] transition-colors sm:px-1 sm:text-sm" :class="settingsTab === 'category' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Category</button>
                 <button type="button" @click="settingsTab = 'escalation'" :aria-selected="settingsTab === 'escalation'" class="inline-flex items-center whitespace-nowrap border-b-2 px-0.5 pb-2 text-[13px] transition-colors sm:px-1 sm:text-sm" :class="settingsTab === 'escalation' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Escalation<span class="hidden min-[400px]:inline">&nbsp;Hierarchy</span></button>
                 <button type="button" @click="settingsTab = 'units'" :aria-selected="settingsTab === 'units'" class="inline-flex items-center whitespace-nowrap border-b-2 px-0.5 pb-2 text-[13px] transition-colors sm:px-1 sm:text-sm" :class="settingsTab === 'units' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Colleges and Offices</button>
-                <button type="button" @click="settingsTab = 'declaration'" :aria-selected="settingsTab === 'declaration'" class="inline-flex items-center whitespace-nowrap border-b-2 px-0.5 pb-2 text-[13px] transition-colors sm:px-1 sm:text-sm" :class="settingsTab === 'declaration' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Declaration</button>
             </div>
             <button type="button" x-bind:class="settingsTab === 'category' ? '' : 'invisible'" x-on:click.prevent.stop="addCategoryOpen = true" class="mb-1 inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-primary px-2.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 sm:h-9 sm:gap-1.5 sm:px-3 sm:text-sm"><x-icons.plus class="h-4 w-4" /><span>Add<span class="hidden sm:inline"> Category</span></span></button>
         </div>
@@ -243,24 +242,7 @@
             </div>
         </div>
 
-        <div x-cloak x-bind:class="settingsTab === 'declaration' ? 'opacity-100' : 'pointer-events-none opacity-0'" class="col-start-1 row-start-1 transition-opacity duration-150 ease-out">
-            <form method="POST" action="{{ route('admin.settings.declaration') }}" class="max-w-3xl rounded-lg border border-border bg-card p-4">
-                @csrf
-                @method('PUT')
-                <h2 class="text-base font-bold text-primary">Ticket declaration</h2>
-                <p class="mt-0.5 text-xs text-muted-foreground">Students must agree to this statement before they can submit a ticket. Write it in the words the SDS Office and the Student Handbook use.</p>
-                <label for="settings-declaration" class="sr-only">Declaration</label>
-                <textarea id="settings-declaration" name="declaration" rows="7" maxlength="2000" class="mt-3 w-full rounded-md border border-input bg-white px-3 py-2 text-sm leading-relaxed text-foreground outline-none focus:ring-1 focus:ring-ring">{{ old('declaration', \App\Models\Setting::declaration()) }}</textarea>
-                @error('declaration')
-                    <p class="mt-1 text-xs font-medium text-destructive">{{ $message }}</p>
-                @enderror
-                <div class="mt-3 flex flex-wrap justify-end gap-2">
-                    <button type="submit" name="restore_default" value="1" class="inline-flex h-9 items-center rounded-md border border-border bg-white px-3 text-xs font-semibold text-foreground hover:bg-muted">Restore Default</button>
-                    <button type="submit" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-xs font-semibold text-primary-foreground hover:bg-primary/90">Save Declaration</button>
-                </div>
-            </form>
-        </div>
-        <div x-data="{ addDepartmentOpen: false, deleteDepartmentOpen: false, deleteDepartmentId: null, deleteDepartmentName: '', departmentEditId: null, departmentType: 'college', departmentName: '', departmentDescription: '', departmentNameError: '', departmentCourses: [], departmentPositions: [], courseDraft: { course: '', year_level: '', block: '', description: '' }, positionDraft: '', courseDraftError: '', positionDraftError: '', openDepartmentModal(type) { this.departmentEditId = null; this.departmentType = type; this.departmentName = ''; this.departmentDescription = ''; this.departmentCourses = []; this.departmentPositions = []; this.addDepartmentOpen = true; this.resetCourseDraft(); this.positionDraft = ''; this.positionDraftError = ''; this.departmentNameError = ''; }, openEditDepartment(department) { this.departmentEditId = department.id; this.departmentType = department.type; this.departmentName = department.name; this.departmentDescription = department.description || ''; this.departmentCourses = (department.courses || []).map(course => ({ course: course.course, year_level: String(course.year_level), block: course.block === null ? '' : String(course.block), description: course.description || '' })); this.departmentPositions = department.positions || []; this.resetCourseDraft(); this.positionDraft = ''; this.positionDraftError = ''; this.departmentNameError = ''; this.addDepartmentOpen = true; }, openDeleteDepartment(department) { this.deleteDepartmentId = department.id; this.deleteDepartmentName = department.name; this.deleteDepartmentOpen = true; }, closeDeleteDepartment() { this.deleteDepartmentId = null; this.deleteDepartmentName = ''; this.deleteDepartmentOpen = false; }, addCourse() { const hasCourse = this.courseDraft.course.trim() !== ''; const hasYear = this.courseDraft.year_level !== ''; if (!hasCourse && !hasYear) { this.courseDraftError = 'Program and year level are required'; return; } if (!hasCourse) { this.courseDraftError = 'Input program name'; return; } if (!hasYear) { this.courseDraftError = 'Input number of year levels'; return; } this.departmentCourses.push({ ...this.courseDraft, course: this.courseDraft.course.trim(), description: (this.courseDraft.description || '').trim(), block: this.courseDraft.block === '' ? null : this.courseDraft.block }); this.courseDraftError = ''; this.resetCourseDraft(); }, addPosition() { const position = this.positionDraft.trim(); if (position === '') { this.positionDraftError = 'Input designation name'; return; } this.departmentPositions.push(position); this.positionDraft = ''; this.positionDraftError = ''; }, resetCourseDraft() { this.courseDraft = { course: '', year_level: '', block: '', description: '' }; this.courseDraftError = ''; }, removeCourse(index) { this.departmentCourses.splice(index, 1); }, removePosition(index) { this.departmentPositions.splice(index, 1); }, saveDepartment(event) { if (this.departmentName.trim() === '') { event.preventDefault(); this.departmentNameError = 'Input a name'; return; } if (this.departmentType === 'college' && this.departmentCourses.length === 0) { event.preventDefault(); this.courseDraftError = 'Add at least one program'; } }, resetDepartmentForm() { this.departmentEditId = null; this.departmentName = ''; this.departmentNameError = ''; this.departmentCourses = []; this.departmentPositions = []; this.resetCourseDraft(); this.positionDraft = ''; this.positionDraftError = ''; this.addDepartmentOpen = false; } }" x-cloak x-bind:class="settingsTab === 'units' ? 'opacity-100' : 'pointer-events-none opacity-0'" class="col-start-1 row-start-1 transition-opacity duration-150 ease-out">
+        <div x-data="{ addDepartmentOpen: false, deleteDepartmentOpen: false, deleteDepartmentId: null, deleteDepartmentName: '', departmentEditId: null, departmentType: 'college', departmentName: '', departmentDescription: '', departmentNameError: '', departmentCourses: [], departmentPositions: [], courseDraft: { course: '', year_level: '', block: '', description: '' }, positionDraft: '', positionDescriptionDraft: '', positionEditingPosition: null, positionEditingIndex: null, courseDraftError: '', positionDraftError: '', openDepartmentModal(type) { this.departmentEditId = null; this.departmentType = type; this.departmentName = ''; this.departmentDescription = ''; this.departmentCourses = []; this.departmentPositions = []; this.addDepartmentOpen = true; this.resetCourseDraft(); this.positionDraft = ''; this.positionDescriptionDraft = ''; this.positionEditingPosition = null; this.positionEditingIndex = null; this.positionDraftError = ''; this.departmentNameError = ''; }, openEditDepartment(department) { this.departmentEditId = department.id; this.departmentType = department.type; this.departmentName = department.name; this.departmentDescription = department.description || ''; this.departmentCourses = (department.courses || []).map(course => ({ course: course.course, year_level: String(course.year_level), block: course.block === null ? '' : String(course.block), description: course.description || '' })); this.departmentPositions = (department.positions || []).map(position => typeof position === 'string' ? { name: position, description: '' } : { name: position.name, description: position.description || '' }); this.resetCourseDraft(); this.positionDraft = ''; this.positionDescriptionDraft = ''; this.positionEditingPosition = null; this.positionEditingIndex = null; this.positionDraftError = ''; this.departmentNameError = ''; this.addDepartmentOpen = true; }, openDeleteDepartment(department) { this.deleteDepartmentId = department.id; this.deleteDepartmentName = department.name; this.deleteDepartmentOpen = true; }, closeDeleteDepartment() { this.deleteDepartmentId = null; this.deleteDepartmentName = ''; this.deleteDepartmentOpen = false; }, addCourse() { const hasCourse = this.courseDraft.course.trim() !== ''; const hasYear = this.courseDraft.year_level !== ''; if (!hasCourse && !hasYear) { this.courseDraftError = 'Program and year level are required'; return; } if (!hasCourse) { this.courseDraftError = 'Input program name'; return; } if (!hasYear) { this.courseDraftError = 'Input number of year levels'; return; } this.departmentCourses.push({ ...this.courseDraft, course: this.courseDraft.course.trim(), description: (this.courseDraft.description || '').trim(), block: this.courseDraft.block === '' ? null : this.courseDraft.block }); this.courseDraftError = ''; this.resetCourseDraft(); }, addPosition() { const name = this.positionDraft.trim(); if (name === '') { this.positionDraftError = 'Input designation name'; return; } const position = { name, description: (this.positionDescriptionDraft || '').trim() }; if (this.positionEditingPosition) { this.departmentPositions.splice(this.positionEditingIndex, 0, position); this.positionEditingPosition = null; this.positionEditingIndex = null; } else { this.departmentPositions.push(position); } this.positionDraft = ''; this.positionDescriptionDraft = ''; this.positionDraftError = ''; }, resetCourseDraft() { this.courseDraft = { course: '', year_level: '', block: '', description: '' }; this.courseDraftError = ''; }, removeCourse(index) { this.departmentCourses.splice(index, 1); }, removePosition(index) { this.departmentPositions.splice(index, 1); }, saveDepartment(event) { if (this.departmentName.trim() === '') { event.preventDefault(); this.departmentNameError = 'Input a name'; return; } if (this.departmentType === 'college' && this.departmentCourses.length === 0) { event.preventDefault(); this.courseDraftError = 'Add at least one program'; return; } if (this.departmentType === 'office' && this.departmentPositions.length === 0) { event.preventDefault(); this.positionDraftError = 'Add at least one designation'; } }, resetDepartmentForm() { this.departmentEditId = null; this.departmentName = ''; this.departmentNameError = ''; this.departmentCourses = []; this.departmentPositions = []; this.resetCourseDraft(); this.positionDraft = ''; this.positionDescriptionDraft = ''; this.positionEditingPosition = null; this.positionEditingIndex = null; this.positionDraftError = ''; this.addDepartmentOpen = false; } }" x-cloak x-bind:class="settingsTab === 'units' ? 'opacity-100' : 'pointer-events-none opacity-0'" class="col-start-1 row-start-1 transition-opacity duration-150 ease-out">
             <div class="grid gap-6">
                 <style>
                     .student-departments table thead th { padding-top: 0.5rem; padding-bottom: 0.5rem; }
@@ -342,66 +324,20 @@
                     </ul>
                 </section>
 
-                <section x-init="departmentPositions = departmentPositions.map(position => typeof position === 'string' ? { name: position, description: '' } : position); positionDescriptionDraft = ''; positionEditingPosition = null; positionEditingIndex = null; addPosition = () => { const name = positionDraft.trim(); if (name === '') { positionDraftError = 'Input designation name'; return; } const position = { name, description: (positionDescriptionDraft || '').trim() }; if (positionEditingPosition) { departmentPositions.splice(positionEditingIndex, 0, position); positionEditingPosition = null; positionEditingIndex = null; } else { departmentPositions.push(position); } positionDraft = ''; positionDescriptionDraft = ''; positionDraftError = ''; }; const originalOpenEditDepartment = openEditDepartment; openEditDepartment = (department) => { if (department.type === 'office') { department.positions = @js($units->where('type', 'office')->mapWithKeys(fn ($item) => [$item->id => $item->designations->map(fn ($position) => ['name' => $position->name, 'description' => $position->description])->values()])->all())[department.id] || []; positionDescriptionDraft = ''; positionEditingPosition = null; positionEditingIndex = null; } originalOpenEditDepartment(department); }" class="recipient-departments">
+                <section class="recipient-departments">
                     <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                         <div class="flex items-start gap-3"><span class="grid h-10 w-10 shrink-0 place-items-center text-primary"><x-icons.users class="h-7 w-7" /></span><div><h2 class="font-display text-lg font-bold text-foreground">Offices</h2><p class="text-xs text-muted-foreground">Configure the offices and service units that recipients belong to.</p></div></div>
                         <button type="button" @click="openDepartmentModal('office')" class="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90"><x-icons.plus class="h-3.5 w-3.5" /> Add office</button>
                     </div>
                     <ul class="grid w-full gap-3 lg:grid-cols-2">
                         @forelse ($units->where('type', 'office') as $department)
-                            <li x-data="{ expanded: false }" @click="if (! $event.target.closest('button, a, [data-unit-details]')) expanded = ! expanded" class="cursor-pointer rounded-lg border border-border bg-card p-4"><div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="text-base font-bold text-primary">{{ $department->name }}</p><p class="mt-0.5 text-xs text-muted-foreground">{{ $department->description ?: 'No description provided.' }}</p></div><div class="flex shrink-0 items-center gap-2"><button type="button" @click="openEditDepartment({ id: {{ $department->id }}, type: @js($department->type), name: @js($department->name), description: @js($department->description), courses: [], positions: @js($department->designations->pluck('name')->values()) })" class="grid h-8 w-8 place-items-center rounded-md bg-primary-soft text-primary transition-colors hover:bg-primary/15" aria-label="Edit department" title="Edit"><x-icons.pencil class="h-3.5 w-3.5" /></button><button type="button" @click="openDeleteDepartment({ id: {{ $department->id }}, name: @js($department->name) })" class="grid h-8 w-8 place-items-center rounded-md bg-primary-soft text-primary transition-colors hover:bg-primary/15" aria-label="Delete department" title="Delete"><x-icons.trash class="h-3.5 w-3.5" /></button><button type="button" @click="expanded = !expanded" class="grid h-8 w-8 place-items-center rounded-md bg-primary-soft text-primary transition-colors hover:bg-primary/15" aria-label="Toggle department details" title="Show details"><x-icons.arrow-down class="h-4 w-4 transition-transform" ::class="expanded ? '' : 'rotate-180'" /></button></div></div><div x-show="expanded" x-collapse data-unit-details class="mt-3 cursor-default overflow-hidden rounded-md border border-border"><table class="w-full text-left"><thead class="bg-primary-soft text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"><tr><th class="px-4 py-2.5">Designations</th></tr></thead><tbody class="divide-y divide-border">@forelse ($department->designations as $position)<tr><td class="px-4 py-2 text-xs font-semibold text-muted-foreground"><span class="mr-2 text-primary">&bull;</span>{{ $position->name }}</td></tr>@empty<tr><td class="px-4 py-3 text-xs text-muted-foreground">No designations configured.</td></tr>@endforelse</tbody></table></div></li>
+                            <li x-data="{ expanded: false }" @click="if (! $event.target.closest('button, a, [data-unit-details]')) expanded = ! expanded" class="cursor-pointer rounded-lg border border-border bg-card p-4"><div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="text-base font-bold text-primary">{{ $department->name }}</p><p class="mt-0.5 text-xs text-muted-foreground">{{ $department->description ?: 'No description provided.' }}</p></div><div class="flex shrink-0 items-center gap-2"><button type="button" @click="openEditDepartment({ id: {{ $department->id }}, type: @js($department->type), name: @js($department->name), description: @js($department->description), courses: [], positions: @js($department->designations->map(fn ($designation) => ['name' => $designation->name, 'description' => $designation->description])->values()) })" class="grid h-8 w-8 place-items-center rounded-md bg-primary-soft text-primary transition-colors hover:bg-primary/15" aria-label="Edit department" title="Edit"><x-icons.pencil class="h-3.5 w-3.5" /></button><button type="button" @click="openDeleteDepartment({ id: {{ $department->id }}, name: @js($department->name) })" class="grid h-8 w-8 place-items-center rounded-md bg-primary-soft text-primary transition-colors hover:bg-primary/15" aria-label="Delete department" title="Delete"><x-icons.trash class="h-3.5 w-3.5" /></button><button type="button" @click="expanded = !expanded" class="grid h-8 w-8 place-items-center rounded-md bg-primary-soft text-primary transition-colors hover:bg-primary/15" aria-label="Toggle department details" title="Show details"><x-icons.arrow-down class="h-4 w-4 transition-transform" ::class="expanded ? '' : 'rotate-180'" /></button></div></div><div x-show="expanded" x-collapse data-unit-details class="mt-3 cursor-default overflow-hidden rounded-md border border-border"><table class="w-full text-left"><thead class="bg-primary-soft text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"><tr><th class="px-4 py-2.5">Designation</th><th class="px-4 py-2.5">Description</th></tr></thead><tbody class="divide-y divide-border">@forelse ($department->designations as $position)<tr><td class="px-4 py-2 text-xs font-bold text-foreground">{{ $position->name }}</td><td class="px-4 py-2 text-xs text-muted-foreground">{{ $position->description ?: 'No designation description provided.' }}</td></tr>@empty<tr><td colspan="2" class="px-4 py-3 text-xs text-muted-foreground">No designations configured.</td></tr>@endforelse</tbody></table></div></li>
                         @empty
                             <li class="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground lg:col-span-2">No offices configured.</li>
                         @endforelse
                     </ul>
                 </section>
             </div>
-
-            <script>
-                document.addEventListener('click', (event) => {
-                    const confirmButton = event.target.closest('[data-designation-confirm]');
-                    if (!confirmButton) return;
-
-                    requestAnimationFrame(() => {
-                        const description = confirmButton.closest('form')?.querySelector('textarea[placeholder="Designation description"]');
-                        if (description) description.value = '';
-                    });
-                });
-
-                document.addEventListener('click', (event) => {
-                    const editButton = event.target.closest('[data-designation-edit]');
-                    if (!editButton) return;
-
-                    const row = editButton.closest('[data-designation-row]');
-                    const savedDescription = row?.querySelector('input[name*="[description]"]')?.value || '';
-                    requestAnimationFrame(() => {
-                        const description = document.querySelector('textarea[placeholder="Designation description"]');
-                        if (description) {
-                            description.value = savedDescription;
-                            description.dispatchEvent(new Event('input', { bubbles: true }));
-                        }
-                    });
-                });
-
-                document.addEventListener('click', (event) => {
-                    const cancelButton = event.target.closest('[data-designation-cancel]');
-                    if (!cancelButton) return;
-
-                    requestAnimationFrame(() => {
-                        const description = document.querySelector('textarea[placeholder="Designation description"]');
-                        if (description) description.value = '';
-                    });
-                });
-
-                document.addEventListener('keydown', (event) => {
-                    if (event.key !== 'Enter' || !event.target.matches('input[placeholder="Designation name"]')) return;
-
-                    requestAnimationFrame(() => {
-                        const description = event.target.closest('form')?.querySelector('textarea[placeholder="Designation description"]');
-                        if (description) description.value = '';
-                    });
-                });
-            </script>
 
             <div x-show="deleteDepartmentOpen" x-cloak x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                 <div @click.outside="closeDeleteDepartment()" class="w-full max-w-md rounded-2xl border border-border bg-white shadow-2xl" role="dialog" aria-modal="true" aria-label="Delete department">
@@ -727,71 +663,5 @@
             </div>
         </div>
     </div>
-    <script>
-        document.addEventListener('alpine:initialized', () => {
-            const departmentSettingsRoot = document.querySelector('[x-data*="addDepartmentOpen"]');
-            if (!departmentSettingsRoot || !window.Alpine) return;
-
-            const state = Alpine.$data(departmentSettingsRoot);
-            const recipientPositionData = @json($units->where('type', 'office')->mapWithKeys(fn ($department) => [$department->id => $department->designations->map(fn ($position) => ['name' => $position->name, 'description' => $position->description])->values()])->all());
-            state.openEditDepartment = function (department) {
-                this.departmentEditId = department.id;
-                this.departmentType = department.type;
-                this.departmentName = department.name;
-                this.departmentDescription = department.description || '';
-                this.departmentCourses = (department.courses || []).map(course => ({ course: course.course, year_level: String(course.year_level), block: course.block === null ? '' : String(course.block), description: course.description || '' }));
-                this.departmentPositions = department.type === 'office' ? (recipientPositionData[department.id] || []) : (department.positions || []);
-                this.resetCourseDraft();
-                this.positionDraft = '';
-                this.positionDescriptionDraft = '';
-                this.positionDraftError = '';
-                this.departmentNameError = '';
-                this.addDepartmentOpen = true;
-            };
-
-            const originalSaveDepartment = state.saveDepartment;
-            state.saveDepartment = function (event) {
-                if (this.departmentName.trim() === '') {
-                    event.preventDefault();
-                    this.departmentNameError = 'Input a name';
-                    return;
-                }
-
-                if (this.departmentType === 'office' && this.departmentPositions.filter(position => (typeof position === 'string' ? position : position.name || '').trim() !== '').length === 0) {
-                    event.preventDefault();
-                    this.positionDraftError = 'Add at least one designation';
-                    return;
-                }
-
-                return originalSaveDepartment.call(this, event);
-            };
-        });
-
-        // Scoped in a block: this script runs again on every in-app visit to the page.
-        {
-        document.querySelectorAll('.recipient-departments table').forEach((table) => {
-            const header = table.querySelector('thead tr');
-            if (header) header.innerHTML = '<th class="px-4 py-2.5">Designation</th><th class="px-4 py-2.5">Description</th>';
-            table.querySelectorAll('tbody tr').forEach((row) => {
-                const cell = row.querySelector('td');
-                if (!cell || row.querySelectorAll('td').length > 1) return;
-                const position = cell.textContent.trim().replace(/^•\s*/, '');
-                cell.outerHTML = `<td class="px-4 py-2 text-xs font-bold text-foreground">${position}</td><td class="px-4 py-2 text-xs text-muted-foreground">No designation description provided.</td>`;
-            });
-        });
-
-        const recipientPositionData = @json($units->where('type', 'office')->values()->map(fn ($department) => $department->designations->map(fn ($position) => ['name' => $position->name, 'description' => $position->description])->values())->values());
-        document.querySelectorAll('.recipient-departments > ul > li').forEach((card, departmentIndex) => {
-            const positions = recipientPositionData[departmentIndex] || [];
-            card.querySelectorAll('tbody tr').forEach((row, positionIndex) => {
-                const descriptionCell = row.querySelectorAll('td')[1];
-                if (descriptionCell && positions[positionIndex]) {
-                    descriptionCell.textContent = positions[positionIndex].description || 'No designation description provided.';
-                }
-            });
-        });
-
-        }
-    </script>
 </div>
 </x-app-layout>

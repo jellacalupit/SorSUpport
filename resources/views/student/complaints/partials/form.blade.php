@@ -156,7 +156,7 @@
                 <span class="text-sm font-semibold">Declaration <span class="text-destructive" aria-hidden="true">*</span></span>
                 <label class="flex cursor-pointer items-start gap-3 text-sm">
                     <input id="declaration" name="declaration" type="checkbox" value="1" @checked(old('declaration')) class="mt-0.5 h-4 w-4 shrink-0 rounded-[6px] accent-red-800" />
-                    <span class="text-xs leading-relaxed text-muted-foreground">{{ \App\Models\Setting::declaration() }}</span>
+                    <span class="text-xs leading-relaxed text-muted-foreground">{{ \App\Models\Complaint::DECLARATION }}</span>
                 </label>
                 <x-input-error :messages="$errors->get('declaration')" />
             </div>

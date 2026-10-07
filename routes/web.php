@@ -314,27 +314,6 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
             return view('admin.audit', compact('auditLogs', 'actions'));
         })->name('audit');
 
-        Route::put('/settings/declaration', function (\Illuminate\Http\Request $request) {
-            if ($request->boolean('restore_default')) {
-                \App\Models\Setting::write(\App\Models\Setting::DECLARATION, null);
-                \App\Models\AuditLog::activity('declaration_updated', details: 'Restored the default ticket declaration.');
-
-                return redirect()->route('admin.settings', ['settings_tab' => 'declaration'])->with('success', 'The default declaration was restored.');
-            }
-
-            $validated = $request->validate([
-                'declaration' => 'required|string|min:20|max:2000',
-            ], [
-                'declaration.required' => 'The declaration cannot be empty.',
-                'declaration.min' => 'The declaration is too short to be a meaningful statement.',
-            ]);
-
-            \App\Models\Setting::write(\App\Models\Setting::DECLARATION, trim($validated['declaration']));
-            \App\Models\AuditLog::activity('declaration_updated', details: 'Updated the ticket declaration students agree to.');
-
-            return redirect()->route('admin.settings', ['settings_tab' => 'declaration'])->with('success', 'Declaration saved.');
-        })->name('settings.declaration');
-
         Route::get('/settings', function () {
             return view('admin.settings', [
                 'categories' => \App\Models\ComplaintCategory::query()

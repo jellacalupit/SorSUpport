@@ -14,6 +14,11 @@ class Complaint extends Model
     // A complaint mirrors the status of its ticket; see Ticket::STATUS_LABELS.
     public const STATUS_SUBMITTED = Ticket::STATUS_SUBMITTED;
 
+    /**
+     * The statement a student must agree to before submitting a ticket.
+     */
+    public const DECLARATION = 'I declare that the information I am submitting is true and correct to the best of my knowledge, and I understand that a false or malicious complaint may be dealt with under the Student Handbook. I consent to the collection and use of this information by Sorsogon State University to act on my concern, in accordance with the Data Privacy Act of 2012.';
+
     protected $fillable = [
         'reference_number',
         'student_id',

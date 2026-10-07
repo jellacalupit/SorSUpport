@@ -7,7 +7,6 @@ use App\Models\Complaint;
 use App\Models\ComplaintCategory;
 use App\Models\EmailNotification;
 use App\Models\Recipient;
-use App\Models\Setting;
 use App\Models\Student;
 use App\Models\Ticket;
 use App\Models\User;
@@ -430,29 +429,19 @@ class TicketEmailContentTest extends TestCase
             ->assertSessionHasErrors(['username' => 'We could not send the reset email right now. Please try again later or visit the SDS Office.']);
     }
 
-    // ------------------------------------------------------------------ declaration setting
+    // ------------------------------------------------------------------ declaration
 
-    public function test_the_admin_can_reword_the_declaration_students_agree_to(): void
+    public function test_students_agree_to_the_fixed_declaration_and_admins_have_nothing_to_configure(): void
     {
-        $this->actingAs($this->student)->get(route('student.complaints.create'))->assertOk()->assertSee(Setting::DEFAULT_DECLARATION);
-
-        $this->actingAs($this->admin)->get(route('admin.settings', ['settings_tab' => 'declaration']))
+        $this->actingAs($this->student)->get(route('student.complaints.create'))
             ->assertOk()
-            ->assertSee('Ticket declaration');
+            ->assertSee(Complaint::DECLARATION);
 
-        $this->actingAs($this->admin)->put(route('admin.settings.declaration'), ['declaration' => 'Too short'])->assertSessionHasErrors('declaration');
-        $this->actingAs($this->student)->put(route('admin.settings.declaration'), ['declaration' => str_repeat('A student may not change this. ', 2)])->assertForbidden();
+        $this->actingAs($this->admin)->get(route('admin.settings'))
+            ->assertOk()
+            ->assertDontSee('Ticket declaration');
 
-        $wording = 'I certify that this report is truthful, in keeping with the SorSU Student Handbook.';
-
-        $this->actingAs($this->admin)->put(route('admin.settings.declaration'), ['declaration' => $wording])->assertSessionHasNoErrors();
-
-        $this->assertSame($wording, Setting::declaration());
-        $this->actingAs($this->student)->get(route('student.complaints.create'))->assertOk()->assertSee($wording)->assertDontSee(Setting::DEFAULT_DECLARATION);
-        $this->assertDatabaseHas('audit_logs', ['action' => 'declaration_updated']);
-
-        $this->actingAs($this->admin)->put(route('admin.settings.declaration'), ['restore_default' => '1'])->assertSessionHasNoErrors();
-        $this->assertSame(Setting::DEFAULT_DECLARATION, Setting::declaration());
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('admin.settings.declaration'));
     }
 
     // ------------------------------------------------------------------ audit trail

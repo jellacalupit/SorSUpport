@@ -79,6 +79,42 @@ window.addEventListener('resize', () => {
 	document.querySelectorAll('[data-keep-in-view]').forEach(keepInView);
 });
 
+// Escape closes whatever is open on top (a modal, a drawer or the mobile menu) the same way its
+// close button, or a click on the dark backdrop, would.
+const overlaySelector = '.fixed.inset-0';
+
+const isShown = (element) => {
+	const style = getComputedStyle(element);
+
+	return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
+};
+
+const zIndexOf = (element) => Number.parseInt(getComputedStyle(element).zIndex, 10) || 0;
+
+window.addEventListener('keydown', (event) => {
+	if (event.key !== 'Escape' || event.defaultPrevented) {
+		return;
+	}
+
+	// Outer overlays only, highest first; among equals, the one added last sits on top.
+	const overlays = [...document.querySelectorAll(overlaySelector)]
+		.filter((overlay) => isShown(overlay) && !overlay.parentElement?.closest(overlaySelector));
+
+	if (overlays.length === 0) {
+		return;
+	}
+
+	const top = overlays.reduce((current, overlay) => (zIndexOf(overlay) >= zIndexOf(current) ? overlay : current));
+	const closeButton = [...top.querySelectorAll('button[aria-label^="Close" i], [data-admin-ticket-close], [data-my-ticket-close], [data-ticket-review-close]')]
+		.find((button) => isShown(button) && !button.disabled);
+
+	if (closeButton) {
+		closeButton.click();
+	} else {
+		top.querySelector('[data-admin-ticket-backdrop], [data-my-ticket-backdrop]')?.click() ?? top.click();
+	}
+}, true);
+
 document.addEventListener('click', (event) => {
 	const trigger = event.target.closest('#bulk-upload-trigger');
 

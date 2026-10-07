@@ -222,4 +222,30 @@ class CategorySettingsTest extends TestCase
             ])
             ->assertSessionHasErrors('category_id');
     }
+
+    public function test_the_unit_edit_form_carries_its_own_edit_logic(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_SDS_ADMIN,
+            'is_active' => true,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+        $office = \App\Models\Unit::create(['type' => \App\Models\Unit::TYPE_OFFICE, 'name' => 'Library']);
+        $office->designations()->create(['name' => 'Campus Librarian', 'description' => 'Manages library services.']);
+
+        $this->actingAs($admin)->get(route('admin.settings', ['settings_tab' => 'units']))
+            ->assertOk()
+            ->assertSee('Manages library services.')
+            ->assertSee('positionEditingPosition: null', false)
+            ->assertDontSee("addEventListener('alpine:initialized'", false);
+
+        $this->actingAs($admin)->put(route('admin.units.update', $office), [
+            'name' => 'Campus Library',
+            'designations' => [['name' => 'Campus Librarian', 'description' => 'Runs the library.']],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('units', ['id' => $office->id, 'name' => 'Campus Library']);
+        $this->assertDatabaseHas('unit_designations', ['unit_id' => $office->id, 'description' => 'Runs the library.']);
+    }
 }
