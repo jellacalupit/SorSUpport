@@ -46,7 +46,8 @@ return [
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
             'encryption' => env('MAIL_ENCRYPTION'),
-            'timeout' => null,
+            // Give up quickly when the mail server cannot be reached, instead of leaving the user waiting.
+            'timeout' => (int) env('MAIL_TIMEOUT', 15),
             'auth_mode' => null,
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],

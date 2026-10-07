@@ -353,6 +353,15 @@ class TicketEmailContentTest extends TestCase
         $this->assertAuthenticatedAs($this->student);
     }
 
+    public function test_forgot_password_explains_when_the_email_cannot_be_sent(): void
+    {
+        \Illuminate\Support\Facades\Password::shouldReceive('sendResetLink')->once()->andThrow(new \RuntimeException('Connection could not be established'));
+
+        $this->post(route('password.email'), ['username' => $this->student->username])
+            ->assertRedirect()
+            ->assertSessionHasErrors(['username' => 'We could not send the reset email right now. Please try again later or visit the SDS Office.']);
+    }
+
     // ------------------------------------------------------------------ declaration setting
 
     public function test_the_admin_can_reword_the_declaration_students_agree_to(): void
