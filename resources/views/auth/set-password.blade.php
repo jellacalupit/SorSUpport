@@ -2,14 +2,8 @@
 
 @section('content')
 @php($isReset = isset($request) && filled($request->route('token')))
-<div class="flex min-h-screen flex-col bg-muted">
-    <header class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 bg-primary px-4 py-4 text-primary-foreground">
-        <span class="w-5"></span>
-        <h1 class="text-center font-display text-sm font-bold sm:text-base">Set Up Password</h1>
-        <span class="w-5"></span>
-    </header>
-
-    <main class="mx-auto w-full max-w-3xl flex-1 px-6 py-8 lg:px-10">
+<div class="grid min-h-screen place-items-center bg-sidebar px-5 py-12">
+    <main class="w-full max-w-md rounded-2xl bg-card p-6 shadow-lg sm:p-8">
         <ol class="grid grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-2">
             <li class="grid justify-items-center gap-1.5">
                 <span class="grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground">✓</span>
@@ -27,16 +21,16 @@
             </li>
         </ol>
 
-        <h2 class="mt-8 font-display text-xl font-bold sm:text-2xl">Create Your Password</h2>
+        <h1 class="mt-6 font-display text-xl font-bold sm:text-2xl">Create Your Password</h1>
         <p class="mt-2 text-xs text-muted-foreground sm:text-sm">Set a secure password to access your SorSUpport account.</p>
 
-        <form id="set-password-form" method="POST" action="{{ $isReset ? route('password.store') : route('password.force.update') }}" class="mt-6 grid gap-5">
+        <form id="set-password-form" method="POST" action="{{ $isReset ? route('password.store') : route('password.force.update') }}" class="mt-5 grid gap-5">
             @csrf
             @if ($isReset)
                 <input type="hidden" name="token" value="{{ $request->route('token') }}">
                 <input type="hidden" name="email" value="{{ old('email', $request->email) }}">
             @endif
-            <div class="grid gap-5 rounded-2xl bg-card p-6 shadow-sm sm:p-8 lg:p-10">
+            <div class="grid gap-5">
                 <div class="grid gap-2">
                     <label for="new-password" class="text-xs font-semibold sm:text-sm">New Password</label>
                     <div class="relative">
@@ -68,6 +62,18 @@
 
             <button type="submit" class="h-12 w-full rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:text-base">Save Password</button>
         </form>
+
+        {{-- A password reset is done signed out; a first-time password is set while signed in, so going back signs out. --}}
+        @if ($isReset)
+            <p class="mt-4 text-center text-xs text-muted-foreground">
+                <a href="{{ route('login') }}" class="font-semibold text-primary underline">Back to login</a>
+            </p>
+        @else
+            <form method="POST" action="{{ route('logout') }}" class="mt-4 text-center text-xs text-muted-foreground">
+                @csrf
+                <button type="submit" class="font-semibold text-primary underline">Back to login</button>
+            </form>
+        @endif
     </main>
 </div>
 

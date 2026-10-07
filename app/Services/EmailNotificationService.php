@@ -111,13 +111,8 @@ class EmailNotificationService
             ? 'the student'
             : $notification->recipient_email;
 
-        $details = sprintf(
-            'Email sent to %s. Subject: "%s". Message: %s Notification type: %s.',
-            $recipient,
-            $subject,
-            $body,
-            $notification->type
-        );
+        // Who it went to and what it was about; the full wording is in the email itself.
+        $details = sprintf('Email sent to %s: "%s".', $recipient, $subject);
 
         AuditLog::create([
             'ticket_id' => $notification->ticket_id,

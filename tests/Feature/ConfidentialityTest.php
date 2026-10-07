@@ -244,7 +244,7 @@ class ConfidentialityTest extends TestCase
         $details = AuditLog::query()->where('ticket_id', $ticket->id)->pluck('details')->implode(' ');
         $this->assertStringNotContainsString($this->student->email, $details);
         $this->assertStringNotContainsString('Quixote', $details);
-        $this->assertStringContainsString('Email sent to the student.', $details);
+        $this->assertStringContainsString('Email sent to the student: "', $details);
 
         // The student's own actions are attributed to "Anonymous" for everyone else.
         $log = AuditLog::query()->where('ticket_id', $ticket->id)->where('action', 'ticket_withdrawn')->firstOrFail();

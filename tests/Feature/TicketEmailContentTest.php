@@ -276,8 +276,12 @@ class TicketEmailContentTest extends TestCase
         $this->assertSame(1, app(EmailNotificationService::class)->sendPendingNotifications());
         $this->assertSame(EmailNotification::STATUS_SENT, $notification->fresh()->status);
 
+        // The audit entry says who it went to and the subject, nothing more.
         $log = AuditLog::query()->where('ticket_id', $ticket->id)->where('action', 'email_notification_sent')->firstOrFail();
-        $this->assertStringContainsString("Ticket {$ticket->complaint->reference_number} was assigned to you", $log->details);
+        $this->assertSame(
+            sprintf('Email sent to %s: "Ticket %s was assigned to you".', $this->handler->email, $ticket->complaint->reference_number),
+            $log->details
+        );
 
         // Nothing is sent twice.
         $this->assertSame(0, app(EmailNotificationService::class)->sendPendingNotifications());
@@ -351,6 +355,42 @@ class TicketEmailContentTest extends TestCase
 
         $this->post(route('login'), ['username' => $this->student->username, 'password' => 'BrandNew@2026']);
         $this->assertAuthenticatedAs($this->student);
+    }
+
+    public function test_the_create_password_page_is_a_card_with_a_way_back_to_login(): void
+    {
+        // Reached from a reset link, signed out: a plain link back.
+        $this->get(route('password.reset', ['token' => 'any-token', 'email' => $this->student->email]))
+            ->assertOk()
+            ->assertSee('Create Your Password')
+            ->assertSee('max-w-md', false)
+            ->assertSee('Back to login')
+            ->assertSee('href="' . route('login') . '"', false);
+
+        // Reached on first login, signed in: going back signs the user out.
+        $this->student->forceFill(['must_change_password' => true])->save();
+
+        $this->actingAs($this->student)->get(route('password.force'))
+            ->assertOk()
+            ->assertSee('Back to login')
+            ->assertSee('action="' . route('logout') . '"', false);
+
+        $this->actingAs($this->student)->post(route('logout'))->assertRedirect(route('login'));
+        $this->assertGuest();
+    }
+
+    public function test_old_email_audit_entries_are_shortened(): void
+    {
+        $log = AuditLog::create([
+            'ticket_id' => null,
+            'performed_by' => null,
+            'action' => 'email_notification_sent',
+            'details' => 'Email sent to rey@sorsu.test. Subject: "Ticket assigned". Message: A new ticket has been assigned to you for #4. Notification type: recipient_assignment.',
+        ]);
+
+        (require database_path('migrations/2026_10_09_100000_shorten_email_audit_entries.php'))->up();
+
+        $this->assertSame('Email sent to rey@sorsu.test: "Ticket assigned".', $log->fresh()->details);
     }
 
     public function test_forgot_password_explains_when_the_email_cannot_be_sent(): void

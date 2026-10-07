@@ -29,12 +29,7 @@ class AccountUpdateNotification extends Notification implements ShouldQueue
             'ticket_id' => null,
             'performed_by' => null,
             'action' => 'email_notification_sent',
-            'details' => sprintf(
-                'Email sent to %s. Subject: "%s". Message: %s Notification type: account_update.',
-                $notifiable->email,
-                $this->subject,
-                $this->message
-            ),
+            'details' => sprintf('Email sent to %s: "%s".', $notifiable->email, $this->subject),
         ]);
 
         return (new MailMessage)

@@ -20,10 +20,7 @@ class VerifyEmailNotification extends BaseVerifyEmail implements ShouldQueue
             'ticket_id' => null,
             'performed_by' => null,
             'action' => 'email_notification_sent',
-            'details' => sprintf(
-                'Email sent to %s. Subject: "Verify Your SorSUpport Email Address". Message: A verification link was sent. Notification type: verification.',
-                $notifiable->email
-            ),
+            'details' => sprintf('Email sent to %s: "Verify Your SorSUpport Email Address".', $notifiable->email),
         ]);
 
         return (new MailMessage)

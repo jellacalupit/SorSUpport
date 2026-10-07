@@ -22,10 +22,7 @@ class ResetPasswordNotification extends BaseResetPassword
             'ticket_id' => null,
             'performed_by' => null,
             'action' => 'email_notification_sent',
-            'details' => sprintf(
-                'Email sent to %s. Subject: "Reset Your SorSUpport Password". Message: A password reset link was sent. Notification type: password_reset.',
-                $notifiable->email
-            ),
+            'details' => sprintf('Email sent to %s: "Reset Your SorSUpport Password".', $notifiable->email),
         ]);
 
         return (new MailMessage)
