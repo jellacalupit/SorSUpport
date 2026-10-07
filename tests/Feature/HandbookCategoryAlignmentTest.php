@@ -94,6 +94,30 @@ class HandbookCategoryAlignmentTest extends TestCase
         $this->assertDatabaseHas('complaint_categories', ['id' => $specific->id]);
     }
 
+    public function test_every_category_gets_an_escalation_path_and_an_audit_entry(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_SDS_ADMIN, 'username' => '230515']);
+        $chair = $this->staff('210751', 'CICT', 'BSCS PC');
+        $dean = $this->staff('200926', 'CICT', 'Dean');
+        $director = $this->staff('200043', 'Office of the Campus Director', 'Campus Director');
+        $grades = $this->category('Grades and Examinations');
+        $fees = $this->category('Fees and Payments');
+
+        (require database_path('migrations/2026_10_10_400000_add_escalation_paths_to_categories.php'))->up();
+
+        $this->assertSame(
+            [[1, $chair->id], [2, $dean->id], [3, $director->id]],
+            $grades->escalationHierarchies()->where('path_name', 'CICT')->get()->map(fn ($step) => [(int) $step->level, (int) $step->recipient_id])->all()
+        );
+        $this->assertSame([$director->id], $fees->escalationHierarchies()->pluck('recipient_id')->map(fn ($id) => (int) $id)->all());
+        $this->assertDatabaseHas('audit_logs', [
+            'performed_by' => $admin->id,
+            'action' => 'escalation_hierarchy_updated',
+            'details' => 'Updated the escalation hierarchy of "Fees and Payments".',
+        ]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'category_deleted', 'details' => 'Deleted complaint category "Academic Concerns".']);
+    }
+
     public function test_missing_categories_and_staff_are_skipped(): void
     {
         $library = $this->category('Library Services');
