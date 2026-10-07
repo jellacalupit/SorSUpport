@@ -22,6 +22,20 @@ Schedule::command('notifications:send')->everyMinute()->withoutOverlapping();
 // tell at once whether email will go out.
 Artisan::command('mail:check', function () {
     try {
+        if (config('mail.default') === 'brevo') {
+            $response = \Illuminate\Support\Facades\Http::timeout(20)
+                ->withHeaders(['api-key' => (string) config('services.brevo.key'), 'accept' => 'application/json'])
+                ->get('https://api.brevo.com/v3/account');
+
+            if ($response->failed()) {
+                throw new \RuntimeException('Brevo refused the request: ' . ($response->json('message') ?? $response->status()));
+            }
+
+            $this->info('MAIL CHECK: Brevo accepted the API key.');
+
+            return 0;
+        }
+
         $transport = \Illuminate\Support\Facades\Mail::mailer()->getSymfonyTransport();
 
         if (method_exists($transport, 'start')) {
