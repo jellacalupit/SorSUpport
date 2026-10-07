@@ -138,18 +138,38 @@ class HandbookCategoryAlignmentTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'category_deleted', 'details' => 'Deleted complaint category "Gender and Discrimination Concerns".']);
     }
 
-    public function test_saving_an_escalation_path_also_suggests_its_staff(): void
+    public function test_a_level_holds_several_people_from_the_category_only(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_SDS_ADMIN, 'is_active' => true, 'email_verified_at' => now(), 'must_change_password' => false]);
-        $director = $this->staff('200043', 'Office of the Campus Director', 'Campus Director');
-        $director->user->update(['is_active' => true, 'email_verified_at' => null]);
-        $library = $this->category('Library Services');
+        $first = $this->staff('210751', 'CICT', 'BSCS PC');
+        $second = $this->staff('220384', 'CICT', 'BSIS PC');
+        $dean = $this->staff('200926', 'CICT', 'Dean');
+        $outsider = $this->staff('220687', 'Library', 'Campus Librarian');
+        foreach ([$first, $second, $dean, $outsider] as $staff) {
+            // Active is enough; the email does not have to be verified yet.
+            $staff->user->update(['is_active' => true, 'email_verified_at' => null]);
+        }
+        $grades = $this->category('Grades and Examinations');
+        $grades->suggestedRecipients()->attach([$first->id, $second->id, $dean->id]);
 
         $this->actingAs($admin)
-            ->put(route('admin.categories.escalation.update', $library), ['paths' => [['name' => 'Campus Director', 'recipient_ids' => [$director->id]]]])
+            ->put(route('admin.categories.escalation.update', $grades), ['paths' => [['name' => 'CICT', 'levels' => [[$first->id, $second->id], [$dean->id]]]]])
             ->assertSessionHasNoErrors();
 
-        $this->assertSame([$director->id], $library->suggestedRecipients()->pluck('recipients.id')->map(fn ($id) => (int) $id)->all());
+        $this->assertSame(
+            [[1, $first->id], [1, $second->id], [2, $dean->id]],
+            $grades->escalationHierarchies()->orderBy('level')->orderBy('id')->get()->map(fn ($step) => [(int) $step->level, (int) $step->recipient_id])->all()
+        );
+
+        // Someone outside the category cannot be added.
+        $this->actingAs($admin)
+            ->put(route('admin.categories.escalation.update', $grades), ['paths' => [['name' => 'CICT', 'levels' => [[$outsider->id]]]]])
+            ->assertSessionHasErrors('paths');
+        $this->assertSame(3, $grades->escalationHierarchies()->count());
+
+        $this->actingAs($admin)->get(route('admin.settings', ['settings_tab' => 'escalation']))
+            ->assertOk()
+            ->assertSee('[levels][${levelIndex}][]', false);
     }
 
     public function test_missing_categories_and_staff_are_skipped(): void

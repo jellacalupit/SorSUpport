@@ -96,41 +96,70 @@ class ComplaintCategoryController extends Controller
         $validated = $request->validate([
             'paths' => 'nullable|array',
             'paths.*.name' => 'nullable|string|max:100',
+            // Each level lists one or more people.
+            'paths.*.levels' => 'nullable|array',
+            'paths.*.levels.*' => 'nullable|array',
+            'paths.*.levels.*.*' => 'integer|exists:recipients,id',
+            // One person per level, in order.
             'paths.*.recipient_ids' => 'nullable|array',
             'paths.*.recipient_ids.*' => 'integer|exists:recipients,id',
         ]);
 
         $paths = collect($validated['paths'] ?? [])
-            ->map(fn (array $path): array => [
-                'name' => trim((string) ($path['name'] ?? '')),
-                'recipient_ids' => array_values(array_unique(array_map('intval', $path['recipient_ids'] ?? []))),
-            ])
-            ->filter(fn (array $path): bool => $path['recipient_ids'] !== [])
+            ->map(function (array $path): array {
+                $levels = array_key_exists('levels', $path)
+                    ? array_values($path['levels'] ?? [])
+                    : array_map(fn ($id) => [$id], $path['recipient_ids'] ?? []);
+                $seen = [];
+                $levels = array_map(function ($level) use (&$seen): array {
+                    // A person sits on one level of a path only.
+                    $ids = array_values(array_diff(array_unique(array_map('intval', (array) $level)), $seen));
+                    $seen = [...$seen, ...$ids];
+
+                    return $ids;
+                }, $levels);
+
+                return [
+                    'name' => trim((string) ($path['name'] ?? '')),
+                    'levels' => array_values(array_filter($levels, fn (array $level): bool => $level !== [])),
+                ];
+            })
+            ->filter(fn (array $path): bool => $path['levels'] !== [])
             ->values();
 
-        $recipientIds = $paths->flatMap(fn (array $path): array => $path['recipient_ids'])->unique();
+        $recipientIds = $paths->flatMap(fn (array $path): array => array_merge(...$path['levels']))->unique();
 
         if ($recipientIds->isNotEmpty() && Recipient::query()->active()->whereIn('id', $recipientIds)->count() !== $recipientIds->count()) {
             throw ValidationException::withMessages(['paths' => 'Only active recipients can be placed in an escalation path.']);
         }
 
-        DB::transaction(function () use ($category, $paths): void {
+        $categoryRecipientIds = $category->suggestedRecipients()->pluck('recipients.id')
+            ->merge($category->escalationHierarchies()->pluck('recipient_id'))
+            ->map(fn ($id) => (int) $id);
+
+        if ($recipientIds->diff($categoryRecipientIds)->isNotEmpty()) {
+            throw ValidationException::withMessages(['paths' => 'Only the recipients of this category can be placed in its escalation paths.']);
+        }
+
+        DB::transaction(function () use ($category, $paths, $recipientIds): void {
             $category->escalationHierarchies()->delete();
 
             foreach ($paths as $pathIndex => $path) {
-                foreach ($path['recipient_ids'] as $levelIndex => $recipientId) {
-                    EscalationHierarchy::create([
-                        'complaint_category_id' => $category->id,
-                        'path_number' => $pathIndex + 1,
-                        'path_name' => $path['name'] !== '' ? $path['name'] : null,
-                        'level' => $levelIndex + 1,
-                        'recipient_id' => $recipientId,
-                    ]);
+                foreach ($path['levels'] as $levelIndex => $levelRecipientIds) {
+                    foreach ($levelRecipientIds as $recipientId) {
+                        EscalationHierarchy::create([
+                            'complaint_category_id' => $category->id,
+                            'path_number' => $pathIndex + 1,
+                            'path_name' => $path['name'] !== '' ? $path['name'] : null,
+                            'level' => $levelIndex + 1,
+                            'recipient_id' => $recipientId,
+                        ]);
+                    }
                 }
             }
 
             // Everyone a ticket can be escalated to is also listed as a suggested recipient.
-            $category->suggestedRecipients()->syncWithoutDetaching($paths->flatMap(fn (array $path): array => $path['recipient_ids'])->unique()->all());
+            $category->suggestedRecipients()->syncWithoutDetaching($recipientIds->all());
         });
 
         AuditLog::activity('escalation_hierarchy_updated', details: sprintf('Updated the escalation hierarchy of "%s".', $category->name));

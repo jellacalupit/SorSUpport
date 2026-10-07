@@ -82,13 +82,18 @@
             $escalationCategories = $categories->map(fn ($category) => [
                 'id' => $category->id,
                 'name' => $category->name,
+                // Only the category's own recipients can be placed in its escalation paths.
+                'recipientIds' => $category->suggestedRecipients->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
                 'paths' => $category->escalationHierarchies
                     ->groupBy('path_number')
                     ->sortKeys()
                     ->values()
                     ->map(fn ($entries) => [
                         'name' => (string) ($entries->first()->path_name ?? ''),
-                        'steps' => $entries->sortBy('level')->pluck('recipient_id')->map(fn ($id) => (string) $id)->values()->all(),
+                        // Each level can hold several people, e.g. every Program Chair of a college.
+                        'levels' => $entries->groupBy('level')->sortKeys()->values()
+                            ->map(fn ($level) => $level->pluck('recipient_id')->map(fn ($id) => (string) $id)->values()->all())
+                            ->all(),
                     ])
                     ->all(),
             ])->values();
@@ -111,9 +116,24 @@
                 return this.categories.find((item) => item.id === this.selectedId) ?? null;
             },
             load() {
-                this.paths = (this.category?.paths ?? []).map((path) => ({ name: path.name, steps: [...path.steps] }));
+                this.paths = (this.category?.paths ?? []).map((path) => ({ name: path.name, levels: path.levels.map((level) => [...level]) }));
                 this.dirty = false;
             },
+            get options() {
+                const allowed = new Set([...(this.category?.recipientIds ?? []), ...this.paths.flatMap((path) => path.levels.flat())]);
+                return this.recipients.filter((recipient) => allowed.has(recipient.id));
+            },
+            label(id) {
+                return this.recipients.find((recipient) => recipient.id === id)?.label ?? 'Recipient';
+            },
+            available(path) {
+                const used = path.levels.flat();
+                return this.options.filter((recipient) => !used.includes(recipient.id));
+            },
+            addPerson(level, id) {
+                if (id && !level.includes(id)) { level.push(id); this.dirty = true; }
+            },
+            removePerson(level, index) { level.splice(index, 1); this.dirty = true; },
             select(id) {
                 id = Number(id);
                 if (id === this.selectedId) return;
@@ -125,26 +145,26 @@
                 this.load();
             },
             summary(category) {
-                const paths = category.paths.filter((path) => path.steps.length);
+                const paths = category.paths.filter((path) => path.levels.some((level) => level.length));
                 if (!paths.length) return 'Not set';
-                const levels = paths.reduce((total, path) => total + path.steps.length, 0);
+                const levels = paths.reduce((total, path) => total + path.levels.filter((level) => level.length).length, 0);
                 return `${paths.length} path${paths.length === 1 ? '' : 's'} · ${levels} level${levels === 1 ? '' : 's'}`;
             },
-            addPath() { this.paths.push({ name: '', steps: [''] }); this.dirty = true; },
+            addPath() { this.paths.push({ name: '', levels: [[]] }); this.dirty = true; },
             removePath(index) { this.paths.splice(index, 1); this.dirty = true; },
-            addStep(path) { path.steps.push(''); this.dirty = true; },
-            removeStep(path, index) { path.steps.splice(index, 1); this.dirty = true; },
-            moveStep(path, index, offset) {
+            addLevel(path) { path.levels.push([]); this.dirty = true; },
+            removeLevel(path, index) { path.levels.splice(index, 1); this.dirty = true; },
+            moveLevel(path, index, offset) {
                 const target = index + offset;
-                if (target < 0 || target >= path.steps.length) return;
-                const [moved] = path.steps.splice(index, 1);
-                path.steps.splice(target, 0, moved);
+                if (target < 0 || target >= path.levels.length) return;
+                const [moved] = path.levels.splice(index, 1);
+                path.levels.splice(target, 0, moved);
                 this.dirty = true;
             },
         }" x-bind:class="settingsTab === 'escalation' ? 'opacity-100' : 'pointer-events-none opacity-0'" class="col-start-1 row-start-1 transition-opacity duration-150 ease-out">
             <div class="mb-3 rounded-xl border border-primary/15 bg-primary-soft/40 px-4 py-3 text-xs leading-relaxed text-foreground">
                 <p class="font-semibold text-primary">How escalation works</p>
-                <p class="mt-0.5 text-muted-foreground">When you tap <span class="font-semibold text-foreground">Escalate</span> on a ticket, only the people listed here for that ticket's category can be chosen. A <span class="font-semibold text-foreground">path</span> is one route a ticket can go up through, from Level 1 to the last level. Add another path when the same category can be escalated through a different office.</p>
+                <p class="mt-0.5 text-muted-foreground">When you tap <span class="font-semibold text-foreground">Escalate</span> on a ticket, only the people listed here for that ticket's category can be chosen. A <span class="font-semibold text-foreground">path</span> is one route a ticket can go up through, from Level 1 to the last level, and a level can hold several people, such as every Program Chair of a college. Only the category's suggested recipients can be added. Add another path when the same category can be escalated through a different office.</p>
             </div>
 
             <template x-if="categories.length === 0">
@@ -205,28 +225,40 @@
                                 </div>
 
                                 <ol class="grid gap-2 p-3">
-                                    <template x-for="(recipientId, stepIndex) in path.steps" :key="stepIndex">
-                                        <li class="relative grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-2">
-                                            <span x-show="stepIndex < path.steps.length - 1" class="absolute top-8 -bottom-2 left-4 w-px bg-primary/25" aria-hidden="true"></span>
-                                            <span class="relative grid h-8 w-8 place-items-center rounded-full bg-primary-soft text-xs font-bold text-primary" :title="`Level ${stepIndex + 1}`" x-text="stepIndex + 1"></span>
-                                            <select :name="`paths[${pathIndex}][recipient_ids][]`" x-model="path.steps[stepIndex]" x-on:change="dirty = true" required :aria-label="`Level ${stepIndex + 1} recipient`" class="h-9 w-full min-w-0 rounded-md border border-input bg-white px-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring">
-                                                <option value="">Select recipient</option>
-                                                <template x-for="recipient in recipients" :key="recipient.id">
-                                                    <option :value="recipient.id" :selected="recipient.id === path.steps[stepIndex]" :disabled="path.steps.includes(recipient.id) && recipient.id !== path.steps[stepIndex]" x-text="recipient.label"></option>
-                                                </template>
-                                            </select>
+                                    <template x-for="(level, levelIndex) in path.levels" :key="levelIndex">
+                                        <li class="relative grid grid-cols-[2rem_minmax(0,1fr)_auto] items-start gap-2">
+                                            <span x-show="levelIndex < path.levels.length - 1" class="absolute top-8 -bottom-2 left-4 w-px bg-primary/25" aria-hidden="true"></span>
+                                            <span class="relative grid h-8 w-8 place-items-center rounded-full bg-primary-soft text-xs font-bold text-primary" :title="`Level ${levelIndex + 1}`" x-text="levelIndex + 1"></span>
+                                            <div class="min-w-0 rounded-md border border-input bg-white p-1.5">
+                                                <div class="flex flex-wrap gap-1.5">
+                                                    <template x-for="(recipientId, personIndex) in level" :key="recipientId">
+                                                        <span class="inline-flex max-w-full items-center gap-1 rounded-full border border-primary/15 bg-primary-soft py-0.5 pr-1 pl-2.5 text-[11px] font-semibold text-primary">
+                                                            <input type="hidden" :name="`paths[${pathIndex}][levels][${levelIndex}][]`" :value="recipientId">
+                                                            <span class="truncate" x-text="label(recipientId)"></span>
+                                                            <button type="button" x-on:click="removePerson(level, personIndex)" class="grid h-4 w-4 shrink-0 place-items-center rounded-full hover:bg-primary/15" :aria-label="`Remove ${label(recipientId)}`"><x-icons.x class="h-3 w-3" /></button>
+                                                        </span>
+                                                    </template>
+                                                </div>
+                                                <select x-on:change="addPerson(level, $event.target.value); $event.target.value = ''" :aria-label="`Add a person to level ${levelIndex + 1}`" class="mt-1 h-8 w-full min-w-0 rounded-md border-0 bg-transparent px-1 text-xs text-muted-foreground outline-none focus:ring-1 focus:ring-ring" :class="level.length ? '' : 'mt-0'">
+                                                    <option value="" x-text="available(path).length ? (level.length ? '+ Add another person to this level' : '+ Add a person to this level') : 'Everyone in this category is already in this path'"></option>
+                                                    <template x-for="recipient in available(path)" :key="recipient.id">
+                                                        <option :value="recipient.id" x-text="recipient.label"></option>
+                                                    </template>
+                                                </select>
+                                            </div>
                                             <span class="flex shrink-0 items-center">
-                                                <button type="button" x-on:click="moveStep(path, stepIndex, -1)" :disabled="stepIndex === 0" class="grid h-8 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary disabled:opacity-30" aria-label="Move level up" title="Move up"><x-icons.arrow-down class="h-4 w-4" /></button>
-                                                <button type="button" x-on:click="moveStep(path, stepIndex, 1)" :disabled="stepIndex === path.steps.length - 1" class="grid h-8 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary disabled:opacity-30" aria-label="Move level down" title="Move down"><x-icons.arrow-down class="h-4 w-4 rotate-180" /></button>
-                                                <button type="button" x-on:click="removeStep(path, stepIndex)" class="grid h-8 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive" aria-label="Remove level" title="Remove level"><x-icons.x class="h-4 w-4" /></button>
+                                                <button type="button" x-on:click="moveLevel(path, levelIndex, -1)" :disabled="levelIndex === 0" class="grid h-8 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary disabled:opacity-30" aria-label="Move level up" title="Move up"><x-icons.arrow-down class="h-4 w-4" /></button>
+                                                <button type="button" x-on:click="moveLevel(path, levelIndex, 1)" :disabled="levelIndex === path.levels.length - 1" class="grid h-8 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary disabled:opacity-30" aria-label="Move level down" title="Move down"><x-icons.arrow-down class="h-4 w-4 rotate-180" /></button>
+                                                <button type="button" x-on:click="removeLevel(path, levelIndex)" class="grid h-8 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive" aria-label="Remove level" title="Remove level"><x-icons.x class="h-4 w-4" /></button>
                                             </span>
                                         </li>
                                     </template>
-                                    <li x-show="path.steps.length === 0" class="text-xs text-muted-foreground">This path has no levels, so it will not be saved.</li>
+                                    <li x-show="path.levels.length === 0" class="text-xs text-muted-foreground">This path has no levels, so it will not be saved.</li>
+                                    <li x-show="options.length === 0" class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">This category has no suggested recipients yet. Add them in the Category tab first.</li>
                                 </ol>
 
                                 <div class="px-3 pb-3">
-                                    <button type="button" x-on:click="addStep(path)" class="inline-flex h-8 items-center gap-1.5 rounded-md border border-dashed border-primary/50 px-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary-soft"><x-icons.plus class="h-3.5 w-3.5" /> <span x-text="`Add level ${path.steps.length + 1}`"></span></button>
+                                    <button type="button" x-on:click="addLevel(path)" class="inline-flex h-8 items-center gap-1.5 rounded-md border border-dashed border-primary/50 px-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary-soft"><x-icons.plus class="h-3.5 w-3.5" /> <span x-text="`Add level ${path.levels.length + 1}`"></span></button>
                                 </div>
                             </section>
                         </template>
