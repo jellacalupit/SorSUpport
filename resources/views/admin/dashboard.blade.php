@@ -102,10 +102,11 @@
                     <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="hidden shrink-0 text-xs font-medium text-primary hover:underline lg:inline">View All</a>
                 </div>
             </div>
-            {{-- The script sets the height: taller on phones, where the bars run sideways so the category names stay readable. --}}
-            <div data-volume-canvas-box class="relative z-0 mt-2 h-64 w-full">
+            {{-- Each bar has its own colour; the category names are listed below the chart. --}}
+            <div data-volume-canvas-box class="relative z-0 mt-2 h-56 w-full">
                 <canvas class="absolute inset-0" data-volume-canvas aria-label="Complaint volume chart"></canvas>
             </div>
+            <ul data-volume-legend class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-foreground sm:grid-cols-3" aria-label="Categories"></ul>
         </div>
 
         <!-- Recent tickets -->
@@ -419,7 +420,7 @@
             </section>
         </div>
 
-        <div class="grid w-[360px] flex-1 grid-rows-[300px_380px] gap-2 self-stretch overflow-visible pt-0">
+        <div class="grid w-[360px] flex-1 grid-rows-[auto_380px] gap-2 self-stretch overflow-visible pt-0">
             @php
                 $monthOptions = [
                     1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'May', 6 => 'Jun',
@@ -495,9 +496,10 @@
                         <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
                 </div>
-                <div class="relative z-0 mt-2 min-h-[140px] w-full flex-1">
+                <div class="relative z-0 mt-2 h-40 w-full">
                     <canvas class="absolute inset-0" data-volume-canvas aria-label="Complaint volume chart"></canvas>
                 </div>
+                <ul data-volume-legend class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-foreground" aria-label="Categories"></ul>
             </div>
             <div class="grid min-h-95 grid-cols-2 gap-2">
                 <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-[20px] border border-border bg-white p-2 shadow-sm">
@@ -635,16 +637,6 @@
             const categories = payload.categories || [];
             const points = payload.points || [];
             const canvas = root.querySelector('[data-volume-canvas]');
-            const canvasBox = root.querySelector('[data-volume-canvas-box]') ?? canvas.parentElement;
-            // In the phone layout the category bars run sideways so the names fit beside them.
-            const canRunSideways = canvasBox.hasAttribute('data-volume-canvas-box');
-            const isNarrow = () => canRunSideways && canvasBox.clientWidth < 520;
-            // Bars run sideways on phones, and also whenever there are too many categories for
-            // each to get a readable column (under about 90px), so the names never collide.
-            const runsSideways = (labelCount) => canRunSideways
-                && (isNarrow() || canvasBox.clientWidth / Math.max(1, labelCount) < 90);
-            let wasSideways = false;
-            let lastBarCount = null;
             const titleEl = root.querySelector('[data-volume-title]');
             
             // Track selected values
@@ -657,7 +649,10 @@
             const yearHiddenSelect = root.querySelector('[data-volume-year]');
             
             const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const barColors = ['#7a1d2a', '#c4785a', '#2d7a74', '#6b7a3a', '#6b5a8a', '#9a3a42'];
+            const barColors = ['#7a1d2a', '#c4785a', '#2d7a74', '#6b7a3a', '#6b5a8a', '#b8862b', '#3a5f8a', '#9a3a42', '#4f8a5b', '#8a4f7d', '#5a6470', '#c25b3f', '#2f6f8f', '#7d6b2a', '#a0526b', '#3d7d6a'];
+            // Past the palette, spread further colours evenly round the colour wheel.
+            const colorFor = (index) => barColors[index] ?? `hsl(${Math.round((index * 137.5) % 360)} 45% 42%)`;
+            const legendEl = root.querySelector('[data-volume-legend]');
             const lineColor = '#7a1d2a';
             const muted = '#9ca3af';
             const fontSans = "'Source Sans 3', ui-sans-serif, system-ui, sans-serif";
@@ -728,7 +723,7 @@
                         labels: categories.map((item) => item.name),
                         tooltipLabels: categories.map((item) => item.name),
                         values,
-                        colors: categories.map((_, index) => barColors[index % barColors.length]),
+                        colors: categories.map((_, index) => colorFor(index)),
                     };
                 }
 
@@ -862,11 +857,28 @@
                 const model = buildChartModel();
                 titleEl.textContent = model.title;
                 const yMax = niceMax(model.values);
-                const horizontal = model.type === 'bar' && runsSideways(model.labels.length);
-                wasSideways = horizontal;
-                lastBarCount = model.type === 'bar' ? model.labels.length : null;
-                // Each category gets its own row, so the chart grows with the number of categories.
-                canvasBox.style.height = horizontal ? `${Math.max(220, model.labels.length * (isNarrow() ? 40 : 30) + 36)}px` : '';
+                // Category names would collide under the bars once there are many, so each bar gets
+                // a colour and the names are listed below the chart with a matching square.
+                const horizontal = false;
+                if (legendEl) {
+                    legendEl.hidden = model.type !== 'bar';
+                    legendEl.replaceChildren(...(model.type === 'bar' ? model.labels.map((name, index) => {
+                        const item = document.createElement('li');
+                        item.className = 'flex min-w-0 items-center gap-1.5';
+                        item.title = name;
+                        const swatch = document.createElement('span');
+                        swatch.className = 'h-2.5 w-2.5 shrink-0 rounded-sm';
+                        swatch.style.backgroundColor = model.colors[index];
+                        const label = document.createElement('span');
+                        label.className = 'min-w-0 flex-1 truncate';
+                        label.textContent = name;
+                        const count = document.createElement('span');
+                        count.className = 'shrink-0 font-semibold tabular-nums';
+                        count.textContent = model.values[index];
+                        item.append(swatch, label, count);
+                        return item;
+                    }) : []));
+                }
 
                 const dataset = model.type === 'bar'
                     ? {
@@ -905,7 +917,6 @@
                         autoSkip: model.type !== 'bar',
                         callback: (value, index) => {
                             if (model.type !== 'bar') return model.labels[index];
-                            if (horizontal) return wrapChartLabel(model.labels[index], isNarrow() ? 16 : 30);
 
                             const maxLineLength = model.labels.length <= 2
                                 ? 28
@@ -918,6 +929,7 @@
                     },
                     border: { display: false },
                 };
+                if (model.type === 'bar') categoryAxis.ticks.display = false;
                 const valueAxis = {
                     beginAtZero: true,
                     suggestedMax: yMax,
@@ -982,9 +994,6 @@
 
             render();
 
-            window.addEventListener('resize', () => {
-                if (document.body.contains(root) && lastBarCount !== null && runsSideways(lastBarCount) !== wasSideways) render();
-            });
         });
     </script>
 </x-app-layout>
