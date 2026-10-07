@@ -385,7 +385,8 @@
             </div>
         </form>
 
-        <div data-account-table="students" x-show="tab === 'students'" x-cloak class="mx-auto mt-4 w-full overflow-x-auto rounded-lg border">
+        <div data-account-table="students" x-show="tab === 'students'" x-cloak class="mx-auto mt-4 w-full">
+            <div class="w-full overflow-x-auto rounded-lg border">
             <table class="w-full text-[13px] max-lg:min-w-max max-lg:whitespace-nowrap">
                 <thead class="border-b bg-primary text-white">
                     <tr class="text-left">
@@ -436,8 +437,17 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <p class="text-xs text-muted-foreground" data-account-count>
+                    @if ($studentUsers->total() > 0)
+                        Showing {{ $studentUsers->firstItem() }}–{{ $studentUsers->lastItem() }} of {{ $studentUsers->total() }} student {{ \Illuminate\Support\Str::plural('account', $studentUsers->total()) }}
+                    @else
+                        No student accounts to show
+                    @endif
+                </p>
             @if ($studentUsers->hasPages())
-                <nav class="mt-5 flex justify-end" aria-label="Student accounts pagination">
+                <nav class="flex justify-end" aria-label="Student accounts pagination">
                     <div class="flex max-w-full flex-wrap items-center justify-end gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
                         @if ($studentUsers->onFirstPage())
                             <span class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground/50" aria-disabled="true">Previous</span>
@@ -474,6 +484,7 @@
                     </div>
                 </nav>
             @endif
+            </div>
         </div>
 
         <div x-show="accountModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -921,8 +932,8 @@
             </div>
         </div>
 
-        <div x-show="tab === 'recipients'" x-cloak class="mx-auto mt-4 w-full">
-            <div data-account-table="recipients" class="w-full overflow-x-auto rounded-lg border">
+        <div data-account-table="recipients" x-show="tab === 'recipients'" x-cloak class="mx-auto mt-4 w-full">
+            <div class="w-full overflow-x-auto rounded-lg border">
             <table class="w-full text-[13px] max-lg:min-w-max max-lg:whitespace-nowrap">
                 <thead class="border-b bg-primary text-white">
                     <tr class="text-left">
@@ -974,8 +985,16 @@
                 </tbody>
             </table>
             </div>
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <p class="text-xs text-muted-foreground" data-account-count>
+                    @if ($recipientUsers->total() > 0)
+                        Showing {{ $recipientUsers->firstItem() }}–{{ $recipientUsers->lastItem() }} of {{ $recipientUsers->total() }} recipient {{ \Illuminate\Support\Str::plural('account', $recipientUsers->total()) }}
+                    @else
+                        No recipient accounts to show
+                    @endif
+                </p>
             @if ($recipientUsers->hasPages())
-                <nav class="mt-5 flex justify-end" aria-label="Recipient accounts pagination">
+                <nav class="flex justify-end" aria-label="Recipient accounts pagination">
                     <div class="flex max-w-full flex-wrap items-center justify-end gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
                         @if ($recipientUsers->onFirstPage())
                             <span class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground/50" aria-disabled="true">Previous</span>
@@ -1012,6 +1031,7 @@
                     </div>
                 </nav>
             @endif
+            </div>
         </div>
     </div>
 </x-app-layout>
@@ -1250,5 +1270,89 @@
         });
 
         window.addEventListener('popstate', () => loadAccountResults(window.location.href, false));
+
+        // Saving an account or changing its status refreshes the tables in place, so the admin
+        // stays on the same tab, page and filters instead of reloading the whole page. Bound once,
+        // as this script runs again when the page is revisited without a full reload.
+        if (window.accountActionsBound) return;
+        window.accountActionsBound = true;
+
+        const accountActionSelector = [
+            '#admin-student-account-form',
+            '#admin-recipient-account-form',
+            '#edit-student-account-form',
+            '#edit-recipient-account-form',
+            `${tableSelector} form[action*="/deactivate"]`,
+            `${tableSelector} form[action*="/reactivate"]`,
+        ].join(', ');
+
+        const showActionErrors = (form, messages) => {
+            let box = form.querySelector('[data-account-action-errors]');
+            if (!box) {
+                box = document.createElement('ul');
+                box.dataset.accountActionErrors = '';
+                box.className = 'mb-3 grid gap-1 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive';
+                form.prepend(box);
+            }
+            box.replaceChildren(...messages.map((message) => {
+                const item = document.createElement('li');
+                item.textContent = message;
+                return item;
+            }));
+        };
+
+        const showToastFrom = (html) => {
+            const toast = new DOMParser().parseFromString(html, 'text/html').querySelector('[role="status"][aria-live="polite"]');
+            if (!toast) return;
+            document.body.append(toast);
+            window.Alpine?.initTree(toast);
+        };
+
+        document.addEventListener('submit', async (event) => {
+            const form = event.target.closest(accountActionSelector);
+            // A form the required-field check already stopped is left alone.
+            if (!form || event.defaultPrevented) return;
+
+            event.preventDefault();
+            const submitButtons = form.querySelectorAll('button[type="submit"]');
+            submitButtons.forEach((button) => { button.disabled = true; });
+            form.querySelector('[data-account-action-errors]')?.remove();
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json, text/html' },
+                });
+
+                if (response.status === 422) {
+                    const data = await response.json();
+                    showActionErrors(form, Object.values(data.errors ?? {}).flat());
+                    return;
+                }
+
+                if (!response.ok) throw new Error(`Account action failed: ${response.status}`);
+
+                const html = await response.text();
+                const root = document.querySelector('[x-data][class*="-mt-1"]');
+                const state = root ? window.Alpine?.$data(root) : null;
+
+                if (state) {
+                    if (form.id === 'admin-student-account-form') state.resetStudentForm?.();
+                    if (form.id === 'admin-recipient-account-form') state.resetRecipientForm?.();
+                    state.accountModalOpen = false;
+                    state.recipientModalOpen = false;
+                    state.editStudentModalOpen = false;
+                    state.editRecipientModalOpen = false;
+                }
+
+                await loadAccountResults(window.location.href, false);
+                showToastFrom(html);
+            } catch (error) {
+                form.submit();
+            } finally {
+                submitButtons.forEach((button) => { button.disabled = false; });
+            }
+        });
     })();
 </script>
