@@ -100,6 +100,8 @@
             $escalationRecipients = $recipients->map(fn ($recipient) => [
                 'id' => (string) $recipient->id,
                 'label' => trim(($recipient->user?->table_name ?? 'Recipient') . ' · ' . (trim((string) $recipient->designation) !== '' ? $recipient->designation : 'No designation') . ', ' . (trim((string) $recipient->unit) !== '' ? $recipient->unit : 'No department')),
+                'name' => $recipient->user?->table_name ?? 'Recipient',
+                'detail' => (trim((string) $recipient->designation) !== '' ? $recipient->designation : 'No designation') . ', ' . (trim((string) $recipient->unit) !== '' ? $recipient->unit : 'No department'),
             ])->values();
         @endphp
         <div x-cloak x-data="{
@@ -138,7 +140,6 @@
                 id = Number(id);
                 if (id === this.selectedId) return;
                 if (this.dirty && !window.confirm('Leave this category without saving your changes?')) {
-                    this.$nextTick(() => { if (this.$refs.categorySelect) this.$refs.categorySelect.value = this.selectedId; });
                     return;
                 }
                 this.selectedId = id;
@@ -174,12 +175,24 @@
             <div x-show="categories.length > 0" class="grid gap-3 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start">
                 <!-- Category picker: a dropdown on phones, a list on desktop -->
                 <div class="lg:hidden">
-                    <label for="escalation-category" class="mb-1 block text-xs font-semibold text-muted-foreground">Category</label>
-                    <select id="escalation-category" x-ref="categorySelect" x-on:change="select($event.target.value)" class="h-10 w-full rounded-md border border-input bg-white px-3 text-sm font-semibold text-foreground outline-none focus:ring-1 focus:ring-ring">
-                        <template x-for="item in categories" :key="item.id">
-                            <option :value="item.id" :selected="item.id === selectedId" x-text="`${item.name} (${summary(item)})`"></option>
-                        </template>
-                    </select>
+                    <span id="escalation-category-label" class="mb-1 block text-xs font-semibold text-muted-foreground">Category</span>
+                    <details class="group relative" x-on:click.outside="$el.removeAttribute('open')">
+                        <summary aria-labelledby="escalation-category-label" class="flex h-11 w-full cursor-pointer list-none items-center justify-between gap-2 rounded-xl border border-input bg-muted px-3 text-sm outline-none transition-colors hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                            <span class="min-w-0 truncate font-semibold text-foreground" x-text="category?.name ?? 'Select a category'"></span>
+                            <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                        </summary>
+                        <div class="absolute top-full z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg">
+                            <template x-for="item in categories" :key="item.id">
+                                <button type="button" class="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground" x-bind:class="selectedId === item.id ? 'bg-primary-soft text-primary' : ''" x-on:click="select(item.id); $el.closest('details').removeAttribute('open')">
+                                    <span class="min-w-0">
+                                        <span class="block wrap-break-word" x-text="item.name"></span>
+                                        <span class="block text-xs" :class="summary(item) === 'Not set' ? 'text-amber-700' : 'text-muted-foreground'" x-text="summary(item)"></span>
+                                    </span>
+                                    <svg x-show="selectedId === item.id" x-cloak class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+                                </button>
+                            </template>
+                        </div>
+                    </details>
                 </div>
                 <aside class="hidden overflow-hidden rounded-xl border border-border bg-card lg:block">
                     <p class="border-b border-border bg-muted/50 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Categories</p>
@@ -239,12 +252,23 @@
                                                         </span>
                                                     </template>
                                                 </div>
-                                                <select x-on:change="addPerson(level, $event.target.value); $event.target.value = ''" :aria-label="`Add a person to level ${levelIndex + 1}`" class="mt-1 h-8 w-full min-w-0 rounded-md border-0 bg-transparent px-1 text-xs text-muted-foreground outline-none focus:ring-1 focus:ring-ring" :class="level.length ? '' : 'mt-0'">
-                                                    <option value="" x-text="available(path).length ? (level.length ? '+ Add another person to this level' : '+ Add a person to this level') : 'Everyone in this category is already in this path'"></option>
-                                                    <template x-for="recipient in available(path)" :key="recipient.id">
-                                                        <option :value="recipient.id" x-text="recipient.label"></option>
-                                                    </template>
-                                                </select>
+                                                <details class="group relative" :class="level.length ? 'mt-1.5' : ''" x-on:click.outside="$el.removeAttribute('open')">
+                                                    <summary :aria-label="`Add a person to level ${levelIndex + 1}`" class="flex h-9 w-full cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-input bg-muted px-3 text-xs outline-none transition-colors hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                                                        <span class="min-w-0 truncate text-muted-foreground" x-text="available(path).length ? (level.length ? 'Add another person to this level' : 'Add a person to this level') : 'Everyone in this category is already in this path'"></span>
+                                                        <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                                                    </summary>
+                                                    <div class="absolute top-full z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg">
+                                                        <template x-for="recipient in available(path)" :key="recipient.id">
+                                                            <button type="button" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground" x-on:click="addPerson(level, recipient.id); $el.closest('details').removeAttribute('open')">
+                                                                <span class="min-w-0">
+                                                                    <span class="block wrap-break-word" x-text="recipient.name"></span>
+                                                                    <span class="block wrap-break-word text-xs text-muted-foreground" x-text="recipient.detail"></span>
+                                                                </span>
+                                                            </button>
+                                                        </template>
+                                                        <p x-show="available(path).length === 0" class="px-3 py-2 text-xs text-muted-foreground">Everyone in this category is already in this path.</p>
+                                                    </div>
+                                                </details>
                                             </div>
                                             <span class="flex shrink-0 items-center">
                                                 <button type="button" x-on:click="moveLevel(path, levelIndex, -1)" :disabled="levelIndex === 0" class="grid h-8 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary disabled:opacity-30" aria-label="Move level up" title="Move up"><x-icons.arrow-down class="h-4 w-4" /></button>
