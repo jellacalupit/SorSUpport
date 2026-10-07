@@ -67,6 +67,36 @@ class HandbookCategoryAlignmentTest extends TestCase
         $this->assertFalse($overlap->fresh()->is_active);
     }
 
+    public function test_the_overlapping_categories_are_deleted_unless_a_ticket_uses_them(): void
+    {
+        $unused = $this->category('Academic Concerns');
+        $kept = $this->category('Registrar and Records');
+        $student = \App\Models\Student::create([
+            'user_id' => User::factory()->create(['role' => User::ROLE_STUDENT])->id,
+            'student_id' => 'S9001',
+            'college' => 'CICT',
+            'program' => 'BSIT',
+            'year_level' => '2nd Year',
+            'block' => 'A',
+        ]);
+        \App\Models\Complaint::create([
+            'reference_number' => \App\Models\Complaint::generateReferenceNumber(),
+            'student_id' => $student->id,
+            'category_id' => $kept->id,
+            'subject_title' => 'Transcript request',
+            'description' => 'My transcript has not been released.',
+            'is_anonymous' => false,
+            'status' => \App\Models\Complaint::STATUS_SUBMITTED,
+        ]);
+        $specific = $this->category('Grades and Examinations');
+
+        (require database_path('migrations/2026_10_10_200000_delete_overlapping_categories.php'))->up();
+
+        $this->assertDatabaseMissing('complaint_categories', ['id' => $unused->id]);
+        $this->assertDatabaseHas('complaint_categories', ['id' => $kept->id]);
+        $this->assertDatabaseHas('complaint_categories', ['id' => $specific->id]);
+    }
+
     public function test_missing_categories_and_staff_are_skipped(): void
     {
         $library = $this->category('Library Services');
