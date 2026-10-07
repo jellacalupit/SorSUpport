@@ -390,8 +390,12 @@
             const resolutionCanvas = document.getElementById('resolutionChart');
             if (resolutionCanvas) {
                 const box = document.querySelector('[data-resolution-box]');
-                if (narrow && box) box.style.height = `${Math.max(200, payload.resolution.labels.length * 40 + 30)}px`;
-                const categoryAxis = { grid: { display: false }, ticks: { autoSkip: false, maxRotation: 0, callback: (value, index) => wrapLabel(payload.resolution.labels[index], narrow ? 16 : 18) }, border: { display: false } };
+                const count = payload.resolution.labels.length;
+                // Sideways bars on phones, and whenever there are too many categories for each to get
+                // a readable column (under about 90px); the chart then grows one row per category.
+                const sideways = narrow || (box && box.clientWidth / Math.max(1, count) < 90);
+                if (sideways && box) box.style.height = `${Math.max(200, count * (narrow ? 40 : 30) + 30)}px`;
+                const categoryAxis = { grid: { display: false }, ticks: { autoSkip: false, maxRotation: 0, callback: (value, index) => wrapLabel(payload.resolution.labels[index], sideways ? (narrow ? 16 : 30) : 18) }, border: { display: false } };
                 const valueAxis = { beginAtZero: true, grid: { color: '#eef0f3' }, border: { display: false }, title: { display: !narrow, text: 'Days' } };
 
                 new Chart(resolutionCanvas, {
@@ -400,9 +404,9 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        indexAxis: narrow ? 'y' : 'x',
+                        indexAxis: sideways ? 'y' : 'x',
                         plugins: { legend: { display: false } },
-                        scales: narrow ? { x: valueAxis, y: categoryAxis } : { x: categoryAxis, y: valueAxis },
+                        scales: sideways ? { x: valueAxis, y: categoryAxis } : { x: categoryAxis, y: valueAxis },
                     },
                 });
             }

@@ -639,7 +639,12 @@
             // In the phone layout the category bars run sideways so the names fit beside them.
             const canRunSideways = canvasBox.hasAttribute('data-volume-canvas-box');
             const isNarrow = () => canRunSideways && canvasBox.clientWidth < 520;
-            let wasNarrow = isNarrow();
+            // Bars run sideways on phones, and also whenever there are too many categories for
+            // each to get a readable column (under about 90px), so the names never collide.
+            const runsSideways = (labelCount) => canRunSideways
+                && (isNarrow() || canvasBox.clientWidth / Math.max(1, labelCount) < 90);
+            let wasSideways = false;
+            let lastBarCount = null;
             const titleEl = root.querySelector('[data-volume-title]');
             
             // Track selected values
@@ -857,9 +862,11 @@
                 const model = buildChartModel();
                 titleEl.textContent = model.title;
                 const yMax = niceMax(model.values);
-                const horizontal = model.type === 'bar' && isNarrow();
-                wasNarrow = isNarrow();
-                canvasBox.style.height = horizontal ? `${Math.max(220, model.labels.length * 40 + 36)}px` : '';
+                const horizontal = model.type === 'bar' && runsSideways(model.labels.length);
+                wasSideways = horizontal;
+                lastBarCount = model.type === 'bar' ? model.labels.length : null;
+                // Each category gets its own row, so the chart grows with the number of categories.
+                canvasBox.style.height = horizontal ? `${Math.max(220, model.labels.length * (isNarrow() ? 40 : 30) + 36)}px` : '';
 
                 const dataset = model.type === 'bar'
                     ? {
@@ -898,7 +905,7 @@
                         autoSkip: model.type !== 'bar',
                         callback: (value, index) => {
                             if (model.type !== 'bar') return model.labels[index];
-                            if (horizontal) return wrapChartLabel(model.labels[index], 16);
+                            if (horizontal) return wrapChartLabel(model.labels[index], isNarrow() ? 16 : 30);
 
                             const maxLineLength = model.labels.length <= 2
                                 ? 28
@@ -976,7 +983,7 @@
             render();
 
             window.addEventListener('resize', () => {
-                if (document.body.contains(root) && isNarrow() !== wasNarrow) render();
+                if (document.body.contains(root) && lastBarCount !== null && runsSideways(lastBarCount) !== wasSideways) render();
             });
         });
     </script>
