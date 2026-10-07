@@ -83,7 +83,6 @@ class AdminDashboardController extends Controller
         $topPerformingRecipients = User::query()
             ->whereIn('role', [User::ROLE_RECIPIENT, User::ROLE_SDS_ADMIN])
             ->where('is_active', true)
-            ->whereNotNull('email_verified_at')
             ->with('recipient')
             ->get()
             ->map(function ($user) {
@@ -151,7 +150,6 @@ class AdminDashboardController extends Controller
             'totalRecipients' => User::query()
                 ->whereIn('role', [User::ROLE_RECIPIENT, User::ROLE_SDS_ADMIN])
                 ->where('is_active', true)
-                ->whereNotNull('email_verified_at')
                 ->count(),
             'totalCategories' => ComplaintCategory::query()->where('is_active', true)->count(),
             'recentTickets' => $recentTickets,

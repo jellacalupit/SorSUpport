@@ -119,7 +119,6 @@ class AnalyticsController extends Controller
             'recipientOptions' => \App\Models\User::query()
                 ->whereIn('role', [\App\Models\User::ROLE_RECIPIENT, \App\Models\User::ROLE_SDS_ADMIN])
                 ->where('is_active', true)
-                ->whereNotNull('email_verified_at')
                 ->with('recipient')
                 ->orderBy('first_name')
                 ->get(),

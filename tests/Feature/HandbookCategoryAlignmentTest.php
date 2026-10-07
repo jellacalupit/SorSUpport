@@ -118,6 +118,40 @@ class HandbookCategoryAlignmentTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'category_deleted', 'details' => 'Deleted complaint category "Academic Concerns".']);
     }
 
+    public function test_the_gender_categories_merge_and_escalation_staff_are_suggested(): void
+    {
+        $gad = $this->staff('230839', 'Gender and Development', 'GAD Focal Person');
+        $director = $this->staff('200043', 'Office of the Campus Director', 'Campus Director');
+        $harassment = $this->category('Gender-Based Sexual Harassment');
+        $discrimination = $this->category('Gender and Discrimination Concerns');
+        $harassment->suggestedRecipients()->attach($gad->id);
+        $discrimination->suggestedRecipients()->attach($gad->id);
+        $harassment->escalationHierarchies()->create(['path_number' => 1, 'level' => 1, 'recipient_id' => $director->id]);
+
+        (require database_path('migrations/2026_10_10_500000_merge_gender_categories_and_suggest_escalation_staff.php'))->up();
+
+        $this->assertDatabaseMissing('complaint_categories', ['id' => $discrimination->id]);
+        $merged = $harassment->fresh();
+        $this->assertSame('Gender-Based Harassment and Discrimination', $merged->name);
+        $this->assertTrue($merged->is_sensitive);
+        $this->assertEqualsCanonicalizing([$gad->id, $director->id], $merged->suggestedRecipients()->pluck('recipients.id')->all());
+        $this->assertDatabaseHas('audit_logs', ['action' => 'category_deleted', 'details' => 'Deleted complaint category "Gender and Discrimination Concerns".']);
+    }
+
+    public function test_saving_an_escalation_path_also_suggests_its_staff(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_SDS_ADMIN, 'is_active' => true, 'email_verified_at' => now(), 'must_change_password' => false]);
+        $director = $this->staff('200043', 'Office of the Campus Director', 'Campus Director');
+        $director->user->update(['is_active' => true, 'email_verified_at' => null]);
+        $library = $this->category('Library Services');
+
+        $this->actingAs($admin)
+            ->put(route('admin.categories.escalation.update', $library), ['paths' => [['name' => 'Campus Director', 'recipient_ids' => [$director->id]]]])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame([$director->id], $library->suggestedRecipients()->pluck('recipients.id')->map(fn ($id) => (int) $id)->all());
+    }
+
     public function test_missing_categories_and_staff_are_skipped(): void
     {
         $library = $this->category('Library Services');

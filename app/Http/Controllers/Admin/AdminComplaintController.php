@@ -136,7 +136,7 @@ class AdminComplaintController extends Controller
         app(TicketUnreadService::class)->markTicketsViewed(Auth::user(), [(string) $complaint->id]);
 
         $categories = ComplaintCategory::query()->where('is_active', true)->orderBy('name')->get();
-        $recipients = \App\Models\Recipient::query()->activeVerified()->with('user')->orderBy('unit')->get();
+        $recipients = \App\Models\Recipient::query()->active()->with('user')->orderBy('unit')->get();
 
         // Identified complaints should have tickets; if not, still show what we have.
         return view('admin.complaints.show', compact('complaint', 'categories', 'recipients'));

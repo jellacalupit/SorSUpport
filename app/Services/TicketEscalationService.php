@@ -31,7 +31,6 @@ class TicketEscalationService
             ->with('recipient.user')
             ->get()
             ->filter(fn ($entry) => $entry->recipient?->user?->is_active
-                && $entry->recipient->user->email_verified_at
                 && (int) $entry->recipient->user_id !== (int) $currentHandlerUserId)
             ->map(fn ($entry) => [
                 'path_number' => (int) $entry->path_number,

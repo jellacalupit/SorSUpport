@@ -91,7 +91,7 @@ class ComplaintController extends Controller
             ->get();
 
         $recipients = Recipient::query()
-            ->activeVerified()
+            ->active()
             ->with('user')
             ->get()
             ->sortBy(fn (Recipient $recipient) => $recipient->user->table_name, SORT_NATURAL | SORT_FLAG_CASE)
@@ -176,7 +176,7 @@ class ComplaintController extends Controller
 
         if (filled($validated['suggested_recipient_id'] ?? null)) {
             $suggestedRecipientId = Recipient::query()
-                ->activeVerified()
+                ->active()
                 ->whereKey($validated['suggested_recipient_id'])
                 ->value('id');
 

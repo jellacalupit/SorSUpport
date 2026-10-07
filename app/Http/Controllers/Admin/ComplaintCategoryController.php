@@ -42,7 +42,7 @@ class ComplaintCategoryController extends Controller
                 ...$handlingOptions,
             ]);
 
-            $category->suggestedRecipients()->sync($validated['suggested_recipient_ids'] ?? []);
+            $category->suggestedRecipients()->sync($this->withEscalationRecipients($category, $validated['suggested_recipient_ids'] ?? []));
             $this->syncEscalationHierarchy($category, $validated['hierarchy_levels'] ?? []);
 
             return $category;
@@ -55,7 +55,7 @@ class ComplaintCategoryController extends Controller
 
     public function edit(ComplaintCategory $category): View
     {
-        $recipients = Recipient::query()->activeVerified()->with('user')->orderBy('unit')->get();
+        $recipients = Recipient::query()->active()->with('user')->orderBy('unit')->get();
 
         return view('admin.categories.edit', compact('category', 'recipients'));
     }
@@ -74,7 +74,7 @@ class ComplaintCategoryController extends Controller
                 ...$handlingOptions,
             ]);
 
-            $category->suggestedRecipients()->sync($validated['suggested_recipient_ids'] ?? []);
+            $category->suggestedRecipients()->sync($this->withEscalationRecipients($category, $validated['suggested_recipient_ids'] ?? []));
 
             // The category form does not carry the hierarchy; only touch it when it was sent.
             if (array_key_exists('hierarchy_levels', $validated)) {
@@ -128,6 +128,9 @@ class ComplaintCategoryController extends Controller
                     ]);
                 }
             }
+
+            // Everyone a ticket can be escalated to is also listed as a suggested recipient.
+            $category->suggestedRecipients()->syncWithoutDetaching($paths->flatMap(fn (array $path): array => $path['recipient_ids'])->unique()->all());
         });
 
         AuditLog::activity('escalation_hierarchy_updated', details: sprintf('Updated the escalation hierarchy of "%s".', $category->name));
@@ -135,6 +138,16 @@ class ComplaintCategoryController extends Controller
         return redirect()
             ->route('admin.settings', ['settings_tab' => 'escalation', 'category' => $category->id])
             ->with('success', 'Escalation hierarchy saved.');
+    }
+
+    /**
+     * The suggested recipients always include everyone on the category's escalation paths.
+     */
+    protected function withEscalationRecipients(ComplaintCategory $category, array $suggestedIds): array
+    {
+        $escalationIds = $category->exists ? $category->escalationHierarchies()->pluck('recipient_id')->all() : [];
+
+        return collect($suggestedIds)->merge($escalationIds)->map(fn ($id) => (int) $id)->unique()->values()->all();
     }
 
     public function toggleStatus(ComplaintCategory $category): RedirectResponse

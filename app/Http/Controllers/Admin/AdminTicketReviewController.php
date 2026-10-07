@@ -86,9 +86,7 @@ class AdminTicketReviewController extends Controller
         $categories = ComplaintCategory::query()->where('is_active', true)->orderBy('name')->get();
         $recipients = Recipient::query()
             ->with('user')
-            ->whereHas('user', fn ($query) => $query
-                ->where('is_active', true)
-                ->whereNotNull('email_verified_at'))
+            ->whereHas('user', fn ($query) => $query->where('is_active', true))
             ->orderBy('unit')
             ->get();
 
@@ -542,7 +540,7 @@ class AdminTicketReviewController extends Controller
 
         if (filled($validated['suggested_recipient_id'] ?? null)) {
             $suggestedRecipient = Recipient::query()
-                ->activeVerified()
+                ->active()
                 ->with('user')
                 ->find($validated['suggested_recipient_id']);
 

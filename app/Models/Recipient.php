@@ -24,13 +24,6 @@ class Recipient extends Model
         return $query->whereHas('user', fn ($user) => $user->where('is_active', true));
     }
 
-    public function scopeActiveVerified(Builder $query): Builder
-    {
-        return $query->whereHas('user', fn ($user) => $user
-            ->where('is_active', true)
-            ->whereNotNull('email_verified_at'));
-    }
-
     /**
      * Recipient belongs to a User.
      */
