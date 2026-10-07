@@ -393,6 +393,34 @@ class TicketEmailContentTest extends TestCase
         $this->assertSame('Email sent to rey@sorsu.test: "Ticket assigned".', $log->fresh()->details);
     }
 
+    public function test_every_email_carries_the_logo_and_the_system_name(): void
+    {
+        $logo = 'branding/sorsu%20logo.png';
+
+        $ticketEmail = $this->email($this->ticket(Ticket::STATUS_ASSIGNED), EmailNotification::TYPE_RECIPIENT_ASSIGNMENT, $this->handler);
+        $this->assertStringContainsString($logo, $ticketEmail['html']);
+
+        foreach ([
+            view('emails.password-reset', ['resetUrl' => 'https://example.test/reset', 'expires' => 15])->render(),
+            view('emails.verify-email', ['verificationUrl' => 'https://example.test/verify', 'url' => 'https://example.test/verify', 'user' => $this->student])->render(),
+            view('emails.account-update', ['subject' => 'Your SORSUPPORT account was activated', 'email_message' => 'Your account has been activated.'])->render(),
+        ] as $html) {
+            $this->assertStringContainsString($logo, $html);
+            $this->assertStringContainsString('SorSUpport', $html);
+        }
+
+        $this->assertSame('SorSUpport', config('mail.from.name') ?: 'SorSUpport');
+    }
+
+    public function test_the_login_form_does_not_ask_the_browser_to_fill_in_credentials(): void
+    {
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('autocomplete="off"', false)
+            ->assertSee('autocomplete="new-password"', false)
+            ->assertDontSee('autocomplete="current-password"', false);
+    }
+
     public function test_forgot_password_explains_when_the_email_cannot_be_sent(): void
     {
         \Illuminate\Support\Facades\Password::shouldReceive('sendResetLink')->once()->andThrow(new \RuntimeException('Connection could not be established'));

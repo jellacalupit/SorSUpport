@@ -51,7 +51,7 @@ class PasswordResetTest extends TestCase
 
             return str_contains($email, 'expire in 15 minutes')
                 && ! str_contains($email, "If you're having trouble clicking")
-                && ! str_contains($email, 'SorSUpport');
+                && str_contains($email, 'branding/sorsu%20logo.png');
         });
     }
 

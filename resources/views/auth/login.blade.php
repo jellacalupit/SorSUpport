@@ -17,7 +17,7 @@
                 data-error-input
                 :value="old('username')"
                 autofocus
-                autocomplete="username"
+                autocomplete="off"
                 oninput="this.value = this.value.replace(/\D/g, '')"
                 placeholder="Enter your student or staff ID">
             <x-input-error data-login-error class="text-left text-sm" :messages="$errors->get('username')" />
@@ -32,7 +32,7 @@
                     class="flex h-11 w-full rounded-xl border border-input bg-muted px-3 pr-11 text-xs text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:text-sm"
                     type="password"
                     name="password"
-                    autocomplete="current-password"
+                    autocomplete="new-password"
                     placeholder="Enter your password">
 
                 <button type="button" id="toggle-password" class="absolute inset-y-0 right-3 grid place-items-center text-muted-foreground" aria-label="Show password">
