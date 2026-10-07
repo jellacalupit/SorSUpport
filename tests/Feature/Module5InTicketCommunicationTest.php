@@ -41,7 +41,6 @@ class Module5InTicketCommunicationTest extends TestCase
         ]);
         $category = ComplaintCategory::create([
             'name' => 'Missing Ticket Category',
-            'resolution_deadline_days' => 3,
             'is_active' => true,
         ]);
         $complaint = Complaint::create([
@@ -108,7 +107,6 @@ class Module5InTicketCommunicationTest extends TestCase
 
         $category = ComplaintCategory::create([
             'name' => 'Academic Concern',
-            'resolution_deadline_days' => 3,
             'is_active' => true,
         ]);
 
@@ -210,57 +208,6 @@ class Module5InTicketCommunicationTest extends TestCase
         ]);
     }
 
-    public function test_ticket_deadline_starts_on_submission_for_15_day_policy(): void
-    {
-        Carbon::setTestNow(Carbon::create(2026, 8, 29, 12, 0, 0, 'Asia/Manila'));
-
-        $studentUser = User::factory()->create([
-            'role' => User::ROLE_STUDENT,
-            'email_verified_at' => now(),
-            'must_change_password' => false,
-        ]);
-
-        $studentProfile = Student::create([
-            'user_id' => $studentUser->id,
-            'student_id' => 'S2030',
-            'college' => 'IT',
-            'program' => 'BSIT',
-            'year_level' => '2nd Year',
-            'block' => 'A',
-        ]);
-
-        $category = ComplaintCategory::create([
-            'name' => 'Academic Concern',
-            'resolution_deadline_days' => 15,
-            'is_active' => true,
-        ]);
-
-        $complaint = Complaint::create([
-            'reference_number' => Complaint::generateReferenceNumber(),
-            'student_id' => $studentProfile->id,
-            'category_id' => $category->id,
-            'subject_title' => 'Fifteen day policy check',
-            'description' => 'Deadline should start at submission.',
-            'is_anonymous' => false,
-            'status' => Complaint::STATUS_SUBMITTED,
-        ]);
-
-        $ticket = Ticket::create([
-            'complaint_id' => $complaint->id,
-            'status' => Ticket::STATUS_SUBMITTED,
-            'deadline' => now()->addDays(15),
-        ]);
-
-        $this->assertNotNull($ticket->deadline);
-        $this->assertSame(15, $ticket->remainingDays());
-        $this->assertSame(
-            now()->copy()->addDays(15)->startOfDay()->format('Y-m-d'),
-            $ticket->deadline->copy()->startOfDay()->format('Y-m-d')
-        );
-
-        Carbon::setTestNow();
-    }
-
     public function test_ticket_card_badge_counts_other_user_messages(): void
     {
         $studentUser = User::factory()->create([
@@ -286,7 +233,6 @@ class Module5InTicketCommunicationTest extends TestCase
 
         $category = ComplaintCategory::create([
             'name' => 'Academic Concern',
-            'resolution_deadline_days' => 3,
             'is_active' => true,
         ]);
 
@@ -354,7 +300,6 @@ class Module5InTicketCommunicationTest extends TestCase
 
         $category = ComplaintCategory::create([
             'name' => 'Academic Concern',
-            'resolution_deadline_days' => 3,
             'is_active' => true,
         ]);
 
@@ -425,7 +370,6 @@ class Module5InTicketCommunicationTest extends TestCase
 
         $category = ComplaintCategory::create([
             'name' => 'Academic Concern',
-            'resolution_deadline_days' => 3,
             'is_active' => true,
         ]);
 
@@ -495,7 +439,6 @@ class Module5InTicketCommunicationTest extends TestCase
 
         $category = ComplaintCategory::create([
             'name' => 'Academic Concern',
-            'resolution_deadline_days' => 3,
             'is_active' => true,
         ]);
 
@@ -576,7 +519,6 @@ class Module5InTicketCommunicationTest extends TestCase
 
         $category = ComplaintCategory::create([
             'name' => 'Academic Concern',
-            'resolution_deadline_days' => 3,
             'is_active' => true,
         ]);
 

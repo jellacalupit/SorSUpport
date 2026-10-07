@@ -55,7 +55,6 @@ class Module4TicketRoutingTest extends TestCase
 
         $category = ComplaintCategory::create([
             'name' => 'Academic Concern',
-            'resolution_deadline_days' => 3,
             'is_active' => true,
         ]);
 

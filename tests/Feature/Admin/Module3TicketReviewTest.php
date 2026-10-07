@@ -43,7 +43,6 @@ class Module3TicketReviewTest extends TestCase
 
         $category = ComplaintCategory::create([
             'name' => 'Academic Concern',
-            'resolution_deadline_days' => 3,
             'is_active' => true,
         ]);
 
@@ -120,13 +119,11 @@ class Module3TicketReviewTest extends TestCase
 
         $matchingCategory = ComplaintCategory::create([
             'name' => 'Academic Concern',
-            'resolution_deadline_days' => 3,
             'is_active' => true,
         ]);
 
         $otherCategory = ComplaintCategory::create([
             'name' => 'Facilities Concern',
-            'resolution_deadline_days' => 7,
             'is_active' => true,
         ]);
 
@@ -196,13 +193,11 @@ class Module3TicketReviewTest extends TestCase
 
         $matchingCategory = ComplaintCategory::create([
             'name' => 'Academic Concern',
-            'resolution_deadline_days' => 3,
             'is_active' => true,
         ]);
 
         $otherCategory = ComplaintCategory::create([
             'name' => 'Facilities Concern',
-            'resolution_deadline_days' => 7,
             'is_active' => true,
         ]);
 
@@ -231,7 +226,6 @@ class Module3TicketReviewTest extends TestCase
             'status' => Ticket::STATUS_IN_PROGRESS,
             'current_handler_id' => $admin->id,
             'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
-            'deadline' => now()->addDays(2),
             'assigned_to' => $admin->id,
         ]);
 
@@ -240,7 +234,6 @@ class Module3TicketReviewTest extends TestCase
             'status' => Ticket::STATUS_CLOSED,
             'current_handler_id' => $admin->id,
             'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
-            'deadline' => now()->addDays(10),
             'assigned_to' => $admin->id,
         ]);
 
@@ -289,7 +282,6 @@ class Module3TicketReviewTest extends TestCase
 
         $category = ComplaintCategory::create([
             'name' => 'Service Concern',
-            'resolution_deadline_days' => 5,
             'is_active' => true,
         ]);
 
@@ -349,7 +341,6 @@ class Module3TicketReviewTest extends TestCase
 
         $category = ComplaintCategory::create([
             'name' => 'Service Concern',
-            'resolution_deadline_days' => 5,
             'is_active' => true,
         ]);
 
@@ -458,7 +449,6 @@ class Module3TicketReviewTest extends TestCase
 
         $category = ComplaintCategory::create([
             'name' => 'Information Request',
-            'resolution_deadline_days' => 4,
             'recipient_id' => $recipient->id,
             'is_active' => true,
         ]);

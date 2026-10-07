@@ -21,7 +21,7 @@ class HandbookCategoryAlignmentTest extends TestCase
 
     protected function category(string $name): ComplaintCategory
     {
-        return ComplaintCategory::create(['name' => $name, 'resolution_deadline_days' => 1, 'is_active' => true]);
+        return ComplaintCategory::create(['name' => $name, 'is_active' => true]);
     }
 
     protected function align(): void
@@ -47,14 +47,11 @@ class HandbookCategoryAlignmentTest extends TestCase
 
         $this->align();
 
-        // The investigating committee decides within 10 working days.
-        $this->assertSame(10, $harassment->fresh()->resolution_deadline_days);
         $this->assertEqualsCanonicalizing([$gad->id, $guidance->id], $harassment->suggestedRecipients()->pluck('recipients.id')->all());
 
         // Filed with the SDS Coordinator or a teacher, kept confidential, escalated PC > Dean > Director.
         $againstStudent->refresh();
         $this->assertTrue($againstStudent->is_sensitive);
-        $this->assertSame(15, $againstStudent->resolution_deadline_days);
         $this->assertEqualsCanonicalizing([$sds->id, $faculty->id], $againstStudent->suggestedRecipients()->pluck('recipients.id')->all());
         $this->assertSame(
             [[1, $chair->id], [2, $dean->id], [3, $director->id]],
@@ -103,7 +100,6 @@ class HandbookCategoryAlignmentTest extends TestCase
 
         $this->align();
 
-        $this->assertSame(3, $library->fresh()->resolution_deadline_days);
         $this->assertSame(0, $library->suggestedRecipients()->count());
     }
 }

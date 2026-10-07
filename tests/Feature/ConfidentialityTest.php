@@ -53,8 +53,8 @@ class ConfidentialityTest extends TestCase
         Recipient::create(['user_id' => $this->handler->id, 'staff_id' => 'STAFF-1', 'unit' => 'Registrar', 'designation' => 'Registrar']);
         Recipient::create(['user_id' => $this->otherRecipient->id, 'staff_id' => 'STAFF-2', 'unit' => 'CICT', 'designation' => 'Dean']);
 
-        $this->category = ComplaintCategory::create(['name' => 'Student Services', 'resolution_deadline_days' => 15, 'is_active' => true]);
-        $this->sensitive = ComplaintCategory::create(['name' => 'Harassment', 'resolution_deadline_days' => 15, 'is_active' => true, 'is_sensitive' => true]);
+        $this->category = ComplaintCategory::create(['name' => 'Student Services', 'is_active' => true]);
+        $this->sensitive = ComplaintCategory::create(['name' => 'Harassment', 'is_active' => true, 'is_sensitive' => true]);
 
         foreach ([$this->category, $this->sensitive] as $category) {
             $category->suggestedRecipients()->attach([$this->handler->recipient->id, $this->otherRecipient->recipient->id]);

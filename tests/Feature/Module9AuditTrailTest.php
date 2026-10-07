@@ -58,7 +58,6 @@ class Module9AuditTrailTest extends TestCase
         $category = ComplaintCategory::create([
             'name' => 'Audit Trail Category',
             'recipient_id' => $recipientOne->id,
-            'resolution_deadline_days' => 5,
             'is_active' => true,
         ]);
 
@@ -241,7 +240,6 @@ class Module9AuditTrailTest extends TestCase
         $category = ComplaintCategory::create([
             'name' => 'Invalid Closure Category',
             'recipient_id' => $recipient->id,
-            'resolution_deadline_days' => 5,
             'is_active' => true,
         ]);
 
@@ -310,7 +308,6 @@ class Module9AuditTrailTest extends TestCase
         $category = ComplaintCategory::create([
             'name' => 'Anonymous Category',
             'recipient_id' => $recipient->id,
-            'resolution_deadline_days' => 5,
             'is_active' => true,
         ]);
 
@@ -394,7 +391,6 @@ class Module9AuditTrailTest extends TestCase
         $category = ComplaintCategory::create([
             'name' => 'Audit History Category',
             'recipient_id' => $recipient->id,
-            'resolution_deadline_days' => 5,
             'is_active' => true,
         ]);
 

@@ -145,7 +145,6 @@ class Ticket extends Model
         'referred_to',
         'referred_at',
         'clarification_requested_at',
-        'deadline',
         'acknowledged_at',
         'escalated_at',
         'resolved_at',
@@ -160,7 +159,6 @@ class Ticket extends Model
     protected function casts(): array
     {
         return [
-            'deadline' => 'datetime',
             'acknowledged_at' => 'datetime',
             'escalated_at' => 'datetime',
             'resolved_at' => 'datetime',
@@ -359,26 +357,6 @@ class Ticket extends Model
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class)->orderBy('created_at');
-    }
-
-    public function remainingDays(): ?int
-    {
-        if (! $this->deadline) {
-            return null;
-        }
-
-        if ($this->status === self::STATUS_CLOSED) {
-            return null;
-        }
-
-        $today = now()->copy()->setTimezone('Asia/Manila')->startOfDay();
-        $deadline = $this->deadline->copy()->setTimezone('Asia/Manila')->startOfDay();
-
-        if ($today->greaterThanOrEqualTo($deadline)) {
-            return 0;
-        }
-
-        return max(0, (int) $today->diffInDays($deadline, false));
     }
 
     /**

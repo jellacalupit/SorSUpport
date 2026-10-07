@@ -87,8 +87,8 @@ class TicketDetailsEditTest extends TestCase
             'designation' => 'Registrar',
         ]);
 
-        $category = ComplaintCategory::create(['name' => 'Facilities', 'resolution_deadline_days' => 3, 'is_active' => true]);
-        $otherCategory = ComplaintCategory::create(['name' => 'Records', 'resolution_deadline_days' => 3, 'is_active' => true]);
+        $category = ComplaintCategory::create(['name' => 'Facilities', 'is_active' => true]);
+        $otherCategory = ComplaintCategory::create(['name' => 'Records', 'is_active' => true]);
 
         $complaint = Complaint::create([
             'reference_number' => Complaint::generateReferenceNumber(),

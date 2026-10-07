@@ -43,7 +43,6 @@ class CategorySettingsTest extends TestCase
     {
         return ComplaintCategory::create($attributes + [
             'name' => 'General',
-            'resolution_deadline_days' => 15,
             'is_active' => true,
         ]);
     }

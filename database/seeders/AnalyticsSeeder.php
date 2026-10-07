@@ -72,7 +72,6 @@ class AnalyticsSeeder extends Seeder
                 $category = ComplaintCategory::create([
                     'name' => $name,
                     'description' => 'Seeded analytics category',
-                    'resolution_deadline_days' => 5 + ($index % 4),
                     'is_active' => true,
                 ]);
 
@@ -225,7 +224,6 @@ class AnalyticsSeeder extends Seeder
                     'status' => $status,
                     'assigned_to' => $recipients->random()->user_id,
                     'current_handler_id' => $recipients->random()->user_id,
-                    'deadline' => $complaintDate->copy()->addDays($category->resolution_deadline_days),
                     'acknowledged_at' => $ticketCreatedAt->copy()->addHours(3),
                     'resolved_at' => $resolvedAt,
                     'closed_at' => $closedAt,

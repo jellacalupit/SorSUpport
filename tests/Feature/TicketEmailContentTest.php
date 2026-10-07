@@ -41,7 +41,7 @@ class TicketEmailContentTest extends TestCase
         Student::create(['user_id' => $this->student->id, 'student_id' => '2024-77123', 'college' => 'CICT', 'program' => 'BSIT', 'year_level' => '1', 'block' => '1']);
         Recipient::create(['user_id' => $this->handler->id, 'staff_id' => 'STAFF-1', 'unit' => 'Registrar', 'designation' => 'Registrar']);
 
-        $this->category = ComplaintCategory::create(['name' => 'Student Services', 'resolution_deadline_days' => 15, 'is_active' => true]);
+        $this->category = ComplaintCategory::create(['name' => 'Student Services', 'is_active' => true]);
     }
 
     protected function user(string $role, string $first, string $last): User
@@ -234,7 +234,7 @@ class TicketEmailContentTest extends TestCase
 
     public function test_staff_emails_do_not_carry_the_subject_of_a_sensitive_ticket(): void
     {
-        $sensitive = ComplaintCategory::create(['name' => 'Harassment', 'resolution_deadline_days' => 15, 'is_active' => true, 'is_sensitive' => true]);
+        $sensitive = ComplaintCategory::create(['name' => 'Harassment', 'is_active' => true, 'is_sensitive' => true]);
         $ticket = $this->ticket(Ticket::STATUS_ASSIGNED, [], ['category_id' => $sensitive->id, 'subject_title' => 'Groped in the corridor']);
 
         foreach ([$this->handler, $this->admin] as $to) {

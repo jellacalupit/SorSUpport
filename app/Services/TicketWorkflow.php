@@ -250,7 +250,6 @@ class TicketWorkflow
                 'jurisdiction' => Ticket::JURISDICTION_SDS,
                 'assigned_to' => null,
                 'current_handler_id' => $admin->id,
-                'deadline' => null,
                 'acknowledged_at' => now(),
             ]);
 
@@ -276,7 +275,6 @@ class TicketWorkflow
                 'jurisdiction' => $ticket->jurisdiction ?? ($recipient ? Ticket::JURISDICTION_RECIPIENT : Ticket::JURISDICTION_SDS),
                 'assigned_to' => $recipient ? $handlerId : null,
                 'current_handler_id' => $handlerId,
-                'deadline' => null,
                 'acknowledged_at' => null,
             ]);
 

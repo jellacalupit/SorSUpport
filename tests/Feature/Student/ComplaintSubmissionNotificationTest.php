@@ -37,7 +37,6 @@ class ComplaintSubmissionNotificationTest extends TestCase
 
         $category = ComplaintCategory::create([
             'name' => 'Notification Filter',
-            'resolution_deadline_days' => 5,
             'is_active' => true,
         ]);
 
@@ -99,7 +98,6 @@ class ComplaintSubmissionNotificationTest extends TestCase
 
         $category = ComplaintCategory::create([
             'name' => 'Status Filter',
-            'resolution_deadline_days' => 5,
             'is_active' => true,
         ]);
 
@@ -163,7 +161,6 @@ class ComplaintSubmissionNotificationTest extends TestCase
 
         $category = ComplaintCategory::create([
             'name' => 'General Inquiry',
-            'resolution_deadline_days' => 5,
             'is_active' => true,
             'recipient_id' => $recipient->id,
         ]);

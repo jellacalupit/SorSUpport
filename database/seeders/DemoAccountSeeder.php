@@ -149,8 +149,8 @@ class DemoAccountSeeder extends Seeder
         }
 
         $categoryDefinitions = [
-            ['name' => 'Academic Concerns', 'description' => 'Grading disputes and faculty-related academic issues.', 'deadline' => 15, 'recipient' => '2465'],
-            ['name' => 'Student Welfare and Development', 'description' => 'Concerns handled directly by Student Development Services.', 'deadline' => 15, 'recipient' => null, 'jurisdiction' => 'sds'],
+            ['name' => 'Academic Concerns', 'description' => 'Grading disputes and faculty-related academic issues.', 'recipient' => '2465'],
+            ['name' => 'Student Welfare and Development', 'description' => 'Concerns handled directly by Student Development Services.', 'recipient' => null, 'jurisdiction' => 'sds'],
         ];
 
         foreach ($categoryDefinitions as $definition) {
@@ -161,7 +161,6 @@ class DemoAccountSeeder extends Seeder
                     'recipient_id' => $definition['recipient'] !== null
                         ? Recipient::where('staff_id', $definition['recipient'])->value('id')
                         : null,
-                    'resolution_deadline_days' => $definition['deadline'],
                     'default_jurisdiction' => $definition['jurisdiction'] ?? 'recipient',
                     'is_active' => true,
                 ]

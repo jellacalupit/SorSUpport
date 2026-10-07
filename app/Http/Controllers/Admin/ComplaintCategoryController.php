@@ -38,7 +38,6 @@ class ComplaintCategoryController extends Controller
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
                 'recipient_id' => $validated['recipient_id'] ?? null,
-                'resolution_deadline_days' => $validated['resolution_deadline_days'] ?? 1,
                 'is_active' => true,
                 ...$handlingOptions,
             ]);
@@ -72,9 +71,6 @@ class ComplaintCategoryController extends Controller
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
                 'recipient_id' => $validated['recipient_id'] ?? null,
-                ...array_key_exists('resolution_deadline_days', $validated) && $validated['resolution_deadline_days'] !== null
-                    ? ['resolution_deadline_days' => $validated['resolution_deadline_days']]
-                    : [],
                 ...$handlingOptions,
             ]);
 
@@ -194,7 +190,6 @@ class ComplaintCategoryController extends Controller
             'is_sensitive' => 'nullable|boolean',
             'allows_hidden_identity' => 'nullable|boolean',
             'recipient_id' => 'nullable|exists:recipients,id',
-            'resolution_deadline_days' => 'nullable|integer|min:1',
             'suggested_recipient_ids' => 'nullable|array',
             'suggested_recipient_ids.*' => 'integer|distinct|exists:recipients,id',
             'hierarchy_levels' => 'nullable|array',

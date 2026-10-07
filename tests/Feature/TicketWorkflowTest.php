@@ -53,7 +53,7 @@ class TicketWorkflowTest extends TestCase
             Recipient::create(['user_id' => $user->id, 'staff_id' => 'STAFF-' . $index, 'unit' => 'Registrar', 'designation' => 'Staff']);
         }
 
-        $this->category = ComplaintCategory::create(['name' => 'Student Services', 'resolution_deadline_days' => 15, 'is_active' => true]);
+        $this->category = ComplaintCategory::create(['name' => 'Student Services', 'is_active' => true]);
     }
 
     protected function user(string $role, string $name): User

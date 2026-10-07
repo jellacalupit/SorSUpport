@@ -61,22 +61,6 @@
 <div class="mb-8">
 
     <label class="block font-semibold text-gray-900 mb-2">
-        Resolution Deadline (Days)
-    </label>
-
-    <input
-        type="number"
-        min="1"
-        name="resolution_deadline_days"
-        value="{{ old('resolution_deadline_days', $category->resolution_deadline_days ?? '') }}"
-        class="w-full border border-gray-300 rounded-lg p-3 text-gray-900 bg-white"
-        required>
-
-</div>
-
-<div class="mb-8">
-
-    <label class="block font-semibold text-gray-900 mb-2">
         Escalation Hierarchy (Recipient IDs, in order)
     </label>
 

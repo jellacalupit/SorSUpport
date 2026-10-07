@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Brings the configured complaint categories in line with the Student Handbook (Revised 2024):
- * deadlines the handbook sets, who a student may file with, and which matters stay confidential.
+ * who a student may file with, and which matters stay confidential.
  *
  * Categories are found by name and staff by staff ID, so anything not configured yet is skipped.
  */
@@ -29,34 +29,29 @@ return new class extends Migration
     {
         $chairs = [...self::CBME_CHAIRS, ...self::CICT_CHAIRS];
 
-        // name => [deadline in days, sensitive, suggested recipients]
+        // name => [sensitive, suggested recipients]
         $categories = [
-            // Adding or changing subjects closes 5 days after classes open (p. 11).
-            'Class Schedules and Subject Loads' => [3, false, [...$chairs, ...self::DEANS, ...self::REGISTRAR]],
-            // Late enrollees have a 5-day grace period (p. 9).
-            'Enrollment and Admission' => [3, false, [...self::REGISTRAR, ...self::DEANS]],
-            // Refunds must be applied for within two weeks of the opening of classes (p. 14).
-            'Fees and Payments' => [3, false, self::CASHIER],
-            'Library Services' => [3, false, self::LIBRARIAN],
-            'Health Services' => [3, false, self::NURSE],
-            // Students have the right to the expeditious issuance of documents (p. 60); Guidance
-            // issues the Certificate of Good Moral Character (p. 30).
-            'Student Records and Documents' => [5, false, [...self::REGISTRAR, ...self::GUIDANCE]],
+            'Class Schedules and Subject Loads' => [false, [...$chairs, ...self::DEANS, ...self::REGISTRAR]],
+            'Enrollment and Admission' => [false, [...self::REGISTRAR, ...self::DEANS]],
+            'Fees and Payments' => [false, self::CASHIER],
+            'Library Services' => [false, self::LIBRARIAN],
+            'Health Services' => [false, self::NURSE],
+            // Guidance issues the Certificate of Good Moral Character (p. 30).
+            'Student Records and Documents' => [false, [...self::REGISTRAR, ...self::GUIDANCE]],
             // Counseling records are kept with utmost confidentiality (pp. 28-29).
-            'Guidance and Counseling' => [5, true, [...self::GUIDANCE, ...self::SDS]],
-            'Grades and Examinations' => [7, false, [...self::FACULTY, ...$chairs, ...self::REGISTRAR]],
-            'Student Organizations and Activities' => [7, false, self::SDS],
-            'Other Concerns' => [7, false, self::SDS],
-            // The Committee on Decorum and Investigation decides within 10 working days (p. 57);
-            // complaints may be filed with the Guidance or GAD Office (p. 58).
-            'Gender-Based Sexual Harassment' => [10, true, [...self::GAD, ...self::GUIDANCE]],
-            'Gender and Discrimination Concerns' => [10, true, [...self::GAD, ...self::GUIDANCE]],
+            'Guidance and Counseling' => [true, [...self::GUIDANCE, ...self::SDS]],
+            'Grades and Examinations' => [false, [...self::FACULTY, ...$chairs, ...self::REGISTRAR]],
+            'Student Organizations and Activities' => [false, self::SDS],
+            'Other Concerns' => [false, self::SDS],
+            // Complaints may be filed with the Guidance or GAD Office (p. 58).
+            'Gender-Based Sexual Harassment' => [true, [...self::GAD, ...self::GUIDANCE]],
+            'Gender and Discrimination Concerns' => [true, [...self::GAD, ...self::GUIDANCE]],
             // A complaint is filed with the SDS Coordinator or the student's teacher or adviser, and
             // disciplinary matters are strictly confidential (pp. 46, 50).
-            'Complaint Against a Student' => [15, true, [...self::SDS, ...self::FACULTY]],
-            'Bullying and Harassment' => [15, true, [...self::GUIDANCE, ...self::SDS]],
-            'Faculty Conduct and Teaching' => [15, false, [...$chairs, ...self::DEANS]],
-            'Non-Teaching Personnel Conduct' => [15, false, [...self::CAMPUS_DIRECTOR, ...self::SDS]],
+            'Complaint Against a Student' => [true, [...self::SDS, ...self::FACULTY]],
+            'Bullying and Harassment' => [true, [...self::GUIDANCE, ...self::SDS]],
+            'Faculty Conduct and Teaching' => [false, [...$chairs, ...self::DEANS]],
+            'Non-Teaching Personnel Conduct' => [false, [...self::CAMPUS_DIRECTOR, ...self::SDS]],
         ];
 
         $recipientIds = DB::table('recipients')->pluck('id', 'staff_id');
@@ -67,7 +62,7 @@ return new class extends Migration
             ->values()
             ->all();
 
-        foreach ($categories as $name => [$days, $sensitive, $suggested]) {
+        foreach ($categories as $name => [$sensitive, $suggested]) {
             $categoryId = DB::table('complaint_categories')->where('name', $name)->value('id');
 
             if (! $categoryId) {
@@ -75,7 +70,6 @@ return new class extends Migration
             }
 
             DB::table('complaint_categories')->where('id', $categoryId)->update([
-                'resolution_deadline_days' => $days,
                 'is_sensitive' => $sensitive,
                 // A sensitive category always lets the student hide their name.
                 ...($sensitive ? ['allows_hidden_identity' => true] : []),

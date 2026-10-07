@@ -39,7 +39,6 @@ class DashboardVolumeChartTest extends TestCase
 
         $category = ComplaintCategory::create([
             'name' => 'Academic Concerns',
-            'resolution_deadline_days' => 7,
             'is_active' => true,
         ]);
 

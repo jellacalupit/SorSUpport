@@ -124,7 +124,6 @@ class Module8EmailNotificationsTest extends TestCase
 
         $category = ComplaintCategory::create([
             'name' => 'General',
-            'resolution_deadline_days' => 5,
             'is_active' => true,
         ]);
 
