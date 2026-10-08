@@ -376,7 +376,41 @@ class AnalyticsService
             'escalation_frequency' => $this->getEscalationFrequency($filters),
             'status_distribution' => $this->getActiveTicketStatuses($filters),
             'breakdowns' => $this->getBreakdowns($filters),
+            'overview' => $this->getReportOverview($filters),
             'filters' => $filters,
+        ];
+    }
+
+    /**
+     * The figures the printed report explains in plain words: how many tickets came in, how many
+     * are open or finished, how many needed action and were resolved, and how long that took.
+     */
+    public function getReportOverview(array $filters = []): array
+    {
+        $tickets = $this->filterTickets(Ticket::query(), $filters)->with(['complaint.category', 'auditLogs'])->get();
+        $finishedStatuses = [Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED];
+        $needsAction = $tickets->where('classification', Ticket::CLASSIFICATION_NEEDS_RESOLUTION);
+        $timed = $needsAction->filter(fn ($ticket) => $ticket->resolved_at && $ticket->complaint?->created_at);
+        $hours = fn ($ticket) => abs($ticket->complaint->created_at->floatDiffInHours($ticket->resolved_at));
+        $escalated = $tickets->filter(fn ($ticket) => $ticket->auditLogs->where('action', 'ticket_escalated')->isNotEmpty());
+
+        return [
+            'total' => $tickets->count(),
+            'open' => $tickets->whereNotIn('status', $finishedStatuses)->count(),
+            'finished' => $tickets->whereIn('status', $finishedStatuses)->count(),
+            'needs_action' => $needsAction->count(),
+            'needs_action_resolved' => $needsAction->whereIn('status', $finishedStatuses)->count(),
+            'informational' => $tickets->where('classification', Ticket::CLASSIFICATION_INFORMATIONAL)->count(),
+            'invalid' => $tickets->where('classification', Ticket::CLASSIFICATION_INVALID)->count(),
+            'unclassified' => $tickets->filter(fn ($ticket) => blank($ticket->classification))->count(),
+            'escalated_tickets' => $escalated->count(),
+            'average_hours' => $timed->isNotEmpty() ? $timed->avg($hours) : null,
+            'resolution_times' => $timed
+                ->filter(fn ($ticket) => $ticket->complaint->category)
+                ->groupBy(fn ($ticket) => $ticket->complaint->category->name)
+                ->map(fn ($group) => ['tickets' => $group->count(), 'hours' => $group->avg($hours)])
+                ->sortByDesc('hours')
+                ->toArray(),
         ];
     }
 

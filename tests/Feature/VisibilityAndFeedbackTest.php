@@ -399,6 +399,17 @@ class VisibilityAndFeedbackTest extends TestCase
         $this->assertStringContainsString('OFFICE OF THE STUDENT DEVELOPMENT SERVICES', $report);
         $this->assertStringContainsString('Tickets by College', $report);
         $this->assertStringContainsString('Prepared by:', $report);
+
+        // The summary explains the figures in plain words, and open plus finished add up to the total.
+        $this->ticket(Ticket::STATUS_IN_PROGRESS);
+        $this->ticket(Ticket::STATUS_RESOLVED);
+        $overview = app(AnalyticsService::class)->getReportOverview();
+        $this->assertSame($overview['total'], $overview['open'] + $overview['finished']);
+        $this->assertGreaterThanOrEqual(1, $overview['finished']);
+        $explained = view('admin.analytics.report', ['reportData' => app(AnalyticsService::class)->getReportData(), 'filters' => [], 'sections' => ['summary', 'escalation']])->render();
+        $this->assertStringContainsString('What the figures say', $explained);
+        $this->assertStringContainsString('still open', $explained);
+        $this->assertStringContainsString('No tickets were escalated in this period.', $explained);
         $this->assertStringNotContainsString('Tickets by Program', $report);
         $this->assertStringNotContainsString('Student Satisfaction', $report);
 
