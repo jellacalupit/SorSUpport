@@ -167,7 +167,7 @@ class AnalyticsController extends Controller
             'reportData' => $reportData,
             'filters' => $filters,
             'sections' => $sections,
-            'preparedBy' => $request->user()?->name,
+            'preparedBy' => $request->user()?->table_name,
         ])->setPaper('letter');
 
         return $pdf->download($fileName);
