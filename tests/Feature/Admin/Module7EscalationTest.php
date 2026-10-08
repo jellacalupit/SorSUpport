@@ -83,7 +83,7 @@ class Module7EscalationTest extends TestCase
             ->get(route('admin.complaints.show', $ticket->complaint))
             ->assertOk()
             ->assertSee('Escalate ticket')
-            ->assertSee('value="' . $supervisor->id . '" selected', false);
+            ->assertSee('name="recipient_id" value="' . $supervisor->id . '"', false);
     }
 
     public function test_automatic_escalation_and_deadline_reminder_commands_are_gone(): void

@@ -8,7 +8,6 @@
     $escalationService = app(\App\Services\TicketEscalationService::class);
     $escalationPaths = $escalationService->escalationOptions($ticket)->groupBy('path');
     $suggestedTargetId = $escalationService->getNextRecipient($ticket)?->id;
-    $suggestionUsed = false;
     $canEscalate = $ticket->classification === \App\Models\Ticket::CLASSIFICATION_NEEDS_RESOLUTION
         && in_array($ticket->status, [\App\Models\Ticket::STATUS_ASSIGNED, \App\Models\Ticket::STATUS_IN_PROGRESS, \App\Models\Ticket::STATUS_ESCALATED], true);
 @endphp
@@ -33,21 +32,22 @@
             <button type="button" x-on:click="action = null" class="mt-3 h-9 w-full rounded-full border border-border bg-white px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted">Back</button>
         @endif
     @else
-        <label class="sr-only" for="escalate-recipient-{{ $ticket->id }}">Escalate to</label>
-        <select id="escalate-recipient-{{ $ticket->id }}" name="recipient_id" required class="mt-2 h-9 w-full min-w-0 rounded-md border border-input bg-white px-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring">
-            <option value="">Select who to escalate to</option>
-            @foreach ($escalationPaths as $pathName => $steps)
-                <optgroup label="{{ $pathName }}">
-                    @foreach ($steps as $step)
-                        @php
-                            $isSuggested = ! $suggestionUsed && (int) $step['recipient']->id === (int) $suggestedTargetId;
-                            $suggestionUsed = $suggestionUsed || $isSuggested;
-                        @endphp
-                        <option value="{{ $step['recipient']->id }}" @selected($isSuggested)>Level {{ $step['level'] }} · {{ $step['recipient']->user->table_name }} · {{ $step['recipient']->designation }}@if ($ticket->complaint?->names($step['recipient']->user)) · named in this complaint @endif</option>
-                    @endforeach
-                </optgroup>
-            @endforeach
-        </select>
+        @php
+            // One option per person on each path, labelled with their level; the suggested next
+            // person is chosen to start with.
+            $escalationOptions = [];
+            foreach ($escalationPaths as $pathName => $steps) {
+                foreach ($steps as $step) {
+                    $escalationOptions[] = [
+                        'value' => $step['recipient']->id,
+                        'label' => 'Level ' . $step['level'] . ' · ' . $step['recipient']->user->table_name,
+                        'detail' => trim($step['recipient']->designation . ', ' . $step['recipient']->unit, ', ') . ($ticket->complaint?->names($step['recipient']->user) ? ' · named in this complaint' : ''),
+                        'group' => $pathName,
+                    ];
+                }
+            }
+        @endphp
+        <x-picker name="recipient_id" required id="escalate-recipient-{{ $ticket->id }}" label="Escalate to" class="mt-2" placeholder="Select who to escalate to" :selected="$suggestedTargetId ?? ''" :options="$escalationOptions" />
         @error('recipient_id')
             <p class="mt-1 text-xs font-medium text-destructive">{{ $message }}</p>
         @enderror

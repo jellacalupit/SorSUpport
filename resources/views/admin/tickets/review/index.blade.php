@@ -462,12 +462,8 @@
 
                     <form x-show="validity === 'invalid'" x-cloak method="POST" action="{{ route('admin.tickets.reject', $ticket) }}" class="mt-5 border-t border-border pt-4" x-on:submit="if (!invalidReason.trim()) { invalidReasonError = true; $event.preventDefault(); }">
                         @csrf
-                        <label for="closure-type-review-{{ $ticket->id }}" class="text-sm font-semibold text-black">Why can it not be acted on?</label>
-                        <select id="closure-type-review-{{ $ticket->id }}" name="closure_type" class="mt-2 mb-3 h-9 w-full rounded-md border border-input bg-white px-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring">
-                            @foreach ([\App\Models\Ticket::CLOSURE_INVALID, \App\Models\Ticket::CLOSURE_DUPLICATE, \App\Models\Ticket::CLOSURE_OUT_OF_SCOPE, \App\Models\Ticket::CLOSURE_NO_RESPONSE] as $closureType)
-                                <option value="{{ $closureType }}">{{ \App\Models\Ticket::CLOSURE_LABELS[$closureType] }}</option>
-                            @endforeach
-                        </select>
+                        <p class="text-sm font-semibold text-black">Why can it not be acted on?</p>
+                        <x-picker name="closure_type" id="closure-type-review-{{ $ticket->id }}" label="Why can it not be acted on?" class="mt-2 mb-3" :selected="\App\Models\Ticket::CLOSURE_INVALID" :options="collect([\App\Models\Ticket::CLOSURE_INVALID, \App\Models\Ticket::CLOSURE_DUPLICATE, \App\Models\Ticket::CLOSURE_OUT_OF_SCOPE, \App\Models\Ticket::CLOSURE_NO_RESPONSE])->map(fn ($closureType) => ['value' => $closureType, 'label' => \App\Models\Ticket::CLOSURE_LABELS[$closureType]])->all()" />
                         <label for="closure-reason-{{ $ticket->id }}" class="text-sm font-semibold text-black">Reason of Invalidity <span class="text-destructive" aria-hidden="true">*</span></label>
                         <textarea id="closure-reason-{{ $ticket->id }}" name="closure_reason" rows="4" x-model="invalidReason" x-on:input="invalidReasonError = false" x-bind:class="invalidReasonError ? 'border-destructive' : 'border-input'" class="mt-2 w-full rounded-lg border bg-muted px-3 py-2.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" placeholder="Enter the reason for invalidity."></textarea>
                         <p x-show="invalidReasonError" x-cloak class="mt-1 text-xs font-medium text-destructive">This field is required.</p>

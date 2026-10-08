@@ -253,23 +253,14 @@
             @csrf
             @method('PATCH')
             <p class="text-xs text-muted-foreground">Correct these if the student picked the wrong category or recipient.</p>
-            <label class="text-xs font-semibold leading-tight text-muted-foreground">
+            <div class="text-xs font-semibold leading-tight text-muted-foreground">
                 Category
-                <select name="category_id" required class="mt-1 h-9 w-full rounded-md border border-input bg-white px-2 text-xs font-normal text-foreground outline-none focus:ring-1 focus:ring-ring">
-                    @foreach ($categories as $categoryOption)
-                        <option value="{{ $categoryOption->id }}" @selected((int) $categoryOption->id === (int) $complaint->category_id)>{{ $categoryOption->name }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="text-xs font-semibold leading-tight text-muted-foreground">
+                <x-picker name="category_id" required label="Category" class="mt-1" :selected="$complaint->category_id" :options="$categories->map(fn ($categoryOption) => ['value' => $categoryOption->id, 'label' => $categoryOption->name])->all()" />
+            </div>
+            <div class="text-xs font-semibold leading-tight text-muted-foreground">
                 Suggested recipient
-                <select name="suggested_recipient_id" class="mt-1 h-9 w-full rounded-md border border-input bg-white px-2 text-xs font-normal text-foreground outline-none focus:ring-1 focus:ring-ring">
-                    <option value="">None</option>
-                    @foreach ($recipients as $recipientOption)
-                        <option value="{{ $recipientOption->id }}" @selected((int) $recipientOption->id === (int) $complaint->suggested_recipient_id)>{{ $recipientOption->user?->table_name }} · {{ $recipientOption->designation }}, {{ $recipientOption->unit }}</option>
-                    @endforeach
-                </select>
-            </label>
+                <x-picker name="suggested_recipient_id" label="Suggested recipient" class="mt-1" placeholder="None" :selected="$complaint->suggested_recipient_id ?? ''" :options="collect([['value' => '', 'label' => 'None']])->merge($recipients->map(fn ($recipientOption) => ['value' => $recipientOption->id, 'label' => $recipientOption->user?->table_name ?? 'Recipient', 'detail' => trim($recipientOption->designation . ', ' . $recipientOption->unit, ', ')]))->all()" />
+            </div>
             <div class="mt-1 grid grid-cols-2 gap-2">
                 <button type="button" x-on:click="editingDetails = false" class="w-full rounded-full border border-primary bg-white px-2.5 py-1.5 text-center text-xs font-semibold text-primary transition-colors hover:bg-primary-soft">Cancel</button>
                 <button type="submit" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Save Changes</button>
