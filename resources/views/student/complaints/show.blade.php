@@ -23,7 +23,6 @@
             <div class="min-w-0 lg:block!" x-show="tab === 'details'">
                 <h2 class="mb-0.5 hidden font-display text-base font-bold lg:block">Ticket Details</h2>
                 <div class="grid gap-3">
-                    <x-ticket-progress :ticket="$complaint->ticket" />
                     <x-ticket-info-panel :ticket="$complaint->ticket" student-view />
                     <x-ticket-actions :ticket="$complaint->ticket" role="student" />
                 </div>

@@ -382,30 +382,6 @@ class VisibilityAndFeedbackTest extends TestCase
         $log->forceFill(['created_at' => now()->subDays($daysAgo), 'updated_at' => now()->subDays($daysAgo)])->save();
     }
 
-    public function test_the_student_sees_who_their_ticket_is_waiting_on_and_for_how_long(): void
-    {
-        $ticket = $this->ticket(Ticket::STATUS_SUBMITTED);
-        $ticket->complaint->forceFill(['created_at' => now()->subDays(4)])->save();
-        $this->step($ticket, 'complaint_submitted', 4, $this->student);
-
-        $this->actingAs($this->student)->get(route('student.complaints.show', $ticket->complaint))
-            ->assertOk()
-            ->assertSee('Where your ticket is')
-            ->assertSee('Waiting for review by the SDS Office · 4 days')
-            ->assertSee('You submitted the ticket');
-
-        // Once it is assigned, the student is told who has it, and how long each step took.
-        $ticket->update(['status' => Ticket::STATUS_ASSIGNED, 'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'assigned_to' => $this->handler->id, 'current_handler_id' => $this->handler->id]);
-        $this->step($ticket, 'ticket_assigned', 1);
-
-        $this->actingAs($this->student)->get(route('student.complaints.show', $ticket->complaint))
-            ->assertOk()
-            ->assertSee('Waiting for ' . $this->handler->table_name . ' (Registrar, Registrar) to acknowledge it · 1 day')
-            ->assertSee('The SDS Office reviewed it and assigned a handler')
-            ->assertSee('3 days later')
-            ->assertDontSee('Recorded for the test.');
-    }
-
     public function test_analytics_measure_how_long_tickets_wait_at_each_stage(): void
     {
         // Filed 5 days ago, reviewed after 2 days, acknowledged a day later, still in progress.

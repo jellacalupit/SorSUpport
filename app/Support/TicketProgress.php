@@ -26,34 +26,12 @@ class TicketProgress
         'ticket_retained_in_sds_records',
     ];
 
-    /** Steps a student is shown, worded without the staff's internal notes. */
-    protected const STUDENT_STEPS = [
-        'complaint_submitted' => 'You submitted the ticket',
-        'anonymous_complaint_submitted' => 'You submitted the ticket',
-        'clarification_requested' => 'The SDS Office asked you for more details',
-        'clarification_provided' => 'You sent more details',
-        'ticket_assigned' => 'The SDS Office reviewed it and assigned a handler',
-        'ticket_acknowledged' => 'The handler started working on it',
-        'ticket_escalated' => 'It was escalated to a higher level',
-        'ticket_referred' => 'It was referred to a committee',
-        'referral_outcome_recorded' => 'The committee\'s outcome was recorded',
-        'complaint_resolved' => 'A resolution was given',
-        'further_action_requested' => 'You requested further action',
-        'ticket_reopened_from_resolved' => 'The SDS Office reopened it',
-        'resolution_accepted' => 'You accepted the resolution',
-        'ticket_closed' => 'The ticket was closed',
-        'ticket_closed_invalid' => 'The ticket was closed',
-        'ticket_forwarded_and_closed' => 'It was recorded for information and closed',
-        'ticket_retained_in_sds_records' => 'It was recorded for information and closed',
-        'ticket_withdrawn' => 'You withdrew the ticket',
-    ];
-
     /**
      * Who the ticket is waiting on now and since when, or null once it is closed.
      *
      * @return array{text: string, since: ?Carbon, days: int}|null
      */
-    public static function waitingOn(Ticket $ticket, bool $forStudent = false): ?array
+    public static function waitingOn(Ticket $ticket): ?array
     {
         if ($ticket->status === Ticket::STATUS_CLOSED) {
             return null;
@@ -64,12 +42,12 @@ class TicketProgress
 
         [$text, $since] = match ($ticket->status) {
             Ticket::STATUS_SUBMITTED => ['Waiting for review by the SDS Office', $lastAction],
-            Ticket::STATUS_NEEDS_CLARIFICATION => [$forStudent ? 'Waiting for your reply to the SDS Office' : 'Waiting for the student\'s reply', $ticket->clarification_requested_at ?? $lastAction],
+            Ticket::STATUS_NEEDS_CLARIFICATION => ['Waiting for the student\'s reply', $ticket->clarification_requested_at ?? $lastAction],
             Ticket::STATUS_ASSIGNED => ["Waiting for {$holder} to acknowledge it", $lastAction],
             Ticket::STATUS_IN_PROGRESS => ["Being handled by {$holder}", $lastAction],
             Ticket::STATUS_ESCALATED => ["Escalated to {$holder}", $lastAction],
             Ticket::STATUS_REFERRED => ['With the ' . ($ticket->referred_to ?: 'committee') . ' for a decision', $ticket->referred_at ?? $lastAction],
-            Ticket::STATUS_RESOLVED => [$forStudent ? 'Waiting for you to accept the resolution or request further action' : 'Waiting for the student to accept the resolution', $ticket->resolved_at ?? $lastAction],
+            Ticket::STATUS_RESOLVED => ['Waiting for the student to accept the resolution', $ticket->resolved_at ?? $lastAction],
             default => ['Open', $lastAction],
         };
 
@@ -78,28 +56,6 @@ class TicketProgress
             'since' => $since,
             'days' => $since ? max(0, (int) floor($since->diffInDays(now()))) : 0,
         ];
-    }
-
-    /**
-     * The same, as one line: "Waiting for review by the SDS Office · 4 days".
-     */
-    public static function waitingLine(Ticket $ticket, bool $forStudent = false): ?string
-    {
-        $waiting = self::waitingOn($ticket, $forStudent);
-
-        if (! $waiting) {
-            return null;
-        }
-
-        $moving = in_array($ticket->status, [Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED], true);
-        $days = $waiting['days'];
-        $length = match (true) {
-            $days === 0 => $moving ? 'updated today' : 'since today',
-            $moving => 'no update for ' . $days . ' ' . ($days === 1 ? 'day' : 'days'),
-            default => $days . ' ' . ($days === 1 ? 'day' : 'days'),
-        };
-
-        return "{$waiting['text']} · {$length}";
     }
 
     /**
@@ -116,33 +72,6 @@ class TicketProgress
         $office = trim(implode(', ', array_filter([$handler->recipient?->designation, $handler->recipient?->unit])));
 
         return $handler->table_name . ($office !== '' ? " ({$office})" : '');
-    }
-
-    /**
-     * The steps of the ticket so far for the student: what happened, when, and how long after
-     * the step before it.
-     *
-     * @return Collection<int, array{label: string, at: Carbon, gap: ?string}>
-     */
-    public static function studentSteps(Ticket $ticket): Collection
-    {
-        $previous = null;
-
-        return $ticket->auditLogs
-            ->filter(fn ($log) => isset(self::STUDENT_STEPS[$log->action]))
-            ->sortBy('created_at')
-            ->values()
-            ->map(function ($log) use (&$previous) {
-                $days = $previous ? max(0, (int) floor($previous->diffInDays($log->created_at))) : null;
-                $gap = match (true) {
-                    $days === null => null,
-                    $days === 0 => 'the same day',
-                    default => $days . ' ' . ($days === 1 ? 'day' : 'days') . ' later',
-                };
-                $previous = $log->created_at;
-
-                return ['label' => self::STUDENT_STEPS[$log->action], 'at' => $log->created_at, 'gap' => $gap];
-            });
     }
 
     /**
