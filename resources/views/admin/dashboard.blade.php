@@ -69,12 +69,12 @@
                             <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                         </summary>
                         <div class="absolute top-full right-0 z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                            <button type="button" class="relative flex w-full items-center rounded-sm py-1 pl-2 pr-8 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-month-option="" data-selected="true">
+                            <button type="button" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1 pl-2 pr-8 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-month-option="" data-selected="true">
                                 <x-icons.check class="absolute right-2 h-4 w-4" />
                                 All months
                             </button>
                             @foreach ($monthOptions as $monthNumber => $monthLabel)
-                                <button type="button" class="relative flex w-full items-center rounded-sm py-1 pl-2 pr-8 text-xs hover:bg-accent hover:text-accent-foreground" data-month-option="{{ $monthNumber }}">
+                                <button type="button" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1 pl-2 pr-8 text-xs hover:bg-accent hover:text-accent-foreground" data-month-option="{{ $monthNumber }}">
                                     <x-icons.check class="absolute right-2 h-4 w-4 hidden" />
                                     {{ $monthLabel }}
                                 </button>
@@ -454,19 +454,19 @@
                             <select id="volume-chart-category" data-volume-category class="hidden" aria-hidden="true"></select>
                         </details>
 
-                        <details x-data="{}" class="group relative w-32 shrink-0" x-on:click.outside="$el.removeAttribute('open')" data-volume-month-wrapper>
+                        <details x-data="{}" class="group relative w-36 shrink-0" x-on:click.outside="$el.removeAttribute('open')" data-volume-month-wrapper>
                             <span aria-hidden="true" class="invisible block h-0 whitespace-nowrap">All months</span>
                             <summary class="flex h-8 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-1.5 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden" data-volume-month-summary>
                                 <span class="truncate" data-volume-month-label>All months</span>
                                 <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                             </summary>
                             <div class="absolute top-full right-0 z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                                <button type="button" class="relative flex w-full items-center rounded-sm py-1 pl-2 pr-8 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-month-option="" data-selected="true">
+                                <button type="button" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1 pl-2 pr-8 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-month-option="" data-selected="true">
                                     <x-icons.check class="absolute right-2 h-4 w-4" />
                                     All months
                                 </button>
                                 @foreach ($monthOptions as $monthNumber => $monthLabel)
-                                    <button type="button" class="relative flex w-full items-center rounded-sm py-1 pl-2 pr-8 text-xs hover:bg-accent hover:text-accent-foreground" data-month-option="{{ $monthNumber }}">
+                                    <button type="button" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1 pl-2 pr-8 text-xs hover:bg-accent hover:text-accent-foreground" data-month-option="{{ $monthNumber }}">
                                         <x-icons.check class="absolute right-2 h-4 w-4 hidden" />
                                         {{ $monthLabel }}
                                     </button>
