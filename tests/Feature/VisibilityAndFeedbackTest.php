@@ -373,6 +373,22 @@ class VisibilityAndFeedbackTest extends TestCase
         $this->assertNull($top->firstWhere('staff_id', $this->otherRecipient->recipient->staff_id));
     }
 
+    public function test_analytics_bars_are_as_long_as_their_percentage(): void
+    {
+        $other = ComplaintCategory::create(['name' => 'Library Services', 'is_active' => true]);
+        foreach (range(1, 3) as $ignored) {
+            $this->ticket(Ticket::STATUS_IN_PROGRESS);
+        }
+        $single = $this->ticket(Ticket::STATUS_IN_PROGRESS);
+        $single->complaint->update(['category_id' => $other->id]);
+
+        $page = $this->actingAs($this->admin)->get('/admin/analytics')->assertOk()->getContent();
+
+        // Three of four tickets is 75% and one of four is 25%: the larger bar is not drawn full.
+        $this->assertStringContainsString('bg-primary" style="width: 75%"', $page);
+        $this->assertStringContainsString('bg-primary" style="width: 25%"', $page);
+    }
+
     public function test_the_admin_chooses_which_parts_of_the_report_to_generate(): void
     {
         $reportData = app(AnalyticsService::class)->getReportData();

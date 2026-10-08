@@ -242,7 +242,7 @@
                     @forelse ($categoryBars as $label => $count)
                         <div>
                             <div class="mb-1 flex justify-between gap-2 text-xs"><span class="min-w-0 truncate text-foreground">{{ $label }}</span><strong class="shrink-0 tabular-nums">{{ $count }} <span class="font-normal text-muted-foreground">({{ $percent($count) }}%)</span></strong></div>
-                            <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full bg-primary" style="width: {{ $percent($count, max(1, $categoryBars->max())) }}%"></div></div>
+                            <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full bg-primary" style="width: {{ min(100, $percent($count)) }}%"></div></div>
                         </div>
                     @empty
                         <p class="py-6 text-center text-xs text-muted-foreground">No tickets in this period.</p>
@@ -256,7 +256,7 @@
                     @forelse ($departmentBars as $department)
                         <div>
                             <div class="mb-1 flex justify-between gap-2 text-xs"><span class="min-w-0 truncate text-foreground">{{ $department['name'] }}</span><strong class="shrink-0 tabular-nums">{{ $department['total'] }} <span class="font-normal text-muted-foreground">({{ $percent($department['total']) }}%)</span></strong></div>
-                            <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full bg-[#c4785a]" style="width: {{ $percent($department['total'], max(1, $departmentBars->max('total'))) }}%"></div></div>
+                            <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full bg-[#c4785a]" style="width: {{ min(100, $percent($department['total'])) }}%"></div></div>
                         </div>
                     @empty
                         <p class="py-6 text-center text-xs text-muted-foreground">No college or office data in this period.</p>
@@ -298,7 +298,7 @@
         @endphp
         <div class="grid gap-3 sm:gap-4 lg:grid-cols-2" data-analytics-breakdowns>
             @foreach ($breakdownCards as $card)
-                @php $cardTotal = max(1, array_sum($card['rows'])); $cardMax = max(1, max($card['rows'] ?: [0])); @endphp
+                @php $cardTotal = max(1, array_sum($card['rows'])); @endphp
                 <section class="{{ $cardClass }}">
                     <h2 class="{{ $titleClass }}">{{ $card['title'] }}</h2>
                     <p class="{{ $subtitleClass }}">{{ $card['hint'] }}</p>
@@ -306,7 +306,7 @@
                         @forelse (array_filter($card['rows']) as $label => $count)
                             <div>
                                 <div class="mb-1 flex justify-between gap-2 text-xs"><span class="min-w-0 truncate text-foreground">{{ $label }}</span><strong class="shrink-0 tabular-nums">{{ $count }} <span class="font-normal text-muted-foreground">({{ round($count / $cardTotal * 100) }}%)</span></strong></div>
-                                <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full {{ $card['color'] }}" style="width: {{ round($count / $cardMax * 100) }}%"></div></div>
+                                <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full {{ $card['color'] }}" style="width: {{ min(100, round($count / $cardTotal * 100)) }}%"></div></div>
                             </div>
                         @empty
                             <p class="py-6 text-center text-xs text-muted-foreground">{{ $card['empty'] }}</p>
@@ -322,8 +322,8 @@
                     <div class="mt-3 grid gap-2.5">
                         @foreach ($satisfaction['distribution'] as $rating => $count)
                             <div>
-                                <div class="mb-1 flex justify-between gap-2 text-xs"><span class="text-foreground">{{ $rating }} out of 5</span><strong class="tabular-nums">{{ $count }}</strong></div>
-                                <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full bg-amber-500" style="width: {{ round($count / max(1, max($satisfaction['distribution'])) * 100) }}%"></div></div>
+                                <div class="mb-1 flex justify-between gap-2 text-xs"><span class="text-foreground">{{ $rating }} out of 5</span><strong class="tabular-nums">{{ $count }} <span class="font-normal text-muted-foreground">({{ round($count / max(1, $satisfaction['count']) * 100) }}%)</span></strong></div>
+                                <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full bg-amber-500" style="width: {{ min(100, round($count / max(1, $satisfaction['count']) * 100)) }}%"></div></div>
                             </div>
                         @endforeach
                     </div>
