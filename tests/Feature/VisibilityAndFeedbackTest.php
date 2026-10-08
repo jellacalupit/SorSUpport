@@ -351,6 +351,28 @@ class VisibilityAndFeedbackTest extends TestCase
         $this->assertStringContainsString('Tickets by College', view('admin.analytics.report', ['reportData' => $reportData, 'filters' => []])->render());
     }
 
+    public function test_the_dashboard_shows_the_same_recipient_performance_as_analytics(): void
+    {
+        // Three tickets with the same handler: one resolved and already closed, one resolved,
+        // one still in progress. Analytics counts two of three as resolved.
+        $this->ticket(Ticket::STATUS_CLOSED, ['resolved_at' => now(), 'closed_at' => now()]);
+        $this->ticket(Ticket::STATUS_RESOLVED, ['resolved_at' => now()]);
+        $this->ticket(Ticket::STATUS_IN_PROGRESS);
+
+        $row = collect(app(AnalyticsService::class)->getDashboardData()['recipients'])->firstWhere('user_id', $this->handler->id);
+        $this->assertSame(3, $row['assigned']);
+        $this->assertSame(2, $row['resolved']);
+
+        $top = $this->actingAs($this->admin)->get(route('admin.dashboard'))->assertOk()->viewData('topPerformingRecipients');
+        $card = $top->firstWhere('staff_id', 'STAFF-1');
+
+        $this->assertNotNull($card);
+        $this->assertSame(67, $card->performance_percentage);
+        $this->assertSame(2, $card->resolved_count);
+        // People who hold no tickets are not listed with an empty bar.
+        $this->assertNull($top->firstWhere('staff_id', $this->otherRecipient->recipient->staff_id));
+    }
+
     public function test_the_admin_chooses_which_parts_of_the_report_to_generate(): void
     {
         $reportData = app(AnalyticsService::class)->getReportData();

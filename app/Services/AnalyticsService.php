@@ -204,6 +204,7 @@ class AnalyticsService
                     ->map(fn ($ticket) => $ticket->complaint->created_at->floatDiffInHours($ticket->resolved_at));
 
                 return [
+                    'user_id' => $user->id,
                     'name' => $user->table_name ?: 'Unassigned',
                     'unit' => $user->recipient?->unit ?: 'Unassigned',
                     'assigned' => $ticketGroup->count(),

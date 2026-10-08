@@ -79,66 +79,28 @@ class AdminDashboardController extends Controller
             $volumeChartYears = $volumeChartYears->push($currentYear)->unique()->sort()->values();
         }
 
-        // Get top performing recipients based on resolved/assigned tickets ratio
-        $topPerformingRecipients = User::query()
-            ->whereIn('role', [User::ROLE_RECIPIENT, User::ROLE_SDS_ADMIN])
-            ->where('is_active', true)
-            ->with('recipient')
-            ->get()
-            ->map(function ($user) {
-                $assignedCount = Ticket::query()
-                    ->where('assigned_to', $user->id)
-                    ->count();
-                $resolvedCount = Ticket::query()
-                    ->where('assigned_to', $user->id)
-                    ->where('status', Ticket::STATUS_RESOLVED)
-                    ->count();
-                
-                $performancePercentage = $assignedCount > 0 ? round(($resolvedCount / $assignedCount) * 100) : 0;
-                
-                $unit = $user->recipient?->unit ?? 'Not assigned';
-                $designation = $user->recipient?->designation ?? 'Not assigned';
-                $staffId = $user->recipient?->staff_id ?? $user->username ?? 'N/A';
-                
-                // Parse name exactly like the profile page does
-                $parsedNameParts = array_values(array_filter(preg_split('/\s+/', trim((string) ($user->name ?? ''))) ?: [], static fn ($part) => $part !== ''));
-                
-                $profileFirstName = '';
-                $profileMiddleName = '';
-                $profileLastName = '';
-                
-                if (!empty($parsedNameParts)) {
-                    if (count($parsedNameParts) >= 3) {
-                        $profileFirstName = implode(' ', array_slice($parsedNameParts, 0, -2));
-                        $profileMiddleName = $parsedNameParts[count($parsedNameParts) - 2] ?? '';
-                        $profileLastName = $parsedNameParts[count($parsedNameParts) - 1] ?? '';
-                    } elseif (count($parsedNameParts) === 2) {
-                        $profileFirstName = $parsedNameParts[0] ?? '';
-                        $profileLastName = $parsedNameParts[1] ?? '';
-                    } else {
-                        $profileFirstName = $parsedNameParts[0] ?? '';
-                    }
-                }
-                
-                $profileDisplayMiddleInitial = $profileMiddleName !== '' ? strtoupper(substr($profileMiddleName, 0, 1)) . '.' : '';
-                $displayName = trim(implode(' ', array_filter([
-                    $profileFirstName,
-                    $profileDisplayMiddleInitial,
-                    $profileLastName,
-                ], static fn ($part) => $part !== null && $part !== '')));
-                
+        // The five best resolution rates, taken from the same figures the Analytics page shows
+        // (all time): tickets each person holds, and how many needing resolution they resolved.
+        $performanceRows = collect(app(\App\Services\AnalyticsService::class)->getDashboardData()['recipients']);
+        $performanceUsers = User::query()->with('recipient')->whereIn('id', $performanceRows->pluck('user_id'))->get()->keyBy('id');
+
+        $topPerformingRecipients = $performanceRows
+            ->map(function (array $row) use ($performanceUsers) {
+                $user = $performanceUsers->get($row['user_id']);
+
                 return (object) [
                     'user' => $user,
-                    'display_name' => $displayName,
-                    'unit' => $unit,
-                    'designation' => $designation,
-                    'staff_id' => $staffId,
-                    'role' => $user->role === User::ROLE_SDS_ADMIN ? 'Admin' : 'Recipient',
-                    'performance_percentage' => $performancePercentage,
-                    'resolved_count' => $resolvedCount,
+                    'display_name' => $row['name'],
+                    'unit' => $row['unit'],
+                    'designation' => $user?->recipient?->designation ?? 'Not assigned',
+                    'staff_id' => $user?->recipient?->staff_id ?? $user?->username ?? 'N/A',
+                    'role' => $user?->role === User::ROLE_SDS_ADMIN ? 'Admin' : 'Recipient',
+                    'performance_percentage' => (int) round($row['resolved'] / max(1, $row['assigned']) * 100),
+                    'resolved_count' => $row['resolved'],
+                    'assigned_count' => $row['assigned'],
                 ];
             })
-            ->sortByDesc('performance_percentage')
+            ->sort(fn ($first, $second) => [$second->performance_percentage, $second->resolved_count, $second->assigned_count] <=> [$first->performance_percentage, $first->resolved_count, $first->assigned_count])
             ->take(5)
             ->values();
 
