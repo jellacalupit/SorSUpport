@@ -286,10 +286,7 @@
                         </summary>
                         <div class="absolute top-full left-0 z-50 mt-1 w-full min-w-32 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                             @foreach ($sortOptions as $value => $label)
-                                <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => $value, 'unit_filter' => request('unit_filter'), 'program_filter' => request('program_filter'), 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedSort === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
-                                    @if ($selectedSort === $value)
-                                        <x-icons.check class="absolute right-2 h-4 w-4" />
-                                    @endif
+                                <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => $value, 'unit_filter' => request('unit_filter'), 'program_filter' => request('program_filter'), 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 px-2 text-xs {{ $selectedSort === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                     {{ $label }}
                                 </a>
                             @endforeach
@@ -304,10 +301,7 @@
                     </summary>
                     <div class="absolute top-full left-0 z-50 mt-1 w-full min-w-44 rounded-md sm:min-w-28 sm:max-w-[calc(100vw-2rem)] sm:whitespace-nowrap border bg-popover p-1 text-popover-foreground shadow-md">
                         @foreach ($departmentOptions as $value => $label)
-                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'unit_filter' => $value, 'program_filter' => '', 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedDepartment === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
-                                @if ($selectedDepartment === $value)
-                                    <x-icons.check class="absolute right-2 h-4 w-4" />
-                                @endif
+                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'unit_filter' => $value, 'program_filter' => '', 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 px-2 text-xs {{ $selectedDepartment === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                 {{ $label }}
                             </a>
                         @endforeach
@@ -321,10 +315,7 @@
                     </summary>
                     <div class="absolute top-full left-0 z-50 mt-1 w-full min-w-28 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                         @foreach ($courseOptions as $value => $label)
-                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'unit_filter' => $courseDepartmentMap[$value] ?? request('unit_filter'), 'program_filter' => $value, 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedCourse === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
-                                @if ($selectedCourse === $value)
-                                    <x-icons.check class="absolute right-2 h-4 w-4" />
-                                @endif
+                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'unit_filter' => $courseDepartmentMap[$value] ?? request('unit_filter'), 'program_filter' => $value, 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 px-2 text-xs {{ $selectedCourse === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                 {{ $label }}
                             </a>
                         @endforeach
@@ -338,10 +329,7 @@
                     </summary>
                     <div class="absolute top-full left-0 z-50 mt-1 w-full min-w-24 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                         @foreach ($yearOptions as $value => $label)
-                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'unit_filter' => request('unit_filter'), 'program_filter' => request('program_filter'), 'year_filter' => $value, 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedYear === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
-                                @if ($selectedYear === $value)
-                                    <x-icons.check class="absolute right-2 h-4 w-4" />
-                                @endif
+                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'unit_filter' => request('unit_filter'), 'program_filter' => request('program_filter'), 'year_filter' => $value, 'block_filter' => request('block_filter'), 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 px-2 text-xs {{ $selectedYear === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                 {{ $label }}
                             </a>
                         @endforeach
@@ -355,10 +343,7 @@
                     </summary>
                     <div class="absolute top-full left-0 z-50 mt-1 w-full min-w-24 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                         @foreach ($blockOptions as $value => $label)
-                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'unit_filter' => request('unit_filter'), 'program_filter' => request('program_filter'), 'year_filter' => request('year_filter'), 'block_filter' => $value, 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedBlock === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
-                                @if ($selectedBlock === $value)
-                                    <x-icons.check class="absolute right-2 h-4 w-4" />
-                                @endif
+                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'unit_filter' => request('unit_filter'), 'program_filter' => request('program_filter'), 'year_filter' => request('year_filter'), 'block_filter' => $value, 'status_filter' => request('status_filter'), 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 px-2 text-xs {{ $selectedBlock === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                 {{ $label }}
                             </a>
                         @endforeach
@@ -372,10 +357,7 @@
                     </summary>
                     <div class="absolute top-full right-0 z-50 mt-1 w-full min-w-28 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                         @foreach ($statusOptions as $value => $label)
-                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'unit_filter' => request('unit_filter'), 'program_filter' => request('program_filter'), 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => $value, 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedStatus === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
-                                @if ($selectedStatus === $value)
-                                    <x-icons.check class="absolute right-2 h-4 w-4" />
-                                @endif
+                            <a href="{{ route('admin.accounts.index', array_filter(['search' => request('search'), 'sort_id' => request('sort_id'), 'unit_filter' => request('unit_filter'), 'program_filter' => request('program_filter'), 'year_filter' => request('year_filter'), 'block_filter' => request('block_filter'), 'status_filter' => $value, 'category_filter' => $selectedCategory])) }}" class="relative flex w-full items-center rounded-sm py-1.5 px-2 text-xs {{ $selectedStatus === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                 {{ $label }}
                             </a>
                         @endforeach

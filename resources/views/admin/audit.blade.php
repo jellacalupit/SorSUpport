@@ -19,7 +19,7 @@
                     <summary class="flex h-9 cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden"><span class="truncate">{{ $accountTypes[request('account_type', '')] ?? 'All Account Types' }}</span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></summary>
                     <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                         @foreach ($accountTypes as $value => $label)
-                            <a href="{{ $query(['search' => request('search'), 'account_type' => $value, 'from' => request('from'), 'to' => request('to')]) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ request('account_type', '') === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if (request('account_type', '') === $value)<x-icons.check class="absolute right-2 h-4 w-4" />@endif{{ $label }}</a>
+                            <a href="{{ $query(['search' => request('search'), 'account_type' => $value, 'from' => request('from'), 'to' => request('to')]) }}" class="relative flex w-full items-center rounded-sm py-1.5 px-2 text-xs {{ request('account_type', '') === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">{{ $label }}</a>
                         @endforeach
                     </div>
                 </details>

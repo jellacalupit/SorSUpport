@@ -188,7 +188,6 @@
                                         <span class="block wrap-break-word" x-text="item.name"></span>
                                         <span class="block text-xs" :class="summary(item) === 'Not set' ? 'text-amber-700' : 'text-muted-foreground'" x-text="summary(item)"></span>
                                     </span>
-                                    <svg x-show="selectedId === item.id" x-cloak class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
                                 </button>
                             </template>
                         </div>

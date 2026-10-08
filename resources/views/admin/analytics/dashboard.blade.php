@@ -123,8 +123,7 @@
                             </summary>
                             <div class="absolute top-full z-50 mt-1 max-h-72 w-full min-w-44 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md {{ $loop->even ? 'right-0 lg:right-auto' : '' }}">
                                 @foreach (['' => $dropdown['all']] + $dropdown['options'] as $value => $label)
-                                    <button type="button" data-analytics-filter="{{ $dropdown['name'] }}" data-value="{{ $value }}" data-label="{{ $label }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-left text-xs {{ $current === (string) $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
-                                        @if ($current === (string) $value)<x-icons.check class="absolute right-2 h-4 w-4" />@endif
+                                    <button type="button" data-analytics-filter="{{ $dropdown['name'] }}" data-value="{{ $value }}" data-label="{{ $label }}" class="relative flex w-full items-center rounded-sm py-1.5 px-2 text-left text-xs {{ $current === (string) $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                         <span class="min-w-0 wrap-break-word">{{ $label }}</span>
                                     </button>
                                 @endforeach

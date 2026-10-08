@@ -25,8 +25,7 @@
                             </summary>
                             <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md max-sm:min-w-max">
                                 @foreach ($classificationLabels as $value => $label)
-                                    <a href="{{ route('admin.tickets.my', array_filter(['search' => request('search'), 'classification_filter' => $value, 'status_filter' => request('status_filter'), 'sort' => request('sort')])) }}" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedClassification === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
-                                        @if ($selectedClassification === $value) <x-icons.check class="absolute right-2 h-4 w-4" /> @endif
+                                    <a href="{{ route('admin.tickets.my', array_filter(['search' => request('search'), 'classification_filter' => $value, 'status_filter' => request('status_filter'), 'sort' => request('sort')])) }}" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1.5 px-2 text-xs {{ $selectedClassification === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                         {{ $label }}
                                     </a>
                                 @endforeach
@@ -48,8 +47,7 @@
                             </summary>
                             <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md max-sm:min-w-max">
                                 @foreach ($statusLabels as $value => $label)
-                                    <a href="{{ route('admin.tickets.my', array_filter(['search' => request('search'), 'classification_filter' => request('classification_filter'), 'status_filter' => $value, 'sort' => request('sort')])) }}" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedStatus === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
-                                        @if ($selectedStatus === $value) <x-icons.check class="absolute right-2 h-4 w-4" /> @endif
+                                    <a href="{{ route('admin.tickets.my', array_filter(['search' => request('search'), 'classification_filter' => request('classification_filter'), 'status_filter' => $value, 'sort' => request('sort')])) }}" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1.5 px-2 text-xs {{ $selectedStatus === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                         {{ $label }}
                                     </a>
                                 @endforeach
@@ -68,8 +66,7 @@
                             </summary>
                             <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md max-sm:right-0 max-sm:min-w-max">
                                 @foreach (['newest' => 'Newest First', 'oldest' => 'Oldest First'] as $sortOption => $sortLabel)
-                                    <a href="{{ route('admin.tickets.my', array_filter(['search' => request('search'), 'status_filter' => request('status_filter'), 'sort' => $sortOption])) }}" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $sortValue === $sortOption ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
-                                        @if ($sortValue === $sortOption) <x-icons.check class="absolute right-2 h-4 w-4" /> @endif
+                                    <a href="{{ route('admin.tickets.my', array_filter(['search' => request('search'), 'status_filter' => request('status_filter'), 'sort' => $sortOption])) }}" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1.5 px-2 text-xs {{ $sortValue === $sortOption ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                         {{ $sortLabel }}
                                     </a>
                                 @endforeach

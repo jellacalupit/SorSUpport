@@ -25,13 +25,11 @@
                                 <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                             </summary>
                             <div class="absolute top-full z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                                <a href="{{ route('admin.tickets.review.index', array_filter(['search' => request('search'), 'sort' => request('sort')])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedCategoryId === '' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
-                                    @if ($selectedCategoryId === '') <x-icons.check class="absolute right-2 h-4 w-4" /> @endif
+                                <a href="{{ route('admin.tickets.review.index', array_filter(['search' => request('search'), 'sort' => request('sort')])) }}" class="relative flex w-full items-center rounded-sm py-1.5 px-2 text-xs {{ $selectedCategoryId === '' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                     All categories
                                 </a>
                                 @foreach ($categories as $category)
-                                    <a href="{{ route('admin.tickets.review.index', array_filter(['search' => request('search'), 'category_filter' => $category->id, 'sort' => request('sort')])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ $selectedCategoryId === (string) $category->id ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
-                                        @if ($selectedCategoryId === (string) $category->id) <x-icons.check class="absolute right-2 h-4 w-4" /> @endif
+                                    <a href="{{ route('admin.tickets.review.index', array_filter(['search' => request('search'), 'category_filter' => $category->id, 'sort' => request('sort')])) }}" class="relative flex w-full items-center rounded-sm py-1.5 px-2 text-xs {{ $selectedCategoryId === (string) $category->id ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                         <span class="whitespace-normal break-words">{{ $category->name }}</span>
                                     </a>
                                 @endforeach
@@ -49,8 +47,7 @@
                             </summary>
                             <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                                 @foreach (['newest' => 'Newest first', 'oldest' => 'Oldest first'] as $sortValue => $sortLabel)
-                                    <a href="{{ route('admin.tickets.review.index', array_filter(['search' => request('search'), 'category_filter' => request('category_filter'), 'sort' => $sortValue])) }}" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1.5 pl-2 pr-8 text-xs {{ request('sort', 'newest') === $sortValue ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
-                                        @if (request('sort', 'newest') === $sortValue) <x-icons.check class="absolute right-2 h-4 w-4" /> @endif
+                                    <a href="{{ route('admin.tickets.review.index', array_filter(['search' => request('search'), 'category_filter' => request('category_filter'), 'sort' => $sortValue])) }}" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1.5 px-2 text-xs {{ request('sort', 'newest') === $sortValue ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                         {{ $sortLabel }}
                                     </a>
                                 @endforeach

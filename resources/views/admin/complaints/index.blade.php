@@ -19,9 +19,9 @@
                                     <span class="truncate">{{ $selectedCategory?->name ?? 'All categories' }}</span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                                 </summary>
                                 <div class="absolute top-full z-50 mt-1 w-full max-h-72 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                                    <a href="{{ $query(array_merge(request()->only(['search','status_filter','classification_filter','filed_from','filed_to','sort']), ['category_filter' => ''])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ !request('category_filter') ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if (!request('category_filter'))<x-icons.check class="absolute right-2 h-4 w-4" />@endif All categories</a>
+                                    <a href="{{ $query(array_merge(request()->only(['search','status_filter','classification_filter','filed_from','filed_to','sort']), ['category_filter' => ''])) }}" class="relative flex w-full items-center rounded-sm py-1.5 px-2 text-xs {{ !request('category_filter') ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">All categories</a>
                                     @foreach ($categories as $category)
-                                        <a href="{{ $query(array_merge(request()->only(['search','status_filter','classification_filter','filed_from','filed_to','sort']), ['category_filter' => $category->id])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ (string) request('category_filter') === (string) $category->id ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if ((string) request('category_filter') === (string) $category->id)<x-icons.check class="absolute right-2 h-4 w-4" />@endif<span class="whitespace-normal break-words">{{ $category->name }}</span></a>
+                                        <a href="{{ $query(array_merge(request()->only(['search','status_filter','classification_filter','filed_from','filed_to','sort']), ['category_filter' => $category->id])) }}" class="relative flex w-full items-center rounded-sm py-1.5 px-2 text-xs {{ (string) request('category_filter') === (string) $category->id ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}"><span class="whitespace-normal break-words">{{ $category->name }}</span></a>
                                     @endforeach
                                 </div>
                             </details>
@@ -33,7 +33,7 @@
                                 </summary>
                                 <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md max-sm:min-w-max">
                                     @foreach (['' => 'All classifications', 'needs_resolution' => 'Needs Resolution', 'informational' => 'Informational', 'invalid' => 'Invalid'] as $value => $label)
-                                        <a href="{{ $query(array_merge(request()->only(['search','category_filter','status_filter','filed_from','filed_to','sort']), ['classification_filter' => $value])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ request('classification_filter', '') === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if (request('classification_filter', '') === $value)<x-icons.check class="absolute right-2 h-4 w-4" />@endif{{ $label }}</a>
+                                        <a href="{{ $query(array_merge(request()->only(['search','category_filter','status_filter','filed_from','filed_to','sort']), ['classification_filter' => $value])) }}" class="relative flex w-full items-center rounded-sm py-1.5 px-2 text-xs {{ request('classification_filter', '') === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">{{ $label }}</a>
                                     @endforeach
                                 </div>
                             </details>
@@ -46,7 +46,7 @@
                                 </summary>
                                 <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md max-sm:right-0 max-sm:min-w-max">
                                     @foreach (['' => 'All statuses'] + \App\Models\Ticket::STATUS_LABELS as $value => $label)
-                                        <a href="{{ $query(array_merge(request()->only(['search','category_filter','classification_filter','filed_from','filed_to','sort']), ['status_filter' => $value])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ request('status_filter', '') === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if (request('status_filter', '') === $value)<x-icons.check class="absolute right-2 h-4 w-4" />@endif{{ $label }}</a>
+                                        <a href="{{ $query(array_merge(request()->only(['search','category_filter','classification_filter','filed_from','filed_to','sort']), ['status_filter' => $value])) }}" class="relative flex w-full items-center rounded-sm py-1.5 px-2 text-xs {{ request('status_filter', '') === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">{{ $label }}</a>
                                     @endforeach
                                 </div>
                             </details>
@@ -63,7 +63,7 @@
                             </summary>
                             <div class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md max-sm:min-w-max">
                                 @foreach (['latest_update' => 'Latest Update', 'oldest_update' => 'Oldest Update', 'latest_submitted' => 'Latest Submitted', 'oldest_submitted' => 'Oldest Submitted'] as $value => $label)
-                                    <a href="{{ $query(array_merge(request()->only(['search','category_filter','classification_filter','status_filter','filed_from','filed_to']), ['sort' => $value])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs {{ request('sort', 'latest_update') === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if ((request('sort', 'latest_update') === $value))<x-icons.check class="absolute right-2 h-4 w-4" />@endif{{ $label }}</a>
+                                    <a href="{{ $query(array_merge(request()->only(['search','category_filter','classification_filter','status_filter','filed_from','filed_to']), ['sort' => $value])) }}" class="relative flex w-full items-center rounded-sm py-1.5 px-2 text-xs {{ request('sort', 'latest_update') === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">@if ((request('sort', 'latest_update') === $value))@endif{{ $label }}</a>
                                 @endforeach
                             </div>
                         </details>

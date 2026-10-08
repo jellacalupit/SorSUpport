@@ -43,12 +43,10 @@
                     <div class="absolute top-full z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg">
                         <button type="button" class="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground" x-bind:class="categoryId === '' ? 'bg-primary-soft text-primary' : ''" x-on:click="categoryId = ''; categoryLabel = 'Select a category'; document.getElementById('category_id').value = ''; $el.closest('details').removeAttribute('open')">
                             <span>Select a category</span>
-                            <svg x-show="categoryId === ''" x-cloak class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
                         </button>
                         @foreach ($categories as $category)
                             <button type="button" class="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground" x-bind:class="categoryId === '{{ $category->id }}' ? 'bg-primary-soft text-primary' : ''" x-on:click="categoryId = '{{ $category->id }}'; categoryLabel = '{{ addslashes($category->name) }}'; document.getElementById('category_id').value = '{{ $category->id }}'; $el.closest('details').removeAttribute('open')">
                                 <span>{{ $category->name }}</span>
-                                <svg x-show="categoryId === '{{ $category->id }}'" x-cloak class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
                             </button>
                         @endforeach
                     </div>
@@ -69,7 +67,6 @@
                     <div class="absolute top-full z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg">
                         <button type="button" class="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground" x-bind:class="recipientId === '' ? 'bg-primary-soft text-primary' : ''" x-on:click="recipientId = ''; $el.closest('details').removeAttribute('open')">
                             <span>No suggestion</span>
-                            <svg x-show="recipientId === ''" x-cloak class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
                         </button>
                         <template x-for="recipient in recipientChoices" :key="recipient.id">
                             <button type="button" class="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground" x-bind:class="recipientId === recipient.id ? 'bg-primary-soft text-primary' : ''" x-on:click="recipientId = recipient.id; $el.closest('details').removeAttribute('open')">
@@ -77,7 +74,6 @@
                                     <span class="block wrap-break-word" x-text="recipient.name"></span>
                                     <span class="block wrap-break-word text-xs text-muted-foreground" x-show="recipient.detail" x-text="recipient.detail"></span>
                                 </span>
-                                <svg x-show="recipientId === recipient.id" x-cloak class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
                             </button>
                         </template>
                     </div>

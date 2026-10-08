@@ -21,17 +21,11 @@
                     </svg>
                 </summary>
                 <div class="absolute top-full z-50 mt-1 max-h-72 w-full min-w-32 overflow-y-auto overflow-x-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95">
-                    <a data-ticket-filter-link href="{{ route('student.complaints.index', array_filter(['search' => $search, 'status' => $selectedStatus])) }}" class="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-xs outline-none transition-colors {{ $category === 'All' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
-                        @if ($category === 'All')
-                            <x-icons.check class="absolute right-2 h-4 w-4 text-primary" />
-                        @endif
+                    <a data-ticket-filter-link href="{{ route('student.complaints.index', array_filter(['search' => $search, 'status' => $selectedStatus])) }}" class="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 px-2 text-xs outline-none transition-colors {{ $category === 'All' ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                         All categories
                     </a>
                     @foreach ($categories as $categoryName)
-                        <a data-ticket-filter-link href="{{ route('student.complaints.index', array_filter(['search' => $search, 'category' => $categoryName, 'status' => $selectedStatus])) }}" class="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-xs outline-none transition-colors {{ $category === $categoryName ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
-                            @if ($category === $categoryName)
-                                <x-icons.check class="absolute right-2 h-4 w-4 text-primary" />
-                            @endif
+                        <a data-ticket-filter-link href="{{ route('student.complaints.index', array_filter(['search' => $search, 'category' => $categoryName, 'status' => $selectedStatus])) }}" class="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 px-2 text-xs outline-none transition-colors {{ $category === $categoryName ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                             <span class="whitespace-normal break-words">{{ $categoryName }}</span>
                         </a>
                     @endforeach
@@ -47,10 +41,7 @@
                     </summary>
                     <div class="absolute top-full right-0 z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-none">
                         @foreach ($statusLabels as $value => $label)
-                            <a data-ticket-filter-link href="{{ route('student.complaints.index', array_filter(['search' => $search, 'category' => $category !== 'All' ? $category : null, 'status' => $value])) }}" class="relative flex w-full items-center rounded-sm py-1.5 pl-2 pr-8 text-xs transition-colors {{ $selectedStatus === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
-                                @if ($selectedStatus === $value)
-                                    <x-icons.check class="absolute right-2 h-4 w-4 text-primary" />
-                                @endif
+                            <a data-ticket-filter-link href="{{ route('student.complaints.index', array_filter(['search' => $search, 'category' => $category !== 'All' ? $category : null, 'status' => $value])) }}" class="relative flex w-full items-center rounded-sm py-1.5 px-2 text-xs transition-colors {{ $selectedStatus === $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent hover:text-accent-foreground' }}">
                                 {{ $label }}
                             </a>
                         @endforeach

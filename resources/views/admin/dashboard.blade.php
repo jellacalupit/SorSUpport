@@ -49,13 +49,11 @@
                             <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                         </summary>
                         <div class="absolute top-full right-0 z-50 mt-1 max-h-72 w-full min-w-56 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                            <button type="button" class="relative flex w-full items-center rounded-sm py-1 pl-2 pr-8 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-category-option="" data-selected="true">
-                                <x-icons.check class="absolute right-2 h-4 w-4" />
+                            <button type="button" class="relative flex w-full items-center rounded-sm py-1 px-2 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-category-option="" data-selected="true">
                                 All categories
                             </button>
                             @foreach ($volumeChart['categories'] as $category)
-                                <button type="button" class="relative flex w-full items-center rounded-sm py-1 pl-2 pr-8 text-left text-xs leading-snug hover:bg-accent hover:text-accent-foreground" data-category-option="{{ $category['id'] }}">
-                                    <x-icons.check class="absolute right-2 h-4 w-4 hidden" />
+                                <button type="button" class="relative flex w-full items-center rounded-sm py-1 px-2 text-left text-xs leading-snug hover:bg-accent hover:text-accent-foreground" data-category-option="{{ $category['id'] }}">
                                     <span class="min-w-0 wrap-break-word">{{ $category['name'] }}</span>
                                 </button>
                             @endforeach
@@ -69,13 +67,11 @@
                             <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                         </summary>
                         <div class="absolute top-full right-0 z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                            <button type="button" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1 pl-2 pr-8 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-month-option="" data-selected="true">
-                                <x-icons.check class="absolute right-2 h-4 w-4" />
+                            <button type="button" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1 px-2 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-month-option="" data-selected="true">
                                 All months
                             </button>
                             @foreach ($monthOptions as $monthNumber => $monthLabel)
-                                <button type="button" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1 pl-2 pr-8 text-xs hover:bg-accent hover:text-accent-foreground" data-month-option="{{ $monthNumber }}">
-                                    <x-icons.check class="absolute right-2 h-4 w-4 hidden" />
+                                <button type="button" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1 px-2 text-xs hover:bg-accent hover:text-accent-foreground" data-month-option="{{ $monthNumber }}">
                                     {{ $monthLabel }}
                                 </button>
                             @endforeach
@@ -90,8 +86,7 @@
                         </summary>
                         <div class="absolute top-full right-0 z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                             @foreach ($volumeChart['years'] as $year)
-                                <button type="button" class="relative flex w-full items-center rounded-sm py-1 pl-2 pr-8 text-xs whitespace-nowrap hover:bg-accent hover:text-accent-foreground{{ (int) $year === (int) $volumeChart['currentYear'] ? ' bg-primary-soft text-primary' : '' }}" data-year-option="{{ $year }}"{{ (int) $year === (int) $volumeChart['currentYear'] ? ' data-selected="true"' : '' }}>
-                                    @if ((int) $year === (int) $volumeChart['currentYear']) <x-icons.check class="absolute right-2 h-4 w-4" /> @endif
+                                <button type="button" class="relative flex w-full items-center rounded-sm py-1 px-2 text-xs whitespace-nowrap hover:bg-accent hover:text-accent-foreground{{ (int) $year === (int) $volumeChart['currentYear'] ? ' bg-primary-soft text-primary' : '' }}" data-year-option="{{ $year }}"{{ (int) $year === (int) $volumeChart['currentYear'] ? ' data-selected="true"' : '' }}>
                                     {{ $year }}
                                 </button>
                             @endforeach
@@ -440,13 +435,11 @@
                                 <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                             </summary>
                             <div class="absolute top-full right-0 z-50 mt-1 max-h-72 w-full min-w-56 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                                <button type="button" class="relative flex w-full items-center rounded-sm py-1 pl-2 pr-8 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-category-option="" data-selected="true">
-                                    <x-icons.check class="absolute right-2 h-4 w-4" />
+                                <button type="button" class="relative flex w-full items-center rounded-sm py-1 px-2 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-category-option="" data-selected="true">
                                     All categories
                                 </button>
                                 @foreach ($volumeChart['categories'] as $category)
-                                    <button type="button" class="relative flex w-full items-center rounded-sm py-1 pl-2 pr-8 text-left text-xs leading-snug hover:bg-accent hover:text-accent-foreground" data-category-option="{{ $category['id'] }}">
-                                        <x-icons.check class="absolute right-2 h-4 w-4 hidden" />
+                                    <button type="button" class="relative flex w-full items-center rounded-sm py-1 px-2 text-left text-xs leading-snug hover:bg-accent hover:text-accent-foreground" data-category-option="{{ $category['id'] }}">
                                         <span class="min-w-0 wrap-break-word">{{ $category['name'] }}</span>
                                     </button>
                                 @endforeach
@@ -461,13 +454,11 @@
                                 <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                             </summary>
                             <div class="absolute top-full right-0 z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                                <button type="button" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1 pl-2 pr-8 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-month-option="" data-selected="true">
-                                    <x-icons.check class="absolute right-2 h-4 w-4" />
+                                <button type="button" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1 px-2 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-month-option="" data-selected="true">
                                     All months
                                 </button>
                                 @foreach ($monthOptions as $monthNumber => $monthLabel)
-                                    <button type="button" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1 pl-2 pr-8 text-xs hover:bg-accent hover:text-accent-foreground" data-month-option="{{ $monthNumber }}">
-                                        <x-icons.check class="absolute right-2 h-4 w-4 hidden" />
+                                    <button type="button" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1 px-2 text-xs hover:bg-accent hover:text-accent-foreground" data-month-option="{{ $monthNumber }}">
                                         {{ $monthLabel }}
                                     </button>
                                 @endforeach
@@ -483,8 +474,7 @@
                             </summary>
                             <div class="absolute top-full right-0 z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                                 @foreach ($volumeChart['years'] as $year)
-                                    <button type="button" class="relative flex w-full items-center rounded-sm py-1 pl-2 pr-8 text-xs whitespace-nowrap hover:bg-accent hover:text-accent-foreground{{ (int) $year === (int) $volumeChart['currentYear'] ? ' bg-primary-soft text-primary' : '' }}" data-year-option="{{ $year }}"{{ (int) $year === (int) $volumeChart['currentYear'] ? ' data-selected="true"' : '' }}>
-                                        @if ((int) $year === (int) $volumeChart['currentYear']) <x-icons.check class="absolute right-2 h-4 w-4" /> @endif
+                                    <button type="button" class="relative flex w-full items-center rounded-sm py-1 px-2 text-xs whitespace-nowrap hover:bg-accent hover:text-accent-foreground{{ (int) $year === (int) $volumeChart['currentYear'] ? ' bg-primary-soft text-primary' : '' }}" data-year-option="{{ $year }}"{{ (int) $year === (int) $volumeChart['currentYear'] ? ' data-selected="true"' : '' }}>
                                         {{ $year }}
                                     </button>
                                 @endforeach
