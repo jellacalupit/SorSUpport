@@ -14,6 +14,24 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class AnalyticsController extends Controller
 {
+    /**
+     * The parts of the analytics report the admin can choose to generate, in printing order.
+     */
+    public const REPORT_SECTIONS = [
+        'summary' => 'Summary',
+        'categories' => 'Tickets by category',
+        'resolution_rate' => 'Resolution rate',
+        'resolution_time' => 'Average resolution time by category',
+        'escalation' => 'Escalation frequency',
+        'statuses' => 'Tickets by status',
+        'colleges' => 'Tickets by college',
+        'programs' => 'Tickets by program',
+        'resolution_types' => 'How tickets were resolved',
+        'closure_reasons' => 'Why tickets were closed',
+        'escalation_levels' => 'Escalation level',
+        'satisfaction' => 'Student satisfaction',
+    ];
+
     public function index(Request $request, AnalyticsService $analytics)
     {
         $request->mergeIfMissing([
@@ -138,10 +156,19 @@ class AnalyticsController extends Controller
         $reportData = $analytics->getReportData($filters);
         $fileName = 'analytics-report-' . now()->format('YmdHis') . '.pdf';
 
+        // Only the parts the admin ticked are printed; a plain link prints all of them.
+        $sections = array_values(array_intersect(array_keys(self::REPORT_SECTIONS), (array) $request->input('sections', array_keys(self::REPORT_SECTIONS))));
+
+        if ($sections === []) {
+            return back()->withErrors(['sections' => 'Choose at least one part of the report to generate.']);
+        }
+
         $pdf = Pdf::loadView('admin.analytics.report', [
             'reportData' => $reportData,
             'filters' => $filters,
-        ]);
+            'sections' => $sections,
+            'preparedBy' => $request->user()?->name,
+        ])->setPaper('letter');
 
         return $pdf->download($fileName);
     }

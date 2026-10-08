@@ -99,12 +99,11 @@ class AnalyticsService
         $data = [];
 
         foreach ($grouped as $categoryName => $group) {
-            $averageHours = $group->avg(function ($ticket) {
-                return $ticket->resolved_at->floatDiffInHours($ticket->complaint->created_at);
-            });
+            // Days from submission to resolution, counted forward so it is never negative.
+            $averageDays = $group->avg(fn ($ticket) => abs($ticket->complaint->created_at->floatDiffInDays($ticket->resolved_at)));
 
             $labels[] = $categoryName;
-            $data[] = round($averageHours, 1);
+            $data[] = round($averageDays, 1);
         }
 
         return [

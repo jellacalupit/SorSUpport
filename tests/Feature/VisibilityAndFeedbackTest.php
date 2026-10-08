@@ -351,6 +351,45 @@ class VisibilityAndFeedbackTest extends TestCase
         $this->assertStringContainsString('Tickets by College', view('admin.analytics.report', ['reportData' => $reportData, 'filters' => []])->render());
     }
 
+    public function test_the_admin_chooses_which_parts_of_the_report_to_generate(): void
+    {
+        $reportData = app(AnalyticsService::class)->getReportData();
+
+        // Only the chosen parts are printed, on the university letterhead.
+        $report = view('admin.analytics.report', ['reportData' => $reportData, 'filters' => [], 'sections' => ['summary', 'colleges'], 'preparedBy' => 'Abbie Goyal'])->render();
+        $this->assertStringContainsString('Sorsogon State University', $report);
+        $this->assertStringContainsString('Tickets by College', $report);
+        $this->assertStringContainsString('Prepared by:', $report);
+        $this->assertStringNotContainsString('Tickets by Program', $report);
+        $this->assertStringNotContainsString('Student Satisfaction', $report);
+
+        $this->actingAs($this->admin)->get(route('admin.analytics.export.pdf', ['sections' => ['summary', 'statuses']]))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->actingAs($this->admin)->from(route('admin.analytics.index'))->get(route('admin.analytics.export.pdf', ['sections' => ['not-a-part']]))
+            ->assertRedirect(route('admin.analytics.index'))
+            ->assertSessionHasErrors('sections');
+
+        // The Generate Report window lists every part.
+        $this->actingAs($this->admin)->get(route('admin.analytics.index'))
+            ->assertOk()
+            ->assertSee('name="sections[]" value="resolution_time"', false)
+            ->assertSee('Download PDF');
+    }
+
+    public function test_resolution_time_in_the_report_is_in_days_and_never_negative(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_RESOLVED);
+        $ticket->complaint->forceFill(['created_at' => now()->subDays(3)])->save();
+        $ticket->forceFill(['resolved_at' => now()])->save();
+
+        $times = app(AnalyticsService::class)->getAverageResolutionTimePerCategory();
+
+        $this->assertNotEmpty($times['data']);
+        $this->assertEqualsWithDelta(3.0, $times['data'][0], 0.1);
+    }
+
     public function test_analytics_show_empty_breakdowns_without_tickets(): void
     {
         $this->actingAs($this->admin)->get('/admin/analytics')

@@ -43,7 +43,7 @@ class AnalyticsReportExport implements FromArray, WithHeadings, ShouldAutoSize
         }
 
         $rows[] = [];
-        $rows[] = ['Average Resolution Time Per Category (Hours)'];
+        $rows[] = ['Average Resolution Time Per Category (Days)'];
         foreach ($this->reportData['average_resolution_time']['labels'] as $index => $label) {
             $rows[] = [$label, $this->reportData['average_resolution_time']['data'][$index] ?? 0];
         }
