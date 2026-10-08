@@ -38,7 +38,7 @@ class RecipientDashboardController extends Controller
             ->where('status', 'closed')
             ->count();
 
-        // Only the five most recently updated tickets appear on the home page.
+        // Only the ten most recently updated tickets appear on the home page.
         $latestComplaints = Ticket::query()
             ->where('assigned_to', Auth::id())
             ->with([
@@ -47,7 +47,7 @@ class RecipientDashboardController extends Controller
                 'auditLogs',
             ])
             ->orderByDesc('updated_at')
-            ->limit(5)
+            ->limit(10)
             ->get();
 
         return view('recipient.dashboard', compact(

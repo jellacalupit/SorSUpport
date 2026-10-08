@@ -31,7 +31,7 @@ class StudentDashboardController extends Controller
         $closedCount = $complaints->filter(fn($c) => $statusOf($c) === 'closed')->count();
         $recentTickets = $complaints
             ->sortByDesc(fn ($complaint) => $complaint->ticket?->updated_at?->timestamp ?? $complaint->created_at->timestamp)
-            ->take(5);
+            ->take(10);
 
         // Keep the user's given name readable without displaying the surname.
         $firstName = $user->given_name;

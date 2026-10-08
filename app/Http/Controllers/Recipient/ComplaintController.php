@@ -68,7 +68,7 @@ class ComplaintController extends Controller
         $complaints = $query
             ->when($sort === 'oldest', fn ($query) => $query->orderBy('updated_at', 'asc'))
             ->when($sort !== 'oldest', fn ($query) => $query->orderByDesc('updated_at'))
-            ->paginate(10)
+            ->paginate(15)
             ->appends($request->query());
 
         return response()

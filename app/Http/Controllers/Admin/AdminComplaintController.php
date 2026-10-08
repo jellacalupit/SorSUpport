@@ -104,7 +104,7 @@ class AdminComplaintController extends Controller
             $query->orderByDesc($ticketUpdatedAt);
         }
 
-        $complaints = $query->paginate(10)->appends($request->query());
+        $complaints = $query->paginate(15)->appends($request->query());
 
         $categories = ComplaintCategory::query()->where('is_active', true)->orderBy('name')->get();
         $holders = User::query()

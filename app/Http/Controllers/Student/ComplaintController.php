@@ -64,7 +64,7 @@ class ComplaintController extends Controller
             })
             ->when($category && $category !== 'All', fn ($query) => $query->whereHas('category', fn ($query) => $query->where('name', $category)))
             ->orderByRaw("COALESCE((SELECT MAX(updated_at) FROM tickets WHERE tickets.complaint_id = complaints.id), complaints.created_at) DESC")
-            ->paginate(10)
+            ->paginate(15)
             ->withQueryString();
 
         $categories = ComplaintCategory::query()

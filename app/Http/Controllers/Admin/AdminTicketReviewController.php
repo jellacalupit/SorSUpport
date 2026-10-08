@@ -80,7 +80,7 @@ class AdminTicketReviewController extends Controller
                 });
             })
             ->orderBy('updated_at', $request->input('sort', 'newest') === 'oldest' ? 'asc' : 'desc')
-            ->paginate(10)
+            ->paginate(15)
             ->appends($request->query());
 
         $categories = ComplaintCategory::query()->where('is_active', true)->orderBy('name')->get();
@@ -153,7 +153,7 @@ class AdminTicketReviewController extends Controller
             ->when($status, fn ($query) => $query->where('status', $status))
             ->when($sort === 'oldest', fn ($query) => $query->orderBy('updated_at', 'asc'))
             ->when($sort !== 'oldest', fn ($query) => $query->orderByDesc('updated_at'))
-            ->paginate(10)
+            ->paginate(15)
             ->appends($request->query());
 
         return response()

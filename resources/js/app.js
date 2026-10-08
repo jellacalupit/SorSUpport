@@ -115,6 +115,100 @@ window.addEventListener('keydown', (event) => {
 	}
 }, true);
 
+// On phones a ticket list loads its next page as the reader scrolls to the end, like an inbox;
+// desktops keep the page numbers. The marker below the list carries the next page's address.
+const phoneWidth = window.matchMedia('(max-width: 767px)');
+const loadingTickets = new WeakSet();
+
+const roundListEnds = (list) => {
+	const cards = [...list.querySelectorAll(':scope > .surface, :scope > li > .surface')];
+
+	cards.forEach((card, index) => {
+		const first = index === 0;
+		const last = index === cards.length - 1;
+		card.classList.remove('rounded-xl', 'rounded-t-xl', 'rounded-b-xl', 'rounded-t-none', 'rounded-b-none', 'rounded-none');
+		card.classList.add(...(first && last ? ['rounded-xl'] : first ? ['rounded-t-xl', 'rounded-b-none'] : last ? ['rounded-t-none', 'rounded-b-xl'] : ['rounded-none']));
+	});
+};
+
+const ticketMarkerWatcher = new IntersectionObserver((entries) => {
+	entries.forEach((entry) => {
+		if (entry.isIntersecting) {
+			loadMoreTickets(entry.target);
+		}
+	});
+}, { rootMargin: '300px 0px' });
+
+async function loadMoreTickets(marker) {
+	const list = marker.closest('[data-ticket-results]')?.querySelector('[data-ticket-list]');
+	const url = marker.dataset.nextUrl;
+
+	if (!phoneWidth.matches || loadingTickets.has(marker) || !list || !url) {
+		return;
+	}
+
+	loadingTickets.add(marker);
+	marker.textContent = 'Loading more tickets…';
+
+	try {
+		const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+
+		if (!response.ok) {
+			throw new Error('Unable to load more tickets');
+		}
+
+		const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+
+		// The list was replaced (a new filter or page) while this page loaded.
+		if (!document.body.contains(marker)) {
+			return;
+		}
+
+		list.append(...(page.querySelector('[data-ticket-list]')?.children ?? []));
+		roundListEnds(list);
+
+		const nextUrl = page.querySelector('[data-ticket-more]')?.dataset.nextUrl;
+
+		if (!nextUrl) {
+			marker.remove();
+			return;
+		}
+
+		marker.dataset.nextUrl = nextUrl;
+		loadingTickets.delete(marker);
+		// Watching again reports at once if the marker is still in view on a short list.
+		ticketMarkerWatcher.unobserve(marker);
+		ticketMarkerWatcher.observe(marker);
+	} catch {
+		loadingTickets.delete(marker);
+		marker.textContent = 'Could not load more tickets. Tap to try again.';
+		marker.addEventListener('click', () => loadMoreTickets(marker), { once: true });
+	}
+}
+
+const watchTicketMarkers = () => {
+	document.querySelectorAll('[data-ticket-more]:not([data-watched])').forEach((marker) => {
+		marker.dataset.watched = '';
+		ticketMarkerWatcher.observe(marker);
+	});
+};
+
+// Lists arrive with the page, after a filter change and after in-app navigation.
+let ticketMarkerCheck = null;
+new MutationObserver(() => {
+	cancelAnimationFrame(ticketMarkerCheck);
+	ticketMarkerCheck = requestAnimationFrame(watchTicketMarkers);
+}).observe(document.documentElement, { childList: true, subtree: true });
+watchTicketMarkers();
+
+// Turning a phone to landscape can cross into the desktop layout, and back.
+phoneWidth.addEventListener('change', () => {
+	document.querySelectorAll('[data-ticket-more]').forEach((marker) => {
+		ticketMarkerWatcher.unobserve(marker);
+		ticketMarkerWatcher.observe(marker);
+	});
+});
+
 document.addEventListener('click', (event) => {
 	const trigger = event.target.closest('#bulk-upload-trigger');
 

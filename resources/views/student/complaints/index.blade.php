@@ -54,15 +54,20 @@
         <p class="mb-2 text-xs text-muted-foreground">{{ $complaints->total() }} ticket(s)</p>
         <!-- Tickets List -->
     @if ($complaints->count() > 0)
-        <div class="space-y-0.5">
+        <div data-ticket-list class="space-y-0.5">
             @foreach ($complaints as $complaint)
                 <x-ticket-card :item="$complaint" role="student" :first="$loop->first" :last="$loop->last" />
             @endforeach
         </div>
 
+        {{-- On phones the next tickets load as the list is scrolled; desktops keep the page numbers. --}}
+        @if ($complaints->hasMorePages())
+            <p data-ticket-more data-next-url="{{ $complaints->nextPageUrl() }}" class="py-4 text-center text-xs text-muted-foreground md:hidden">Loading more tickets…</p>
+        @endif
+
         <!-- Pagination -->
         @if ($complaints->hasPages())
-            <div class="mt-6">
+            <div class="mt-6 hidden md:block">
                 {{ $complaints->links() }}
             </div>
         @endif

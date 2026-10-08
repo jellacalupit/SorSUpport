@@ -49,7 +49,7 @@
         <div data-ticket-results>
     <p class="mb-2 text-xs text-muted-foreground">{{ $complaints->total() }} ticket(s)</p>
         @if ($complaints->count() > 0)
-            <ul class="grid gap-0.5">
+            <ul data-ticket-list class="grid gap-0.5">
                 @foreach ($complaints as $ticket)
                     <li>
                         <x-ticket-card :item="$ticket" role="recipient" :first="$loop->first" :last="$loop->last" />
@@ -57,8 +57,13 @@
                 @endforeach
             </ul>
 
+            {{-- On phones the next tickets load as the list is scrolled; desktops keep the page numbers. --}}
+            @if ($complaints->hasMorePages())
+                <p data-ticket-more data-next-url="{{ $complaints->nextPageUrl() }}" class="py-4 text-center text-xs text-muted-foreground md:hidden">Loading more tickets…</p>
+            @endif
+
             @if ($complaints->hasPages())
-                <div class="mt-6">{{ $complaints->links() }}</div>
+                <div class="mt-6 hidden md:block">{{ $complaints->links() }}</div>
             @endif
         @else
             <p class="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">No tickets are currently routed to your office.</p>
