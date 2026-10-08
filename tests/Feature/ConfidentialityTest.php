@@ -288,7 +288,7 @@ class ConfidentialityTest extends TestCase
         $this->sensitive->escalationHierarchies()->create(['recipient_id' => $this->otherRecipient->recipient->id, 'level' => 1]);
 
         $this->actingAs($this->admin)
-            ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $this->otherRecipient->recipient->id])
+            ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $this->otherRecipient->recipient->id, 'escalation_note' => 'Not resolved at this level.'])
             ->assertSessionHasNoErrors();
 
         $this->actingAs($this->handler)->get(route('recipient.complaints.show', $ticket->complaint))->assertForbidden();

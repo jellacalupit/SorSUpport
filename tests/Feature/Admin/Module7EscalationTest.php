@@ -26,7 +26,7 @@ class Module7EscalationTest extends TestCase
         // The admin may skip the next configured level and pick any other recipient.
         $this->actingAs($admin)
             ->from(route('admin.complaints.show', $ticket->complaint))
-            ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $director->id])
+            ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $director->id, 'escalation_note' => 'Not resolved at this level.'])
             ->assertRedirect(route('admin.complaints.show', $ticket->complaint))
             ->assertSessionHasNoErrors();
 
@@ -64,7 +64,7 @@ class Module7EscalationTest extends TestCase
             ->assertSessionHasErrors('recipient_id');
 
         $this->actingAs($admin)
-            ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $officer->id])
+            ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $officer->id, 'escalation_note' => 'Not resolved at this level.'])
             ->assertSessionHasErrors('recipient_id');
 
         $ticket->refresh();

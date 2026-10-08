@@ -32,7 +32,7 @@
                 @if ($option['group'] && ($index === 0 || $options[$index - 1]['group'] !== $option['group']))
                     <p class="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">{{ $option['group'] }}</p>
                 @endif
-                <button type="button" class="flex w-full items-center rounded-md px-3 py-2 text-left text-xs normal-case tracking-normal hover:bg-accent hover:text-accent-foreground" x-bind:class="value === @js($option['value']) ? 'bg-primary-soft text-primary' : 'text-foreground'" x-on:click="value = @js($option['value']); $el.closest('details').removeAttribute('open')">
+                <button type="button" class="flex w-full items-center rounded-md px-3 py-2 text-left text-xs normal-case tracking-normal hover:bg-accent hover:text-accent-foreground" x-bind:class="value === @js($option['value']) ? 'bg-primary-soft text-primary' : 'text-foreground'" x-on:click="value = @js($option['value']); $dispatch('picked', value); $el.closest('details').removeAttribute('open')">
                     <span class="min-w-0">
                         <span class="block wrap-break-word font-medium">{{ $option['label'] }}</span>
                         @if ($option['detail'])

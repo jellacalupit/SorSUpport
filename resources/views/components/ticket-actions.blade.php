@@ -61,7 +61,6 @@
     $smallPrimary = 'h-9 w-full rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90';
     $smallCancel = 'h-9 w-full rounded-full border border-border bg-white px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted';
     $input = 'mt-2 w-full rounded-md border border-input bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring';
-    $select = 'mt-2 h-9 w-full min-w-0 rounded-md border border-input bg-white px-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring';
     $panelTitle = 'text-sm font-semibold text-foreground';
     $panelHint = 'mt-0.5 text-xs text-muted-foreground';
 @endphp
@@ -184,13 +183,7 @@
             @endif
             <p class="{{ $panelTitle }}">Mark this ticket as resolved</p>
             <p class="{{ $panelHint }}">The student is asked to accept the resolution or request further action.</p>
-            <label class="sr-only" for="resolution-type-{{ $ticket->id }}">How was it resolved?</label>
-            <select id="resolution-type-{{ $ticket->id }}" name="resolution_type" required class="{{ $select }}">
-                <option value="">How was it resolved?</option>
-                @foreach (Ticket::RESOLUTION_LABELS as $value => $label)
-                    <option value="{{ $value }}" @selected(old('resolution_type') === $value)>{{ $label }}</option>
-                @endforeach
-            </select>
+            <x-picker name="resolution_type" required id="resolution-type-{{ $ticket->id }}" label="How was it resolved?" class="mt-2" placeholder="How was it resolved?" :selected="old('resolution_type', '')" :options="collect(Ticket::RESOLUTION_LABELS)->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values()->all()" />
             <textarea name="resolution_message" rows="3" required maxlength="2000" class="{{ $input }}" placeholder="Describe the resolution for the student.">{{ old('resolution_message') }}</textarea>
             <div class="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" x-on:click="action = null" class="{{ $smallCancel }}">Cancel</button>
@@ -210,14 +203,17 @@
             @csrf
             <p class="{{ $panelTitle }}">Refer to a committee or board</p>
             <p class="{{ $panelHint }}">For cases decided outside the system, such as discipline or harassment cases. Record the outcome here once it is decided.</p>
-            <label class="sr-only" for="referred-to-{{ $ticket->id }}">Referred to</label>
-            <input id="referred-to-{{ $ticket->id }}" name="referred_to" type="text" required maxlength="255" list="committees-{{ $ticket->id }}" value="{{ old('referred_to') }}" class="{{ $input }}" placeholder="Committee or board">
-            <datalist id="committees-{{ $ticket->id }}">
-                <option value="Committee on Decorum and Investigation"></option>
-                <option value="Student Disciplinary Board"></option>
-                <option value="Campus Grievance Committee"></option>
-            </datalist>
-            <textarea name="referral_note" rows="2" maxlength="1000" class="{{ $input }}" placeholder="Note (optional)">{{ old('referral_note') }}</textarea>
+            {{-- The committees the Student Handbook names; any other is typed in. --}}
+            <div x-data="{ committee: @js(old('referred_to', '')) }" x-on:picked="committee = $event.detail">
+                <x-picker name="referred_to" required id="referred-to-{{ $ticket->id }}" label="Referred to" class="mt-2" placeholder="Select the committee or board" :selected="old('referred_to', '')" :options="[
+                    ['value' => 'Committee on Decorum and Investigation', 'label' => 'Committee on Decorum and Investigation', 'detail' => 'Sexual harassment and gender-based cases'],
+                    ['value' => 'Campus Disciplinary Committee', 'label' => 'Campus Disciplinary Committee', 'detail' => 'Student discipline cases on this campus'],
+                    ['value' => 'University Investigation and Disciplinary Committee', 'label' => 'University Investigation and Disciplinary Committee', 'detail' => 'Appeals and university-level cases'],
+                    ['value' => 'other', 'label' => 'Other committee or board', 'detail' => 'Type its name below'],
+                ]" />
+                <input x-show="committee === 'other'" x-cloak x-bind:required="committee === 'other'" x-bind:disabled="committee !== 'other'" name="referred_to_other" type="text" maxlength="255" value="{{ old('referred_to_other') }}" class="{{ $input }}" placeholder="Name of the committee or board" aria-label="Name of the committee or board">
+            </div>
+            <textarea name="referral_note" rows="3" required maxlength="1000" class="{{ $input }}" placeholder="Why is this ticket being referred? This is recorded on the ticket.">{{ old('referral_note') }}</textarea>
             <div class="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" x-on:click="action = null" class="{{ $smallCancel }}">Cancel</button>
                 <button type="submit" class="{{ $smallPrimary }}">Refer Ticket</button>
@@ -230,12 +226,7 @@
             @csrf
             <p class="{{ $panelTitle }}">Record the outcome{{ $ticket->referred_to ? ' from ' . $ticket->referred_to : '' }}</p>
             <p class="{{ $panelHint }}">The ticket becomes Resolved and the student is told the outcome.</p>
-            <label class="sr-only" for="outcome-type-{{ $ticket->id }}">Type of resolution</label>
-            <select id="outcome-type-{{ $ticket->id }}" name="resolution_type" class="{{ $select }}">
-                @foreach (Ticket::RESOLUTION_LABELS as $value => $label)
-                    <option value="{{ $value }}" @selected(old('resolution_type', Ticket::RESOLUTION_COMMITTEE_DECISION) === $value)>{{ $label }}</option>
-                @endforeach
-            </select>
+            <x-picker name="resolution_type" id="outcome-type-{{ $ticket->id }}" label="Type of resolution" class="mt-2" :selected="old('resolution_type', Ticket::RESOLUTION_COMMITTEE_DECISION)" :options="collect(Ticket::RESOLUTION_LABELS)->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values()->all()" />
             <textarea name="outcome" rows="3" required maxlength="2000" class="{{ $input }}" placeholder="What was decided?">{{ old('outcome') }}</textarea>
             <div class="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" x-on:click="action = null" class="{{ $smallCancel }}">Cancel</button>
@@ -253,13 +244,7 @@
             @else
                 <p class="{{ $panelTitle }}">Close without a resolution</p>
                 <p class="{{ $panelHint }}">Use this only when the ticket cannot continue. The student is notified with the reason. This cannot be undone.</p>
-                <label class="sr-only" for="closure-type-{{ $ticket->id }}">Reason for closing</label>
-                <select id="closure-type-{{ $ticket->id }}" name="closure_type" required class="{{ $select }}">
-                    <option value="">Why is it being closed?</option>
-                    @foreach (Ticket::ADMIN_CLOSURE_TYPES as $value)
-                        <option value="{{ $value }}" @selected(old('closure_type') === $value)>{{ Ticket::CLOSURE_LABELS[$value] }}</option>
-                    @endforeach
-                </select>
+                <x-picker name="closure_type" required id="closure-type-{{ $ticket->id }}" label="Reason for closing" class="mt-2" placeholder="Why is it being closed?" :selected="old('closure_type', '')" :options="collect(Ticket::ADMIN_CLOSURE_TYPES)->map(fn ($value) => ['value' => $value, 'label' => Ticket::CLOSURE_LABELS[$value]])->all()" />
                 <textarea name="closure_reason" rows="2" required maxlength="1000" class="{{ $input }}" placeholder="Explain the reason to the student.">{{ old('closure_reason') }}</textarea>
             @endif
             <div class="mt-3 grid grid-cols-2 gap-2">

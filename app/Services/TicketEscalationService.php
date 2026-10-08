@@ -87,9 +87,9 @@ class TicketEscalationService
     /**
      * Escalate a ticket to the recipient chosen by the SDS admin and record when it happened.
      */
-    public function escalate(Ticket $ticket, Recipient $targetRecipient, ?User $performedBy = null): void
+    public function escalate(Ticket $ticket, Recipient $targetRecipient, ?User $performedBy = null, ?string $note = null): void
     {
-        DB::transaction(function () use ($ticket, $targetRecipient, $performedBy): void {
+        DB::transaction(function () use ($ticket, $targetRecipient, $performedBy, $note): void {
             // Escalating again keeps the Escalated status and only changes who holds the ticket.
             $ticket->update([
                 ...($ticket->status === Ticket::STATUS_ESCALATED ? [] : ['status' => Ticket::STATUS_ESCALATED]),
@@ -103,7 +103,8 @@ class TicketEscalationService
                 $ticket->id,
                 'ticket_escalated',
                 $performedBy?->id,
-                sprintf('Ticket escalated to %s.', $targetRecipient->user?->display_name ?? 'the selected recipient')
+                // The admin's explanation is kept with the entry so the next handler can read it.
+                trim(sprintf('Ticket escalated to %s.', $targetRecipient->user?->display_name ?? 'the selected recipient') . (filled($note) ? ' Reason: ' . $note : ''))
             );
 
             if ($ticket->complaint?->names($targetRecipient->user)) {

@@ -138,6 +138,14 @@ class NotificationController extends Controller
                 return $logs->map(function (AuditLog $log) use ($ticket, $complaint) {
                     $body = $log->details ?: "There is a new update for {$complaint->reference_number}.";
 
+                    // The admin's reason for escalating or referring is a note for the staff
+                    // handling the ticket; the student is told only where the ticket went.
+                    if ($log->action === 'ticket_escalated') {
+                        $body = \Illuminate\Support\Str::before($body, ' Reason: ');
+                    } elseif ($log->action === 'ticket_referred' && $ticket?->referred_to) {
+                        $body = "Ticket referred to {$ticket->referred_to}.";
+                    }
+
                     if ($log->action === 'ticket_assigned' && $ticket?->assignee?->isRecipient()) {
                         $body = "SDS Admin assigned the ticket {$complaint->reference_number} to {$ticket->assignee->display_name} for handling.";
                     }

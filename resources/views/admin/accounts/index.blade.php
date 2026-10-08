@@ -470,7 +470,7 @@
         </div>
 
         <div x-show="accountModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div @click.outside="accountModalOpen = false" class="w-full max-w-2xl rounded-2xl border border-border bg-white shadow-2xl">
+            <div @click.outside="accountModalOpen = false" class="flex max-h-[min(85vh,44rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl">
                 <div class="flex items-start justify-between border-b border-border px-5 py-4">
                     <div>
                         <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Students</p>
@@ -481,7 +481,7 @@
                     </button>
                 </div>
 
-                <form id="admin-student-account-form" action="{{ route('admin.accounts.store') }}" method="POST" novalidate class="space-y-3 p-5">
+                <form id="admin-student-account-form" action="{{ route('admin.accounts.store') }}" method="POST" novalidate class="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
                     @csrf
                     <input type="hidden" name="role" value="student">
                     <input type="hidden" name="name" x-bind:value="`${first_name} ${middle_name ? middle_name + ' ' : ''}${last_name}`.trim()">
@@ -598,7 +598,7 @@
         </div>
 
         <div x-show="editStudentModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div @click.outside="closeEditStudentForm()" class="w-full max-w-2xl rounded-2xl border border-border bg-white shadow-2xl">
+            <div @click.outside="closeEditStudentForm()" class="flex max-h-[min(85vh,44rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl">
                 <div class="flex items-start justify-between border-b border-border px-5 py-4">
                     <div>
                         <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Students</p>
@@ -609,7 +609,7 @@
                     </button>
                 </div>
 
-                <form id="edit-student-account-form" method="POST" :action="`{{ url('/admin/accounts') }}/${editStudentUserId}`" novalidate class="space-y-3 p-5">
+                <form id="edit-student-account-form" method="POST" :action="`{{ url('/admin/accounts') }}/${editStudentUserId}`" novalidate class="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
                     @csrf
                     @method('PUT')
                     <input type="hidden" name="role" value="student">
@@ -728,7 +728,7 @@
         </div>
 
         <div x-show="editRecipientModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div @click.outside="closeEditRecipientForm()" class="w-full max-w-2xl rounded-2xl border border-border bg-white shadow-2xl">
+            <div @click.outside="closeEditRecipientForm()" class="flex max-h-[min(85vh,44rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl">
                 <div class="flex items-start justify-between border-b border-border px-5 py-4">
                     <div>
                         <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Recipients</p>
@@ -739,7 +739,7 @@
                     </button>
                 </div>
 
-                <form id="edit-recipient-account-form" method="POST" :action="`{{ url('/admin/accounts') }}/${editRecipientUserId}`" novalidate class="space-y-3 p-5">
+                <form id="edit-recipient-account-form" method="POST" :action="`{{ url('/admin/accounts') }}/${editRecipientUserId}`" novalidate class="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
                     @csrf
                     @method('PUT')
                     <input type="hidden" name="role" value="recipient">
@@ -814,7 +814,7 @@
         </div>
 
         <div x-show="recipientModalOpen" x-cloak @click.self="resetRecipientForm()" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div @click.outside="recipientModalOpen = false" class="w-full max-w-2xl rounded-2xl border border-border bg-white shadow-2xl">
+            <div @click.outside="recipientModalOpen = false" class="flex max-h-[min(85vh,44rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl">
                 <div class="flex items-start justify-between border-b border-border px-5 py-4">
                     <div>
                         <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Recipients</p>
@@ -825,7 +825,7 @@
                     </button>
                 </div>
 
-                <form id="admin-recipient-account-form" action="{{ route('admin.accounts.store') }}" method="POST" novalidate class="space-y-3 p-5">
+                <form id="admin-recipient-account-form" action="{{ route('admin.accounts.store') }}" method="POST" novalidate class="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
                     @csrf
                     <input type="hidden" name="role" value="recipient">
                     <input type="hidden" name="name" x-bind:value="`${recipientFirstName} ${recipientMiddleName ? recipientMiddleName + ' ' : ''}${recipientLastName}`.trim()">

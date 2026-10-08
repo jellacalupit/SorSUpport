@@ -126,7 +126,7 @@ class Module9AuditTrailTest extends TestCase
             ->assertRedirect();
 
         $this->actingAs($admin)
-            ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $recipientTwo->id])
+            ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $recipientTwo->id, 'escalation_note' => 'Not resolved at this level.'])
             ->assertRedirect();
 
         $ticket->refresh();

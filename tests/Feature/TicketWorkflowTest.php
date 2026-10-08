@@ -546,6 +546,35 @@ class TicketWorkflowTest extends TestCase
 
     // ------------------------------------------------------------------ referral
 
+    public function test_escalating_and_referring_need_an_explanation(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
+        $ticket->complaint->category->escalationHierarchies()->create(['path_number' => 1, 'level' => 1, 'recipient_id' => $this->otherRecipient->recipient->id]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $this->otherRecipient->recipient->id])
+            ->assertSessionHasErrors('escalation_note');
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.refer', $ticket), ['referred_to' => 'Campus Disciplinary Committee'])
+            ->assertSessionHasErrors('referral_note');
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.refer', $ticket), ['referred_to' => 'other', 'referral_note' => 'Needs a formal hearing.'])
+            ->assertSessionHasErrors('referred_to_other');
+        $this->assertSame(Ticket::STATUS_IN_PROGRESS, $ticket->fresh()->status);
+
+        // The explanation is kept on the ticket's history.
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $this->otherRecipient->recipient->id, 'escalation_note' => 'The office could not settle it.'])
+            ->assertSessionHasNoErrors();
+        $this->assertTrue($ticket->auditLogs()->where('action', 'ticket_escalated')->where('details', 'like', '%Reason: The office could not settle it.')->exists());
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.refer', $ticket), ['referred_to' => 'other', 'referred_to_other' => 'Scholarship Committee', 'referral_note' => 'Needs a formal hearing.'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('Scholarship Committee', $ticket->fresh()->referred_to);
+        $this->assertTrue($ticket->auditLogs()->where('action', 'ticket_referred')->where('details', 'like', '%Needs a formal hearing.')->exists());
+    }
+
     public function test_a_ticket_is_referred_to_a_committee_and_resolved_with_its_outcome(): void
     {
         $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
@@ -574,7 +603,7 @@ class TicketWorkflowTest extends TestCase
             ->patch(route('recipient.complaints.update-status', $ticket->complaint), ['status' => 'resolved', 'resolution_type' => Ticket::RESOLUTION_ACTION_TAKEN, 'resolution_message' => 'Done.'])
             ->assertForbidden();
         $this->actingAs($this->admin)
-            ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $this->otherRecipient->recipient->id])
+            ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $this->otherRecipient->recipient->id, 'escalation_note' => 'Not resolved at this level.'])
             ->assertForbidden();
 
         $this->actingAs($this->student)
@@ -611,12 +640,12 @@ class TicketWorkflowTest extends TestCase
         }
 
         $this->actingAs($this->admin)
-            ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $this->otherRecipient->recipient->id])
+            ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $this->otherRecipient->recipient->id, 'escalation_note' => 'Not resolved at this level.'])
             ->assertSessionHasNoErrors();
         $this->assertSame(Ticket::STATUS_ESCALATED, $ticket->fresh()->status);
 
         $this->actingAs($this->admin)
-            ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $third->recipient->id])
+            ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $third->recipient->id, 'escalation_note' => 'Not resolved at this level.'])
             ->assertSessionHasNoErrors();
 
         $ticket->refresh();

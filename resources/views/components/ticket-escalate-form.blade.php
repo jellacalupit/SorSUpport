@@ -51,6 +51,11 @@
         @error('recipient_id')
             <p class="mt-1 text-xs font-medium text-destructive">{{ $message }}</p>
         @enderror
+        <label class="sr-only" for="escalation-note-{{ $ticket->id }}">Reason for escalating</label>
+        <textarea id="escalation-note-{{ $ticket->id }}" name="escalation_note" rows="3" required maxlength="1000" class="mt-2 w-full rounded-md border border-input bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring" placeholder="Why is this ticket being escalated? This is recorded on the ticket.">{{ old('escalation_note') }}</textarea>
+        @error('escalation_note')
+            <p class="mt-1 text-xs font-medium text-destructive">{{ $message }}</p>
+        @enderror
         <div class="mt-3 grid gap-2 {{ $cancellable ? 'grid-cols-2' : '' }}">
             @if ($cancellable)
                 <button type="button" x-on:click="action = null" class="h-9 w-full rounded-full border border-border bg-white px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted">Cancel</button>

@@ -461,14 +461,20 @@ class AdminTicketReviewController extends Controller
 
         $validated = $request->validate([
             'referred_to' => 'required|string|max:255',
-            'referral_note' => 'nullable|string|max:1000',
+            // Typed in when the committee is not one of the listed ones.
+            'referred_to_other' => 'nullable|required_if:referred_to,other|string|max:255',
+            'referral_note' => 'required|string|max:1000',
         ], [
-            'referred_to.required' => 'Enter the committee or board the ticket is referred to.',
+            'referred_to.required' => 'Select the committee or board the ticket is referred to.',
+            'referred_to_other.required_if' => 'Enter the name of the committee or board.',
+            'referral_note.required' => 'Explain why the ticket is being referred.',
         ]);
 
-        $this->workflow->refer($ticket, Auth::user(), $validated['referred_to'], $validated['referral_note'] ?? null);
+        $referredTo = $validated['referred_to'] === 'other' ? trim($validated['referred_to_other']) : $validated['referred_to'];
 
-        return back()->with('success', sprintf('Ticket referred to %s.', $validated['referred_to']));
+        $this->workflow->refer($ticket, Auth::user(), $referredTo, trim($validated['referral_note']));
+
+        return back()->with('success', sprintf('Ticket referred to %s.', $referredTo));
     }
 
     /**
@@ -505,8 +511,10 @@ class AdminTicketReviewController extends Controller
 
         $validated = $request->validate([
             'recipient_id' => 'required|exists:recipients,id',
+            'escalation_note' => 'required|string|max:1000',
         ], [
             'recipient_id.required' => 'Select who the ticket should be escalated to.',
+            'escalation_note.required' => 'Explain why the ticket is being escalated.',
         ]);
 
         $recipient = $this->escalationService
@@ -517,7 +525,7 @@ class AdminTicketReviewController extends Controller
             return back()->withErrors(['recipient_id' => 'The ticket cannot be escalated to the selected recipient.']);
         }
 
-        $this->escalationService->escalate($ticket, $recipient, Auth::user());
+        $this->escalationService->escalate($ticket, $recipient, Auth::user(), trim($validated['escalation_note']));
 
         return back()->with('success', sprintf('Ticket escalated to %s.', $recipient->user->display_name));
     }
