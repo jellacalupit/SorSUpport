@@ -259,7 +259,6 @@ class AnalyticsService
             'subjects' => $subjects, 'insights' => $this->buildInsights($categoryCounts, $resolutionHours, $escalationEvents, $tickets, $identified),
             'openCount' => $openTickets->count(), 'units' => $unitRows,
             'oldestOpenTickets' => $oldestOpenTickets,
-            'waiting' => \App\Support\TicketProgress::waitingTimes($tickets),
             'breakdowns' => $this->getBreakdowns($filters, $tickets),
         ];
     }
@@ -377,9 +376,6 @@ class AnalyticsService
             'escalation_frequency' => $this->getEscalationFrequency($filters),
             'status_distribution' => $this->getActiveTicketStatuses($filters),
             'breakdowns' => $this->getBreakdowns($filters),
-            'waiting' => \App\Support\TicketProgress::waitingTimes(
-                $this->filterTickets(Ticket::query(), $filters)->with(['complaint', 'assignee.recipient', 'currentHandler.recipient', 'auditLogs'])->get()
-            ),
             'filters' => $filters,
         ];
     }

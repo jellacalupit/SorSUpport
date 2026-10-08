@@ -147,29 +147,6 @@
         @endif
     @endforeach
 
-    @if ($has('waiting'))
-        @php
-            $waiting = $reportData['waiting'] ?? [];
-            $dayText = fn ($value) => match (true) {
-                $value === null => 'No data yet',
-                $value < 1 => rtrim(rtrim(number_format($value * 24, 1), '0'), '.') . ' hours',
-                default => rtrim(rtrim(number_format((float) $value, 1), '0'), '.') . ' days',
-            };
-        @endphp
-        <div class="section">
-            <h2>Waiting Time</h2>
-            <table class="data">
-                <tbody>
-                    <tr><th>Average wait before the first review</th><td class="number">{{ $dayText($waiting['review_days'] ?? null) }}</td></tr>
-                    <tr><th>Average wait before staff acknowledge</th><td class="number">{{ $dayText($waiting['acknowledge_days'] ?? null) }}</td></tr>
-                    <tr><th>Average time from assignment to resolution</th><td class="number">{{ $dayText($waiting['handling_days'] ?? null) }}</td></tr>
-                    <tr><th>Tickets awaiting review now</th><td class="number">{{ $waiting['awaiting_review'] ?? 0 }}</td></tr>
-                    <tr><th>Open tickets with no action for {{ \App\Support\TicketProgress::ATTENTION_DAYS }} days or more</th><td class="number">{{ $waiting['needing_attention'] ?? 0 }}</td></tr>
-                </tbody>
-            </table>
-        </div>
-    @endif
-
     @if ($has('satisfaction'))
         <div class="section">
             <h2>Student Satisfaction</h2>
