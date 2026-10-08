@@ -253,6 +253,7 @@ class AccountManagementController extends Controller
 
             $user->update([
                 'username' => $studentData['student_id'],
+                ...$this->firstTimePassword($user, $studentData['student_id']),
             ]);
 
             if ($user->student) {
@@ -282,6 +283,7 @@ class AccountManagementController extends Controller
             ]);
             $user->update([
                 'username' => $recipientData['staff_id'],
+                ...$this->firstTimePassword($user, $recipientData['staff_id']),
             ]);
 
             if ($user->recipient) {
@@ -440,5 +442,14 @@ class AccountManagementController extends Controller
             }
             fclose($handle);
         }, 'bulk-upload-errors.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    /**
+     * An account that has not set its own password yet signs in with its ID, so when the admin
+     * corrects the ID the first-time password follows it. A password the user chose is left alone.
+     */
+    protected function firstTimePassword(AppUser $user, string $id): array
+    {
+        return $user->must_change_password ? ['password' => Hash::make($id)] : [];
     }
 }

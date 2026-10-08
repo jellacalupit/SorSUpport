@@ -83,6 +83,47 @@ class AccountsPageTest extends TestCase
             ->assertJsonValidationErrors('email');
     }
 
+    public function test_correcting_an_id_keeps_the_first_time_password_in_step(): void
+    {
+        $this->recipients(2);
+        $first = Recipient::query()->orderBy('id')->first();
+        $second = Recipient::query()->orderBy('id')->skip(1)->first();
+        $first->user->update(['password' => \Illuminate\Support\Facades\Hash::make($first->staff_id), 'must_change_password' => true]);
+        $second->user->update(['password' => \Illuminate\Support\Facades\Hash::make('Their-Own-Pass1'), 'must_change_password' => false]);
+
+        $edit = fn (Recipient $recipient, string $staffId) => $this->actingAs($this->admin)->putJson(route('admin.accounts.update', $recipient->user), [
+            'role' => User::ROLE_RECIPIENT,
+            'first_name' => 'Rey',
+            'last_name' => 'Registrar',
+            'email' => $recipient->user->email,
+            'staff_id' => $staffId,
+            'unit' => 'Registrar',
+            'designation' => 'Staff',
+        ])->assertSessionHasNoErrors();
+
+        // Still on the first-time password: it follows the corrected ID.
+        $edit($first, '260001');
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('260001', $first->user->fresh()->password));
+
+        // A password the user chose is left alone.
+        $edit($second, '260002');
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('Their-Own-Pass1', $second->user->fresh()->password));
+    }
+
+    public function test_first_time_passwords_that_fell_out_of_step_are_repaired(): void
+    {
+        $this->recipients(2);
+        $stuck = Recipient::query()->orderBy('id')->first()->user;
+        $own = Recipient::query()->orderBy('id')->skip(1)->first()->user;
+        $stuck->update(['password' => \Illuminate\Support\Facades\Hash::make('an-old-id'), 'must_change_password' => true]);
+        $own->update(['password' => \Illuminate\Support\Facades\Hash::make('Their-Own-Pass1'), 'must_change_password' => false]);
+
+        (require database_path('migrations/2026_10_10_600000_repair_first_time_passwords.php'))->up();
+
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check($stuck->username, $stuck->fresh()->password));
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('Their-Own-Pass1', $own->fresh()->password));
+    }
+
     public function test_the_page_refreshes_only_the_tables_after_an_account_action(): void
     {
         $this->actingAs($this->admin)->get(route('admin.accounts.index'))
