@@ -45,23 +45,24 @@
     <title>SorSUpport Analytics Report</title>
     <style>
         /* The margins leave room for the letterhead and the footer band on every page. */
-        @page { size: letter; margin: 112pt 40pt 92pt 40pt; }
+        /* The SDS letterhead is on long bond paper (8.5 x 13 in) with 0.75 in side margins. */
+        @page { size: 8.5in 13in; margin: 150pt 54pt 92pt 54pt; }
         body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #1f2937; }
 
-        .letterhead { position: fixed; top: -96pt; left: 0; right: 0; height: 84pt; }
+        .letterhead { position: fixed; top: -102pt; left: 0; right: 0; height: 90pt; }
         .letterhead table { width: 100%; border-collapse: collapse; }
         .letterhead td { vertical-align: middle; text-align: center; padding: 0; }
-        .letterhead .logo { width: 86px; }
-        .letterhead .logo img { height: 78px; }
-        .letterhead p { margin: 0; font-size: 10.5px; line-height: 1.25; color: #000; }
+        .letterhead .logo { width: 72pt; }
+        .letterhead .logo img { width: 72pt; }
+        .letterhead p { margin: 0; font-size: 10pt; line-height: 1.15; color: #000; }
         .letterhead .strong { font-weight: bold; }
-        .letterhead .unit { font-weight: bold; font-size: 12px; }
+        .letterhead .small { font-size: 9pt; }
         .letterhead .place { font-style: italic; }
-        .letterhead .rule { border-top: 2px solid #000; margin: 6px 40px 0 40px; }
+        .letterhead .rule { border-top: 1.5pt solid #000; width: 360pt; margin: 4pt auto 0 auto; }
 
-        /* The band runs edge to edge: 612pt wide, about 80pt tall. */
-        .footer { position: fixed; bottom: -92pt; left: -40pt; width: 612pt; height: 81pt; }
-        .footer img { width: 612pt; height: 80.3pt; }
+        /* The band runs edge to edge: 612pt wide, about 79pt tall. */
+        .footer { position: fixed; bottom: -92pt; left: -54pt; width: 612pt; height: 80pt; }
+        .footer img { width: 612pt; height: 79.2pt; }
 
         h1 { margin: 0; text-align: center; font-size: 15px; color: #7a1d2a; letter-spacing: 0.3px; }
         .subtitle { margin: 3px 0 0 0; text-align: center; font-size: 10px; color: #4b5563; }
@@ -89,11 +90,10 @@
                 <td>
                     <p>Republic of the Philippines</p>
                     <p class="strong">Sorsogon State University</p>
-                    <p class="strong">College of Information and Communications Technology</p>
-                    <p class="unit">INFORMATION TECHNOLOGY</p>
+                    <p class="strong">OFFICE OF THE STUDENT DEVELOPMENT SERVICES</p>
                     <p class="strong">Bulan Campus</p>
-                    <p class="place">Zone 8, Bulan, Sorsogon</p>
-                    <p>Tel. No.; 056 311-0103; Email Address: cict@sorsu.edu.ph</p>
+                    <p class="small place">Zone 8, Bulan, Sorsogon</p>
+                    <p class="small">Tel. No.; 056 311-0103; Email Address: sas_bc@sorsu.edu.ph</p>
                 </td>
                 <td class="logo"><img src="{{ $image('bagong-pilipinas') }}" alt=""></td>
             </tr>

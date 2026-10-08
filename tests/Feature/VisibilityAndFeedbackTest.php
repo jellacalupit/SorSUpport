@@ -396,6 +396,7 @@ class VisibilityAndFeedbackTest extends TestCase
         // Only the chosen parts are printed, on the university letterhead.
         $report = view('admin.analytics.report', ['reportData' => $reportData, 'filters' => [], 'sections' => ['summary', 'colleges'], 'preparedBy' => 'Abbie Goyal'])->render();
         $this->assertStringContainsString('Sorsogon State University', $report);
+        $this->assertStringContainsString('OFFICE OF THE STUDENT DEVELOPMENT SERVICES', $report);
         $this->assertStringContainsString('Tickets by College', $report);
         $this->assertStringContainsString('Prepared by:', $report);
         $this->assertStringNotContainsString('Tickets by Program', $report);

@@ -168,7 +168,7 @@ class AnalyticsController extends Controller
             'filters' => $filters,
             'sections' => $sections,
             'preparedBy' => $request->user()?->table_name,
-        ])->setPaper('letter');
+        ])->setPaper([0, 0, 612, 936]);
 
         return $pdf->download($fileName);
     }
