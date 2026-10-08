@@ -22,6 +22,7 @@ class AnalyticsController extends Controller
         'categories' => 'Tickets by category',
         'resolution_rate' => 'Resolution rate',
         'resolution_time' => 'Average resolution time by category',
+        'waiting' => 'Waiting time',
         'escalation' => 'Escalation frequency',
         'statuses' => 'Tickets by status',
         'colleges' => 'Tickets by college',

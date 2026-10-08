@@ -81,7 +81,8 @@ class AdminDashboardController extends Controller
 
         // The five best resolution rates, taken from the same figures the Analytics page shows
         // (all time): tickets each person holds, and how many needing resolution they resolved.
-        $performanceRows = collect(app(\App\Services\AnalyticsService::class)->getDashboardData()['recipients']);
+        $analyticsData = app(\App\Services\AnalyticsService::class)->getDashboardData();
+        $performanceRows = collect($analyticsData['recipients']);
         $performanceUsers = User::query()->with('recipient')->whereIn('id', $performanceRows->pluck('user_id'))->get()->keyBy('id');
 
         $topPerformingRecipients = $performanceRows
@@ -106,6 +107,8 @@ class AdminDashboardController extends Controller
 
         return view('admin.dashboard', [
             'admin' => $admin,
+            // Tickets that have waited too long, pointed out to the admin; nothing is escalated for them.
+            'waitingNotice' => ['review' => $analyticsData['waiting']['review_overdue'], 'stalled' => $analyticsData['waiting']['stalled']],
             'firstName' => collect(explode(' ', trim($admin->name)))->filter()->first() ?? 'Admin',
             'totalTickets' => $tickets->count(),
             'totalStudents' => User::query()->where('role', User::ROLE_STUDENT)->count(),

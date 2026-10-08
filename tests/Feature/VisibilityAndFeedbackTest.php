@@ -373,6 +373,79 @@ class VisibilityAndFeedbackTest extends TestCase
         $this->assertNull($top->firstWhere('staff_id', $this->otherRecipient->recipient->staff_id));
     }
 
+    /**
+     * Record a step on a ticket as if it happened some days ago.
+     */
+    protected function step(Ticket $ticket, string $action, int $daysAgo, ?User $by = null): void
+    {
+        $log = \App\Models\AuditLog::log($ticket->id, $action, ($by ?? $this->admin)->id, 'Recorded for the test.');
+        $log->forceFill(['created_at' => now()->subDays($daysAgo), 'updated_at' => now()->subDays($daysAgo)])->save();
+    }
+
+    public function test_the_student_sees_who_their_ticket_is_waiting_on_and_for_how_long(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_SUBMITTED);
+        $ticket->complaint->forceFill(['created_at' => now()->subDays(4)])->save();
+        $this->step($ticket, 'complaint_submitted', 4, $this->student);
+
+        $this->actingAs($this->student)->get(route('student.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertSee('Where your ticket is')
+            ->assertSee('Waiting for review by the SDS Office · 4 days')
+            ->assertSee('You submitted the ticket');
+
+        // Once it is assigned, the student is told who has it, and how long each step took.
+        $ticket->update(['status' => Ticket::STATUS_ASSIGNED, 'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'assigned_to' => $this->handler->id, 'current_handler_id' => $this->handler->id]);
+        $this->step($ticket, 'ticket_assigned', 1);
+
+        $this->actingAs($this->student)->get(route('student.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertSee('Waiting for ' . $this->handler->table_name . ' (Registrar, Registrar) to acknowledge it · 1 day')
+            ->assertSee('The SDS Office reviewed it and assigned a handler')
+            ->assertSee('3 days later')
+            ->assertDontSee('Recorded for the test.');
+    }
+
+    public function test_analytics_measure_how_long_tickets_wait_at_each_stage(): void
+    {
+        // Filed 5 days ago, reviewed after 2 days, acknowledged a day later, still in progress.
+        $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
+        $ticket->complaint->forceFill(['created_at' => now()->subDays(5)])->save();
+        $this->step($ticket, 'complaint_submitted', 5, $this->student);
+        $this->step($ticket, 'ticket_assigned', 3);
+        $this->step($ticket, 'ticket_acknowledged', 2, $this->handler);
+
+        // And one nobody has reviewed for 4 days.
+        $waiting = $this->ticket(Ticket::STATUS_SUBMITTED);
+        $waiting->complaint->forceFill(['created_at' => now()->subDays(4)])->save();
+        $this->step($waiting, 'complaint_submitted', 4, $this->student);
+
+        $times = app(AnalyticsService::class)->getDashboardData()['waiting'];
+
+        $this->assertEqualsWithDelta(2.0, $times['review_days'], 0.05);
+        $this->assertEqualsWithDelta(1.0, $times['acknowledge_days'], 0.05);
+        $this->assertSame(1, $times['awaiting_review']);
+        $this->assertSame(4, $times['oldest_review_days']);
+        $this->assertSame(1, $times['review_overdue']);
+        $this->assertSame($waiting->complaint->reference_number, $times['longest']->first()['reference']);
+
+        $this->actingAs($this->admin)->get('/admin/analytics')
+            ->assertOk()
+            ->assertSee('Waiting time')
+            ->assertSee('Before the first review')
+            ->assertSee('Waiting for review by the SDS Office');
+
+        // The dashboard points the waiting ticket out; nothing is escalated for it.
+        $this->actingAs($this->admin)->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Waiting 3 days or more:')
+            ->assertSee('1 ticket for your review');
+        $this->assertSame(Ticket::STATUS_SUBMITTED, $waiting->fresh()->status);
+
+        $report = view('admin.analytics.report', ['reportData' => app(AnalyticsService::class)->getReportData(), 'filters' => [], 'sections' => ['waiting']])->render();
+        $this->assertStringContainsString('Average wait before the first review', $report);
+    }
+
     public function test_analytics_bars_are_as_long_as_their_percentage(): void
     {
         $other = ComplaintCategory::create(['name' => 'Library Services', 'is_active' => true]);

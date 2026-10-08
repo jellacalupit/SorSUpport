@@ -332,6 +332,58 @@
                 @endif
             </section>
         </div>
+        <!-- How long tickets wait -->
+        @php
+            $waiting = $data['waiting'];
+            // Under a day is shown in hours, so a same-day wait does not read as zero.
+            $dayText = fn ($value) => match (true) {
+                $value === null => '—',
+                $value < 1 => rtrim(rtrim(number_format($value * 24, 1), '0'), '.') . ' h',
+                default => rtrim(rtrim(number_format((float) $value, 1), '0'), '.') . ' d',
+            };
+            $waitingTiles = [
+                ['label' => 'Before the first review', 'value' => $dayText($waiting['review_days']), 'hint' => 'From submission until the SDS Office first acts on a ticket'],
+                ['label' => 'Before staff acknowledge', 'value' => $dayText($waiting['acknowledge_days']), 'hint' => 'From assignment until the handler acknowledges it'],
+                ['label' => 'From assignment to resolution', 'value' => $dayText($waiting['handling_days']), 'hint' => 'How long handling takes once a ticket is assigned'],
+                ['label' => 'Awaiting review now', 'value' => $waiting['awaiting_review'], 'hint' => $waiting['awaiting_review'] ? 'The oldest has waited ' . $waiting['oldest_review_days'] . ' ' . \Illuminate\Support\Str::plural('day', $waiting['oldest_review_days']) : 'Nothing is waiting for review'],
+            ];
+        @endphp
+        <section class="{{ $cardClass }} p-0" data-analytics-waiting>
+            <div class="px-4 pt-4">
+                <h2 class="{{ $titleClass }}">Waiting time</h2>
+                <p class="{{ $subtitleClass }}">Average days tickets wait at each stage, and the open tickets that have gone longest without any action. Nothing is escalated automatically.</p>
+            </div>
+            <dl class="mt-3 grid grid-cols-2 gap-px border-y border-border bg-border lg:grid-cols-4">
+                @foreach ($waitingTiles as $tile)
+                    <div class="bg-white px-4 py-3">
+                        <dt class="text-[11px] font-semibold text-muted-foreground">{{ $tile['label'] }}</dt>
+                        <dd class="mt-1 font-display text-xl font-bold leading-none text-primary">{{ $tile['value'] }}</dd>
+                        <dd class="mt-1 text-[10px] leading-snug text-muted-foreground">{{ $tile['hint'] }}</dd>
+                    </div>
+                @endforeach
+            </dl>
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[40rem] text-xs">
+                    <thead class="border-b border-border bg-muted/50 text-[11px] uppercase tracking-wide text-muted-foreground">
+                        <tr class="text-left"><th class="px-4 py-2 font-semibold">Waiting longest</th><th class="px-3 py-2 font-semibold">Status</th><th class="px-3 py-2 font-semibold">Waiting on</th><th class="px-3 py-2 text-right font-semibold">Days open</th><th class="px-4 py-2 text-right font-semibold">No action for</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-border">
+                        @forelse ($waiting['longest'] as $row)
+                            <tr>
+                                <td class="px-4 py-2.5"><span class="font-mono text-[11px] font-semibold text-primary">{{ $row['reference'] }}</span><span class="block max-w-[16rem] truncate text-foreground">{{ $row['subject'] }}</span></td>
+                                <td class="whitespace-nowrap px-3 py-2.5 text-muted-foreground">{{ $row['status'] }}</td>
+                                <td class="px-3 py-2.5 text-muted-foreground">{{ $row['waiting'] }}</td>
+                                <td class="px-3 py-2.5 text-right tabular-nums">{{ $row['days_open'] }} d</td>
+                                <td class="px-4 py-2.5 text-right tabular-nums {{ $row['idle'] >= \App\Support\TicketProgress::ATTENTION_DAYS ? 'font-semibold text-red-700' : 'text-muted-foreground' }}">{{ $row['idle'] === 0 ? 'Today' : $row['idle'] . ' d' }}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="5" class="px-4 py-8 text-center text-muted-foreground">No open tickets in this period.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
         <!-- Who is handling them -->
         <section class="{{ $cardClass }} p-0">
             <div class="px-4 pt-4">

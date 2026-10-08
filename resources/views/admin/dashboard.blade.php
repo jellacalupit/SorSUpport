@@ -20,6 +20,20 @@
 
     {{-- Phones and tablets --}}
     <div class="lg:hidden">
+@if ($waitingNotice['review'] + $waitingNotice['stalled'] > 0)
+    <div class="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900" data-waiting-notice>
+        <p class="min-w-0">
+            <span class="font-semibold">Waiting {{ \App\Support\TicketProgress::ATTENTION_DAYS }} days or more:</span>
+            @if ($waitingNotice['review'])
+                {{ $waitingNotice['review'] }} {{ \Illuminate\Support\Str::plural('ticket', $waitingNotice['review']) }} for your review{{ $waitingNotice['stalled'] ? ',' : '.' }}
+            @endif
+            @if ($waitingNotice['stalled'])
+                {{ $waitingNotice['stalled'] }} with staff and no action.
+            @endif
+        </p>
+        <a data-admin-page-nav href="{{ $waitingNotice['review'] ? route('admin.tickets.review.index') : route('admin.complaints.index') }}" class="shrink-0 font-semibold text-amber-900 underline">View tickets</a>
+    </div>
+@endif
     <div class="grid min-w-0 gap-3">
         <!-- Totals -->
         <div class="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
@@ -272,6 +286,20 @@
 
     {{-- Desktop: the original dashboard --}}
     <div class="hidden lg:block">
+@if ($waitingNotice['review'] + $waitingNotice['stalled'] > 0)
+    <div class="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900" data-waiting-notice>
+        <p class="min-w-0">
+            <span class="font-semibold">Waiting {{ \App\Support\TicketProgress::ATTENTION_DAYS }} days or more:</span>
+            @if ($waitingNotice['review'])
+                {{ $waitingNotice['review'] }} {{ \Illuminate\Support\Str::plural('ticket', $waitingNotice['review']) }} for your review{{ $waitingNotice['stalled'] ? ',' : '.' }}
+            @endif
+            @if ($waitingNotice['stalled'])
+                {{ $waitingNotice['stalled'] }} with staff and no action.
+            @endif
+        </p>
+        <a data-admin-page-nav href="{{ $waitingNotice['review'] ? route('admin.tickets.review.index') : route('admin.complaints.index') }}" class="shrink-0 font-semibold text-amber-900 underline">View tickets</a>
+    </div>
+@endif
     <div class="flex items-stretch gap-2 pt-0">
         <div class="self-start flex flex-col gap-2">
             <div class="grid w-[526px] grid-cols-4 items-stretch gap-2">
