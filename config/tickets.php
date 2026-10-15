@@ -32,6 +32,11 @@ return [
         // Referred to a committee with no outcome recorded: the SDS Office is reminded to follow
         // up. The Student Handbook (p. 57) gives the committee 10 working days to decide.
         'referral_days' => 10,
+
+        // Calendar days a student has to accept a resolution or ask for further action, after
+        // which the SDS Office is told once so it can close the ticket. The Student Handbook
+        // (pp. 47–48) gives 15 days to appeal a decision.
+        'student_response_days' => \App\Models\Ticket::FURTHER_ACTION_DAYS,
     ],
 
     /*

@@ -549,15 +549,23 @@
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <input id="reminder-{{ $row['name'] }}" name="{{ $row['name'] }}" type="number" min="1" max="30" required value="{{ old($row['name'], $reminderSettings[$row['name']]) }}" class="h-8 w-20 rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring">
-                                    <span class="text-xs text-muted-foreground">working days</span>
+                                    <span class="w-22 text-xs text-muted-foreground">working days</span>
                                 </div>
                             </li>
                         @endforeach
-                        <li class="grid gap-1 bg-muted/40 px-4 py-3">
-                            <p class="text-sm font-semibold text-foreground">Student did not respond</p>
-                            <p class="text-xs text-muted-foreground">When a resolved ticket passes the student's {{ \App\Models\Ticket::FURTHER_ACTION_DAYS }} days to accept or ask for further action, the SDS Office is told once so it can close the ticket. The {{ \App\Models\Ticket::FURTHER_ACTION_DAYS }} days follow the Student Handbook's appeal period (pp. 47–48) and are not changed here.</p>
-                        </li>
                     </ul>
+                </div>
+
+                <div class="grid gap-2 rounded-lg border border-border px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">
+                    <div class="min-w-0">
+                        <label for="reminder-student_response_days" class="text-sm font-semibold text-foreground">Student did not respond</label>
+                        <p class="text-xs text-muted-foreground">Days a student has to accept a resolution or ask for further action. Afterwards they can only accept, and the SDS Office is told once so it can close the ticket. The Student Handbook gives {{ \App\Models\Ticket::FURTHER_ACTION_DAYS }} days to appeal a decision (pp. 47–48). <span class="font-medium text-foreground">Reminds: SDS Office.</span></p>
+                        @error('student_response_days')<p class="mt-1 text-xs text-destructive">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input id="reminder-student_response_days" name="student_response_days" type="number" min="1" max="30" required value="{{ old('student_response_days', $reminderSettings['student_response_days']) }}" class="h-8 w-20 rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring">
+                        <span class="w-22 text-xs text-muted-foreground">days</span>
+                    </div>
                 </div>
 
                 <div class="flex justify-end">

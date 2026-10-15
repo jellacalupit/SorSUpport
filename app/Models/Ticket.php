@@ -119,7 +119,11 @@ class Ticket extends Model
         self::RESOLUTION_NO_BASIS => 'No basis found after review',
     ];
 
-    /** Days a student has to ask for further action after a ticket is resolved. */
+    /**
+     * Default days a student has to ask for further action after a ticket is resolved, from the
+     * Student Handbook's 15-day appeal period. The SDS admin may change it in System Settings;
+     * read the current value with furtherActionDays().
+     */
     public const FURTHER_ACTION_DAYS = 15;
 
     public const CLASSIFICATION_NEEDS_RESOLUTION = 'needs_resolution';
@@ -318,7 +322,16 @@ class Ticket extends Model
      */
     public function furtherActionDeadline(): ?\Illuminate\Support\Carbon
     {
-        return $this->resolved_at?->copy()->addDays(self::FURTHER_ACTION_DAYS);
+        return $this->resolved_at?->copy()->addDays(self::furtherActionDays());
+    }
+
+    /**
+     * Days a student has to accept a resolution or ask for further action, as set in System
+     * Settings.
+     */
+    public static function furtherActionDays(): int
+    {
+        return app(\App\Services\TicketReminderService::class)->settings()['student_response_days'];
     }
 
     /**

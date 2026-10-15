@@ -484,7 +484,7 @@ class ComplaintController extends Controller
 
         if ($ticket->status === Ticket::STATUS_RESOLVED && ! $workflow->withinFurtherActionWindow($ticket)) {
             return back()->withErrors([
-                'further_action_reason' => sprintf('Further action can only be requested within %d days after the ticket was resolved.', Ticket::FURTHER_ACTION_DAYS),
+                'further_action_reason' => sprintf('Further action can only be requested within %d days after the ticket was resolved.', Ticket::furtherActionDays()),
             ]);
         }
 

@@ -197,8 +197,8 @@ class TicketRemindersAndDeliveryTest extends TestCase
     public function test_the_sds_office_is_told_once_when_the_student_does_not_respond(): void
     {
         $admin = $this->admin();
-        $unanswered = $this->ticket(['status' => Ticket::STATUS_RESOLVED, 'resolved_at' => now()->subDays(Ticket::FURTHER_ACTION_DAYS + 1)]);
-        $this->ticket(['status' => Ticket::STATUS_RESOLVED, 'resolved_at' => now()->subDays(Ticket::FURTHER_ACTION_DAYS - 1)]);
+        $unanswered = $this->ticket(['status' => Ticket::STATUS_RESOLVED, 'resolved_at' => now()->subDays(Ticket::furtherActionDays() + 1)]);
+        $this->ticket(['status' => Ticket::STATUS_RESOLVED, 'resolved_at' => now()->subDays(Ticket::furtherActionDays() - 1)]);
         $service = app(TicketReminderService::class);
 
         $this->assertSame(1, $service->queueReminders());
@@ -283,6 +283,7 @@ class TicketRemindersAndDeliveryTest extends TestCase
                 'unacknowledged_days' => 2,
                 'idle_days' => 5,
                 'referral_days' => 10,
+                'student_response_days' => 15,
             ])
             ->assertRedirect(route('admin.settings', ['settings_tab' => 'reminders']))
             ->assertSessionHasNoErrors();
@@ -302,8 +303,26 @@ class TicketRemindersAndDeliveryTest extends TestCase
                 'unacknowledged_days' => 2,
                 'idle_days' => 5,
                 'referral_days' => 10,
+                'student_response_days' => 15,
             ])
             ->assertSessionHasErrors('unreviewed_days');
+    }
+
+    public function test_the_students_days_to_respond_can_be_changed(): void
+    {
+        $admin = $this->admin();
+        $ticket = $this->ticket(['status' => Ticket::STATUS_RESOLVED, 'resolved_at' => now()->subDays(8)]);
+        $service = app(TicketReminderService::class);
+
+        $this->assertSame(Ticket::FURTHER_ACTION_DAYS, Ticket::furtherActionDays());
+        $this->assertSame(0, $service->queueReminders());
+
+        $service->saveSettings(['student_response_days' => 7]);
+
+        $this->assertSame(7, Ticket::furtherActionDays());
+        $this->assertTrue($ticket->furtherActionDeadline()->isPast());
+        $this->assertSame(1, $service->queueReminders());
+        $this->assertDatabaseHas('email_notifications', ['ticket_id' => $ticket->id, 'recipient_email' => $admin->email]);
     }
 
     // ------------------------------------------------------------ submission limit

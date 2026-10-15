@@ -76,7 +76,7 @@
     <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800" data-ticket-notice="resolved">
         <p class="font-semibold">Your ticket has been resolved</p>
         @if ($furtherActionExpired)
-            <p class="mt-0.5">The {{ Ticket::FURTHER_ACTION_DAYS }} days for requesting further action have passed. You can still accept the resolution to close the ticket.</p>
+            <p class="mt-0.5">The {{ Ticket::furtherActionDays() }} days for requesting further action have passed. You can still accept the resolution to close the ticket.</p>
         @else
             <p class="mt-0.5">Accept the resolution to close the ticket, or request further action{{ $furtherActionDeadline ? ' until ' . $furtherActionDeadline->format('M d, Y') : '' }} if the concern is not settled.</p>
         @endif

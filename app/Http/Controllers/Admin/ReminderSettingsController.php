@@ -24,23 +24,27 @@ class ReminderSettingsController extends Controller
             'unacknowledged_days' => $days,
             'idle_days' => $days,
             'referral_days' => $days,
+            'student_response_days' => $days,
         ], [
-            '*.min' => 'Enter at least 1 working day.',
-            '*.max' => 'Enter at most 30 working days.',
+            '*.min' => 'Enter at least 1 day.',
+            '*.max' => 'Enter at most 30 days.',
         ]);
 
         $reminders->saveSettings($validated);
 
+        $studentDays = sprintf('Students have %d days to respond to a resolution.', $validated['student_response_days']);
+
         AuditLog::activity('reminder_settings_updated', details: $validated['enabled']
             ? sprintf(
-                'Updated reminders: not reviewed %d, sensitive not reviewed %d, not acknowledged %d, no action %d, referred %d working days.',
+                'Updated reminders: not reviewed %d, sensitive not reviewed %d, not acknowledged %d, no action %d, referred %d working days. %s',
                 $validated['unreviewed_days'],
                 $validated['sensitive_unreviewed_days'],
                 $validated['unacknowledged_days'],
                 $validated['idle_days'],
                 $validated['referral_days'],
+                $studentDays,
             )
-            : 'Turned off reminders for waiting tickets.');
+            : 'Turned off reminders for waiting tickets. ' . $studentDays);
 
         return redirect()->route('admin.settings', ['settings_tab' => 'reminders'])
             ->with('success', 'Reminder settings saved.');

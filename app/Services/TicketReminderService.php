@@ -24,6 +24,7 @@ class TicketReminderService
         'unacknowledged_days',
         'idle_days',
         'referral_days',
+        'student_response_days',
     ];
 
     public const WAITING_STATUSES = [
@@ -38,7 +39,7 @@ class TicketReminderService
     /**
      * The reminder settings: what the SDS admin saved in System Settings, otherwise the defaults.
      *
-     * @return array{enabled: bool, unreviewed_days: int, sensitive_unreviewed_days: int, unacknowledged_days: int, idle_days: int, referral_days: int}
+     * @return array{enabled: bool, unreviewed_days: int, sensitive_unreviewed_days: int, unacknowledged_days: int, idle_days: int, referral_days: int, student_response_days: int}
      */
     public function settings(): array
     {

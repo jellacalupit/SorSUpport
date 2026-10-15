@@ -63,7 +63,7 @@ class TicketEmailComposer
     {
         $isStudent = $audience === self::AUDIENCE_STUDENT;
         $handler = $ticket ? $this->handlerName($ticket) : 'the assigned office';
-        $days = Ticket::FURTHER_ACTION_DAYS;
+        $days = Ticket::furtherActionDays();
 
         return match ($type) {
             EmailNotification::TYPE_SUBMISSION_ACK => [
@@ -247,7 +247,7 @@ class TicketEmailComposer
                 "The student did not respond on {$reference}",
                 'The student\'s days to respond have passed',
                 [
-                    'This ticket was resolved and the student did not accept the resolution or ask for further action within ' . Ticket::FURTHER_ACTION_DAYS . ' days.',
+                    'This ticket was resolved and the student did not accept the resolution or ask for further action within ' . Ticket::furtherActionDays() . ' days.',
                     'You can close the ticket. The student can still accept the resolution until then.',
                 ],
             ],
@@ -277,7 +277,7 @@ class TicketEmailComposer
      */
     protected function studentStatusMessage(?Ticket $ticket, string $reference, string $handler): array
     {
-        $days = Ticket::FURTHER_ACTION_DAYS;
+        $days = Ticket::furtherActionDays();
         $deadline = $ticket?->furtherActionDeadline()?->copy()->setTimezone('Asia/Manila')->format('F j, Y');
 
         return match ($ticket?->status) {
