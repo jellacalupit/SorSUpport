@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\EmailNotificationService;
+use App\Services\TicketReminderService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -15,8 +16,15 @@ Artisan::command('notifications:send', function (EmailNotificationService $servi
     $this->info("Sent {$count} pending email notifications.");
 })->purpose('Send all pending email notifications');
 
-// Escalation is a manual SDS admin decision, so nothing escalates or reminds on a schedule.
+Artisan::command('tickets:send-reminders', function (TicketReminderService $service) {
+    $count = $service->queueReminders();
+
+    $this->info("Queued reminders for {$count} waiting tickets.");
+})->purpose('Email the people holding tickets that have waited too long');
+
+// Escalation stays a manual SDS admin decision; the schedule only sends emails and reminders.
 Schedule::command('notifications:send')->everyMinute()->withoutOverlapping();
+Schedule::command('tickets:send-reminders')->dailyAt(config('tickets.reminders.send_at'))->withoutOverlapping();
 
 // Connects and signs in to the mail server without sending anything, so a deployment can
 // tell at once whether email will go out.

@@ -151,6 +151,17 @@ class ComplaintController extends Controller
             abort(403, 'Student profile not found.');
         }
 
+        // A few tickets an hour is plenty for real concerns and keeps the queue from being flooded.
+        $limit = max(1, (int) config('tickets.submissions_per_hour'));
+
+        if (Complaint::query()->where('student_id', $student->id)->where('created_at', '>', now()->subHour())->count() >= $limit) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'submission' => "You can submit up to {$limit} tickets in an hour. Please wait a while before submitting another, or add details to one of your open tickets instead.",
+                ]);
+        }
+
         $category = ComplaintCategory::with('recipient.user')
             ->findOrFail($validated['category_id']);
 

@@ -85,7 +85,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertGuest();
-        $response->assertSessionHasErrors(['password' => 'Incorrrect ID or password. Try again.']);
+        $response->assertSessionHasErrors(['password' => 'Incorrect ID or password. Try again.']);
     }
 
     public function test_unverified_users_are_sent_to_email_verification_after_login(): void
@@ -117,7 +117,7 @@ class AuthenticationTest extends TestCase
 
         $this->assertGuest();
         $response->assertRedirect(route('login', absolute: false))
-            ->assertSessionHasErrors(['password' => 'Incorrrect ID or password. Try again.']);
+            ->assertSessionHasErrors(['password' => 'Incorrect ID or password. Try again.']);
     }
 
     public function test_admin_settings_only_exposes_active_recipients_for_category_workflows(): void

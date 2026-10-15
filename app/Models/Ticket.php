@@ -280,9 +280,11 @@ class Ticket extends Model
      */
     public function lastActionAt(): ?\Illuminate\Support\Carbon
     {
+        $emailActions = ['email_notification_sent', 'email_notification_failed'];
+
         $latest = $this->relationLoaded('auditLogs')
-            ? $this->auditLogs->where('action', '!=', 'email_notification_sent')->max('created_at')
-            : $this->auditLogs()->where('action', '!=', 'email_notification_sent')->max('created_at');
+            ? $this->auditLogs->whereNotIn('action', $emailActions)->max('created_at')
+            : $this->auditLogs()->whereNotIn('action', $emailActions)->max('created_at');
 
         return $latest ? \Illuminate\Support\Carbon::parse($latest) : ($this->updated_at ?? $this->created_at);
     }

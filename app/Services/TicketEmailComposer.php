@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\EmailNotification;
 use App\Models\Ticket;
 use App\Models\User;
+use Illuminate\Support\Str;
 
 /**
  * Writes each ticket email for its purpose and its reader. The same event reads differently for
@@ -196,6 +197,8 @@ class TicketEmailComposer
                 ['The status of a ticket you handle has changed. Open the ticket to see what happened.'],
             ],
 
+            EmailNotification::TYPE_WAITING_REMINDER => $this->waitingReminderMessage($ticket, $reference),
+
             EmailNotification::TYPE_DAILY_REMINDER => [
                 "Reminder for ticket {$reference}",
                 'A ticket is waiting for action',
@@ -206,6 +209,44 @@ class TicketEmailComposer
                 "Update on {$reference}",
                 'There is an update on a ticket',
                 ['Open the ticket in SorSUpport to see the update.'],
+            ],
+        };
+    }
+
+    /**
+     * A ticket has waited too long at its current step. Says how long and what to do next.
+     *
+     * @return array{0: string, 1: string, 2: list<string>}
+     */
+    protected function waitingReminderMessage(?Ticket $ticket, string $reference): array
+    {
+        $waited = $ticket?->daysSinceLastAction() ?? 0;
+        $days = $waited . ' ' . Str::plural('day', $waited);
+
+        return match ($ticket?->status) {
+            Ticket::STATUS_SUBMITTED => [
+                "Action needed: {$reference} has waited {$days} for review",
+                "A ticket has waited {$days} for review",
+                [
+                    "This ticket has not been classified or assigned for {$days}. The student is waiting to hear that their concern is being looked at.",
+                    'Please review it: assign it to the office that should handle it, handle it directly, or ask the student for more details.',
+                ],
+            ],
+            Ticket::STATUS_ASSIGNED => [
+                "Action needed: please acknowledge {$reference}",
+                "A ticket assigned to you has waited {$days}",
+                [
+                    "This ticket was assigned to you {$days} ago and has not been acknowledged yet.",
+                    'Please open it and acknowledge it, so the student knows their concern is being attended to.',
+                ],
+            ],
+            default => [
+                "Action needed: no update on {$reference} for {$days}",
+                "No action recorded for {$days}",
+                [
+                    "Nothing has been recorded on this ticket for {$days}.",
+                    'Please give the student an update in the ticket\'s conversation, or mark the ticket resolved if the concern is settled.',
+                ],
             ],
         };
     }
