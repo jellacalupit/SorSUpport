@@ -329,8 +329,12 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
                     ->with(['designations', 'programs'])
                     ->orderBy('name')
                     ->get(),
+                'reminderSettings' => app(\App\Services\TicketReminderService::class)->settings(),
             ]);
         })->name('settings');
+
+        Route::put('/settings/reminders', [\App\Http\Controllers\Admin\ReminderSettingsController::class, 'update'])
+            ->name('settings.reminders.update');
 
         Route::get('/analytics/export/pdf', [AnalyticsController::class, 'exportPdf'])
             ->name('analytics.export.pdf');

@@ -7,23 +7,31 @@ return [
     | Reminders for waiting tickets
     |--------------------------------------------------------------------------
     |
-    | Once a day the people holding a ticket are emailed when it has waited this many days with
-    | nothing recorded on it. The reminder repeats every that many days until someone acts.
+    | Starting values for the reminder settings. The SDS admin changes them in System Settings,
+    | which overrides these. Days are working days (Monday to Friday). The reminder repeats
+    | every that many days until someone acts on the ticket.
     |
     */
 
     'reminders' => [
+        'enabled' => true,
+
         // Submitted and not yet classified or assigned: the SDS Office is reminded.
-        'unreviewed_days' => (int) env('REMIND_UNREVIEWED_AFTER_DAYS', 2),
+        'unreviewed_days' => 2,
+
+        // The same for a ticket in a sensitive category. The Student Handbook (p. 58) requires
+        // a sexual harassment complaint to be acted on within 24 hours of receipt.
+        'sensitive_unreviewed_days' => 1,
 
         // Assigned and not yet acknowledged: the assigned handler is reminded.
-        'unacknowledged_days' => (int) env('REMIND_UNACKNOWLEDGED_AFTER_DAYS', 2),
+        'unacknowledged_days' => 2,
 
         // In progress or escalated with no action recorded: the handler is reminded.
-        'idle_days' => (int) env('REMIND_IDLE_AFTER_DAYS', 5),
+        'idle_days' => 5,
 
-        // Time of day the reminders go out, in the app's timezone.
-        'send_at' => env('REMINDERS_SEND_AT', '08:00'),
+        // Referred to a committee with no outcome recorded: the SDS Office is reminded to follow
+        // up. The Student Handbook (p. 57) gives the committee 10 working days to decide.
+        'referral_days' => 10,
     ],
 
     /*

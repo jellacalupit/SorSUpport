@@ -220,16 +220,35 @@ class TicketEmailComposer
      */
     protected function waitingReminderMessage(?Ticket $ticket, string $reference): array
     {
-        $waited = $ticket?->daysSinceLastAction() ?? 0;
-        $days = $waited . ' ' . Str::plural('day', $waited);
+        $waited = $ticket ? app(TicketReminderService::class)->workingDaysWaited($ticket) : 0;
+        $days = $waited . ' working ' . Str::plural('day', $waited);
 
         return match ($ticket?->status) {
             Ticket::STATUS_SUBMITTED => [
                 "Action needed: {$reference} has waited {$days} for review",
                 "A ticket has waited {$days} for review",
-                [
+                array_values(array_filter([
                     "This ticket has not been classified or assigned for {$days}. The student is waiting to hear that their concern is being looked at.",
-                    'Please review it: assign it to the office that should handle it, handle it directly, or ask the student for more details.',
+                    $ticket?->complaint?->isSensitive()
+                        ? 'It is in a sensitive category. For sexual harassment complaints, the Student Handbook requires action within 24 hours of receipt.'
+                        : null,
+                    'Please review it: assign it to the office that should handle it, handle it directly, refer it to the proper committee, or ask the student for more details.',
+                ])),
+            ],
+            Ticket::STATUS_REFERRED => [
+                "Follow up: no outcome recorded for {$reference} after {$days}",
+                "A referred ticket has waited {$days} for its outcome",
+                [
+                    'This ticket was referred to ' . ($ticket?->referred_to ?: 'a committee') . " and no outcome has been recorded for {$days}. The Student Handbook gives the Committee on Decorum and Investigation 10 working days to decide.",
+                    'Please follow up with the committee, and record the outcome on the ticket once it is decided so the student is informed.',
+                ],
+            ],
+            Ticket::STATUS_RESOLVED => [
+                "The student did not respond on {$reference}",
+                'The student\'s days to respond have passed',
+                [
+                    'This ticket was resolved and the student did not accept the resolution or ask for further action within ' . Ticket::FURTHER_ACTION_DAYS . ' days.',
+                    'You can close the ticket. The student can still accept the resolution until then.',
                 ],
             ],
             Ticket::STATUS_ASSIGNED => [

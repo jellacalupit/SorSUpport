@@ -23,8 +23,10 @@ Artisan::command('tickets:send-reminders', function (TicketReminderService $serv
 })->purpose('Email the people holding tickets that have waited too long');
 
 // Escalation stays a manual SDS admin decision; the schedule only sends emails and reminders.
+// Reminders are checked every hour of the working day, so a ticket allowed one working day is
+// reminded about soon after it has waited that long, and never on a weekend.
 Schedule::command('notifications:send')->everyMinute()->withoutOverlapping();
-Schedule::command('tickets:send-reminders')->dailyAt(config('tickets.reminders.send_at'))->withoutOverlapping();
+Schedule::command('tickets:send-reminders')->hourly()->weekdays()->between('8:00', '17:00')->withoutOverlapping();
 
 // Connects and signs in to the mail server without sending anything, so a deployment can
 // tell at once whether email will go out.

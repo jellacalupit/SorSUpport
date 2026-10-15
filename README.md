@@ -26,15 +26,18 @@ The system follows the procedures of the **SorSU Student Handbook (Revised 2024)
 
 ### Reminders for waiting tickets
 
-Each morning the system emails whoever has to act next on a ticket that has waited too long with nothing recorded on it:
+The system emails whoever has to act next on a ticket that has waited too long with nothing recorded on it. Waiting is counted in **working days** (Monday to Friday), and reminders are checked every hour of the working day.
 
-| Ticket is… | Who is reminded | After |
-|---|---|---|
-| Submitted, not yet classified or assigned | SDS Office | 2 days |
-| Assigned, not yet acknowledged | Assigned handler | 2 days |
-| In progress or escalated, no action recorded | Assigned handler | 5 days |
+| Ticket is… | Who is reminded | After | Basis |
+|---|---|---|---|
+| Submitted, not yet classified or assigned | SDS Office | 2 working days | System default |
+| The same, in a sensitive category | SDS Office | 1 working day | Handbook p. 58: harassment complaints acted on within 24 hours |
+| Assigned, not yet acknowledged | Assigned handler | 2 working days | System default |
+| In progress or escalated, no action recorded | Assigned handler | 5 working days | System default |
+| Referred to a committee, no outcome recorded | SDS Office | 10 working days | Handbook p. 57: the committee decides within 10 working days |
+| Resolved, student did not respond | SDS Office, once | 15 days | Handbook pp. 47–48: 15-day appeal period |
 
-The reminder repeats every that many days until someone acts. The waiting periods can be changed with the settings in [config/tickets.php](config/tickets.php).
+A reminder repeats every that many working days until someone acts, and any action on the ticket restarts the count. Reminders never change a ticket; escalating, reassigning and closing stay the SDS admin's decision. The SDS admin can change the waiting days, or turn reminders off, under **System Settings → Reminders**. The starting values are in [config/tickets.php](config/tickets.php).
 
 ### Email delivery
 
@@ -91,11 +94,9 @@ Besides the usual Laravel settings, `.env` takes:
 |---|---|
 | `MAIL_MAILER=brevo`, `BREVO_API_KEY` | Sends email through Brevo. Use `MAIL_MAILER=log` to write emails to the log instead. |
 | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | Sender shown on every email. |
-| `REMIND_UNREVIEWED_AFTER_DAYS` | Days before the SDS Office is reminded of an unreviewed ticket (default 2). |
-| `REMIND_UNACKNOWLEDGED_AFTER_DAYS` | Days before a handler is reminded to acknowledge a ticket (default 2). |
-| `REMIND_IDLE_AFTER_DAYS` | Days without action before a handler is reminded (default 5). |
-| `REMINDERS_SEND_AT` | Time the daily reminders go out (default `08:00`, Philippine time). |
 | `TICKET_SUBMISSIONS_PER_HOUR` | Tickets one student may submit in an hour (default 5). |
+
+Reminder timing is set by the SDS admin in System Settings, not in `.env`.
 
 Useful commands:
 

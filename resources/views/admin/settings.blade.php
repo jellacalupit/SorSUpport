@@ -7,6 +7,7 @@
                 <button type="button" @click="settingsTab = 'category'" :aria-selected="settingsTab === 'category'" class="inline-flex items-center whitespace-nowrap border-b-2 px-0.5 pb-2 text-[13px] transition-colors sm:px-1 sm:text-sm" :class="settingsTab === 'category' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Category</button>
                 <button type="button" @click="settingsTab = 'escalation'" :aria-selected="settingsTab === 'escalation'" class="inline-flex items-center whitespace-nowrap border-b-2 px-0.5 pb-2 text-[13px] transition-colors sm:px-1 sm:text-sm" :class="settingsTab === 'escalation' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Escalation<span class="hidden min-[400px]:inline">&nbsp;Hierarchy</span></button>
                 <button type="button" @click="settingsTab = 'units'" :aria-selected="settingsTab === 'units'" class="inline-flex items-center whitespace-nowrap border-b-2 px-0.5 pb-2 text-[13px] transition-colors sm:px-1 sm:text-sm" :class="settingsTab === 'units' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Colleges and Offices</button>
+                <button type="button" @click="settingsTab = 'reminders'" :aria-selected="settingsTab === 'reminders'" class="inline-flex items-center whitespace-nowrap border-b-2 px-0.5 pb-2 text-[13px] transition-colors sm:px-1 sm:text-sm" :class="settingsTab === 'reminders' ? 'border-[#7a1d2a] font-semibold text-[#7a1d2a]' : 'border-transparent font-medium text-muted-foreground hover:text-foreground'">Reminders</button>
             </div>
             <button type="button" x-bind:class="settingsTab === 'category' ? '' : 'invisible'" x-on:click.prevent.stop="addCategoryOpen = true" class="mb-1 inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-primary px-2.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 sm:h-9 sm:gap-1.5 sm:px-3 sm:text-sm"><x-icons.plus class="h-4 w-4" /><span>Add<span class="hidden sm:inline"> Category</span></span></button>
         </div>
@@ -508,6 +509,61 @@
                     </form>
                 </div>
             </div>
+        </div>
+
+        @php
+            $reminderRows = [
+                ['name' => 'unreviewed_days', 'label' => 'Not yet reviewed', 'who' => 'SDS Office', 'hint' => 'Submitted, but not yet classified or assigned.'],
+                ['name' => 'sensitive_unreviewed_days', 'label' => 'Sensitive, not yet reviewed', 'who' => 'SDS Office', 'hint' => 'The same, for tickets in a sensitive category. The Student Handbook (p. 58) requires harassment complaints to be acted on within 24 hours.'],
+                ['name' => 'unacknowledged_days', 'label' => 'Not yet acknowledged', 'who' => 'Assigned handler', 'hint' => 'Assigned, but the handler has not acknowledged it.'],
+                ['name' => 'idle_days', 'label' => 'No action recorded', 'who' => 'Assigned handler', 'hint' => 'In progress or escalated, with no reply or update.'],
+                ['name' => 'referral_days', 'label' => 'Referred, no outcome', 'who' => 'SDS Office', 'hint' => 'Referred to a committee, with no outcome recorded. The Student Handbook (p. 57) gives the committee 10 working days to decide.'],
+            ];
+        @endphp
+        <div x-cloak x-data="{ remindersOn: @js((bool) old('enabled', $reminderSettings['enabled'])) }" x-bind:class="settingsTab === 'reminders' ? 'opacity-100' : 'pointer-events-none opacity-0'" class="col-start-1 row-start-1 transition-opacity duration-150 ease-out">
+            <form method="POST" action="{{ route('admin.settings.reminders.update') }}" class="grid max-w-3xl gap-4 rounded-xl border border-border bg-card p-4 sm:p-5">
+                @csrf
+                @method('PUT')
+                <div class="flex items-start gap-3">
+                    <span class="grid h-10 w-10 shrink-0 place-items-center text-primary"><x-icons.bell class="h-7 w-7" /></span>
+                    <div>
+                        <h2 class="font-display text-lg font-bold text-foreground">Reminders for waiting tickets</h2>
+                        <p class="text-xs text-muted-foreground">When a ticket waits too long with nothing recorded on it, the person who has to act next gets a high-priority email. Days are working days (Monday to Friday). The reminder repeats until someone acts. Nothing on the ticket changes by itself, and escalation stays your decision.</p>
+                    </div>
+                </div>
+
+                <label class="flex cursor-pointer items-start gap-3 text-sm">
+                    <input type="hidden" name="enabled" value="0">
+                    <input type="checkbox" name="enabled" value="1" x-model="remindersOn" class="mt-0.5 h-4 w-4 shrink-0 rounded-[6px] accent-red-800">
+                    <span><span class="font-medium text-foreground">Send reminders</span><span class="block text-xs text-muted-foreground">Turn off to stop all reminder emails. Other ticket emails are not affected.</span></span>
+                </label>
+
+                <div class="overflow-hidden rounded-lg border border-border" x-bind:class="remindersOn ? '' : 'opacity-50'">
+                    <ul class="divide-y divide-border">
+                        @foreach ($reminderRows as $row)
+                            <li class="grid gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">
+                                <div class="min-w-0">
+                                    <label for="reminder-{{ $row['name'] }}" class="text-sm font-semibold text-foreground">{{ $row['label'] }}</label>
+                                    <p class="text-xs text-muted-foreground">{{ $row['hint'] }} <span class="font-medium text-foreground">Reminds: {{ $row['who'] }}.</span></p>
+                                    @error($row['name'])<p class="mt-1 text-xs text-destructive">{{ $message }}</p>@enderror
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input id="reminder-{{ $row['name'] }}" name="{{ $row['name'] }}" type="number" min="1" max="30" required value="{{ old($row['name'], $reminderSettings[$row['name']]) }}" class="h-8 w-20 rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring">
+                                    <span class="text-xs text-muted-foreground">working days</span>
+                                </div>
+                            </li>
+                        @endforeach
+                        <li class="grid gap-1 bg-muted/40 px-4 py-3">
+                            <p class="text-sm font-semibold text-foreground">Student did not respond</p>
+                            <p class="text-xs text-muted-foreground">When a resolved ticket passes the student's {{ \App\Models\Ticket::FURTHER_ACTION_DAYS }} days to accept or ask for further action, the SDS Office is told once so it can close the ticket. The {{ \App\Models\Ticket::FURTHER_ACTION_DAYS }} days follow the Student Handbook's appeal period (pp. 47–48) and are not changed here.</p>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="inline-flex h-8 items-center justify-center rounded-full bg-primary px-5 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90">Save Reminders</button>
+                </div>
+            </form>
         </div>
         </div>
 
