@@ -177,10 +177,11 @@ class VisibilityAndFeedbackTest extends TestCase
             ->assertSee('6 working days')
             ->assertDontSee('Last Action');
 
-        // Lists point out how long a ticket has been open and idle.
+        // Recipient lists do not show the open-age label.
         $this->actingAs($this->handler)->get(route('recipient.tickets.index'))
             ->assertOk()
-            ->assertSee('Open 6wd · no action for 4d');
+            ->assertDontSee('Open 6wd')
+            ->assertDontSee('no action for');
 
         // Students see the days on the ticket, but not the idle flag in their list.
         $this->actingAs($this->student)->get(route('student.complaints.index'))->assertOk()->assertDontSee('no action for');

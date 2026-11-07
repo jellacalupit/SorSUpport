@@ -50,7 +50,6 @@
         ? $ticket->status_label
         : (\App\Models\Ticket::STATUS_LABELS[$status] ?? 'Submitted');
     $classification = $ticket?->classification;
-    $studentUser = $complaint?->student?->user;
     $radiusClass = match (true) {
         $first && $last => 'rounded-xl',
         $first => 'rounded-t-xl rounded-b-none',
@@ -63,9 +62,9 @@
             $recipientMetaText = 'Escalated ' . $ticket->escalated_at->copy()->setTimezone('Asia/Manila')->format('M d');
         }
     }
-    // How long the ticket has been open and idle, for the admin and recipients.
+    // How long the ticket has been open and idle, for admins.
     $ageText = null;
-    if ($role !== 'student' && $ticket && $ticket->status !== 'closed') {
+    if ($role === 'admin' && $ticket && $ticket->status !== 'closed') {
         $idleDays = $ticket->daysSinceLastAction();
         $ageText = 'Open ' . $ticket->daysOpen() . 'wd' . ($idleDays ? ' · no action for ' . $idleDays . 'd' : '');
     }
@@ -78,18 +77,8 @@
     href="{{ $route }}"
     {{ $attributes->merge(['class' => 'surface ' . $radiusClass . ' ' . ($isUnread ? 'border-0 bg-primary-soft' : 'border border-border bg-card') . ' block w-full min-w-0 max-w-full overflow-hidden p-3 transition-transform duration-200 ease-out hover:scale-[1.01] hover:border-0 ' . ($isUnread ? 'hover:bg-primary-soft' : 'hover:bg-muted/80')]) }}
 >
-    <div class="min-w-0 {{ $role === 'recipient' ? 'grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3' : '' }}">
-        @if ($role === 'recipient')
-            <span class="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-soft text-sm font-bold text-primary">
-                @if ($studentUser?->avatar_path)
-                    <img src="{{ asset('storage/' . $studentUser->avatar_path) }}" alt="" class="h-full w-full object-cover">
-                @else
-                    {{ $studentUser?->name_initials ?: '?' }}
-                @endif
-            </span>
-        @endif
-        <div class="min-w-0 space-y-0">
-        <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 {{ $role === 'recipient' ? 'mt-0.5' : '' }}">
+    <div class="min-w-0 space-y-0">
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
             <p class="flex min-w-0 items-center gap-1.5 font-mono text-[11px] font-semibold text-primary">
                 <span class="truncate">{{ $complaint?->reference_number ?? $item->id }}</span>
                 <span class="flex min-w-0 items-center gap-1.5 truncate font-sans font-normal text-muted-foreground">
@@ -119,7 +108,6 @@
         @if ($ageText)
             <p class="truncate text-[11px] {{ ($idleDays ?? 0) >= 3 ? 'font-semibold text-red-700' : 'text-muted-foreground' }}" data-ticket-age>{{ $ageText }}</p>
         @endif
-        </div>
     </div>
     @if ($slot->isNotEmpty())
         <div class="inline-flex flex-wrap items-center gap-2 text-[11px] leading-4 text-muted-foreground">
