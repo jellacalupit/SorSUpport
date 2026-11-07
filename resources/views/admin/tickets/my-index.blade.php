@@ -207,12 +207,15 @@
                     <!-- Left Side: Ticket Details -->
                     <div class="min-w-0 rounded-lg border border-border bg-card p-4 sm:min-h-[calc(100vh-6rem)]">
                         <div class="flex items-center justify-between gap-3 mb-1">
-                            <p class="font-mono text-[11px] font-semibold leading-tight text-primary">{{ $ticket->complaint?->reference_number ?? $ticket->id }}</p>
-                            <div class="shrink-0"><x-status-badge :status="$ticket->status_label" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" /></div>
+                            <p class="inline-flex min-w-0 items-center gap-1.5 font-mono text-xs font-semibold leading-tight text-primary">
+                                <x-icons.ticket class="h-4 w-4 shrink-0 text-primary" />
+                                <span class="truncate">{{ $ticket->complaint?->reference_number ?? $ticket->id }}</span>
+                            </p>
+                            <div class="shrink-0"><x-status-badge :status="$ticket->status_label" :classification="$ticket->classification" :show-icon="false" class="px-3 py-1 text-xs" /></div>
                         </div>
                         <div class="mt-0 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                            <h3 class="min-w-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $ticket->complaint?->subject_title ?? 'Untitled' }}</h3>
-                            <span class="shrink-0 whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d · g:i A') ?? 'Unknown' }}</span>
+                            <h3 class="min-w-0 truncate font-display text-[15px] font-bold leading-tight text-foreground sm:text-base" title="{{ $ticket->complaint?->subject_title ?? 'Untitled' }}">{{ $ticket->complaint?->subject_title ?? 'Untitled' }}</h3>
+                            <span class="shrink-0 whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground" title="Last updated">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d · g:i A') ?? 'Unknown' }}</span>
                         </div>
                         <div class="mt-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                             @if (! $ticket->complaint?->is_anonymous)

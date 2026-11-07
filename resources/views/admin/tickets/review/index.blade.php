@@ -230,14 +230,17 @@
                 <div class="grid items-start gap-4 sm:grid-cols-[1.35fr_1fr]">
                     <div class="min-w-0 rounded-lg border border-border bg-card p-4 sm:min-h-[calc(100vh-6rem)]">
                         <div class="mb-1 flex items-center justify-between gap-3">
-                            <p class="font-mono text-[11px] font-semibold leading-tight text-primary">{{ $ticket->complaint->reference_number }}</p>
+                            <p class="inline-flex min-w-0 items-center gap-1.5 font-mono text-xs font-semibold leading-tight text-primary">
+                                <x-icons.ticket class="h-4 w-4 shrink-0 text-primary" />
+                                <span class="truncate">{{ $ticket->complaint->reference_number }}</span>
+                            </p>
                             <div class="shrink-0">
-                                <x-status-badge :status="$ticket->status_label" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" />
+                                <x-status-badge :status="$ticket->status_label" :classification="$ticket->classification" :show-icon="false" class="px-3 py-1 text-xs" />
                             </div>
                         </div>
                         <div class="mt-0 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                            <h3 class="min-w-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $ticket->complaint->subject_title }}</h3>
-                            <span class="shrink-0 whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d · g:i A') ?? 'Unknown' }}</span>
+                            <h3 class="min-w-0 truncate font-display text-[15px] font-bold leading-tight text-foreground sm:text-base" title="{{ $ticket->complaint->subject_title }}">{{ $ticket->complaint->subject_title }}</h3>
+                            <span class="shrink-0 whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground" title="Last updated">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d · g:i A') ?? 'Unknown' }}</span>
                         </div>
                         <div class="mt-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                             @if (! $ticket->complaint->is_anonymous)
@@ -330,14 +333,17 @@
             <div class="grid items-start gap-4 sm:grid-cols-[1.35fr_1fr]">
                 <div class="min-w-0 rounded-lg border border-border bg-card p-4 sm:min-h-[calc(100vh-8rem)]">
                     <div class="mb-1 flex items-center justify-between gap-3">
-                        <p class="font-mono text-[11px] font-semibold leading-tight text-primary">{{ $ticket->complaint->reference_number }}</p>
+                        <p class="inline-flex min-w-0 items-center gap-1.5 font-mono text-xs font-semibold leading-tight text-primary">
+                            <x-icons.ticket class="h-4 w-4 shrink-0 text-primary" />
+                            <span class="truncate">{{ $ticket->complaint->reference_number }}</span>
+                        </p>
                         <div class="shrink-0">
-                            <x-status-badge :status="$ticket->status_label" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" />
+                            <x-status-badge :status="$ticket->status_label" :classification="$ticket->classification" :show-icon="false" class="px-3 py-1 text-xs" />
                         </div>
                     </div>
                     <div class="mt-0 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                        <h3 class="min-w-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $ticket->complaint->subject_title }}</h3>
-                        <span class="shrink-0 whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d · g:i A') ?? 'Unknown' }}</span>
+                        <h3 class="min-w-0 truncate font-display text-[15px] font-bold leading-tight text-foreground sm:text-base" title="{{ $ticket->complaint->subject_title }}">{{ $ticket->complaint->subject_title }}</h3>
+                        <span class="shrink-0 whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground" title="Last updated">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d · g:i A') ?? 'Unknown' }}</span>
                     </div>
                     <div class="mt-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                         <span class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
@@ -504,14 +510,17 @@
                     <div class="grid items-start gap-4 sm:grid-cols-[1.35fr_1fr]">
                         <div class="min-w-0 rounded-lg border border-border bg-card p-4 sm:min-h-[calc(100vh-6rem)]">
                             <div class="mb-1 flex items-center justify-between gap-3">
-                                <p class="font-mono text-[11px] font-semibold leading-tight text-primary">{{ $ticket->complaint->reference_number }}</p>
+                                <p class="inline-flex min-w-0 items-center gap-1.5 font-mono text-xs font-semibold leading-tight text-primary">
+                                    <x-icons.ticket class="h-4 w-4 shrink-0 text-primary" />
+                                    <span class="truncate">{{ $ticket->complaint->reference_number }}</span>
+                                </p>
                                 <div class="shrink-0">
-                                    <x-status-badge :status="$ticket->status_label" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" />
+                                    <x-status-badge :status="$ticket->status_label" :classification="$ticket->classification" :show-icon="false" class="px-3 py-1 text-xs" />
                                 </div>
                             </div>
                             <div class="mt-0 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                                <h3 class="min-w-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $ticket->complaint->subject_title }}</h3>
-                                <span class="shrink-0 whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d · g:i A') ?? 'Unknown' }}</span>
+                                <h3 class="min-w-0 truncate font-display text-[15px] font-bold leading-tight text-foreground sm:text-base" title="{{ $ticket->complaint->subject_title }}">{{ $ticket->complaint->subject_title }}</h3>
+                                <span class="shrink-0 whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground" title="Last updated">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d · g:i A') ?? 'Unknown' }}</span>
                             </div>
                             <div class="mt-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                                 <span class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
