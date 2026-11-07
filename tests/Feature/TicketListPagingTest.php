@@ -66,10 +66,10 @@ class TicketListPagingTest extends TestCase
         $this->assertStringContainsString('data-ticket-more', $page);
     }
 
-    public function test_the_student_home_page_shows_the_ten_most_recent_tickets(): void
+    public function test_the_student_home_page_shows_the_five_most_recent_tickets(): void
     {
         $page = $this->actingAs($this->student)->get(route('student.dashboard'))->assertOk()->getContent();
 
-        $this->assertSame(10, substr_count($page, 'Ticket number '));
+        $this->assertSame(5, substr_count($page, 'Ticket number '));
     }
 }

@@ -24,7 +24,7 @@ class AdminDashboardController extends Controller
             ->join('complaints', 'complaints.id', '=', 'tickets.complaint_id')
             ->select('tickets.*')
             ->orderByDesc('complaints.created_at')
-            ->limit(10)
+            ->limit(5)
             ->get();
         $categoryVolume = ComplaintCategory::query()
             ->withCount(['complaints as ticket_count'])
