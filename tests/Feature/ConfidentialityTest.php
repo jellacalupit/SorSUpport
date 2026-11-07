@@ -414,7 +414,7 @@ class ConfidentialityTest extends TestCase
 
         $attachment = $response->json('message.attachment');
         $this->assertNotEmpty($attachment['url']);
-        $this->assertIsInt($attachment['size_bytes']);
+        $this->assertGreaterThan(0, $attachment['size_bytes']);
 
         $this->actingAs($this->student)
             ->get($attachment['url'] . '?preview=1')

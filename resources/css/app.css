@@ -371,8 +371,9 @@
     }
 
     body.thread-keyboard-open .ticket-thread-pane .communication-card {
-        height: max(10rem, calc(var(--thread-visible-height, 100dvh) - 9.5rem));
+        height: var(--thread-card-height, 100dvh);
         min-height: 0;
+        padding-bottom: 0.25rem;
     }
 }
 

@@ -432,25 +432,34 @@
 
                     const visualViewport = window.visualViewport;
                     let threadLayoutHeight = 0;
+                    const threadCard = replyForm?.closest('.communication-card');
                     const setVisibleThreadHeight = () => {
                         if (!replyForm?.elements.content.matches(':focus')) return;
-                        const visibleHeight = visualViewport?.height ?? window.innerHeight;
-                        const keyboardOpen = threadLayoutHeight - visibleHeight > 120;
+                        const viewportBottom = visualViewport
+                            ? visualViewport.offsetTop + visualViewport.height
+                            : window.innerHeight;
+                        const keyboardOpen = threadLayoutHeight - viewportBottom > 120;
                         document.body.classList.toggle('thread-keyboard-open', keyboardOpen);
                         if (keyboardOpen) {
-                            document.documentElement.style.setProperty('--thread-visible-height', `${visibleHeight}px`);
+                            const cardTop = threadCard?.getBoundingClientRect().top ?? 0;
+                            document.documentElement.style.setProperty(
+                                '--thread-card-height',
+                                `${Math.max(160, viewportBottom - cardTop)}px`
+                            );
                         } else {
-                            document.documentElement.style.removeProperty('--thread-visible-height');
+                            document.documentElement.style.removeProperty('--thread-card-height');
                         }
                     };
                     replyForm?.elements.content.addEventListener('focus', () => {
                         threadLayoutHeight = window.innerHeight;
                         setVisibleThreadHeight();
                         visualViewport?.addEventListener('resize', setVisibleThreadHeight);
+                        visualViewport?.addEventListener('scroll', setVisibleThreadHeight);
                     });
                     replyForm?.elements.content.addEventListener('blur', () => {
                         visualViewport?.removeEventListener('resize', setVisibleThreadHeight);
-                        document.documentElement.style.removeProperty('--thread-visible-height');
+                        visualViewport?.removeEventListener('scroll', setVisibleThreadHeight);
+                        document.documentElement.style.removeProperty('--thread-card-height');
                         document.body.classList.remove('thread-keyboard-open');
                         threadLayoutHeight = 0;
                     });
@@ -495,6 +504,7 @@
                             const messageContent = result.message?.content ?? message;
                             const attachment = result.message?.attachment;
                             const attachmentName = attachment?.name ?? '';
+                            const selectedFile = fileField?.files?.[0];
                             const avatarUrl = form.dataset.avatarUrl || '';
                             const avatarInitials = form.dataset.avatarInitials || '';
 
@@ -512,7 +522,9 @@
                             const isImageAttachment = ['jpg', 'jpeg', 'png', 'heic'].includes(attachmentExtension);
                             const attachmentSize = Number.isFinite(attachment?.size_bytes)
                                 ? `${(attachment.size_bytes / 1048576).toFixed(2)} MB`
-                                : '';
+                                : selectedFile
+                                    ? `${(selectedFile.size / 1048576).toFixed(2)} MB`
+                                    : '';
                             const attachmentIcon = isImageAttachment
                                 ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>'
                                 : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>';

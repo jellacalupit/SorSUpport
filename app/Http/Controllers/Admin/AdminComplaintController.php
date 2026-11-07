@@ -180,11 +180,13 @@ class AdminComplaintController extends Controller
 
         $attachmentPath = null;
         $attachmentName = null;
+        $attachmentSize = null;
 
         if ($request->hasFile('file_attachment')) {
             $attachment = $request->file('file_attachment');
             $attachmentPath = $attachment->store('complaints/replies', 'local');
             $attachmentName = $attachment->getClientOriginalName();
+            $attachmentSize = $attachment->getSize();
         }
 
         try {
@@ -225,7 +227,7 @@ class AdminComplaintController extends Controller
                     'attachment' => $message->file_attachment ? [
                         'name' => $message->file_attachment_name ?: basename($message->file_attachment),
                         'url' => route('attachments.message', $message),
-                        'size_bytes' => $message->file_attachment_size,
+                        'size_bytes' => $attachmentSize ?? $message->file_attachment_size,
                     ] : null,
                 ],
             ]);
@@ -235,4 +237,3 @@ class AdminComplaintController extends Controller
             ->with('success', 'Your message has been posted successfully.');
     }
 }
-

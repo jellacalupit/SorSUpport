@@ -162,11 +162,13 @@ class ComplaintController extends Controller
 
         $attachmentPath = null;
         $attachmentName = null;
+        $attachmentSize = null;
 
         if ($request->hasFile('file_attachment')) {
             $attachment = $request->file('file_attachment');
             $attachmentPath = $attachment->store('complaints/replies', 'local');
             $attachmentName = $attachment->getClientOriginalName();
+            $attachmentSize = $attachment->getSize();
         }
 
         $message = DB::transaction(function () use ($complaint, $ticket, $validated, $attachmentPath, $attachmentName) {
@@ -212,7 +214,7 @@ class ComplaintController extends Controller
                     'attachment' => $message->file_attachment ? [
                         'name' => $message->file_attachment_name ?: basename($message->file_attachment),
                         'url' => route('attachments.message', $message),
-                        'size_bytes' => $message->file_attachment_size,
+                        'size_bytes' => $attachmentSize ?? $message->file_attachment_size,
                     ] : null,
                 ],
             ]);
