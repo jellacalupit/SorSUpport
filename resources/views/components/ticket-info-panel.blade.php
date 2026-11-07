@@ -197,7 +197,7 @@
     @endif
 
     @if (count($attachments))
-        <div class="mt-4 border-t border-border pt-3">
+        <div class="mt-4">
                 <div class="flex items-center justify-between gap-3">
                     <p class="flex items-center gap-2 text-sm font-semibold text-foreground">
                         <x-icons.paperclip class="h-4 w-4 shrink-0 text-muted-foreground" />

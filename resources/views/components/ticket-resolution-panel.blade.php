@@ -35,21 +35,22 @@
                             <p class="text-sm font-medium text-foreground">{{ $ticket->resolution_label }}</p>
                         </div>
                     @endif
+                    @if (filled($resolutionLog?->details))
+                        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+                            <p class="text-xs font-semibold text-muted-foreground">Resolution Details</p>
+                            <p class="text-sm leading-relaxed whitespace-pre-line text-foreground">{{ $resolutionLog->details }}</p>
+                        </div>
+                    @endif
                     @if ($ticket->closure_label)
                         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
                             <p class="text-xs font-semibold text-muted-foreground">Closure</p>
                             <p class="text-sm font-medium text-foreground">{{ $ticket->closure_label }}</p>
                         </div>
                     @endif
-                    @if (filled($resolutionLog?->details) || filled($ticket->closure_reason))
-                        <div>
-                            <p class="text-xs font-semibold text-muted-foreground">Details</p>
-                            @if (filled($resolutionLog?->details))
-                                <p class="mt-1 text-sm leading-relaxed whitespace-pre-line text-foreground">{{ $resolutionLog->details }}</p>
-                            @endif
-                            @if (filled($ticket->closure_reason))
-                                <p class="mt-1 text-sm leading-relaxed whitespace-pre-line text-foreground">{{ $ticket->closure_reason }}</p>
-                            @endif
+                    @if (filled($ticket->closure_reason))
+                        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+                            <p class="text-xs font-semibold text-muted-foreground">Closure Details</p>
+                            <p class="text-sm leading-relaxed whitespace-pre-line text-foreground">{{ $ticket->closure_reason }}</p>
                         </div>
                     @endif
                     @if ($ticket->resolved_at)
@@ -71,9 +72,9 @@
                         </div>
                     @endif
                     @if (filled($ticket->satisfaction_comment))
-                        <div>
+                        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
                             <p class="text-xs font-semibold text-muted-foreground">Feedback Comment</p>
-                            <p class="mt-1 text-sm leading-relaxed whitespace-pre-line text-foreground">{{ $ticket->satisfaction_comment }}</p>
+                            <p class="text-sm leading-relaxed whitespace-pre-line text-foreground">{{ $ticket->satisfaction_comment }}</p>
                         </div>
                     @endif
                 </div>

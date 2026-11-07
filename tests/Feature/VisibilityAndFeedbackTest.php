@@ -263,7 +263,8 @@ class VisibilityAndFeedbackTest extends TestCase
             ->assertSee('Feedback Rate')
             ->assertSee('Quick and courteous.')
             ->assertSee('Closure')
-            ->assertSee('Details')
+            ->assertSee('Resolution Details')
+            ->assertSee('Closure Details')
             ->assertSee('The student confirmed resolution.')
             ->assertSee('The registrar released the transcript.')
             ->assertDontSee('How satisfied are you with how this was handled?');
