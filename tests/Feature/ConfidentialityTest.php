@@ -390,7 +390,7 @@ class ConfidentialityTest extends TestCase
             ->assertSee($url, false)
             ->assertSee('data-thread-attachment-preview', false)
             ->assertSee('data-file-type="pdf"', false)
-            ->assertSee(' MB');
+            ->assertSee('KB');
     }
 
     public function test_ajax_conversation_attachment_reply_returns_preview_metadata_and_previews_inline(): void

@@ -184,6 +184,13 @@
                                         $attachmentExtension = strtolower(pathinfo($attachmentName, PATHINFO_EXTENSION));
                                         $isImageAttachment = in_array($attachmentExtension, ['jpg', 'jpeg', 'png', 'heic'], true);
                                         $attachmentSize = $message->file_attachment_size;
+                                        $attachmentSizeLabel = $attachmentSize === null
+                                            ? null
+                                            : ($attachmentSize < 1024
+                                                ? $attachmentSize . ' B'
+                                                : ($attachmentSize < 1048576
+                                                    ? number_format($attachmentSize / 1024, 1) . ' KB'
+                                                    : number_format($attachmentSize / 1048576, 2) . ' MB'));
                                     @endphp
                                     <button
                                         type="button"
@@ -203,8 +210,8 @@
                                         </span>
                                         <span class="flex min-w-0 flex-col">
                                             <span class="max-w-56 truncate text-xs font-semibold">{{ $attachmentName }}</span>
-                                            @if ($attachmentSize !== null)
-                                                <span class="mt-0.5 text-[10px] leading-tight {{ $isOwnMessage ? 'text-primary/75' : 'text-muted-foreground' }}">{{ number_format($attachmentSize / 1048576, 2) }} MB</span>
+                                            @if ($attachmentSizeLabel !== null)
+                                                <span class="mt-0.5 text-[10px] leading-tight {{ $isOwnMessage ? 'text-primary/75' : 'text-muted-foreground' }}">{{ $attachmentSizeLabel }}</span>
                                             @endif
                                         </span>
                                     </button>
@@ -375,6 +382,11 @@
                     });
 
                     const escapeHtml = (value = '') => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&#039;');
+                    const formatFileSize = (bytes) => bytes < 1024
+                        ? `${bytes} B`
+                        : bytes < 1048576
+                            ? `${(bytes / 1024).toFixed(1)} KB`
+                            : `${(bytes / 1048576).toFixed(2)} MB`;
 
                     const attachmentModal = document.getElementById('thread-attachment-modal-{{ $ticket->id }}');
                     const previewImage = attachmentModal?.querySelector('[data-preview-image]');
@@ -521,9 +533,9 @@
                             const attachmentExtension = attachmentName.split('.').pop()?.toLowerCase() ?? '';
                             const isImageAttachment = ['jpg', 'jpeg', 'png', 'heic'].includes(attachmentExtension);
                             const attachmentSize = Number.isFinite(attachment?.size_bytes)
-                                ? `${(attachment.size_bytes / 1048576).toFixed(2)} MB`
+                                ? formatFileSize(attachment.size_bytes)
                                 : selectedFile
-                                    ? `${(selectedFile.size / 1048576).toFixed(2)} MB`
+                                    ? formatFileSize(selectedFile.size)
                                     : '';
                             const attachmentIcon = isImageAttachment
                                 ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>'
