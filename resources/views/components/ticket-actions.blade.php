@@ -97,7 +97,7 @@
         @error('satisfaction_rating')
             <p class="mt-1 text-xs font-medium text-destructive">{{ $message }}</p>
         @enderror
-        <textarea name="satisfaction_comment" rows="2" maxlength="1000" class="{{ $input }}" placeholder="Anything you want to add? (optional)">{{ old('satisfaction_comment') }}</textarea>
+        <textarea name="satisfaction_comment" rows="2" maxlength="1000" class="{{ $input }}" placeholder="Comment (optional)">{{ old('satisfaction_comment') }}</textarea>
         <button type="submit" class="{{ $smallPrimary }} mt-3" x-bind:disabled="! rating" x-bind:class="rating ? '' : 'opacity-50'">Submit Rating</button>
     </form>
 @endif
@@ -184,7 +184,7 @@
             <p class="{{ $panelTitle }}">Mark this ticket as resolved</p>
             <p class="{{ $panelHint }}">The student is asked to accept the resolution or request further action.</p>
             <x-picker name="resolution_type" required id="resolution-type-{{ $ticket->id }}" label="How was it resolved?" class="mt-2" placeholder="How was it resolved?" :selected="old('resolution_type', '')" :options="collect(Ticket::RESOLUTION_LABELS)->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values()->all()" />
-            <textarea name="resolution_message" rows="3" required maxlength="2000" class="{{ $input }}" placeholder="Describe the resolution for the student.">{{ old('resolution_message') }}</textarea>
+            <textarea name="resolution_message" rows="3" maxlength="2000" class="{{ $input }}" placeholder="Resolution details (optional)">{{ old('resolution_message') }}</textarea>
             <div class="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" x-on:click="action = null" class="{{ $smallCancel }}">Cancel</button>
                 <button type="submit" class="h-9 w-full rounded-full bg-green-800 px-3 text-xs font-semibold text-white transition-colors hover:bg-green-900">Mark as Resolved</button>
@@ -245,7 +245,7 @@
                 <p class="{{ $panelTitle }}">Close without a resolution</p>
                 <p class="{{ $panelHint }}">Use this only when the ticket cannot continue. The student is notified with the reason. This cannot be undone.</p>
                 <x-picker name="closure_type" required id="closure-type-{{ $ticket->id }}" label="Reason for closing" class="mt-2" placeholder="Why is it being closed?" :selected="old('closure_type', '')" :options="collect(Ticket::ADMIN_CLOSURE_TYPES)->map(fn ($value) => ['value' => $value, 'label' => Ticket::CLOSURE_LABELS[$value]])->all()" />
-                <textarea name="closure_reason" rows="2" required maxlength="1000" class="{{ $input }}" placeholder="Explain the reason to the student.">{{ old('closure_reason') }}</textarea>
+                <textarea name="closure_reason" rows="2" maxlength="1000" class="{{ $input }}" placeholder="Closure details (optional)">{{ old('closure_reason') }}</textarea>
             @endif
             <div class="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" x-on:click="action = null" class="{{ $smallCancel }}">Cancel</button>

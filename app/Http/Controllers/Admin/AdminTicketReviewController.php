@@ -171,7 +171,7 @@ class AdminTicketReviewController extends Controller
         abort_unless($ticket->isAwaitingReview(), 404);
 
         $validated = $request->validate([
-            'closure_reason' => 'required|string|max:1000',
+            'closure_reason' => 'nullable|string|max:1000',
             'closure_type' => ['nullable', Rule::in([Ticket::CLOSURE_INVALID, Ticket::CLOSURE_DUPLICATE, Ticket::CLOSURE_OUT_OF_SCOPE, Ticket::CLOSURE_NO_RESPONSE])],
         ]);
 
@@ -179,7 +179,7 @@ class AdminTicketReviewController extends Controller
             $ticket,
             Auth::user(),
             $validated['closure_type'] ?? Ticket::CLOSURE_INVALID,
-            $validated['closure_reason'],
+            $validated['closure_reason'] ?? null,
             ['classification' => Ticket::CLASSIFICATION_INVALID]
         );
 
@@ -440,13 +440,12 @@ class AdminTicketReviewController extends Controller
 
         $validated = $request->validate([
             'resolution_type' => ['required', Rule::in(array_keys(Ticket::RESOLUTION_LABELS))],
-            'resolution_message' => 'required|string|max:2000',
+            'resolution_message' => 'nullable|string|max:2000',
         ], [
             'resolution_type.required' => 'Select how the ticket was resolved.',
-            'resolution_message.required' => 'Describe the resolution for the student.',
         ]);
 
-        $this->workflow->resolve($ticket, Auth::user(), $validated['resolution_type'], $validated['resolution_message']);
+        $this->workflow->resolve($ticket, Auth::user(), $validated['resolution_type'], $validated['resolution_message'] ?? null);
 
         return redirect()->route('admin.complaints.show', $ticket->complaint)
             ->with('success', 'Ticket marked as resolved.');
@@ -608,13 +607,12 @@ class AdminTicketReviewController extends Controller
         } else {
             $validated = $request->validate([
                 'closure_type' => ['required', Rule::in(Ticket::ADMIN_CLOSURE_TYPES)],
-                'closure_reason' => 'required|string|max:1000',
+                'closure_reason' => 'nullable|string|max:1000',
             ], [
                 'closure_type.required' => 'Select why the ticket is being closed.',
-                'closure_reason.required' => 'Explain why the ticket is being closed.',
             ]);
 
-            $this->workflow->close($ticket, Auth::user(), $validated['closure_type'], $validated['closure_reason']);
+            $this->workflow->close($ticket, Auth::user(), $validated['closure_type'], $validated['closure_reason'] ?? null);
         }
 
         return redirect()->route('admin.tickets.review.index')

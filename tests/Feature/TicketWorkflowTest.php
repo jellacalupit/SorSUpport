@@ -327,14 +327,14 @@ class TicketWorkflowTest extends TestCase
         $this->assertSame(Ticket::STATUS_IN_PROGRESS, $ticket->fresh()->status);
     }
 
-    public function test_resolving_needs_a_type_and_a_message_and_only_the_handler_can_do_it(): void
+    public function test_resolving_needs_a_type_and_only_the_handler_can_do_it(): void
     {
         $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
         $url = route('recipient.complaints.update-status', $ticket->complaint);
 
         $this->actingAs($this->handler)
             ->patch($url, ['status' => 'resolved'])
-            ->assertSessionHasErrors(['resolution_type', 'resolution_message']);
+            ->assertSessionHasErrors('resolution_type');
 
         $this->actingAs($this->otherRecipient)
             ->patch($url, ['status' => 'resolved', 'resolution_type' => Ticket::RESOLUTION_ACTION_TAKEN, 'resolution_message' => 'Not mine.'])
@@ -367,6 +367,38 @@ class TicketWorkflowTest extends TestCase
 
         $this->actingAs($this->admin)
             ->post(route('admin.tickets.resolve', $ticket), ['resolution_type' => Ticket::RESOLUTION_SETTLED, 'resolution_message' => 'Handled.'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(Ticket::STATUS_RESOLVED, $ticket->fresh()->status);
+    }
+
+    public function test_resolving_without_optional_details_does_not_post_an_empty_thread_message(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS, ['assigned_to' => null, 'current_handler_id' => $this->admin->id]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.resolve', $ticket), ['resolution_type' => Ticket::RESOLUTION_SETTLED])
+            ->assertSessionHasNoErrors();
+
+        $ticket->refresh();
+        $this->assertSame(Ticket::STATUS_RESOLVED, $ticket->status);
+        $this->assertSame(0, $ticket->thread?->messages()->count() ?? 0);
+        $this->assertDatabaseHas('audit_logs', [
+            'ticket_id' => $ticket->id,
+            'action' => 'complaint_resolved',
+            'details' => null,
+        ]);
+    }
+
+    public function test_a_recipient_can_resolve_without_optional_details(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
+
+        $this->actingAs($this->handler)
+            ->patch(route('recipient.complaints.update-status', $ticket->complaint), [
+                'status' => Ticket::STATUS_RESOLVED,
+                'resolution_type' => Ticket::RESOLUTION_SETTLED,
+            ])
             ->assertSessionHasNoErrors();
 
         $this->assertSame(Ticket::STATUS_RESOLVED, $ticket->fresh()->status);
@@ -494,7 +526,7 @@ class TicketWorkflowTest extends TestCase
 
         $this->actingAs($this->admin)
             ->post(route('admin.tickets.close', $ticket))
-            ->assertSessionHasErrors(['closure_type', 'closure_reason']);
+            ->assertSessionHasErrors('closure_type');
 
         $this->actingAs($this->admin)
             ->post(route('admin.tickets.close', $ticket), ['closure_type' => Ticket::CLOSURE_RESOLVED_ACCEPTED, 'closure_reason' => 'Not a valid type here.'])
@@ -511,6 +543,20 @@ class TicketWorkflowTest extends TestCase
         $this->assertSame(Ticket::CLOSURE_DUPLICATE, $ticket->closure_type);
         $this->assertSame('Same as SU-2026-00001.', $ticket->closure_reason);
         $this->assertFalse($ticket->thread->is_active);
+    }
+
+    public function test_closing_an_unresolved_ticket_without_optional_details_succeeds(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.close', $ticket), ['closure_type' => Ticket::CLOSURE_DUPLICATE])
+            ->assertSessionHasNoErrors();
+
+        $ticket->refresh();
+        $this->assertSame(Ticket::STATUS_CLOSED, $ticket->status);
+        $this->assertSame(Ticket::CLOSURE_DUPLICATE, $ticket->closure_type);
+        $this->assertNull($ticket->closure_reason);
     }
 
     public function test_a_ticket_under_review_is_closed_with_the_reason_it_cannot_be_acted_on(): void
@@ -531,6 +577,20 @@ class TicketWorkflowTest extends TestCase
             ->assertOk()
             ->assertSee('Outside the scope of the university')
             ->assertSee('This concerns a private landlord.');
+    }
+
+    public function test_a_ticket_under_review_can_be_closed_without_optional_details(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_SUBMITTED);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.reject', $ticket))
+            ->assertSessionHasNoErrors();
+
+        $ticket->refresh();
+        $this->assertSame(Ticket::STATUS_CLOSED, $ticket->status);
+        $this->assertSame(Ticket::CLOSURE_INVALID, $ticket->closure_type);
+        $this->assertNull($ticket->closure_reason);
     }
 
     public function test_informational_tickets_close_as_recorded_for_information(): void

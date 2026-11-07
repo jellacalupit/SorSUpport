@@ -374,7 +374,7 @@ class TicketWorkflow
      * The handler marks the ticket resolved, saying how. The student then accepts it or asks
      * for further action.
      */
-    public function resolve(Ticket $ticket, User $handler, string $resolutionType, string $message): void
+    public function resolve(Ticket $ticket, User $handler, string $resolutionType, ?string $message = null): void
     {
         $this->authorize($handler, $ticket, self::RESOLVE);
 
@@ -385,7 +385,9 @@ class TicketWorkflow
                 'resolved_at' => now(),
             ]);
 
-            $this->postMessage($ticket, $handler, $message);
+            if (filled($message)) {
+                $this->postMessage($ticket, $handler, $message);
+            }
             AuditLog::log($ticket->id, 'complaint_resolved', $handler->id, $message);
 
             $this->notify($ticket, [$this->student($ticket)], EmailNotification::TYPE_STUDENT_STATUS_UPDATE);
@@ -478,7 +480,7 @@ class TicketWorkflow
                 $isInvalid ? 'ticket_closed_invalid' : 'ticket_closed',
                 $admin->id,
                 $isInvalid
-                    ? "Ticket marked invalid. Reason: {$reason}"
+                    ? trim('Ticket marked invalid.' . ($reason ? " Reason: {$reason}" : ''))
                     : trim("Ticket closed by admin. {$label}." . ($reason ? " {$reason}" : ''))
             );
 

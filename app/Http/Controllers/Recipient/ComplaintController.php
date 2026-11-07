@@ -251,14 +251,13 @@ class ComplaintController extends Controller
         $validated = $request->validate([
             'status' => ['required', Rule::in([Ticket::STATUS_RESOLVED])],
             'resolution_type' => ['required', Rule::in(array_keys(Ticket::RESOLUTION_LABELS))],
-            'resolution_message' => 'required|string|max:2000',
+            'resolution_message' => 'nullable|string|max:2000',
         ], [
             'status.in' => 'Recipients can only mark a ticket as resolved.',
             'resolution_type.required' => 'Select how the ticket was resolved.',
-            'resolution_message.required' => 'Describe the resolution for the student.',
         ]);
 
-        $workflow->resolve($ticket, Auth::user(), $validated['resolution_type'], $validated['resolution_message']);
+        $workflow->resolve($ticket, Auth::user(), $validated['resolution_type'], $validated['resolution_message'] ?? null);
 
         return back()->with('success', 'Ticket marked as resolved.');
     }
