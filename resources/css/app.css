@@ -371,9 +371,15 @@
     }
 
     body.thread-keyboard-open .ticket-thread-pane .communication-card {
-        height: var(--thread-card-height, 100dvh);
+        position: fixed;
+        top: var(--thread-card-top, 0px);
+        left: var(--thread-card-left, 0px);
+        bottom: var(--thread-keyboard-gap, 0px);
+        width: var(--thread-card-width, 100vw);
+        height: auto;
         min-height: 0;
-        padding-bottom: 0.25rem;
+        padding-bottom: 0;
+        z-index: 40;
     }
 }
 

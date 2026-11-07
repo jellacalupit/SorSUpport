@@ -445,25 +445,45 @@
                     const visualViewport = window.visualViewport;
                     let threadLayoutHeight = 0;
                     const threadCard = replyForm?.closest('.communication-card');
+                    let threadCardBounds = null;
                     const setVisibleThreadHeight = () => {
                         if (!replyForm?.elements.content.matches(':focus')) return;
                         const viewportBottom = visualViewport
                             ? visualViewport.offsetTop + visualViewport.height
                             : window.innerHeight;
                         const keyboardOpen = threadLayoutHeight - viewportBottom > 120;
+                        const wasKeyboardOpen = document.body.classList.contains('thread-keyboard-open');
+                        if (keyboardOpen && !threadCardBounds && threadCard) {
+                            const bounds = threadCard.getBoundingClientRect();
+                            threadCardBounds = {
+                                top: bounds.top,
+                                left: bounds.left,
+                                width: bounds.width,
+                            };
+                        }
                         document.body.classList.toggle('thread-keyboard-open', keyboardOpen);
                         if (keyboardOpen) {
-                            const cardTop = threadCard?.getBoundingClientRect().top ?? 0;
+                            document.documentElement.style.setProperty('--thread-card-top', `${threadCardBounds?.top ?? 0}px`);
+                            document.documentElement.style.setProperty('--thread-card-left', `${threadCardBounds?.left ?? 0}px`);
+                            document.documentElement.style.setProperty('--thread-card-width', `${threadCardBounds?.width ?? 0}px`);
                             document.documentElement.style.setProperty(
-                                '--thread-card-height',
-                                `${Math.max(160, viewportBottom - cardTop)}px`
+                                '--thread-keyboard-gap',
+                                `${Math.max(0, threadLayoutHeight - viewportBottom)}px`
                             );
-                        } else {
-                            document.documentElement.style.removeProperty('--thread-card-height');
+                        } else if (wasKeyboardOpen) {
+                            document.documentElement.style.removeProperty('--thread-card-top');
+                            document.documentElement.style.removeProperty('--thread-card-left');
+                            document.documentElement.style.removeProperty('--thread-card-width');
+                            document.documentElement.style.removeProperty('--thread-keyboard-gap');
+                            threadCardBounds = null;
                         }
                     };
                     replyForm?.elements.content.addEventListener('focus', () => {
                         threadLayoutHeight = window.innerHeight;
+                        const bounds = threadCard?.getBoundingClientRect();
+                        threadCardBounds = bounds
+                            ? { top: bounds.top, left: bounds.left, width: bounds.width }
+                            : null;
                         setVisibleThreadHeight();
                         visualViewport?.addEventListener('resize', setVisibleThreadHeight);
                         visualViewport?.addEventListener('scroll', setVisibleThreadHeight);
@@ -471,8 +491,12 @@
                     replyForm?.elements.content.addEventListener('blur', () => {
                         visualViewport?.removeEventListener('resize', setVisibleThreadHeight);
                         visualViewport?.removeEventListener('scroll', setVisibleThreadHeight);
-                        document.documentElement.style.removeProperty('--thread-card-height');
+                        document.documentElement.style.removeProperty('--thread-card-top');
+                        document.documentElement.style.removeProperty('--thread-card-left');
+                        document.documentElement.style.removeProperty('--thread-card-width');
+                        document.documentElement.style.removeProperty('--thread-keyboard-gap');
                         document.body.classList.remove('thread-keyboard-open');
+                        threadCardBounds = null;
                         threadLayoutHeight = 0;
                     });
 
