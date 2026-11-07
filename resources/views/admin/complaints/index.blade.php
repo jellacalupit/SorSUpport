@@ -205,7 +205,12 @@
             @endphp
             <template id="complaint-{{ $complaint->id }}">
                 <div class="grid items-start gap-4 sm:grid-cols-[1.35fr_1fr]">
-                    <div class="min-w-0 rounded-lg border border-border bg-card p-4 sm:min-h-[calc(100vh-6rem)]">
+                    <div class="min-w-0">
+                        @if ($ticket)
+                            <x-ticket-info-panel :ticket="$ticket" :show-closed-at="true" />
+                            <x-ticket-actions :ticket="$ticket" role="admin" class="mt-3" />
+                        @else
+                    <div class="rounded-lg border border-border bg-card p-4 sm:min-h-[calc(100vh-6rem)]">
                         <div class="mb-1 flex items-center justify-between gap-3">
                             <p class="inline-flex min-w-0 items-center gap-1.5 font-mono text-xs font-semibold leading-tight text-primary">
                                 <x-icons.ticket class="h-4 w-4 shrink-0 text-primary" />
@@ -279,6 +284,8 @@
                                 <x-ticket-actions :ticket="$ticket" role="admin" class="mt-1" />
                             @endif
                         </div>
+                    </div>
+                        @endif
                     </div>
 
                     <div class="flex flex-col gap-4 overflow-hidden sm:h-[calc(100vh-6rem)]">

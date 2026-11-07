@@ -62,9 +62,6 @@
             <h2 class="mb-0.5 hidden font-display text-base font-bold lg:block">Ticket Details</h2>
             <div class="grid gap-3">
                 <x-ticket-info-panel :ticket="$ticket" :show-filed-by="true" :show-closed-at="true" :editable="true" :categories="$categories" :recipients="$recipients" />
-                @unless ($isPendingReview)
-                    <x-ticket-resolution-panel :ticket="$ticket" :show-closed-at="true" />
-                @endunless
 
                 @unless ($isPendingReview)
                     {{-- With a conversation, desktop shows this under the conversation instead. --}}

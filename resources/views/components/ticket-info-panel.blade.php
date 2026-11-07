@@ -15,7 +15,9 @@
     $canEditDetails = $editable && $ticket->isAwaitingReview();
 
     $submittedAt = $complaint?->created_at?->copy()->setTimezone('Asia/Manila');
-    $assignedUser = $ticket->currentHandler ?? $ticket->assignee;
+    $assignedUser = $ticket->isAwaitingReview() && ! $ticket->assignee
+        ? null
+        : ($ticket->currentHandler ?? $ticket->assignee);
     $assignedRecipient = $assignedUser?->recipient;
     $creator = $complaint?->hidesIdentityFrom(\Illuminate\Support\Facades\Auth::user())
         ? null
@@ -241,6 +243,8 @@
                 </div>
         </div>
     @endif
+
+    <x-ticket-resolution-panel :ticket="$ticket" :show-closed-at="$showClosedAt" />
 
     <div x-show="attachmentPreview" x-cloak x-on:click.self="attachmentPreview = null" x-on:keydown.escape.window="attachmentPreview = null" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="Attachment preview">
         <div class="flex max-h-full w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">

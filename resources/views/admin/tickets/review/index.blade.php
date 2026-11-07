@@ -200,16 +200,6 @@
 
     @foreach ($tickets as $ticket)
         @php
-            $student = $ticket->complaint->student;
-            $studentUser = $student?->user;
-            $studentNameParts = preg_split('/\s+/', trim((string) ($studentUser?->name ?? '')), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-            $holderUser = $ticket->currentHandler ?? $ticket->assignee ?? Auth::user();
-            $holderRecipient = $holderUser?->recipient;
-            $pendingHolderName = $holderUser?->table_name ?? '—';
-            $holderRole = $holderUser?->role === \App\Models\User::ROLE_SDS_ADMIN ? 'Admin' : 'Recipient';
-            $studentDisplayName = $ticket->complaint->is_anonymous ? 'Anonymous' : ($studentUser?->table_name ?? 'Anonymous');
-            $studentCourseYearBlock = trim(($student?->program ?? 'Program not specified') . ' ' . ($student?->year_level ?? 'N/A') . (($student?->block ?? '') !== '' ? '-' . $student->block : ''));
-
             $category = $ticket->complaint->category;
             $categoryRecipients = collect();
             if ($category) {
@@ -228,61 +218,9 @@
         @if ($ticket->status === 'resolved')
             <template id="complaint-{{ $ticket->complaint->id }}">
                 <div class="grid items-start gap-4 sm:grid-cols-[1.35fr_1fr]">
-                    <div class="min-w-0 rounded-lg border border-border bg-card p-4 sm:min-h-[calc(100vh-6rem)]">
-                        <div class="mb-1 flex items-center justify-between gap-3">
-                            <p class="inline-flex min-w-0 items-center gap-1.5 font-mono text-xs font-semibold leading-tight text-primary">
-                                <x-icons.ticket class="h-4 w-4 shrink-0 text-primary" />
-                                <span class="truncate">{{ $ticket->complaint->reference_number }}</span>
-                            </p>
-                            <div class="shrink-0">
-                                <x-status-badge :status="$ticket->status_label" :classification="$ticket->classification" :show-icon="false" class="px-3 py-1 text-xs" />
-                            </div>
-                        </div>
-                        <div class="mt-0 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                            <h3 class="min-w-0 truncate font-display text-[15px] font-bold leading-tight text-foreground sm:text-base" title="{{ $ticket->complaint->subject_title }}">{{ $ticket->complaint->subject_title }}</h3>
-                            <span class="shrink-0 whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground" title="Last updated">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d · g:i A') ?? 'Unknown' }}</span>
-                        </div>
-                        <div class="mt-1">
-                            <p class="whitespace-pre-line wrap-break-word text-sm leading-relaxed text-foreground">{{ $ticket->complaint->description ?? 'No description' }}</p>
-                        </div>
-                        <div class="mt-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                            @if (! $ticket->complaint->is_anonymous)
-                                <span class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
-                                    @if ($ticket->complaint->student?->user?->avatar_path)
-                                        <img src="{{ asset('storage/' . $ticket->complaint->student->user->avatar_path) }}" alt="{{ $ticket->complaint->student->user->table_name ?? 'Student' }}" class="h-full w-full object-cover">
-                                    @else
-                                        {{ $ticket->complaint->student?->user?->name_initials ?: 'A' }}
-                                    @endif
-                                </span>
-                            @endif
-                            <span class="relative min-w-0" x-data="{ studentProfileOpen: false }" x-on:mouseenter="studentProfileOpen = true" x-on:mouseleave="studentProfileOpen = false">
-                                <span class="{{ $ticket->complaint->is_anonymous ? '' : 'cursor-pointer truncate font-semibold text-foreground hover:text-primary hover:underline' }}">{{ $ticket->complaint->is_anonymous ? 'Anonymous' : ($ticket->complaint->student?->user?->table_name ?? 'Anonymous') }}</span>
-                            </span>
-                            <span class="shrink-0">at</span>
-                            <span class="shrink-0">{{ $ticket->complaint->created_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</span>
-                        </div>
-                        <div class="mt-3 grid gap-2">
-                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Category</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->category?->name ?? 'Uncategorized' }}</p></div>
-                            @php
-                                $assignedUser = $ticket->currentHandler ?? $ticket->assignee;
-                                $assignedRecipient = $assignedUser?->recipient;
-                            @endphp
-                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">{{ $assignedRecipient ? 'Assigned Recipient' : ($assignedUser ? 'Assigned To' : 'Suggested Recipient') }}</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $assignedUser?->table_name ?? $ticket->complaint->suggestedRecipient?->user?->table_name ?? 'None' }}</p></div>
-                            @if ($ticket->complaint->attachment_files)
-                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Attachment</p>
-                                    @foreach ($ticket->complaint->attachment_files as $attachment)
-                                        <a href="{{ $attachment['url'] }}" target="_blank" rel="noopener" class="mt-2 inline-flex max-w-full items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-xs font-semibold text-foreground hover:border-primary hover:bg-primary-soft">
-                                            <x-icons.paperclip class="h-3.5 w-3.5 shrink-0" />
-                                            <span class="truncate">{{ $attachment['name'] }}</span>
-                                        </a>
-                                    @endforeach
-                                </div>
-                            @endif
-                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Classification</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : '—' }}</p></div>
-                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Escalated On</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->escalated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? '—' }}</p></div>
-                        </div>
-
-                        <x-ticket-actions :ticket="$ticket" role="admin" class="mt-4" />
+                    <div class="min-w-0">
+                        <x-ticket-info-panel :ticket="$ticket" :show-closed-at="true" />
+                        <x-ticket-actions :ticket="$ticket" role="admin" class="mt-3" />
                     </div>
 
                     <div class="flex flex-col gap-4 overflow-hidden sm:h-[calc(100vh-6rem)]">
@@ -331,65 +269,11 @@
         @endif
         <template id="ticket-{{ $ticket->id }}">
             <div class="grid items-start gap-4 sm:grid-cols-[1.35fr_1fr]">
-                <div class="min-w-0 rounded-lg border border-border bg-card p-4 sm:min-h-[calc(100vh-8rem)]">
-                    <div class="mb-1 flex items-center justify-between gap-3">
-                        <p class="inline-flex min-w-0 items-center gap-1.5 font-mono text-xs font-semibold leading-tight text-primary">
-                            <x-icons.ticket class="h-4 w-4 shrink-0 text-primary" />
-                            <span class="truncate">{{ $ticket->complaint->reference_number }}</span>
-                        </p>
-                        <div class="shrink-0">
-                            <x-status-badge :status="$ticket->status_label" :classification="$ticket->classification" :show-icon="false" class="px-3 py-1 text-xs" />
-                        </div>
-                    </div>
-                    <div class="mt-0 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                        <h3 class="min-w-0 truncate font-display text-[15px] font-bold leading-tight text-foreground sm:text-base" title="{{ $ticket->complaint->subject_title }}">{{ $ticket->complaint->subject_title }}</h3>
-                        <span class="shrink-0 whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground" title="Last updated">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d · g:i A') ?? 'Unknown' }}</span>
-                    </div>
-                    <div class="mt-1">
-                        <p class="whitespace-pre-line wrap-break-word text-sm leading-relaxed text-foreground">{{ $ticket->complaint->description ?? 'No description' }}</p>
-                    </div>
-                    <div class="mt-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                        <span class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
-                            @if ($studentUser?->avatar_path && ! $ticket->complaint->is_anonymous)
-                                <img src="{{ asset('storage/' . $studentUser->avatar_path) }}" alt="{{ $studentDisplayName }}" class="h-full w-full object-cover">
-                            @else
-                                {{ $ticket->complaint->is_anonymous ? 'A' : (collect($studentNameParts)->map(fn ($part) => substr($part, 0, 1))->take(2)->join('') ?: 'A') }}
-                            @endif
-                        </span>
-                        <span class="relative min-w-0" x-data="{ studentProfileOpen: false }" x-on:mouseenter="studentProfileOpen = true" x-on:mouseleave="studentProfileOpen = false">
-                            <span class="{{ $ticket->complaint->is_anonymous ? '' : 'cursor-pointer truncate font-semibold text-foreground hover:text-primary hover:underline' }}">{{ $studentDisplayName }}</span>
-                            @if ($studentUser && ! $ticket->complaint->is_anonymous)
-                                <span x-show="studentProfileOpen" x-cloak data-keep-in-view class="brand-gradient absolute top-6 left-0 z-[100] w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-left text-primary-foreground shadow-lg">
-                                    <span class="flex items-center gap-3">
-                                        <span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">
-                                            @if ($studentUser->avatar_path)
-                                                <img src="{{ asset('storage/' . $studentUser->avatar_path) }}" alt="{{ $studentDisplayName }}" class="h-full w-full object-cover">
-                                            @else
-                                                {{ collect($studentNameParts)->map(fn ($part) => substr($part, 0, 1))->take(2)->join('') }}
-                                            @endif
-                                        </span>
-                                        <span class="min-w-0">
-                                            <span class="block wrap-break-word text-sm font-bold">{{ $studentDisplayName }}</span>
-                                            <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $student?->student_id ?? 'N/A' }} · {{ $student?->college ?? 'College not specified' }} · {{ $studentCourseYearBlock }}</span>
-                                        </span>
-                                    </span>
-                                    <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">Student</span>
-                                </span>
-                            @endif
-                        </span>
-                        <span class="shrink-0">at</span>
-                        <span class="shrink-0">{{ $ticket->complaint->created_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</span>
-                    </div>
-                    <div class="mt-3 grid gap-2">
-                        @include('admin.tickets.review.partials.details', ['ticket' => $ticket])
-                        @foreach ($ticket->complaint->attachment_files as $attachment)
-                            <a href="{{ $attachment['url'] }}" target="_blank" rel="noopener" class="inline-flex max-w-full items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-xs font-semibold text-foreground hover:border-primary hover:bg-primary-soft">
-                                <x-icons.paperclip class="h-3.5 w-3.5 shrink-0" />
-                                <span class="truncate">{{ $attachment['name'] }}</span>
-                            </a>
-                        @endforeach
-                    </div>
-
+                <div class="min-w-0">
+                    <x-ticket-info-panel :ticket="$ticket" :editable="true" :categories="$categories" :recipients="$recipients" :show-closed-at="true" />
+                    @unless ($ticket->isAwaitingReview())
+                        <x-ticket-actions :ticket="$ticket" role="admin" class="mt-3" />
+                    @endunless
                 </div>
                 @if ($ticket->isAwaitingReview())
                 <div class="min-w-0">
@@ -510,59 +394,9 @@
                 </div>
                 @elseif ($ticket->status === 'resolved')
                     <div class="grid items-start gap-4 sm:grid-cols-[1.35fr_1fr]">
-                        <div class="min-w-0 rounded-lg border border-border bg-card p-4 sm:min-h-[calc(100vh-6rem)]">
-                            <div class="mb-1 flex items-center justify-between gap-3">
-                                <p class="inline-flex min-w-0 items-center gap-1.5 font-mono text-xs font-semibold leading-tight text-primary">
-                                    <x-icons.ticket class="h-4 w-4 shrink-0 text-primary" />
-                                    <span class="truncate">{{ $ticket->complaint->reference_number }}</span>
-                                </p>
-                                <div class="shrink-0">
-                                    <x-status-badge :status="$ticket->status_label" :classification="$ticket->classification" :show-icon="false" class="px-3 py-1 text-xs" />
-                                </div>
-                            </div>
-                            <div class="mt-0 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                                <h3 class="min-w-0 truncate font-display text-[15px] font-bold leading-tight text-foreground sm:text-base" title="{{ $ticket->complaint->subject_title }}">{{ $ticket->complaint->subject_title }}</h3>
-                                <span class="shrink-0 whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground" title="Last updated">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d · g:i A') ?? 'Unknown' }}</span>
-                            </div>
-                            <div class="mt-1">
-                                <p class="whitespace-pre-line wrap-break-word text-sm leading-relaxed text-foreground">{{ $ticket->complaint->description ?? 'No description' }}</p>
-                            </div>
-                            <div class="mt-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                                <span class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
-                                    @if ($ticket->complaint->student?->user?->avatar_path && ! $ticket->complaint->is_anonymous)
-                                        <img src="{{ asset('storage/' . $ticket->complaint->student->user->avatar_path) }}" alt="{{ $ticket->complaint->student->user->table_name ?? 'Student' }}" class="h-full w-full object-cover">
-                                    @else
-                                        {{ $ticket->complaint->student?->user?->name_initials ?: 'A' }}
-                                    @endif
-                                </span>
-                                <span class="relative min-w-0" x-data="{ studentProfileOpen: false }" x-on:mouseenter="studentProfileOpen = true" x-on:mouseleave="studentProfileOpen = false">
-                                    <span class="{{ $ticket->complaint->is_anonymous ? '' : 'cursor-pointer truncate font-semibold text-foreground hover:text-primary hover:underline' }}">{{ $ticket->complaint->is_anonymous ? 'Anonymous' : ($ticket->complaint->student?->user?->table_name ?? 'Anonymous') }}</span>
-                                </span>
-                                <span class="shrink-0">at</span>
-                                <span class="shrink-0">{{ $ticket->complaint->created_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</span>
-                            </div>
-                            <div class="mt-3 grid gap-2">
-                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Category</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint->category?->name ?? 'Uncategorized' }}</p></div>
-                                @php
-                                    $assignedUser = $ticket->currentHandler ?? $ticket->assignee;
-                                    $assignedRecipient = $assignedUser?->recipient;
-                                @endphp
-                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">{{ $assignedRecipient ? 'Assigned Recipient' : ($assignedUser ? 'Assigned To' : 'Suggested Recipient') }}</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $assignedUser?->table_name ?? $ticket->complaint->suggestedRecipient?->user?->table_name ?? 'None' }}</p></div>
-                                @if ($ticket->complaint->attachment_files)
-                                    <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Attachment</p>
-                                        @foreach ($ticket->complaint->attachment_files as $attachment)
-                                            <a href="{{ $attachment['url'] }}" target="_blank" rel="noopener" class="mt-2 inline-flex max-w-full items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-xs font-semibold text-foreground hover:border-primary hover:bg-primary-soft">
-                                                <x-icons.paperclip class="h-3.5 w-3.5 shrink-0" />
-                                                <span class="truncate">{{ $attachment['name'] }}</span>
-                                            </a>
-                                        @endforeach
-                                    </div>
-                                @endif
-                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Classification</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : '—' }}</p></div>
-                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Escalated On</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket->escalated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? '—' }}</p></div>
-                            </div>
-
-                            <x-ticket-actions :ticket="$ticket" role="admin" class="mt-4" />
+                        <div class="min-w-0">
+                            <x-ticket-info-panel :ticket="$ticket" :show-closed-at="true" />
+                            <x-ticket-actions :ticket="$ticket" role="admin" class="mt-3" />
                         </div>
 
                         <div class="flex flex-col gap-4 overflow-hidden sm:h-[calc(100vh-6rem)]">

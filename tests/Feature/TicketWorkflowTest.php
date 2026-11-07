@@ -766,6 +766,44 @@ class TicketWorkflowTest extends TestCase
         ] as [$user, $url]) {
             $this->actingAs($user)->get($url)->assertOk()->assertSeeInOrder($detailsOrder);
         }
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.complaints.index'))
+            ->assertOk()
+            ->assertSeeInOrder($detailsOrder);
+
+        $this->ticket(Ticket::STATUS_IN_PROGRESS, [
+            'assigned_to' => null,
+            'current_handler_id' => $this->admin->id,
+        ]);
+        $this->actingAs($this->admin)
+            ->get(route('admin.tickets.my'))
+            ->assertOk()
+            ->assertSeeInOrder([
+                'My transcript has not been released.',
+                'Category',
+                'Assigned To',
+                'Classification',
+                'Last Updated At',
+                'Created At',
+                'Created By',
+                'Days Open',
+            ]);
+
+        $this->ticket(Ticket::STATUS_SUBMITTED);
+        $this->actingAs($this->admin)
+            ->get(route('admin.tickets.review.index'))
+            ->assertOk()
+            ->assertSeeInOrder([
+                'My transcript has not been released.',
+                'Category',
+                'Suggested Recipient',
+                'Classification',
+                'Last Updated At',
+                'Created At',
+                'Created By',
+                'Days Open',
+            ]);
     }
 
     public function test_the_admin_sees_the_actions_for_tickets_it_handles(): void

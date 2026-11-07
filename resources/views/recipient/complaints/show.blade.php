@@ -43,7 +43,6 @@
                         </div>
                     @endif
                     <x-ticket-info-panel :ticket="$complaint->ticket" :show-filed-by="true" />
-                    <x-ticket-resolution-panel :ticket="$complaint->ticket" />
                     <x-ticket-actions :ticket="$complaint->ticket" role="recipient" />
                 </div>
             </div>
