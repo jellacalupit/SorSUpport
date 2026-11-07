@@ -217,6 +217,9 @@
                             <h3 class="min-w-0 truncate font-display text-[15px] font-bold leading-tight text-foreground sm:text-base" title="{{ $ticket->complaint?->subject_title ?? 'Untitled' }}">{{ $ticket->complaint?->subject_title ?? 'Untitled' }}</h3>
                             <span class="shrink-0 whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground" title="Last updated">{{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d · g:i A') ?? 'Unknown' }}</span>
                         </div>
+                        <div class="mt-1">
+                            <p class="whitespace-pre-line wrap-break-word text-sm leading-relaxed text-foreground">{{ $ticket->complaint?->description ?? 'No description' }}</p>
+                        </div>
                         <div class="mt-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                             @if (! $ticket->complaint?->is_anonymous)
                                 <span class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
@@ -253,10 +256,11 @@
                         </div>
                         <div class="mt-3 grid gap-2">
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Category</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint?->category?->name ?? 'Uncategorized' }}</p></div>
-                            @if ($ticket->complaint?->suggestedRecipient?->user)
-                                <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Suggested recipient</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $ticket->complaint?->suggestedRecipient->user->table_name }}</p></div>
-                            @endif
-                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Description</p><p class="whitespace-pre-line wrap-break-word text-sm leading-relaxed text-foreground">{{ $ticket->complaint?->description ?? 'No description' }}</p></div>
+                            @php
+                                $assignedUser = $ticket->currentHandler ?? $ticket->assignee;
+                                $assignedRecipient = $assignedUser?->recipient;
+                            @endphp
+                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">{{ $assignedRecipient ? 'Assigned Recipient' : ($assignedUser ? 'Assigned To' : 'Suggested Recipient') }}</p><p class="wrap-break-word text-sm font-medium leading-tight text-foreground">{{ $assignedUser?->table_name ?? $ticket->complaint?->suggestedRecipient?->user?->table_name ?? 'None' }}</p></div>
                             @if ($ticket->complaint?->attachment_files)
                                 <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Attachment</p>
                                 @foreach ($ticket->complaint->attachment_files as $attachment)

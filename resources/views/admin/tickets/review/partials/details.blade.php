@@ -1,6 +1,9 @@
 @php
     $complaint = $ticket->complaint;
     $detailsEditable = $ticket->isAwaitingReview();
+    $assignedUser = $ticket->currentHandler ?? $ticket->assignee;
+    $assignedRecipient = $assignedUser?->recipient;
+    $suggestedRecipientName = $complaint->suggestedRecipient?->user?->table_name;
     $labelClass = 'text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase';
     $valueClass = 'wrap-break-word text-sm font-medium leading-tight text-foreground';
 @endphp
@@ -20,8 +23,8 @@
             @endif
         </div>
         <div>
-            <p class="{{ $labelClass }}">Suggested recipient</p>
-            <p class="{{ $valueClass }}">{{ $complaint->suggestedRecipient?->user?->table_name ?? 'None' }}</p>
+            <p class="{{ $labelClass }}">{{ $assignedRecipient ? 'Assigned Recipient' : ($assignedUser ? 'Assigned To' : 'Suggested Recipient') }}</p>
+            <p class="{{ $valueClass }}">{{ $assignedUser?->table_name ?? $suggestedRecipientName ?? 'None' }}</p>
         </div>
     </div>
 

@@ -72,7 +72,7 @@
             <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $complaint?->category?->name ?? 'Uncategorized' }}</p>
         </div>
         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">{{ $assignedUser ? 'Assigned To' : 'Suggested Recipient' }}</p>
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">{{ $assignedRecipient ? 'Assigned Recipient' : ($assignedUser ? 'Assigned To' : 'Suggested Recipient') }}</p>
             <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">
                 @if ($assignedUser && $assignedRecipient)
                     <span class="relative" x-data="{ holderProfileOpen: false }" x-on:click.outside="holderProfileOpen = false">
