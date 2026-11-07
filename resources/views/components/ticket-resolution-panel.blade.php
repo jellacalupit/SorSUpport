@@ -28,7 +28,7 @@
         @if ($showResolutionDetails)
             <div class="{{ $ticket->referred_to ? 'mt-4 border-t border-border pt-3' : '' }}">
                 <p class="text-sm font-semibold text-foreground">Resolution and Feedback</p>
-                <div class="mt-2 grid gap-y-2">
+                <div class="mt-2 grid gap-y-1.5">
                     @if ($ticket->resolution_label)
                         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
                             <p class="text-xs font-semibold text-muted-foreground">Resolution</p>
@@ -38,7 +38,7 @@
                     @if (filled($resolutionLog?->details))
                         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
                             <p class="text-xs font-semibold text-muted-foreground">Resolution Details</p>
-                            <p class="text-sm leading-relaxed whitespace-pre-line text-foreground">{{ $resolutionLog->details }}</p>
+                            <p class="text-sm font-medium leading-tight whitespace-pre-line text-foreground">{{ $resolutionLog->details }}</p>
                         </div>
                     @endif
                     @if ($ticket->closure_label)
@@ -50,7 +50,7 @@
                     @if (filled($ticket->closure_reason))
                         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
                             <p class="text-xs font-semibold text-muted-foreground">Closure Details</p>
-                            <p class="text-sm leading-relaxed whitespace-pre-line text-foreground">{{ $ticket->closure_reason }}</p>
+                            <p class="text-sm font-medium leading-tight whitespace-pre-line text-foreground">{{ $ticket->closure_reason }}</p>
                         </div>
                     @endif
                     @if ($ticket->resolved_at)
@@ -74,7 +74,7 @@
                     @if (filled($ticket->satisfaction_comment))
                         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
                             <p class="text-xs font-semibold text-muted-foreground">Feedback Comment</p>
-                            <p class="text-sm leading-relaxed whitespace-pre-line text-foreground">{{ $ticket->satisfaction_comment }}</p>
+                            <p class="text-sm font-medium leading-tight whitespace-pre-line text-foreground">{{ $ticket->satisfaction_comment }}</p>
                         </div>
                     @endif
                 </div>
