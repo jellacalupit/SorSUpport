@@ -67,7 +67,7 @@
     $ageText = null;
     if ($role !== 'student' && $ticket && $ticket->status !== 'closed') {
         $idleDays = $ticket->daysSinceLastAction();
-        $ageText = 'Open ' . $ticket->daysOpen() . 'd' . ($idleDays ? ' · no action for ' . $idleDays . 'd' : '');
+        $ageText = 'Open ' . $ticket->daysOpen() . 'wd' . ($idleDays ? ' · no action for ' . $idleDays . 'd' : '');
     }
     $unreadService = app(\App\Services\TicketUnreadService::class);
     $badgeCount = Auth::user() ? $unreadService->unreadCountForTicket(Auth::user(), $ticket) : 0;

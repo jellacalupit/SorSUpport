@@ -152,56 +152,59 @@ class VisibilityAndFeedbackTest extends TestCase
 
     // ------------------------------------------------------------------ days open and last action
 
-    public function test_days_open_and_days_since_the_last_action_are_counted(): void
+    public function test_days_open_counts_weekdays_and_ticket_details_omit_the_last_action(): void
     {
-        $this->travelTo(now()->subDays(10));
+        $createdAt = now()->startOfWeek()->setTime(9, 0);
+        $this->travelTo($createdAt);
         $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
         AuditLog::log($ticket->id, 'ticket_assigned', $this->admin->id, 'Assigned.');
 
-        $this->travelTo(now()->addDays(6));
+        $this->travelTo($createdAt->copy()->addDays(4));
         AuditLog::log($ticket->id, 'message_posted', $this->handler->id, 'Recipient posted a reply message.');
 
         // Emails the system sends are not an action by anyone.
-        $this->travelTo(now()->addDays(2));
+        $this->travelTo($createdAt->copy()->addDays(8));
         AuditLog::create(['ticket_id' => $ticket->id, 'performed_by' => null, 'action' => 'email_notification_sent', 'details' => 'Email sent.']);
 
-        $this->travelBack();
         $ticket = $ticket->fresh();
 
-        $this->assertSame(10, $ticket->daysOpen());
+        $this->assertSame(6, $ticket->daysOpen());
         $this->assertSame(4, $ticket->daysSinceLastAction());
 
         $this->actingAs($this->admin)->get(route('admin.complaints.show', $ticket->complaint))
             ->assertOk()
             ->assertSee('Days Open')
-            ->assertSee('10 days')
-            ->assertSee('4 days ago');
+            ->assertSee('6 working days')
+            ->assertDontSee('Last Action');
 
         // Lists point out how long a ticket has been open and idle.
         $this->actingAs($this->handler)->get(route('recipient.tickets.index'))
             ->assertOk()
-            ->assertSee('Open 10d · no action for 4d');
+            ->assertSee('Open 6wd · no action for 4d');
 
         // Students see the days on the ticket, but not the idle flag in their list.
         $this->actingAs($this->student)->get(route('student.complaints.index'))->assertOk()->assertDontSee('no action for');
+        $this->travelBack();
     }
 
     public function test_a_closed_ticket_shows_the_days_it_took_and_no_idle_time(): void
     {
-        $this->travelTo(now()->subDays(8));
+        $createdAt = now()->startOfWeek()->setTime(9, 0)->addDays(4);
+        $this->travelTo($createdAt);
         $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
         $this->travelBack();
 
-        $ticket->update(['status' => Ticket::STATUS_CLOSED, 'closure_type' => Ticket::CLOSURE_WITHDRAWN, 'closed_at' => now()->subDays(3)]);
+        $ticket->update(['status' => Ticket::STATUS_CLOSED, 'closure_type' => Ticket::CLOSURE_WITHDRAWN, 'closed_at' => $createdAt->copy()->addDays(4)]);
         $ticket = $ticket->fresh();
 
-        $this->assertSame(5, $ticket->daysOpen());
+        $this->assertSame(2, $ticket->daysOpen());
         $this->assertNull($ticket->daysSinceLastAction());
 
         $this->actingAs($this->student)->get(route('student.complaints.show', $ticket->complaint))
             ->assertOk()
-            ->assertSee('Days To Close')
-            ->assertSee('5 days')
+            ->assertSee('Days Open')
+            ->assertSee('2 working days')
+            ->assertDontSee('Days To Close')
             ->assertDontSee('Last Action');
     }
 
@@ -212,7 +215,10 @@ class VisibilityAndFeedbackTest extends TestCase
         $this->assertSame(0, $ticket->daysOpen());
         $this->assertSame(0, $ticket->daysSinceLastAction());
 
-        $this->actingAs($this->admin)->get(route('admin.complaints.show', $ticket->complaint))->assertOk()->assertSee('0 days')->assertSee('Today');
+        $this->actingAs($this->admin)->get(route('admin.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertSee('0 working days')
+            ->assertDontSee('Last Action');
     }
 
     // ------------------------------------------------------------------ satisfaction rating
@@ -220,6 +226,7 @@ class VisibilityAndFeedbackTest extends TestCase
     public function test_the_student_rates_a_resolved_and_closed_ticket_once(): void
     {
         $ticket = $this->closedTicket();
+        AuditLog::log($ticket->id, 'complaint_resolved', $this->handler->id, 'The registrar released the transcript.');
         $complaint = $ticket->complaint;
         $url = route('student.complaints.rate', $complaint);
 
@@ -252,11 +259,23 @@ class VisibilityAndFeedbackTest extends TestCase
         $this->actingAs($this->student)->get(route('student.complaints.show', $complaint))
             ->assertOk()
             ->assertSee('4 out of 5')
+            ->assertSee('Feedback Comment')
+            ->assertSee('Quick and courteous.')
+            ->assertSee('Resolution Details')
+            ->assertSee('The registrar released the transcript.')
             ->assertDontSee('How satisfied are you with how this was handled?');
 
         // The office that handled it and the admin see the feedback.
-        $this->actingAs($this->handler)->get(route('recipient.complaints.show', $complaint))->assertOk()->assertSee('4 out of 5')->assertSee('Quick and courteous.');
-        $this->actingAs($this->admin)->get(route('admin.complaints.show', $complaint))->assertOk()->assertSee('4 out of 5');
+        $this->actingAs($this->handler)->get(route('recipient.complaints.show', $complaint))
+            ->assertOk()
+            ->assertSee('4 out of 5')
+            ->assertSee('Quick and courteous.')
+            ->assertSee('The registrar released the transcript.');
+        $this->actingAs($this->admin)->get(route('admin.complaints.show', $complaint))
+            ->assertOk()
+            ->assertSee('4 out of 5')
+            ->assertSee('Quick and courteous.')
+            ->assertSee('The registrar released the transcript.');
     }
 
     public function test_only_resolved_tickets_can_be_rated(): void

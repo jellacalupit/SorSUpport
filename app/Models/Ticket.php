@@ -269,14 +269,30 @@ class Ticket extends Model
     }
 
     /**
-     * Whole days from submission until now, or until the ticket was closed.
+     * Whole weekdays from submission until now, or until the ticket was closed.
      */
     public function daysOpen(): int
     {
         $from = $this->complaint?->created_at ?? $this->created_at;
         $until = $this->closed_at ?? now();
 
-        return $from ? max(0, (int) floor($from->diffInDays($until))) : 0;
+        if (! $from || $until->lessThanOrEqualTo($from)) {
+            return 0;
+        }
+
+        $wholeDays = (int) floor($from->diffInSeconds($until) / 86400);
+        $end = $from->copy()->addDays($wholeDays)->startOfDay();
+        $day = $from->copy()->startOfDay();
+        $calendarDays = (int) $day->diffInDays($end);
+        $workingDays = intdiv($calendarDays, 7) * 5;
+
+        for ($offset = 0, $remainingDays = $calendarDays % 7; $offset < $remainingDays; $offset++) {
+            if (! $day->copy()->addDays($offset)->isWeekend()) {
+                $workingDays++;
+            }
+        }
+
+        return $workingDays;
     }
 
     /**

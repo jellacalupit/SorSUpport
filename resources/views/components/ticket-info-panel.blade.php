@@ -14,10 +14,21 @@
     $isInvalid = $ticket->classification === 'invalid';
     $canEditDetails = $editable && $ticket->isAwaitingReview();
     $showResolutionDetails = in_array($ticket->status, ['resolved', 'closed'], true);
+    $resolutionLog = $showResolutionDetails
+        ? $ticket->auditLogs()
+            ->whereIn('action', ['complaint_resolved', 'referral_outcome_recorded'])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first()
+        : null;
 
     $submittedAt = $complaint?->created_at?->copy()->setTimezone('Asia/Manila');
     $assignedUser = $ticket->currentHandler ?? $ticket->assignee;
     $assignedRecipient = $assignedUser?->recipient;
+    $creator = $complaint?->hidesIdentityFrom(\Illuminate\Support\Facades\Auth::user())
+        ? null
+        : $complaint?->student?->user;
+    $creatorStudent = $creator?->student;
     $suggestedRecipientName = $complaint?->suggestedRecipient?->user?->table_name;
     $createdBy = $complaint?->filerNameFor(\Illuminate\Support\Facades\Auth::user()) ?? 'Unknown';
     $attachments = $complaint?->attachment_files ?? [];
@@ -117,20 +128,43 @@
         </div>
         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
             <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Created By</p>
-            <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $createdBy }}</p>
+            <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">
+                @if ($creator)
+                    <span class="relative inline-block" x-data="{ creatorProfileOpen: false }" x-on:click.outside="creatorProfileOpen = false">
+                        <button type="button" class="text-left text-primary hover:underline" x-on:click="creatorProfileOpen = !creatorProfileOpen" aria-label="View {{ $createdBy }} profile">
+                            {{ $createdBy }}
+                        </button>
+                        <span x-show="creatorProfileOpen" x-cloak data-keep-in-view class="brand-gradient absolute top-7 left-0 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-primary-foreground shadow-lg">
+                            <span class="flex items-center gap-3">
+                                <span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">
+                                    @if ($creator->avatar_path)
+                                        <img src="{{ asset('storage/' . $creator->avatar_path) }}" alt="{{ $createdBy }}" class="h-full w-full object-cover">
+                                    @else
+                                        {{ $creator->name_initials }}
+                                    @endif
+                                </span>
+                                <span class="min-w-0">
+                                    <span class="block wrap-break-word text-sm font-bold">{{ $createdBy }}</span>
+                                    <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $creatorStudent?->student_id ?? 'N/A' }} · {{ $creatorStudent?->college ?? 'College not specified' }} · {{ trim(($creatorStudent?->program ?? 'Program not specified') . ' ' . ($creatorStudent?->year_level ?? 'N/A') . (($creatorStudent?->block ?? '') !== '' ? '-' . $creatorStudent->block : '')) }}</span>
+                                </span>
+                            </span>
+                            <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">Student</span>
+                        </span>
+                    </span>
+                @else
+                    {{ $createdBy }}
+                @endif
+            </p>
         </div>
         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">{{ $ticket->status === 'closed' ? 'Days To Close' : 'Days Open' }}</p>
-            <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word" data-ticket-days-open>{{ $ticket->daysOpen() }} {{ \Illuminate\Support\Str::plural('day', $ticket->daysOpen()) }}</p>
-        </div>
-        @if ($ticket->daysSinceLastAction() !== null)
-            <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Last Action</p>
-                <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word {{ $ticket->daysSinceLastAction() >= 3 ? 'text-red-700' : '' }}" data-ticket-last-action>
-                    {{ $ticket->daysSinceLastAction() === 0 ? 'Today' : $ticket->daysSinceLastAction() . ' ' . \Illuminate\Support\Str::plural('day', $ticket->daysSinceLastAction()) . ' ago' }}
-                </p>
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground" title="{{ $ticket->status === 'closed' ? 'Weekdays from ticket creation to closure.' : 'Weekdays elapsed since ticket creation.' }}">Days Open</p>
+            <div class="min-w-0">
+                <p class="text-sm font-medium leading-tight wrap-break-word" data-ticket-days-open>{{ $ticket->daysOpen() }} {{ \Illuminate\Support\Str::plural('working day', $ticket->daysOpen()) }}</p>
+                @if ($ticket->status === 'closed')
+                    <p class="mt-0.5 text-[11px] leading-tight text-muted-foreground">Weekdays from creation to closure</p>
+                @endif
             </div>
-        @endif
+        </div>
     </div>
 
     @unless ($studentView)
@@ -247,6 +281,12 @@
                             <p class="text-sm font-medium text-foreground">{{ $ticket->resolved_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}</p>
                         </div>
                     @endif
+                    @if (filled($resolutionLog?->details))
+                        <div>
+                            <p class="text-xs font-semibold text-muted-foreground">Resolution Details</p>
+                            <p class="mt-1 text-sm leading-relaxed whitespace-pre-line text-foreground">{{ $resolutionLog->details }}</p>
+                        </div>
+                    @endif
                     @if ($showClosedAt && $ticket->status === 'closed' && $ticket->closed_at)
                         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
                             <p class="text-xs font-semibold text-muted-foreground">Closed At</p>
@@ -271,9 +311,12 @@
                             <p class="text-xs font-semibold text-muted-foreground">Feedback</p>
                             <p class="text-sm font-medium text-foreground" data-ticket-rating>{{ $ticket->satisfaction_rating }} out of 5</p>
                         </div>
-                        @if ($ticket->satisfaction_comment)
-                            <p class="text-sm leading-relaxed text-muted-foreground">“{{ $ticket->satisfaction_comment }}”</p>
-                        @endif
+                    @endif
+                    @if (filled($ticket->satisfaction_comment))
+                        <div>
+                            <p class="text-xs font-semibold text-muted-foreground">Feedback Comment</p>
+                            <p class="mt-1 text-sm leading-relaxed whitespace-pre-line text-foreground">{{ $ticket->satisfaction_comment }}</p>
+                        </div>
                     @endif
                 </div>
             </div>
