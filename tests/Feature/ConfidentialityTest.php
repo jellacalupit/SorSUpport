@@ -369,7 +369,7 @@ class ConfidentialityTest extends TestCase
         $this->actingAs($this->student)
             ->post(route('student.complaints.reply', $complaint), [
                 'content' => 'Here is the receipt.',
-                'file_attachment' => UploadedFile::fake()->create('receipt.pdf', 10, 'application/pdf'),
+                'file_attachment' => UploadedFile::fake()->createWithContent('receipt.pdf', '%PDF-1.4 test'),
             ])
             ->assertSessionHasNoErrors();
 
@@ -385,7 +385,41 @@ class ConfidentialityTest extends TestCase
         $this->actingAs($this->otherRecipient)->get($url)->assertForbidden();
         $this->actingAs($this->otherStudent)->get($url)->assertForbidden();
 
-        $this->actingAs($this->handler)->get(route('recipient.complaints.show', $complaint))->assertOk()->assertSee($url, false);
+        $this->actingAs($this->handler)->get(route('recipient.complaints.show', $complaint))
+            ->assertOk()
+            ->assertSee($url, false)
+            ->assertSee('data-thread-attachment-preview', false)
+            ->assertSee('data-file-type="pdf"', false)
+            ->assertSee(' MB');
+    }
+
+    public function test_ajax_conversation_attachment_reply_returns_preview_metadata_and_previews_inline(): void
+    {
+        $ticket = $this->assign($this->submit());
+        $complaint = $ticket->complaint;
+        $this->actingAs($this->handler)->post(route('recipient.complaints.acknowledge', $complaint));
+
+        $response = $this->actingAs($this->student)
+            ->withHeaders([
+                'Accept' => 'application/json',
+                'X-Requested-With' => 'XMLHttpRequest',
+            ])
+            ->post(route('student.complaints.reply', $complaint), [
+                'content' => 'Here is the receipt.',
+                'file_attachment' => UploadedFile::fake()->create('receipt.pdf', 10, 'application/pdf'),
+            ])
+            ->assertOk()
+            ->assertJsonPath('message.attachment.name', 'receipt.pdf')
+            ->assertJsonPath('message.content', 'Here is the receipt.');
+
+        $attachment = $response->json('message.attachment');
+        $this->assertNotEmpty($attachment['url']);
+        $this->assertIsInt($attachment['size_bytes']);
+
+        $this->actingAs($this->student)
+            ->get($attachment['url'] . '?preview=1')
+            ->assertOk()
+            ->assertHeader('content-disposition', 'inline; filename=receipt.pdf');
     }
 
     // ------------------------------------------------------------------ conflict of interest

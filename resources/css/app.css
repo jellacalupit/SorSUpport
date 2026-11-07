@@ -365,6 +365,15 @@
         width: 3px !important;
         height: 3px !important;
     }
+
+    body.thread-keyboard-open [data-mobile-tab-bar] {
+        display: none;
+    }
+
+    body.thread-keyboard-open .ticket-thread-pane .communication-card {
+        height: max(10rem, calc(var(--thread-visible-height, 100dvh) - 9.5rem));
+        min-height: 0;
+    }
 }
 
 /* Conversation on the admin ticket page: a slightly denser version of the thread card.

@@ -11,6 +11,7 @@ use App\Models\ThreadMessage;
 use App\Models\TicketThread;
 use App\Models\EmailNotification;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -126,7 +127,7 @@ class ComplaintController extends Controller
     /**
      * Store a reply to a complaint.
      */
-    public function storeReply(Request $request, Complaint $complaint): RedirectResponse
+    public function storeReply(Request $request, Complaint $complaint): RedirectResponse|JsonResponse
     {
         Log::debug('Recipient\\ComplaintController@storeReply called', ['user_id' => Auth::id(), 'complaint_id' => $complaint->id ?? null]);
 
@@ -168,11 +169,11 @@ class ComplaintController extends Controller
             $attachmentName = $attachment->getClientOriginalName();
         }
 
-        DB::transaction(function () use ($complaint, $ticket, $validated, $attachmentPath, $attachmentName) {
+        $message = DB::transaction(function () use ($complaint, $ticket, $validated, $attachmentPath, $attachmentName) {
             $thread = $ticket->thread;
 
             // Create thread message
-            ThreadMessage::create([
+            $message = ThreadMessage::create([
                 'thread_id' => $thread->id,
                 'sender_id' => Auth::id(),
                 'content' => $validated['content'] ?? '',
@@ -199,9 +200,24 @@ class ComplaintController extends Controller
                     'status' => EmailNotification::STATUS_PENDING,
                 ]);
             }
+
+            return $message;
         });
 
         Log::debug('Recipient\\ComplaintController@storeReply returning redirect', ['user_id' => Auth::id()]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => [
+                    'content' => $message->content,
+                    'attachment' => $message->file_attachment ? [
+                        'name' => $message->file_attachment_name ?: basename($message->file_attachment),
+                        'url' => route('attachments.message', $message),
+                        'size_bytes' => $message->file_attachment_size,
+                    ] : null,
+                ],
+            ]);
+        }
+
         return redirect()->route('recipient.complaints.show', $complaint);
     }
 

@@ -12,6 +12,7 @@ use App\Models\Ticket;
 use App\Models\TicketThread;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -380,7 +381,7 @@ class ComplaintController extends Controller
     /**
      * Store a reply message to the complaint thread.
      */
-    public function storeReply(Request $request, Complaint $complaint): RedirectResponse
+    public function storeReply(Request $request, Complaint $complaint): RedirectResponse|JsonResponse
     {
         Log::debug('Student\\ComplaintController@storeReply called', ['user_id' => Auth::id(), 'complaint_id' => $complaint->id ?? null]);
 
@@ -422,11 +423,11 @@ class ComplaintController extends Controller
             $attachmentName = $attachment->getClientOriginalName();
         }
 
-        DB::transaction(function () use ($ticket, $validated, $attachmentPath, $attachmentName) {
+        $message = DB::transaction(function () use ($ticket, $validated, $attachmentPath, $attachmentName) {
             $thread = $ticket->thread;
 
             // Create thread message
-            ThreadMessage::create([
+            $message = ThreadMessage::create([
                 'thread_id' => $thread->id,
                 'sender_id' => Auth::id(),
                 'content' => $validated['content'] ?? '',
@@ -446,22 +447,35 @@ class ComplaintController extends Controller
 
             if ($ticket->status === Ticket::STATUS_NEEDS_CLARIFICATION) {
                 app(TicketWorkflow::class)->provideClarification($ticket, Auth::user());
-
-                return;
+            } else {
+                $handler = $ticket->currentHandler ?? $ticket->assignee;
+                if ($handler?->email) {
+                    EmailNotification::create([
+                        'ticket_id' => $ticket->id,
+                        'recipient_email' => $handler->email,
+                        'type' => EmailNotification::TYPE_MESSAGE_POSTED,
+                        'status' => EmailNotification::STATUS_PENDING,
+                    ]);
+                }
             }
 
-            $handler = $ticket->currentHandler ?? $ticket->assignee;
-            if ($handler?->email) {
-                EmailNotification::create([
-                    'ticket_id' => $ticket->id,
-                    'recipient_email' => $handler->email,
-                    'type' => EmailNotification::TYPE_MESSAGE_POSTED,
-                    'status' => EmailNotification::STATUS_PENDING,
-                ]);
-            }
+            return $message;
         });
 
         Log::debug('Student\\ComplaintController@storeReply returning redirect', ['user_id' => Auth::id()]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => [
+                    'content' => $message->content,
+                    'attachment' => $message->file_attachment ? [
+                        'name' => $message->file_attachment_name ?: basename($message->file_attachment),
+                        'url' => route('attachments.message', $message),
+                        'size_bytes' => $message->file_attachment_size,
+                    ] : null,
+                ],
+            ]);
+        }
+
         return redirect()->route('student.complaints.show', $complaint);
     }
 

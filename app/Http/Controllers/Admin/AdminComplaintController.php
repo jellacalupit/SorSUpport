@@ -10,6 +10,7 @@ use App\Models\ThreadMessage;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -145,7 +146,7 @@ class AdminComplaintController extends Controller
     /**
      * Store a reply message to the complaint thread.
      */
-    public function storeReply(Request $request, Complaint $complaint): RedirectResponse
+    public function storeReply(Request $request, Complaint $complaint): RedirectResponse|JsonResponse
     {
         Log::debug('Admin\\AdminComplaintController@storeReply called', ['user_id' => Auth::id(), 'complaint_id' => $complaint->id ?? null]);
 
@@ -187,11 +188,11 @@ class AdminComplaintController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($ticket, $validated, $attachmentPath, $attachmentName) {
+            $message = DB::transaction(function () use ($ticket, $validated, $attachmentPath, $attachmentName) {
                 $thread = $ticket->thread;
 
                 // Create thread message
-                ThreadMessage::create([
+                $message = ThreadMessage::create([
                     'thread_id' => $thread->id,
                     'sender_id' => Auth::id(),
                     'content' => $validated['content'] ?? '',
@@ -208,6 +209,8 @@ class AdminComplaintController extends Controller
                     Auth::id(),
                     'Admin posted a reply message.'
                 );
+
+                return $message;
             });
         } catch (\Throwable $e) {
             Log::error('Admin\\AdminComplaintController@storeReply exception', ['exception' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
@@ -215,9 +218,21 @@ class AdminComplaintController extends Controller
         }
 
         Log::debug('Admin\\AdminComplaintController@storeReply returning redirect', ['user_id' => Auth::id()]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => [
+                    'content' => $message->content,
+                    'attachment' => $message->file_attachment ? [
+                        'name' => $message->file_attachment_name ?: basename($message->file_attachment),
+                        'url' => route('attachments.message', $message),
+                        'size_bytes' => $message->file_attachment_size,
+                    ] : null,
+                ],
+            ]);
+        }
+
         return redirect()->route('admin.complaints.show', $complaint)
             ->with('success', 'Your message has been posted successfully.');
     }
 }
-
 

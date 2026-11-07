@@ -40,14 +40,18 @@ class AttachmentController extends Controller
     /**
      * A file sent in the ticket's conversation.
      */
-    public function message(ThreadMessage $message): StreamedResponse
+    public function message(Request $request, ThreadMessage $message): StreamedResponse
     {
         $complaint = $message->thread?->ticket?->complaint;
 
         abort_unless($complaint && $this->access->canViewComplaint(Auth::user(), $complaint), 403);
         abort_unless($message->file_attachment, 404);
 
-        return $this->serve($message->file_attachment, $message->file_attachment_name ?: basename($message->file_attachment));
+        return $this->serve(
+            $message->file_attachment,
+            $message->file_attachment_name ?: basename($message->file_attachment),
+            $request->boolean('preview'),
+        );
     }
 
     protected function serve(string $path, string $name, bool $preview = false): StreamedResponse
@@ -55,7 +59,7 @@ class AttachmentController extends Controller
         // Files uploaded before attachments became private are still on the public disk.
         foreach (['local', 'public'] as $disk) {
             if (Storage::disk($disk)->exists($path)) {
-                if ($preview && in_array(strtolower(pathinfo($name, PATHINFO_EXTENSION)), ['pdf', 'jpg', 'jpeg', 'png'], true)) {
+                if ($preview && in_array(strtolower(pathinfo($name, PATHINFO_EXTENSION)), ['pdf', 'jpg', 'jpeg', 'png', 'heic'], true)) {
                     return Storage::disk($disk)->response($path, $name, [
                         'Cache-Control' => 'private, no-store',
                         'X-Content-Type-Options' => 'nosniff',

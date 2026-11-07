@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class ThreadMessage extends Model
 {
@@ -48,5 +49,20 @@ class ThreadMessage extends Model
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sender_id');
+    }
+
+    public function getFileAttachmentSizeAttribute(): ?int
+    {
+        if (! $this->file_attachment) {
+            return null;
+        }
+
+        foreach (['local', 'public'] as $disk) {
+            if (Storage::disk($disk)->exists($this->file_attachment)) {
+                return Storage::disk($disk)->size($this->file_attachment);
+            }
+        }
+
+        return null;
     }
 }
