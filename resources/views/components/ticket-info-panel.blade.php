@@ -13,14 +13,6 @@
     $complaint = $ticket->complaint;
     $isInvalid = $ticket->classification === 'invalid';
     $canEditDetails = $editable && $ticket->isAwaitingReview();
-    $showResolutionDetails = in_array($ticket->status, ['resolved', 'closed'], true);
-    $resolutionLog = $showResolutionDetails
-        ? $ticket->auditLogs()
-            ->whereIn('action', ['complaint_resolved', 'referral_outcome_recorded'])
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->first()
-        : null;
 
     $submittedAt = $complaint?->created_at?->copy()->setTimezone('Asia/Manila');
     $assignedUser = $ticket->currentHandler ?? $ticket->assignee;
@@ -63,11 +55,12 @@
     <h2 class="mt-2 truncate font-display text-[15px] font-bold leading-tight sm:text-base" title="{{ $complaint?->subject_title ?? 'Untitled' }}">
         {{ $complaint?->subject_title ?? 'Untitled' }}
     </h2>
-    <div class="mt-2">
+    <div class="mt-1">
         <p class="text-sm leading-relaxed whitespace-pre-line text-foreground">{{ trim($complaint?->description ?? 'No description provided') }}</p>
     </div>
 
-    <div class="mt-4 grid gap-y-2">
+    <div class="mt-2">
+    <div class="grid gap-y-2">
         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
             <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Category</p>
             <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $complaint?->category?->name ?? 'Uncategorized' }}</p>
@@ -157,13 +150,8 @@
             </p>
         </div>
         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground" title="{{ $ticket->status === 'closed' ? 'Weekdays from ticket creation to closure.' : 'Weekdays elapsed since ticket creation.' }}">Days Open</p>
-            <div class="min-w-0">
-                <p class="text-sm font-medium leading-tight wrap-break-word" data-ticket-days-open>{{ $ticket->daysOpen() }} {{ \Illuminate\Support\Str::plural('working day', $ticket->daysOpen()) }}</p>
-                @if ($ticket->status === 'closed')
-                    <p class="mt-0.5 text-[11px] leading-tight text-muted-foreground">Weekdays from creation to closure</p>
-                @endif
-            </div>
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Days Open</p>
+            <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word" data-ticket-days-open>{{ $ticket->daysOpen() }} {{ \Illuminate\Support\Str::plural('working day', $ticket->daysOpen()) }}</p>
         </div>
     </div>
 
@@ -207,12 +195,9 @@
             </div>
         </form>
     @endif
-</div>
 
-@if (count($attachments) || $showResolutionDetails || $ticket->referred_to)
-    <div class="surface mt-3 p-4 sm:p-6">
-        @if (count($attachments))
-            <div>
+    @if (count($attachments))
+        <div class="mt-4 border-t border-border pt-3">
                 <div class="flex items-center justify-between gap-3">
                     <p class="flex items-center gap-2 text-sm font-semibold text-foreground">
                         <x-icons.paperclip class="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -253,73 +238,7 @@
                         </div>
                     @endforeach
                 </div>
-            </div>
-        @endif
-
-        @if ($ticket->referred_to)
-            <div class="{{ count($attachments) ? 'mt-4 border-t border-border pt-3' : '' }}">
-                <p class="text-sm font-semibold text-foreground">Referral</p>
-                <p class="mt-1 text-sm text-muted-foreground">
-                    {{ $ticket->referred_to }}@if ($ticket->referred_at) · {{ $ticket->referred_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}@endif
-                </p>
-            </div>
-        @endif
-
-        @if ($showResolutionDetails)
-            <div class="{{ count($attachments) || $ticket->referred_to ? 'mt-4 border-t border-border pt-3' : '' }}">
-                <p class="text-sm font-semibold text-foreground">Resolution and Feedback</p>
-                <div class="mt-2 grid gap-y-2">
-                    @if ($ticket->resolution_label)
-                        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-                            <p class="text-xs font-semibold text-muted-foreground">Resolution</p>
-                            <p class="text-sm font-medium text-foreground">{{ $ticket->resolution_label }}</p>
-                        </div>
-                    @endif
-                    @if ($ticket->resolved_at)
-                        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-                            <p class="text-xs font-semibold text-muted-foreground">Resolved At</p>
-                            <p class="text-sm font-medium text-foreground">{{ $ticket->resolved_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}</p>
-                        </div>
-                    @endif
-                    @if (filled($resolutionLog?->details))
-                        <div>
-                            <p class="text-xs font-semibold text-muted-foreground">Resolution Details</p>
-                            <p class="mt-1 text-sm leading-relaxed whitespace-pre-line text-foreground">{{ $resolutionLog->details }}</p>
-                        </div>
-                    @endif
-                    @if ($showClosedAt && $ticket->status === 'closed' && $ticket->closed_at)
-                        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-                            <p class="text-xs font-semibold text-muted-foreground">Closed At</p>
-                            <p class="text-sm font-medium text-foreground">{{ $ticket->closed_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}</p>
-                        </div>
-                    @endif
-                    @if ($ticket->closure_label || $ticket->closure_reason)
-                        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-                            <p class="text-xs font-semibold text-muted-foreground">Closure Reason</p>
-                            <p class="text-sm font-medium text-foreground">
-                                @if ($ticket->closure_label)
-                                    {{ $ticket->closure_label }}
-                                @endif
-                                @if ($ticket->closure_reason)
-                                    {{ $ticket->closure_label ? ' · ' : '' }}{{ $ticket->closure_reason }}
-                                @endif
-                            </p>
-                        </div>
-                    @endif
-                    @if ($ticket->satisfaction_rating !== null)
-                        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-                            <p class="text-xs font-semibold text-muted-foreground">Feedback</p>
-                            <p class="text-sm font-medium text-foreground" data-ticket-rating>{{ $ticket->satisfaction_rating }} out of 5</p>
-                        </div>
-                    @endif
-                    @if (filled($ticket->satisfaction_comment))
-                        <div>
-                            <p class="text-xs font-semibold text-muted-foreground">Feedback Comment</p>
-                            <p class="mt-1 text-sm leading-relaxed whitespace-pre-line text-foreground">{{ $ticket->satisfaction_comment }}</p>
-                        </div>
-                    @endif
-                </div>
-            </div>
-        @endif
+        </div>
+    @endif
     </div>
-@endif
+</div>

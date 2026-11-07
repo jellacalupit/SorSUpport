@@ -225,7 +225,7 @@ class VisibilityAndFeedbackTest extends TestCase
 
     public function test_the_student_rates_a_resolved_and_closed_ticket_once(): void
     {
-        $ticket = $this->closedTicket();
+        $ticket = $this->closedTicket(attributes: ['closure_reason' => 'The student confirmed resolution.']);
         AuditLog::log($ticket->id, 'complaint_resolved', $this->handler->id, 'The registrar released the transcript.');
         $complaint = $ticket->complaint;
         $url = route('student.complaints.rate', $complaint);
@@ -260,8 +260,11 @@ class VisibilityAndFeedbackTest extends TestCase
             ->assertOk()
             ->assertSee('4 out of 5')
             ->assertSee('Feedback Comment')
+            ->assertSee('Feedback Rate')
             ->assertSee('Quick and courteous.')
-            ->assertSee('Resolution Details')
+            ->assertSee('Closure')
+            ->assertSee('Details')
+            ->assertSee('The student confirmed resolution.')
             ->assertSee('The registrar released the transcript.')
             ->assertDontSee('How satisfied are you with how this was handled?');
 

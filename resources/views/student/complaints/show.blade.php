@@ -24,14 +24,19 @@
                 <h2 class="mb-0.5 hidden font-display text-base font-bold lg:block">Ticket Details</h2>
                 <div class="grid gap-3">
                     <x-ticket-info-panel :ticket="$complaint->ticket" student-view />
+                    @unless ($hasThread)
+                        <x-ticket-resolution-panel :ticket="$complaint->ticket" />
+                    @endunless
                     <x-ticket-actions :ticket="$complaint->ticket" role="student" />
                 </div>
             </div>
 
             @if ($hasThread)
-                <!-- Ticket Thread -->
-                <div class="ticket-thread-pane min-w-0 lg:block!" x-show="tab === 'thread'" x-cloak>
-                    <x-ticket-thread :ticket="$complaint->ticket" viewerRole="student" />
+                <div class="min-w-0 lg:block!" x-show="tab === 'thread' || tab === 'details'">
+                    <x-ticket-resolution-panel :ticket="$complaint->ticket" />
+                    <div class="ticket-thread-pane mt-3 min-w-0 lg:block!" x-show="tab === 'thread'" x-cloak>
+                        <x-ticket-thread :ticket="$complaint->ticket" viewerRole="student" />
+                    </div>
                 </div>
             @endif
         </div>
