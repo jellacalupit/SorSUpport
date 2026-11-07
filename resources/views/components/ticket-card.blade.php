@@ -78,7 +78,7 @@
     {{ $attributes->merge(['class' => 'surface ' . $radiusClass . ' ' . ($isUnread ? 'border-0 bg-primary-soft' : 'border border-border bg-card') . ' block w-full min-w-0 max-w-full overflow-hidden p-3 transition-transform duration-200 ease-out hover:scale-[1.01] hover:border-0 ' . ($isUnread ? 'hover:bg-primary-soft' : 'hover:bg-muted/80')]) }}
 >
     <div class="min-w-0 space-y-0">
-        <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+        <div class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
             <p class="flex min-w-0 items-center gap-1.5 font-mono text-[11px] font-semibold text-primary">
                 <span class="truncate">{{ $complaint?->reference_number ?? $item->id }}</span>
                 <span class="flex min-w-0 items-center gap-1.5 truncate font-sans font-normal text-muted-foreground">
@@ -96,11 +96,11 @@
             </p>
             <x-status-badge :status="$statusDisplay" :classification="$classification" :show-icon="false" class="max-w-28 truncate px-2 py-0 text-[10px]" />
         </div>
-        <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+        <div class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
             <p class="line-clamp-2 min-w-0 break-words text-sm font-bold">
                 {{ $complaint?->subject_title ?? 'Untitled' }}
             </p>
-            <span class="shrink-0 text-right text-[11px] leading-4 text-muted-foreground">{{ $lastUpdate }}</span>
+            <span class="shrink-0 text-right text-[11px] leading-4 whitespace-nowrap text-muted-foreground">{{ $lastUpdate }}</span>
         </div>
         <p class="truncate text-xs text-muted-foreground">
             {{ $complaint?->description ?? 'No description provided.' }}

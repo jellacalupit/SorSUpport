@@ -1,6 +1,6 @@
 <x-app-layout :role="'recipient'" title="Assigned Tickets">
-    <section>
-        <form method="GET" action="{{ route('recipient.tickets.index') }}" data-ticket-filter-form>
+    <section class="min-w-0">
+        <form method="GET" action="{{ route('recipient.tickets.index') }}" data-ticket-filter-form class="min-w-0">
             <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
                 <div class="relative min-w-0 flex-1">
                     <x-icons.search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -14,7 +14,7 @@
                     $selectedStatus = request('status_filter', '');
                     $selectedSort = request('sort', 'newest');
                 @endphp
-                <div class="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-center gap-2 sm:flex">
+                <div class="grid grid-cols-2 items-center gap-2 sm:flex">
                     <details x-data="{}" class="group relative min-w-0 sm:w-56 sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
                         <summary id="sort-filter" class="flex h-9 w-full cursor-pointer list-none items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none ring-offset-background transition-colors hover:bg-muted focus:ring-1 focus:ring-ring [&::-webkit-details-marker]:hidden">
                             <span class="min-w-0 truncate">{{ $sortLabels[$selectedSort] ?? 'Sort by newest date' }}</span>
@@ -46,12 +46,12 @@
             </div>
         </form>
 
-        <div data-ticket-results>
+        <div data-ticket-results class="min-w-0">
     <p class="mb-2 text-xs text-muted-foreground">{{ $complaints->total() }} ticket(s)</p>
         @if ($complaints->count() > 0)
-            <ul data-ticket-list class="grid gap-0.5">
+            <ul data-ticket-list class="grid min-w-0 grid-cols-1 gap-0.5">
                 @foreach ($complaints as $ticket)
-                    <li>
+                    <li class="min-w-0">
                         <x-ticket-card :item="$ticket" role="recipient" :first="$loop->first" :last="$loop->last" />
                     </li>
                 @endforeach
