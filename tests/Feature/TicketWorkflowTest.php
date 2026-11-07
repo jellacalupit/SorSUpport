@@ -745,6 +745,29 @@ class TicketWorkflowTest extends TestCase
         $this->actingAs($this->admin)->get('/admin/analytics')->assertOk();
     }
 
+    public function test_ticket_details_show_last_updated_in_the_shared_student_order_for_all_roles(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
+        $detailsOrder = [
+            'My transcript has not been released.',
+            'Category',
+            'Assigned Recipient',
+            'Classification',
+            'Last Updated At',
+            'Created At',
+            'Created By',
+            'Days Open',
+        ];
+
+        foreach ([
+            [$this->student, route('student.complaints.show', $ticket->complaint)],
+            [$this->handler, route('recipient.complaints.show', $ticket->complaint)],
+            [$this->admin, route('admin.complaints.show', $ticket->complaint)],
+        ] as [$user, $url]) {
+            $this->actingAs($user)->get($url)->assertOk()->assertSeeInOrder($detailsOrder);
+        }
+    }
+
     public function test_the_admin_sees_the_actions_for_tickets_it_handles(): void
     {
         $mine = $this->ticket(Ticket::STATUS_IN_PROGRESS, ['assigned_to' => null, 'current_handler_id' => $this->admin->id]);

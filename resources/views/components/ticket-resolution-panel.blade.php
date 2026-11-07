@@ -15,7 +15,7 @@
 @endphp
 
 @if ($showResolutionDetails || $ticket->referred_to)
-    <div class="surface p-4 sm:p-6">
+    <div class="mt-4 border-t border-border pt-4">
         @if ($ticket->referred_to)
             <div>
                 <p class="text-sm font-semibold text-foreground">Referral</p>

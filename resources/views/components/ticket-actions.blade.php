@@ -84,7 +84,7 @@
 @endif
 
 @if ($role === 'student' && $ticket->canBeRated() && $workflow->isOwner(Auth::user(), $ticket))
-    <form method="POST" action="{{ route('student.complaints.rate', $complaint) }}" class="surface p-4" x-data="{ rating: @js((int) old('satisfaction_rating', 0)) }" data-ticket-rating-form>
+    <form method="POST" action="{{ route('student.complaints.rate', $complaint) }}" class="mt-4 border-t border-border pt-4" x-data="{ rating: @js((int) old('satisfaction_rating', 0)) }" data-ticket-rating-form>
         @csrf
         <p class="{{ $panelTitle }}">How satisfied are you with how this was handled?</p>
         <p class="{{ $panelHint }}">Your rating helps the SDS Office improve. 1 is very dissatisfied and 5 is very satisfied.</p>

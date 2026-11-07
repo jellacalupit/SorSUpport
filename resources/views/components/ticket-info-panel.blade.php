@@ -53,13 +53,10 @@
         </div>
     </div>
 
-    <div class="mt-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+    <div class="mt-2">
         <h2 class="min-w-0 truncate font-display text-[15px] font-bold leading-tight sm:text-base" title="{{ $complaint?->subject_title ?? 'Untitled' }}">
             {{ $complaint?->subject_title ?? 'Untitled' }}
         </h2>
-        <span class="shrink-0 whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground" title="Last updated">
-            {{ $lastUpdatedAt?->copy()->setTimezone('Asia/Manila')->format('M d · g:i A') ?? 'Unknown' }}
-        </span>
     </div>
     <div class="mt-1">
         <p class="text-sm leading-relaxed whitespace-pre-line text-foreground">{{ trim($complaint?->description ?? 'No description provided') }}</p>
@@ -109,16 +106,20 @@
                 {{ $ticket->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : 'Not yet classified' }}
             </p>
         </div>
-        @if ($ticket->escalated_at)
-            <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Escalated</p>
-                <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $ticket->escalated_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}</p>
-            </div>
-        @endif
+        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Last Updated At</p>
+            <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $lastUpdatedAt?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</p>
+        </div>
         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
             <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Created At</p>
             <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $submittedAt?->format('M d, Y · g:i A') ?? 'Unknown' }}</p>
         </div>
+        @if ($ticket->escalated_at)
+            <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Escalated At</p>
+                <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $ticket->escalated_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}</p>
+            </div>
+        @endif
         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
             <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Created By</p>
             <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">
@@ -215,7 +216,7 @@
                             $isImageAttachment = in_array(strtolower($attachmentExtension), ['jpg', 'jpeg', 'png', 'heic']);
                             $attachmentSize = $complaint->attachmentFileSize($attachment);
                         @endphp
-                        <div @if ($index >= 2) x-show="showAllAttachments" x-cloak @endif class="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-border bg-white px-3 py-2">
+                        <div @if ($index >= 2) x-show="showAllAttachments" x-cloak @endif class="flex min-w-0 items-center justify-between gap-3 py-1">
                             <button type="button" x-on:click="attachmentPreview = { name: @js($attachmentName), url: @js($attachment['url']), type: @js(strtolower($attachmentExtension)) }" class="flex min-w-0 items-center gap-3 text-left hover:text-primary">
                                 <span class="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-muted text-primary">
                                     @if ($isImageAttachment)
