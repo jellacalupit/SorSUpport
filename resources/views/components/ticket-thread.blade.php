@@ -186,11 +186,9 @@
                                         $attachmentSize = $message->file_attachment_size;
                                         $attachmentSizeLabel = $attachmentSize === null
                                             ? null
-                                            : ($attachmentSize < 1024
-                                                ? $attachmentSize . ' B'
-                                                : ($attachmentSize < 1048576
-                                                    ? number_format($attachmentSize / 1024, 1) . ' KB'
-                                                    : number_format($attachmentSize / 1048576, 2) . ' MB'));
+                                            : ($attachmentSize < 1048576
+                                                ? number_format($attachmentSize / 1024, 1) . ' KB'
+                                                : number_format($attachmentSize / 1048576, 2) . ' MB');
                                     @endphp
                                     <button
                                         type="button"
@@ -382,11 +380,9 @@
                     });
 
                     const escapeHtml = (value = '') => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&#039;');
-                    const formatFileSize = (bytes) => bytes < 1024
-                        ? `${bytes} B`
-                        : bytes < 1048576
-                            ? `${(bytes / 1024).toFixed(1)} KB`
-                            : `${(bytes / 1048576).toFixed(2)} MB`;
+                    const formatFileSize = (bytes) => bytes < 1048576
+                        ? `${(bytes / 1024).toFixed(1)} KB`
+                        : `${(bytes / 1048576).toFixed(2)} MB`;
 
                     const attachmentModal = document.getElementById('thread-attachment-modal-{{ $ticket->id }}');
                     const previewImage = attachmentModal?.querySelector('[data-preview-image]');
