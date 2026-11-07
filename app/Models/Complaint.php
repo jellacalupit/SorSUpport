@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Storage;
 
 class Complaint extends Model
 {
@@ -83,6 +84,30 @@ class Complaint extends Model
             $attachments,
             array_keys($attachments),
         );
+    }
+
+    public function attachmentFileSize(array $attachment): ?int
+    {
+        return isset($attachment['size'])
+            ? (int) $attachment['size']
+            : $this->attachmentSize($attachment['path'] ?? null);
+    }
+
+    protected function attachmentSize(?string $path): ?int
+    {
+        if (! $path) {
+            return null;
+        }
+
+        foreach (['local', 'public'] as $disk) {
+            $storage = Storage::disk($disk);
+
+            if ($storage->exists($path)) {
+                return $storage->size($path);
+            }
+        }
+
+        return null;
     }
 
     /**

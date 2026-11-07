@@ -13,78 +13,35 @@
     $complaint = $ticket->complaint;
     $isInvalid = $ticket->classification === 'invalid';
     $canEditDetails = $editable && $ticket->isAwaitingReview();
+    $showResolutionDetails = in_array($ticket->status, ['resolved', 'closed'], true);
 
     $submittedAt = $complaint?->created_at?->copy()->setTimezone('Asia/Manila');
-    $lastUpdate = 'Unknown';
+    $assignedUser = $ticket->currentHandler ?? $ticket->assignee;
+    $assignedRecipient = $assignedUser?->recipient;
+    $suggestedRecipientName = $complaint?->suggestedRecipient?->user?->table_name;
+    $createdBy = $complaint?->filerNameFor(\Illuminate\Support\Facades\Auth::user()) ?? 'Unknown';
+    $attachments = $complaint?->attachment_files ?? [];
     $holder = $ticket->isAwaitingReview()
         ? \App\Models\User::query()->where('role', \App\Models\User::ROLE_SDS_ADMIN)->orderBy('id')->first()
         : ($isInvalid ? null : ($ticket->currentHandler
             ?? $ticket->assignee
             ?? $complaint?->category?->recipient?->user));
-    $holderRecipient = $holder?->recipient;
     $holderDisplayName = $holder?->table_name ?? '—';
-    $student = $complaint?->student;
-    $studentUser = $student?->user;
-    $studentDisplayName = $complaint?->is_anonymous ? 'Anonymous' : ($studentUser?->table_name ?? 'Anonymous');
-    $studentCourseYearBlock = trim(($student->program ?? 'Program not specified') . ' ' . ($student->year_level ?? 'N/A') . (($student->block ?? '') !== '' ? '-' . $student->block : ''));
     $statusDisplay = $ticket->status_label;
-    if ($ticket->updated_at) {
-        $updatedAt = $ticket->updated_at->copy()->setTimezone('Asia/Manila');
-        $nowInManila = now()->setTimezone('Asia/Manila');
-        $ageInMinutes = $updatedAt->diffInMinutes($nowInManila);
-        $relativeTime = $updatedAt->diffForHumans();
-        $lastUpdate = $ageInMinutes < 60
-            ? str_replace(' from now', ' ago', $relativeTime)
-            : ($ageInMinutes < 1440
-                ? $updatedAt->format('g:i A')
-                : $updatedAt->format('M d, g:i A'));
-    }
 @endphp
 
-<div class="surface p-4 sm:p-6" @if ($canEditDetails) x-data="{ editingDetails: false }" @endif>
-    <div class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-        <div class="min-w-0">
-            <h2 class="font-display text-lg font-bold leading-tight wrap-break-word">
-                {{ $complaint?->subject_title ?? 'Untitled' }}
-            </h2>
-            <p class="font-mono text-[11px] font-semibold leading-tight text-primary">
+<div class="surface p-4 sm:p-6" x-data="{ showAllAttachments: false, editingDetails: false }">
+    <div class="flex items-center justify-between gap-3">
+        <p class="inline-flex min-w-0 items-center gap-1.5 font-mono text-xs font-semibold leading-tight text-primary">
+            <x-icons.ticket class="h-4 w-4 shrink-0 text-primary" />
+            <span class="truncate">
                 {{ $complaint?->reference_number ?? $ticket->id }}
-            </p>
-            @if ($showFiledBy)
-                <p class="mt-1 text-xs leading-tight text-muted-foreground">
-                    Filed by
-                    @if ($studentUser && ! $complaint?->is_anonymous)
-                        <span class="relative inline-block" x-data="{ studentProfileOpen: false }" x-on:click.outside="studentProfileOpen = false">
-                            <button type="button" class="text-left font-medium text-primary hover:underline" x-on:click="studentProfileOpen = !studentProfileOpen" aria-label="View {{ $studentDisplayName }} profile">
-                                {{ $studentDisplayName }}
-                            </button>
-                            <span x-show="studentProfileOpen" x-cloak data-keep-in-view class="brand-gradient absolute top-6 left-0 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-primary-foreground shadow-lg">
-                                <span class="flex items-center gap-3">
-                                    <span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">
-                                        @if ($studentUser->avatar_path)
-                                            <img src="{{ asset('storage/' . $studentUser->avatar_path) }}" alt="{{ $studentDisplayName }}" class="h-full w-full object-cover">
-                                        @else
-                                            {{ $studentUser->name_initials }}
-                                        @endif
-                                    </span>
-                                    <span class="min-w-0">
-                                        <span class="block wrap-break-word text-sm font-bold">{{ $studentDisplayName }}</span>
-                                        <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $student->student_id ?? 'N/A' }} · {{ $student->college ?? 'College not specified' }} · {{ $studentCourseYearBlock }}</span>
-                                    </span>
-                                </span>
-                                <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">Student</span>
-                            </span>
-                        </span>
-                    @else
-                        Anonymous
-                    @endif
-                </p>
-            @endif
-        </div>
-        <div class="flex flex-col items-end gap-2">
+            </span>
+        </p>
+        <div class="flex shrink-0 items-center gap-2">
             <x-status-badge :status="$statusDisplay" :classification="$ticket->classification" :show-icon="false" class="px-3 py-1 text-xs" />
             @if ($canEditDetails)
-                <button type="button" x-show="!editingDetails" x-on:click="editingDetails = true" class="inline-flex shrink-0 items-center gap-1 rounded-full border border-primary px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary-soft">
+                <button type="button" x-show="!editingDetails" x-on:click="editingDetails = true" aria-label="Edit ticket details" class="inline-flex shrink-0 items-center gap-1 rounded-full border border-primary px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary-soft">
                     <x-icons.pencil class="h-3 w-3" />
                     Edit
                 </button>
@@ -92,9 +49,93 @@
         </div>
     </div>
 
+    <h2 class="mt-2 truncate font-display text-[15px] font-bold leading-tight sm:text-base" title="{{ $complaint?->subject_title ?? 'Untitled' }}">
+        {{ $complaint?->subject_title ?? 'Untitled' }}
+    </h2>
+    <div class="mt-2">
+        <p class="text-sm leading-relaxed whitespace-pre-line text-foreground">{{ trim($complaint?->description ?? 'No description provided') }}</p>
+    </div>
+
+    <div class="mt-4 grid gap-y-2">
+        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Category</p>
+            <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $complaint?->category?->name ?? 'Uncategorized' }}</p>
+        </div>
+        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">{{ $assignedUser ? 'Assigned To' : 'Suggested Recipient' }}</p>
+            <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">
+                @if ($assignedUser && $assignedRecipient)
+                    <span class="relative" x-data="{ holderProfileOpen: false }" x-on:click.outside="holderProfileOpen = false">
+                        <button type="button" class="text-left text-primary hover:underline" x-on:click="holderProfileOpen = !holderProfileOpen" aria-label="View {{ $assignedUser->table_name }} profile">
+                            {{ $assignedUser->table_name }}
+                        </button>
+                        <span x-show="holderProfileOpen" x-cloak data-keep-in-view class="brand-gradient absolute top-7 left-0 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-primary-foreground shadow-lg">
+                            <span class="flex items-center gap-3">
+                                <span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">
+                                    @if ($assignedUser->avatar_path)
+                                        <img src="{{ asset('storage/' . $assignedUser->avatar_path) }}" alt="{{ $assignedUser->table_name }}" class="h-full w-full object-cover">
+                                    @else
+                                        {{ $assignedUser->name_initials }}
+                                    @endif
+                                </span>
+                                <span class="min-w-0">
+                                    <span class="block wrap-break-word text-sm font-bold">{{ $assignedUser->table_name }}</span>
+                                    <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $assignedRecipient->staff_id }} · {{ $assignedRecipient->unit }} · {{ $assignedRecipient->designation }}</span>
+                                </span>
+                            </span>
+                            <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">{{ $assignedUser->isSdsAdmin() ? 'Admin' : 'Recipient' }}</span>
+                        </span>
+                    </span>
+                @elseif ($assignedUser)
+                    {{ $assignedUser->table_name }}
+                @else
+                    {{ $suggestedRecipientName ?? 'None' }}
+                @endif
+            </p>
+        </div>
+        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Classification</p>
+            <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">
+                {{ $ticket->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : 'Not yet classified' }}
+            </p>
+        </div>
+        @if ($ticket->escalated_at)
+            <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Escalated</p>
+                <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $ticket->escalated_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}</p>
+            </div>
+        @endif
+        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Last Updated</p>
+            <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">
+                {{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}
+            </p>
+        </div>
+        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Created At</p>
+            <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $submittedAt?->format('M d, Y · g:i A') ?? 'Unknown' }}</p>
+        </div>
+        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Created By</p>
+            <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $createdBy }}</p>
+        </div>
+        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">{{ $ticket->status === 'closed' ? 'Days To Close' : 'Days Open' }}</p>
+            <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word" data-ticket-days-open>{{ $ticket->daysOpen() }} {{ \Illuminate\Support\Str::plural('day', $ticket->daysOpen()) }}</p>
+        </div>
+        @if ($ticket->daysSinceLastAction() !== null)
+            <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Last Action</p>
+                <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word {{ $ticket->daysSinceLastAction() >= 3 ? 'text-red-700' : '' }}" data-ticket-last-action>
+                    {{ $ticket->daysSinceLastAction() === 0 ? 'Today' : $ticket->daysSinceLastAction() . ' ' . \Illuminate\Support\Str::plural('day', $ticket->daysSinceLastAction()) . ' ago' }}
+                </p>
+            </div>
+        @endif
+    </div>
+
     @unless ($studentView)
         @if ($complaint?->isSensitive())
-            <div class="mt-3 rounded-lg border border-primary/30 bg-primary-soft px-3 py-2 text-xs text-primary" data-ticket-notice="sensitive">
+            <div class="mt-4 rounded-lg border border-primary/30 bg-primary-soft px-3 py-2 text-xs text-primary" data-ticket-notice="sensitive">
                 <p class="font-semibold">Sensitive ticket</p>
                 <p class="mt-0.5">Only the SDS Office and the assigned handler can open this ticket. Do not share its details with anyone else.</p>
             </div>
@@ -112,141 +153,6 @@
             </div>
         @endif
     @endunless
-    <div class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
-        <!-- Category -->
-        <div class="min-w-0">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Category</p>
-            <p class="text-sm font-medium leading-tight wrap-break-word">{{ $complaint?->category?->name ?? 'Uncategorized' }}</p>
-        </div>
-
-        @if ($ticket->isAwaitingReview())
-            <!-- Suggested Recipient -->
-            <div class="min-w-0">
-                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Suggested Recipient</p>
-                <p class="text-sm font-medium leading-tight wrap-break-word">{{ $complaint?->suggestedRecipient?->user?->table_name ?? 'None' }}</p>
-            </div>
-        @else
-            <!-- Current Holder -->
-            <div class="min-w-0">
-                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Current Holder</p>
-                <p class="text-sm font-medium leading-tight wrap-break-word">
-                    @if ($holder && $holderRecipient)
-                        <span class="relative" x-data="{ holderProfileOpen: false }" x-on:click.outside="holderProfileOpen = false">
-                            <button type="button" class="text-left text-primary hover:underline" x-on:click="holderProfileOpen = !holderProfileOpen" aria-label="View {{ $holderDisplayName }} profile">
-                                {{ $holderDisplayName }}
-                            </button>
-                            <span x-show="holderProfileOpen" x-cloak data-keep-in-view class="brand-gradient absolute top-7 left-0 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-primary-foreground shadow-lg">
-                                <span class="flex items-center gap-3">
-                                    <span class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-sm font-bold ring-2 ring-primary-foreground/30">
-                                        @if ($holder->avatar_path)
-                                            <img src="{{ asset('storage/' . $holder->avatar_path) }}" alt="{{ $holderDisplayName }}" class="h-full w-full object-cover">
-                                        @else
-                                            {{ $holder->name_initials }}
-                                        @endif
-                                    </span>
-                                    <span class="min-w-0">
-                                        <span class="block wrap-break-word text-sm font-bold">{{ $holderDisplayName }}</span>
-                                        <span class="mt-1 block wrap-break-word text-[11px] leading-relaxed opacity-95">ID {{ $holderRecipient->staff_id }} · {{ $holderRecipient->unit }} · {{ $holderRecipient->designation }}</span>
-                                    </span>
-                                </span>
-                                <span class="mt-3 inline-flex rounded-full border border-primary-foreground/40 bg-primary-foreground/15 px-3 py-1 text-[10px] font-semibold">{{ $holder?->role === \App\Models\User::ROLE_SDS_ADMIN ? 'Admin' : 'Recipient' }}</span>
-                            </span>
-                        </span>
-                    @else
-                        {{ $holderDisplayName }}
-                    @endif
-                </p>
-            </div>
-
-        @endif
-
-        @if (filled($complaint?->personnel_involved))
-            <div class="min-w-0">
-                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Person Involved</p>
-                <p class="text-sm font-medium leading-tight wrap-break-word">{{ $complaint->personnel_involved }}</p>
-            </div>
-        @endif
-        <!-- Escalation date -->
-        @if ($ticket->escalated_at)
-            <div class="min-w-0">
-                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Escalated On</p>
-                <p class="text-sm font-medium leading-tight wrap-break-word">
-                    {{ $ticket->escalated_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}
-                </p>
-            </div>
-        @endif
-
-        @if ($ticket->referred_to)
-            <div class="min-w-0">
-                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Referred To</p>
-                <p class="text-sm font-medium leading-tight wrap-break-word">
-                    {{ $ticket->referred_to }}@if ($ticket->referred_at) · {{ $ticket->referred_at->copy()->setTimezone('Asia/Manila')->format('M d, Y') }}@endif
-                </p>
-            </div>
-        @endif
-
-        @if ($ticket->resolution_label && in_array($ticket->status, ['resolved', 'closed'], true))
-            <div class="min-w-0">
-                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Resolution</p>
-                <p class="text-sm font-medium leading-tight wrap-break-word">{{ $ticket->resolution_label }}</p>
-            </div>
-        @endif
-
-        @if ($showClosedAt && $ticket->status === 'closed' && $ticket->closed_at)
-            <div class="min-w-0">
-                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Closed at</p>
-                <p class="text-sm font-medium leading-tight wrap-break-word">
-                    {{ $ticket->closed_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}
-                </p>
-            </div>
-        @endif
-
-        <!-- Classification -->
-        <div class="min-w-0">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Classification</p>
-            <p class="text-sm font-medium leading-tight wrap-break-word">
-                {{ $ticket->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : 'Not yet classified' }}
-            </p>
-        </div>
-
-        <!-- Date Submitted -->
-        <div class="min-w-0">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Date Submitted</p>
-            <p class="text-sm font-medium leading-tight wrap-break-word">
-                {{ $submittedAt?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}
-            </p>
-        </div>
-
-        <!-- Days open and time since the last action -->
-        <div class="min-w-0">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">{{ $ticket->status === 'closed' ? 'Days To Close' : 'Days Open' }}</p>
-            <p class="text-sm font-medium leading-tight wrap-break-word" data-ticket-days-open>{{ $ticket->daysOpen() }} {{ \Illuminate\Support\Str::plural('day', $ticket->daysOpen()) }}</p>
-        </div>
-        @if ($ticket->daysSinceLastAction() !== null)
-            <div class="min-w-0">
-                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Action</p>
-                <p class="text-sm font-medium leading-tight wrap-break-word {{ $ticket->daysSinceLastAction() >= 3 ? 'text-red-700' : '' }}" data-ticket-last-action>
-                    {{ $ticket->daysSinceLastAction() === 0 ? 'Today' : $ticket->daysSinceLastAction() . ' ' . \Illuminate\Support\Str::plural('day', $ticket->daysSinceLastAction()) . ' ago' }}
-                </p>
-            </div>
-        @endif
-        @if ($ticket->satisfaction_rating)
-            <div class="min-w-0">
-                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Student Rating</p>
-                <p class="text-sm font-medium leading-tight wrap-break-word" data-ticket-rating>{{ $ticket->satisfaction_rating }} out of 5</p>
-                @if ($ticket->satisfaction_comment)
-                    <p class="mt-0.5 text-xs leading-snug text-muted-foreground">“{{ $ticket->satisfaction_comment }}”</p>
-                @endif
-            </div>
-        @endif
-        <!-- Last Updated -->
-        <div class="min-w-0">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Updated</p>
-            <p class="text-sm font-medium leading-tight wrap-break-word">
-                {{ $lastUpdate }}
-            </p>
-        </div>
-    </div>
 
     @if ($canEditDetails)
         <form x-show="editingDetails" x-cloak method="POST" action="{{ route('admin.tickets.update-details', $ticket) }}" class="mt-3 grid gap-2 rounded-lg border border-border bg-muted/50 p-3">
@@ -269,53 +175,108 @@
     @endif
 </div>
 
-<div class="surface p-4 sm:p-6">
-    <!-- Description -->
-    <div>
-        <p class="text-xs font-semibold tracking-wide text-foreground uppercase">Description</p>
-        <p class="text-sm leading-relaxed whitespace-pre-line text-foreground">{{ trim($complaint?->description ?? 'No description provided') }}</p>
-    </div>
-
-    <!-- Attachments -->
-    @if ($complaint?->attachment_files)
-        <div class="mt-3">
-            <p class="flex items-center gap-2 text-xs font-semibold tracking-wide text-foreground uppercase">
-                <x-icons.paperclip class="h-4 w-4 shrink-0 text-muted-foreground" />
-                Attachment
-            </p>
-            <div class="mt-2 grid gap-2">
-                @foreach ($complaint->attachment_files as $attachment)
-                    @php
-                        $attachmentExtension = strtolower(pathinfo($attachment['name'] ?? $attachment['path'] ?? '', PATHINFO_EXTENSION));
-                        $isImageAttachment = in_array($attachmentExtension, ['jpg', 'jpeg', 'png', 'heic']);
-                    @endphp
-                    <a href="{{ $attachment['url'] }}" target="_blank" class="group flex w-fit max-w-full items-center gap-2 rounded-md border border-border bg-gray-200 p-1.5 text-black transition-colors hover:border-primary hover:bg-primary-soft">
-                        <span class="flex min-w-0 items-center gap-2">
-                            <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-gray-400 text-primary">
-                                @if ($isImageAttachment)
-                                    <x-icons.image class="h-3.5 w-3.5 fill-muted text-gray-700 transition-colors" />
-                                @else
-                                    <x-icons.file-text class="h-3.5 w-3.5 fill-muted text-gray-700 transition-colors" />
-                                @endif
-                            </span>
-                            <span class="min-w-0 truncate text-sm font-semibold">{{ $attachment['name'] }}</span>
-                        </span>
-                    </a>
-                @endforeach
+@if (count($attachments) || $showResolutionDetails || $ticket->referred_to)
+    <div class="surface mt-3 p-4 sm:p-6">
+        @if (count($attachments))
+            <div>
+                <div class="flex items-center justify-between gap-3">
+                    <p class="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <x-icons.paperclip class="h-4 w-4 shrink-0 text-muted-foreground" />
+                        Attachments ({{ count($attachments) }})
+                    </p>
+                    @if (count($attachments) > 2)
+                        <button type="button" x-on:click="showAllAttachments = !showAllAttachments" x-text="showAllAttachments ? 'Hide' : 'Show all'" class="shrink-0 text-xs font-medium text-muted-foreground underline-offset-2 hover:text-primary hover:underline"></button>
+                    @endif
+                </div>
+                <div class="mt-2 grid gap-2">
+                    @foreach ($attachments as $index => $attachment)
+                        @php
+                            $attachmentName = $attachment['name'] ?? basename($attachment['path'] ?? '');
+                            $attachmentExtension = strtoupper(pathinfo($attachmentName, PATHINFO_EXTENSION));
+                            $isImageAttachment = in_array(strtolower($attachmentExtension), ['jpg', 'jpeg', 'png', 'heic']);
+                            $attachmentSize = $complaint->attachmentFileSize($attachment);
+                        @endphp
+                        <div @if ($index >= 2) x-show="showAllAttachments" x-cloak @endif class="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-border bg-white px-3 py-2">
+                            <div class="flex min-w-0 items-center gap-3">
+                                <span class="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-muted text-primary">
+                                    @if ($isImageAttachment)
+                                        <x-icons.image class="h-5 w-5" />
+                                    @else
+                                        <x-icons.file-text class="h-5 w-5" />
+                                    @endif
+                                </span>
+                                <span class="min-w-0">
+                                    <span class="block truncate text-sm font-medium text-foreground">{{ $attachmentName }}</span>
+                                    <span class="block text-xs text-muted-foreground">
+                                        {{ $attachmentSize !== null ? number_format($attachmentSize / 1048576, 2) . ' MB' : 'Size unavailable' }}
+                                    </span>
+                                </span>
+                            </div>
+                            <a href="{{ $attachment['url'] }}" download class="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary hover:underline">
+                                <x-icons.download class="h-3.5 w-3.5" />
+                                Download
+                            </a>
+                        </div>
+                    @endforeach
+                </div>
             </div>
-        </div>
-    @endif
+        @endif
 
-    <!-- Closed Reason (if applicable) -->
-    @if ($ticket->status === 'closed' && ($ticket->closure_label || $ticket->closure_reason))
-        <div class="mt-4 rounded-lg border bg-secondary p-3 text-sm">
-            <p class="font-semibold">Closure Reason</p>
-            @if ($ticket->closure_label)
-                <p class="mt-1 font-medium text-foreground">{{ $ticket->closure_label }}</p>
-            @endif
-            @if ($ticket->closure_reason)
-                <p class="mt-1 text-muted-foreground">{{ $ticket->closure_reason }}</p>
-            @endif
-        </div>
-    @endif
-</div>
+        @if ($ticket->referred_to)
+            <div class="{{ count($attachments) ? 'mt-4 border-t border-border pt-3' : '' }}">
+                <p class="text-sm font-semibold text-foreground">Referral</p>
+                <p class="mt-1 text-sm text-muted-foreground">
+                    {{ $ticket->referred_to }}@if ($ticket->referred_at) · {{ $ticket->referred_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}@endif
+                </p>
+            </div>
+        @endif
+
+        @if ($showResolutionDetails)
+            <div class="{{ count($attachments) || $ticket->referred_to ? 'mt-4 border-t border-border pt-3' : '' }}">
+                <p class="text-sm font-semibold text-foreground">Resolution and Feedback</p>
+                <div class="mt-2 grid gap-y-2">
+                    @if ($ticket->resolution_label)
+                        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+                            <p class="text-xs font-semibold text-muted-foreground">Resolution</p>
+                            <p class="text-sm font-medium text-foreground">{{ $ticket->resolution_label }}</p>
+                        </div>
+                    @endif
+                    @if ($ticket->resolved_at)
+                        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+                            <p class="text-xs font-semibold text-muted-foreground">Resolved At</p>
+                            <p class="text-sm font-medium text-foreground">{{ $ticket->resolved_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}</p>
+                        </div>
+                    @endif
+                    @if ($showClosedAt && $ticket->status === 'closed' && $ticket->closed_at)
+                        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+                            <p class="text-xs font-semibold text-muted-foreground">Closed At</p>
+                            <p class="text-sm font-medium text-foreground">{{ $ticket->closed_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}</p>
+                        </div>
+                    @endif
+                    @if ($ticket->closure_label || $ticket->closure_reason)
+                        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+                            <p class="text-xs font-semibold text-muted-foreground">Closure Reason</p>
+                            <p class="text-sm font-medium text-foreground">
+                                @if ($ticket->closure_label)
+                                    {{ $ticket->closure_label }}
+                                @endif
+                                @if ($ticket->closure_reason)
+                                    {{ $ticket->closure_label ? ' · ' : '' }}{{ $ticket->closure_reason }}
+                                @endif
+                            </p>
+                        </div>
+                    @endif
+                    @if ($ticket->satisfaction_rating !== null)
+                        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+                            <p class="text-xs font-semibold text-muted-foreground">Feedback</p>
+                            <p class="text-sm font-medium text-foreground" data-ticket-rating>{{ $ticket->satisfaction_rating }} out of 5</p>
+                        </div>
+                        @if ($ticket->satisfaction_comment)
+                            <p class="text-sm leading-relaxed text-muted-foreground">“{{ $ticket->satisfaction_comment }}”</p>
+                        @endif
+                    @endif
+                </div>
+            </div>
+        @endif
+    </div>
+@endif

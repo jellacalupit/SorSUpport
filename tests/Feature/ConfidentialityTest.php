@@ -392,7 +392,7 @@ class ConfidentialityTest extends TestCase
         $this->actingAs($this->admin)->get(route('admin.complaints.show', $ticket->complaint))
             ->assertOk()
             ->assertSee('Named in this complaint')
-            ->assertSee('Mr. Rey Registrar');
+            ->assertDontSee('Person Involved');
 
         $ticket = $this->assign($ticket, $this->handler);
 

@@ -50,7 +50,7 @@ class AttachmentController extends Controller
         // Files uploaded before attachments became private are still on the public disk.
         foreach (['local', 'public'] as $disk) {
             if (Storage::disk($disk)->exists($path)) {
-                return Storage::disk($disk)->response($path, $name, ['Cache-Control' => 'private, no-store']);
+                return Storage::disk($disk)->download($path, $name, ['Cache-Control' => 'private, no-store']);
             }
         }
 

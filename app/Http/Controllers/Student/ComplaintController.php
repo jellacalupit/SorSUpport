@@ -207,6 +207,7 @@ class ComplaintController extends Controller
                 $attachmentPaths[] = [
                     'path' => $file->store('complaints', 'local'),
                     'name' => $file->getClientOriginalName(),
+                    'size' => $file->getSize(),
                 ];
             }
         }
