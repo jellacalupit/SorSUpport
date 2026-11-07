@@ -374,11 +374,11 @@
         position: fixed;
         top: var(--thread-card-top, 0px);
         left: var(--thread-card-left, 0px);
-        bottom: var(--thread-keyboard-gap, 0px);
+        bottom: max(0px, calc(var(--thread-keyboard-gap, 0px) - 2rem));
         width: var(--thread-card-width, 100vw);
         height: auto;
         min-height: 0;
-        padding-bottom: 0;
+        padding-bottom: 0.75rem;
         z-index: 40;
     }
 }
