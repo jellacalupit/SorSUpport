@@ -33,7 +33,7 @@
     $statusDisplay = $ticket->status_label;
 @endphp
 
-<div class="surface p-4 sm:p-6" x-data="{ showAllAttachments: false, editingDetails: false }">
+<div class="surface p-4 sm:p-6" x-data="{ showAllAttachments: false, editingDetails: false, attachmentPreview: null }">
     <div class="flex items-center justify-between gap-3">
         <p class="inline-flex min-w-0 items-center gap-1.5 font-mono text-xs font-semibold leading-tight text-primary">
             <x-icons.ticket class="h-4 w-4 shrink-0 text-primary" />
@@ -216,7 +216,7 @@
                             $attachmentSize = $complaint->attachmentFileSize($attachment);
                         @endphp
                         <div @if ($index >= 2) x-show="showAllAttachments" x-cloak @endif class="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-border bg-white px-3 py-2">
-                            <div class="flex min-w-0 items-center gap-3">
+                            <button type="button" x-on:click="attachmentPreview = { name: @js($attachmentName), url: @js($attachment['url']), type: @js(strtolower($attachmentExtension)) }" class="flex min-w-0 items-center gap-3 text-left hover:text-primary">
                                 <span class="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-muted text-primary">
                                     @if ($isImageAttachment)
                                         <x-icons.image class="h-5 w-5" />
@@ -230,7 +230,7 @@
                                         {{ $attachmentSize !== null ? number_format($attachmentSize / 1048576, 2) . ' MB' : 'Size unavailable' }}
                                     </span>
                                 </span>
-                            </div>
+                            </button>
                             <a href="{{ $attachment['url'] }}" download class="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary hover:underline">
                                 <x-icons.download class="h-3.5 w-3.5" />
                                 Download
@@ -240,5 +240,35 @@
                 </div>
         </div>
     @endif
+
+    <div x-show="attachmentPreview" x-cloak x-on:click.self="attachmentPreview = null" x-on:keydown.escape.window="attachmentPreview = null" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="Attachment preview">
+        <div class="flex max-h-full w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+            <div class="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+                <p class="min-w-0 truncate text-sm font-semibold text-foreground" x-text="attachmentPreview?.name"></p>
+                <button type="button" x-on:click="attachmentPreview = null" aria-label="Close attachment preview" class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground">
+                    <x-icons.x class="h-5 w-5" />
+                </button>
+            </div>
+            <div class="min-h-0 flex-1 overflow-auto bg-muted/40 p-3 sm:p-5">
+                <template x-if="['jpg', 'jpeg', 'png'].includes(attachmentPreview?.type)">
+                    <img :src="attachmentPreview.url + '?preview=1'" :alt="attachmentPreview.name" class="mx-auto max-h-[75vh] max-w-full rounded-md object-contain">
+                </template>
+                <template x-if="attachmentPreview?.type === 'pdf'">
+                    <iframe :src="attachmentPreview.url + '?preview=1'" :title="attachmentPreview.name" class="h-[75vh] w-full rounded-md bg-white"></iframe>
+                </template>
+                <template x-if="!['jpg', 'jpeg', 'png', 'pdf'].includes(attachmentPreview?.type)">
+                    <div class="mx-auto flex min-h-48 max-w-lg flex-col items-center justify-center gap-3 text-center">
+                        <x-icons.file-text class="h-10 w-10 text-primary" />
+                        <p class="text-sm font-semibold text-foreground">Preview isn’t available in this browser</p>
+                        <p class="text-sm text-muted-foreground">Download the file to open it with Word or another app available on your device. Ticket attachments stay private and aren’t sent to an external document service.</p>
+                        <a :href="attachmentPreview.url" :download="attachmentPreview.name" class="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90">
+                            <x-icons.download class="h-4 w-4" />
+                            Download file
+                        </a>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
     </div>
 </div>

@@ -316,16 +316,22 @@ class ConfidentialityTest extends TestCase
     public function test_attachments_are_stored_privately_and_downloaded_only_by_people_on_the_ticket(): void
     {
         $ticket = $this->assign($this->submit([
-            'file_attachment' => [UploadedFile::fake()->create('evidence.pdf', 20, 'application/pdf')],
+            'file_attachment' => [
+                UploadedFile::fake()->create('evidence.pdf', 20, 'application/pdf'),
+                UploadedFile::fake()->create('notes.docx', 20, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
+            ],
         ]));
         $complaint = $ticket->complaint;
         $path = $complaint->attachment_files[0]['path'];
+        $documentPath = $complaint->attachment_files[1]['path'];
 
         Storage::disk('local')->assertExists($path);
+        Storage::disk('local')->assertExists($documentPath);
         Storage::disk('public')->assertMissing($path);
 
         $url = route('attachments.complaint', [$complaint, 0]);
         $this->assertSame($url, $complaint->attachment_files[0]['url']);
+        $documentUrl = route('attachments.complaint', [$complaint, 1]);
 
         auth()->logout();
         $this->get($url)->assertRedirect(route('login'));
@@ -333,6 +339,12 @@ class ConfidentialityTest extends TestCase
         foreach ([$this->student, $this->admin, $this->handler] as $allowed) {
             $this->actingAs($allowed)->get($url)->assertOk();
         }
+        $this->actingAs($this->student)->get($url . '?preview=1')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf')
+            ->assertHeader('content-disposition', 'inline; filename=evidence.pdf');
+        $this->actingAs($this->student)->get($documentUrl . '?preview=1')
+            ->assertDownload('notes.docx');
 
         foreach ([$this->otherStudent, $this->otherRecipient] as $denied) {
             $this->actingAs($denied)->get($url)->assertForbidden();
@@ -344,6 +356,7 @@ class ConfidentialityTest extends TestCase
         $this->actingAs($this->handler)->get(route('recipient.complaints.show', $complaint))
             ->assertOk()
             ->assertSee($url, false)
+            ->assertSee('attachmentPreview')
             ->assertDontSee('storage/complaints', false);
     }
 
