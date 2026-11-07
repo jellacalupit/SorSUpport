@@ -62,7 +62,7 @@
             <h2 class="mb-0.5 hidden font-display text-base font-bold lg:block">Ticket Details</h2>
             <div class="grid gap-3">
                 <x-ticket-info-panel :ticket="$ticket" :show-filed-by="true" :show-closed-at="true" :editable="true" :categories="$categories" :recipients="$recipients" />
-                @unless ($hasThread || $isPendingReview)
+                @unless ($isPendingReview)
                     <x-ticket-resolution-panel :ticket="$ticket" :show-closed-at="true" />
                 @endunless
 
@@ -77,9 +77,8 @@
 
         @if ($hasThread)
             <!-- Conversation -->
-            <div class="min-w-0 lg:block!" x-show="tab === 'thread' || tab === 'details'">
-                <x-ticket-resolution-panel :ticket="$ticket" :show-closed-at="true" />
-                <div class="ticket-thread-pane admin-page-thread mt-3 lg:block!" x-show="tab === 'thread'" x-cloak>
+            <div class="min-w-0 lg:block!" x-show="tab === 'thread'" x-cloak>
+                <div class="ticket-thread-pane admin-page-thread">
                     <x-ticket-thread :ticket="$ticket" viewerRole="admin" />
                 </div>
                 @include('admin.tickets.partials.audit-activity', ['class' => 'mt-3 hidden lg:block'])

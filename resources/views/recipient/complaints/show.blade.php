@@ -43,19 +43,14 @@
                         </div>
                     @endif
                     <x-ticket-info-panel :ticket="$complaint->ticket" :show-filed-by="true" />
-                    @unless ($hasThread)
-                        <x-ticket-resolution-panel :ticket="$complaint->ticket" />
-                    @endunless
+                    <x-ticket-resolution-panel :ticket="$complaint->ticket" />
                     <x-ticket-actions :ticket="$complaint->ticket" role="recipient" />
                 </div>
             </div>
 
             @if ($hasThread)
-                <div class="min-w-0 lg:block!" x-show="tab === 'thread' || tab === 'details'">
-                    <x-ticket-resolution-panel :ticket="$complaint->ticket" />
-                    <div class="ticket-thread-pane mt-3 min-w-0 lg:block!" x-show="tab === 'thread'" x-cloak>
-                        <x-ticket-thread :ticket="$complaint->ticket" viewerRole="recipient" />
-                    </div>
+                <div class="ticket-thread-pane min-w-0 lg:block!" x-show="tab === 'thread'" x-cloak>
+                    <x-ticket-thread :ticket="$complaint->ticket" viewerRole="recipient" />
                 </div>
             @endif
         </div>
