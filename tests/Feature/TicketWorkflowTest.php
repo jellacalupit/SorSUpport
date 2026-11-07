@@ -754,6 +754,10 @@ class TicketWorkflowTest extends TestCase
             ->assertSee('Refer to Committee')
             ->assertSee('Close Ticket');
 
+        $this->actingAs($this->admin)->get(route('admin.complaints.index'))->assertOk()
+            ->assertSee('Mark as Resolved')
+            ->assertSee('Refer to Committee');
+
         $this->actingAs($this->admin)->get(route('admin.complaints.show', $mine->complaint))->assertOk()
             ->assertSee('Mark as Resolved')
             ->assertSee('Refer to Committee');

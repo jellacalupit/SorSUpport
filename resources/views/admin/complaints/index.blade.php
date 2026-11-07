@@ -212,7 +212,10 @@
                                 <x-status-badge :status="$ticket?->status_label ?? 'Submitted'" :classification="$ticket?->classification" :show-icon="false" class="px-2 py-0.5 text-[11px] leading-tight w-fit" />
                             </div>
                         </div>
-                        <h3 class="mt-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $complaint->subject_title ?? 'Untitled' }}</h3>
+                        <div class="mt-0 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                            <h3 class="min-w-0 wrap-break-word font-display text-lg font-bold leading-tight text-foreground">{{ $complaint->subject_title ?? 'Untitled' }}</h3>
+                            <span class="shrink-0 whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground">{{ $ticket?->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d · g:i A') ?? $complaint->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d · g:i A') ?? 'Unknown' }}</span>
+                        </div>
                         <div class="mt-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                             @if (! $complaint->is_anonymous)
                                 <span class="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
@@ -267,9 +270,8 @@
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Classification</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket?->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : '—' }}</p></div>
                             <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Escalated On</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket?->escalated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? '—' }}</p></div>
                             @if ($ticket)
-                                <x-ticket-escalate-form :ticket="$ticket" class="mt-1" />
+                                <x-ticket-actions :ticket="$ticket" role="admin" class="mt-1" />
                             @endif
-                            <div><p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground uppercase">Last Updated</p><p class="text-sm font-medium leading-tight text-foreground">{{ $ticket?->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? $complaint->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}</p></div>
                         </div>
                     </div>
 

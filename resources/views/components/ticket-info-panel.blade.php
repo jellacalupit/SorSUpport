@@ -31,6 +31,7 @@
             ?? $complaint?->category?->recipient?->user));
     $holderDisplayName = $holder?->table_name ?? '—';
     $statusDisplay = $ticket->status_label;
+    $lastUpdatedAt = $ticket->updated_at ?? $complaint?->updated_at;
 @endphp
 
 <div class="surface p-4 sm:p-6" x-data="{ showAllAttachments: false, editingDetails: false, attachmentPreview: null }">
@@ -52,9 +53,14 @@
         </div>
     </div>
 
-    <h2 class="mt-2 truncate font-display text-[15px] font-bold leading-tight sm:text-base" title="{{ $complaint?->subject_title ?? 'Untitled' }}">
-        {{ $complaint?->subject_title ?? 'Untitled' }}
-    </h2>
+    <div class="mt-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+        <h2 class="min-w-0 truncate font-display text-[15px] font-bold leading-tight sm:text-base" title="{{ $complaint?->subject_title ?? 'Untitled' }}">
+            {{ $complaint?->subject_title ?? 'Untitled' }}
+        </h2>
+        <span class="shrink-0 whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground" title="Last updated">
+            {{ $lastUpdatedAt?->copy()->setTimezone('Asia/Manila')->format('M d · g:i A') ?? 'Unknown' }}
+        </span>
+    </div>
     <div class="mt-1">
         <p class="text-sm leading-relaxed whitespace-pre-line text-foreground">{{ trim($complaint?->description ?? 'No description provided') }}</p>
     </div>
@@ -109,12 +115,6 @@
                 <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $ticket->escalated_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}</p>
             </div>
         @endif
-        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Last Updated</p>
-            <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">
-                {{ $ticket->updated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') ?? 'Unknown' }}
-            </p>
-        </div>
         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
             <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Created At</p>
             <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $submittedAt?->format('M d, Y · g:i A') ?? 'Unknown' }}</p>
