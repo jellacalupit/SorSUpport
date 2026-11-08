@@ -56,6 +56,8 @@ SorSUpport can be installed from a supported mobile or desktop browser. Open the
 
 The installed app still needs an internet connection to access tickets and account information. When offline, it displays a reconnect notice; private pages and data are not stored for offline use. Local development on `localhost` also supports PWA installation.
 
+On its first load in an app session, the installed app displays a brief logo-only startup screen while the page loads.
+
 ## Running it locally
 
 Requirements: PHP 8.2+, Composer, Node.js 22+, and MySQL (for example through XAMPP).

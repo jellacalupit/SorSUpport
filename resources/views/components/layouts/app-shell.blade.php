@@ -129,6 +129,7 @@
     </head>
 
     <body class="overflow-hidden font-sans antialiased bg-background text-foreground">
+        @include('components.pwa-startup-screen')
 
         <div>
 

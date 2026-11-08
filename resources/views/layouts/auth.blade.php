@@ -13,6 +13,8 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="bg-background font-sans text-foreground antialiased">
+        @include('components.pwa-startup-screen')
+
         @yield('content')
     </body>
 </html>

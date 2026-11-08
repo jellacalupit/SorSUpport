@@ -9,6 +9,31 @@
     }
 
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    const startupScreen = document.getElementById('pwa-startup-screen');
+    const startupWasShown = sessionStorage.getItem('sorsupport-startup-shown') === 'true';
+
+    if (startupScreen && isStandalone && !startupWasShown) {
+        const startupStartedAt = performance.now();
+        sessionStorage.setItem('sorsupport-startup-shown', 'true');
+
+        const dismissStartupScreen = () => {
+            const remainingTime = Math.max(0, 500 - (performance.now() - startupStartedAt));
+
+            window.setTimeout(() => {
+                startupScreen.classList.add('is-dismissing');
+                window.setTimeout(() => startupScreen.remove(), 260);
+            }, remainingTime);
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', dismissStartupScreen, { once: true });
+        } else {
+            dismissStartupScreen();
+        }
+    } else {
+        startupScreen?.remove();
+    }
+
     const userAgent = navigator.userAgent;
     const isIOS = /iphone|ipad|ipod/i.test(userAgent)
         || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
