@@ -10,26 +10,53 @@
 
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
     const startupScreen = document.getElementById('pwa-startup-screen');
-    const startupWasShown = sessionStorage.getItem('sorsupport-startup-shown') === 'true';
+    const startupIsPending = document.documentElement.classList.contains('pwa-startup-pending');
 
-    if (startupScreen && isStandalone && !startupWasShown) {
-        const startupStartedAt = performance.now();
-        sessionStorage.setItem('sorsupport-startup-shown', 'true');
+    if (startupScreen && isStandalone && startupIsPending) {
+        const progressBar = startupScreen.querySelector('[role="progressbar"]');
+        const progressFill = startupScreen.querySelector('.startup-progress-fill');
+        const progressLabel = startupScreen.querySelector('.startup-percent');
+        const startedAt = performance.now();
+        let pageLoaded = document.readyState === 'complete';
+        let animationFrame;
 
-        const dismissStartupScreen = () => {
-            const remainingTime = Math.max(0, 500 - (performance.now() - startupStartedAt));
+        const finishStartup = () => {
+            window.cancelAnimationFrame(animationFrame);
+            progressBar?.setAttribute('aria-valuenow', '100');
+            if (progressFill) progressFill.style.width = '100%';
+            if (progressLabel) progressLabel.textContent = '100%';
 
             window.setTimeout(() => {
                 startupScreen.classList.add('is-dismissing');
+                document.documentElement.classList.remove('pwa-startup-pending');
                 window.setTimeout(() => startupScreen.remove(), 260);
-            }, remainingTime);
+            }, Math.max(0, 900 - (performance.now() - startedAt)));
         };
 
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', dismissStartupScreen, { once: true });
-        } else {
-            dismissStartupScreen();
-        }
+        const updateProgress = () => {
+            const elapsed = performance.now() - startedAt;
+            const percent = pageLoaded
+                ? 100
+                : Math.min(92, Math.max(4, Math.floor(4 + 88 * (1 - Math.exp(-elapsed / 2200)))));
+
+            startupScreen.classList.toggle('is-loading', elapsed >= 650);
+            progressBar?.setAttribute('aria-valuenow', String(percent));
+            if (progressFill) progressFill.style.width = `${percent}%`;
+            if (progressLabel) progressLabel.textContent = `${percent}%`;
+
+            if (pageLoaded) {
+                finishStartup();
+                return;
+            }
+
+            animationFrame = window.requestAnimationFrame(updateProgress);
+        };
+
+        window.addEventListener('load', () => {
+            pageLoaded = true;
+        }, { once: true });
+
+        animationFrame = window.requestAnimationFrame(updateProgress);
     } else {
         startupScreen?.remove();
     }
