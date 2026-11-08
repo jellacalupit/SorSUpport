@@ -50,6 +50,12 @@ Ticket emails are queued and sent every minute. If sending fails, the email is t
 - Brevo for email, DomPDF and Laravel Excel for reports
 - Docker image deployed on Railway
 
+## Install SorSUpport on your device
+
+SorSUpport can be installed from a supported mobile or desktop browser. Open the deployed site over HTTPS, then choose **Install SorSUpport** when prompted (or use the browser's **Install app** / **Add to Home Screen** menu). On iPhone or iPad, open the site in Safari, tap **Share**, then **Add to Home Screen**.
+
+The installed app still needs an internet connection to access tickets and account information. When offline, it displays a reconnect notice; private pages and data are not stored for offline use. Local development on `localhost` also supports PWA installation.
+
 ## Running it locally
 
 Requirements: PHP 8.2+, Composer, Node.js 22+, and MySQL (for example through XAMPP).

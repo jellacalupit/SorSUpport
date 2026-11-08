@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#701f1f">
+    <title>Offline - SorSUpport</title>
+    <style>
+        :root { color-scheme: light; font-family: system-ui, sans-serif; color: #252525; background: #f8f7f6; }
+        body { box-sizing: border-box; display: grid; min-height: 100vh; margin: 0; padding: 24px; place-items: center; }
+        main { width: min(100%, 28rem); padding: 32px; border: 1px solid #e6dfdd; border-radius: 20px; background: white; text-align: center; box-shadow: 0 8px 32px #32101012; }
+        h1 { margin: 0 0 12px; color: #701f1f; font-size: 1.5rem; }
+        p { margin: 0; line-height: 1.6; }
+        button { margin-top: 24px; padding: 10px 18px; border: 0; border-radius: 10px; background: #701f1f; color: white; font: inherit; font-weight: 600; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>You’re offline</h1>
+        <p>SorSUpport needs an internet connection to load tickets and account information. Reconnect and try again.</p>
+        <button type="button" onclick="window.location.reload()">Try again</button>
+    </main>
+</body>
+</html>
