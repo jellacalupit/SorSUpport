@@ -94,7 +94,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <link rel="icon" href="{{ asset('branding/sorsu logo.png') }}" type="image/png">
-        @include('components.pwa-head')
+        @include('components.legacy-pwa-cleanup')
 
         <title>SorSUpport</title>
 
@@ -129,8 +129,6 @@
     </head>
 
     <body class="overflow-hidden font-sans antialiased bg-background text-foreground">
-        @include('components.pwa-startup-screen')
-
         <div>
 
             @if($isAdmin)

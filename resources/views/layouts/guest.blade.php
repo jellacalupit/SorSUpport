@@ -7,7 +7,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <link rel="icon" href="{{ asset('branding/sorsu logo.png') }}" type="image/png">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        @include('components.pwa-head')
+        @include('components.legacy-pwa-cleanup')
 
         <title>{{ config('app.name', 'SorSUpport') }}</title>
 
@@ -18,8 +18,6 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans text-foreground antialiased bg-background">
-        @include('components.pwa-startup-screen')
-
         <div class="flex min-h-screen flex-col bg-background">
             <div class="{{ $roundedHeader ? 'md:flex md:flex-1' : '' }}">
                 <header class="brand-gradient px-6 pt-12 pb-12 text-center text-primary-foreground sm:pt-16{{ $roundedHeader ? ' login-header-curve md:flex md:min-h-screen md:flex-[2] md:flex-col md:justify-center' : '' }}">

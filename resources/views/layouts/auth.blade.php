@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <link rel="icon" href="{{ asset('branding/sorsu logo.png') }}" type="image/png">
-        @include('components.pwa-head')
+        @include('components.legacy-pwa-cleanup')
         <title>SorSUpport</title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,8 +13,6 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="bg-background font-sans text-foreground antialiased">
-        @include('components.pwa-startup-screen')
-
         @yield('content')
     </body>
 </html>
