@@ -15,6 +15,20 @@
     let installPrompt = null;
     let card = null;
 
+    const positionCard = () => {
+        if (!card) {
+            return;
+        }
+
+        const tabBar = document.querySelector('[data-mobile-tab-bar]');
+        const tabBarVisible = tabBar && getComputedStyle(tabBar).display !== 'none';
+        const bottomOffset = tabBarVisible
+            ? Math.max(16, window.innerHeight - tabBar.getBoundingClientRect().top + 12)
+            : 16;
+
+        card.style.bottom = `${bottomOffset}px`;
+    };
+
     const dismissCard = () => {
         if (card) {
             card.remove();
@@ -31,6 +45,7 @@
         card.setAttribute('aria-label', 'Install SorSUpport');
         card.setAttribute('role', 'status');
         card.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:10000;display:flex;align-items:center;gap:12px;width:min(360px,calc(100vw - 32px));box-sizing:border-box;padding:14px;border:1px solid #e6dfdd;border-radius:16px;background:#fff;color:#252525;box-shadow:0 8px 32px #32101024;font:14px/1.45 system-ui,sans-serif';
+        positionCard();
 
         const icon = document.createElement('img');
         icon.src = iconUrl || '';
@@ -82,6 +97,7 @@
         content.append(title, message, action);
         card.append(icon, content, close);
         document.body.append(card);
+        positionCard();
     };
 
     window.addEventListener('beforeinstallprompt', (event) => {
@@ -91,6 +107,7 @@
     });
 
     window.addEventListener('appinstalled', dismissCard);
+    window.addEventListener('resize', positionCard);
 
     if (isIOS && !isStandalone) {
         if (document.readyState === 'loading') {
