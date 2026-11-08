@@ -366,10 +366,6 @@
         height: 3px !important;
     }
 
-    body.thread-keyboard-open [data-mobile-tab-bar] {
-        display: none;
-    }
-
     body.thread-keyboard-open .ticket-thread-pane .communication-card {
         position: fixed;
         top: var(--thread-card-top, 0px);
