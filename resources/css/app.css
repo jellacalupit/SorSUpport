@@ -326,6 +326,16 @@
     --tab-bar-height: calc(3.5rem + max(0.5rem, env(safe-area-inset-bottom, 0px)));
 }
 
+@media (max-width: 1023px) {
+    [data-mobile-tab-bar] {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 50;
+    }
+}
+
 /* Thinner scrollbars on phones and tablets. */
 @media (max-width: 1023px) {
     html::-webkit-scrollbar,

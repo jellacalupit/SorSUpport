@@ -91,7 +91,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <link rel="icon" href="{{ asset('branding/sorsu logo.png') }}" type="image/png">
         @include('components.pwa-head')
@@ -997,7 +997,7 @@
                     </script>
 
                     <!-- Main Content -->
-                    <main class="min-h-0 w-full min-w-0 flex-1 overflow-y-auto">
+                    <main class="min-h-0 w-full min-w-0 flex-1 overflow-y-auto pb-[var(--tab-bar-height)] lg:pb-0">
 
                         <div class="mx-auto w-full min-w-0 max-w-6xl px-4 py-5 sm:px-6 lg:px-8">
                             {{ $slot }}
