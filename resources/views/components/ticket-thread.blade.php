@@ -262,7 +262,7 @@
                             rows="1"
                             placeholder="{{ $messagePlaceholder }}"
                             @disabled($isReadOnly)
-                            class="block min-h-9 w-full resize-none rounded-3xl border-0 bg-transparent px-3.5 py-2 {{ $viewerRole === 'admin' ? 'text-xs' : 'text-sm' }} leading-5 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-0 disabled:cursor-not-allowed"
+                            class="block min-h-9 w-full resize-none rounded-3xl border-0 bg-transparent px-3.5 py-2 {{ $viewerRole === 'admin' ? 'text-xs leading-normal' : 'text-sm leading-5' }} text-foreground placeholder-muted-foreground focus:outline-none focus:ring-0 disabled:cursor-not-allowed"
                         ></textarea>
                     </div>
 

@@ -414,8 +414,6 @@
 .admin-page-thread #ticket-reply-form textarea {
     min-height: 2.25rem;
     padding: 0.5rem 0.875rem;
-    font-size: 14px;
-    line-height: 1.25rem;
 }
 
 .admin-page-thread #ticket-reply-form > label,
