@@ -32,7 +32,7 @@
     }
 
     #pwa-startup-screen.is-dismissing img {
-        transform: scale(0.72);
+        transform: scale(1.2);
         opacity: 0;
     }
 

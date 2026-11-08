@@ -13,8 +13,11 @@
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 
         try {
-            if (isStandalone && sessionStorage.getItem('sorsupport-startup-shown') !== 'true') {
-                sessionStorage.setItem('sorsupport-startup-shown', 'true');
+            const lastShown = Number(localStorage.getItem('sorsupport-startup-last-shown') || 0);
+            const shownRecently = Date.now() - lastShown < 15 * 60 * 1000;
+
+            if (isStandalone && !shownRecently) {
+                localStorage.setItem('sorsupport-startup-last-shown', String(Date.now()));
                 document.documentElement.classList.add('pwa-startup-pending');
             }
         } catch (error) {

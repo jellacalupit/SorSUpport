@@ -56,7 +56,7 @@ SorSUpport can be installed from a supported mobile or desktop browser. Open the
 
 The installed app still needs an internet connection to access tickets and account information. When offline, it displays a reconnect notice; private pages and data are not stored for offline use. Local development on `localhost` also supports PWA installation.
 
-On its first load in an app session, the installed app shows a centered logo, then zooms and fades it away to reveal the page.
+When opened, the installed app shows a centered logo, then zooms and fades it away to reveal the page. A 15-minute guard prevents the splash from repeating during redirects or page navigation.
 
 ## Running it locally
 

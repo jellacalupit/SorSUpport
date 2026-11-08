@@ -21,7 +21,7 @@
                 startupScreen.classList.add('is-dismissing');
                 document.documentElement.classList.remove('pwa-startup-pending');
                 window.setTimeout(() => startupScreen.remove(), 520);
-            }, Math.max(0, 700 - (performance.now() - startedAt)));
+            }, Math.max(0, 500 - (performance.now() - startedAt)));
         };
 
         window.addEventListener('load', () => {
