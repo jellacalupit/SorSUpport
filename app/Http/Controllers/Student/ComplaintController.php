@@ -354,6 +354,7 @@ class ComplaintController extends Controller
         $complaint->load([
             'category.recipient.user',
             'ticket.assignee',
+            'ticket.currentHandler.recipient',
             'ticket.forwardedRecipient',
             'ticket.thread' => function ($q) {
                 $q->with(['messages' => function ($q2) {

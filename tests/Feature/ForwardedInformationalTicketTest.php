@@ -164,6 +164,89 @@ class ForwardedInformationalTicketTest extends TestCase
         ]);
     }
 
+    public function test_student_ticket_page_shows_status_specific_waiting_guidance(): void
+    {
+        $cases = [
+            [Ticket::STATUS_SUBMITTED, [], 'Waiting for SDS review'],
+            [Ticket::STATUS_NEEDS_CLARIFICATION, [], 'Waiting for your reply'],
+            [Ticket::STATUS_ASSIGNED, ['assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id], 'Waiting for Registrar Office to acknowledge'],
+            [Ticket::STATUS_IN_PROGRESS, ['assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id], 'Being handled by Registrar Office'],
+            [Ticket::STATUS_ESCALATED, ['assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id], 'Escalated to Registrar Office'],
+            [Ticket::STATUS_REFERRED, ['referred_to' => 'Campus Disciplinary Committee'], 'Referred to a committee. SDS will record the outcome'],
+            [Ticket::STATUS_RESOLVED, ['resolved_at' => now()], 'Waiting for your response. You can accept or ask for further action until'],
+            [Ticket::STATUS_CLOSED, ['closure_type' => Ticket::CLOSURE_INFORMATIONAL], 'Closed: Recorded for information'],
+        ];
+
+        foreach ($cases as [$status, $attributes, $expected]) {
+            $ticket = $this->ticket($status, $attributes);
+
+            $this->actingAs($this->student)
+                ->get(route('student.complaints.show', $ticket->complaint))
+                ->assertOk()
+                ->assertSee($expected);
+        }
+    }
+
+    public function test_student_timeline_is_ordered_privacy_safe_and_last_updated_ignores_email_events(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_ASSIGNED, [
+            'assigned_to' => $this->recipient->id,
+            'current_handler_id' => $this->recipient->id,
+        ]);
+        $first = now()->subDays(3);
+        $second = now()->subDays(2);
+        $latestStudentEvent = now()->subDay();
+
+        foreach ([
+            ['complaint_submitted', $first, 'PRIVATE-SUBMISSION-DETAIL'],
+            ['ticket_assigned', $second, 'PRIVATE-ASSIGNMENT-NOTE'],
+            ['ticket_escalated', $latestStudentEvent, 'PRIVATE-ESCALATION-REASON'],
+            ['returned_to_sds', now(), 'PRIVATE-RETURN-REASON'],
+            ['email_notification_sent', now()->addDay(), 'PRIVATE-EMAIL-CONTENT'],
+            ['email_notification_failed', now()->addDays(2), 'PRIVATE-EMAIL-FAILURE'],
+        ] as [$action, $createdAt, $details]) {
+            $event = AuditLog::create([
+                'ticket_id' => $ticket->id,
+                'performed_by' => $this->admin->id,
+                'action' => $action,
+                'details' => $details,
+            ]);
+            $event->forceFill(['created_at' => $createdAt, 'updated_at' => $createdAt])->save();
+        }
+
+        $expectedLastUpdated = $latestStudentEvent->copy()->setTimezone(config('app.timezone'))->format('M d, Y');
+
+        $this->actingAs($this->student)
+            ->get(route('student.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertSeeInOrder(['Ticket submitted', 'Ticket assigned', 'Ticket escalated'])
+            ->assertSee($expectedLastUpdated)
+            ->assertDontSee('PRIVATE-SUBMISSION-DETAIL')
+            ->assertDontSee('PRIVATE-ASSIGNMENT-NOTE')
+            ->assertDontSee('PRIVATE-ESCALATION-REASON')
+            ->assertDontSee('PRIVATE-RETURN-REASON')
+            ->assertDontSee('PRIVATE-EMAIL-CONTENT')
+            ->assertDontSee('PRIVATE-EMAIL-FAILURE');
+    }
+
+    public function test_another_student_cannot_view_the_ticket_timeline(): void
+    {
+        $otherStudent = $this->user(User::ROLE_STUDENT, 'Olive Other');
+        Student::create([
+            'user_id' => $otherStudent->id,
+            'student_id' => 'STUDENT-2026-2',
+            'college' => 'CICT',
+            'program' => 'BSIT',
+            'year_level' => '1',
+            'block' => '1',
+        ]);
+        $ticket = $this->ticket(Ticket::STATUS_SUBMITTED);
+
+        $this->actingAs($otherStudent)
+            ->get(route('student.complaints.show', $ticket->complaint))
+            ->assertForbidden();
+    }
+
     public function test_forwarded_display_preserves_hidden_identity_and_sensitive_subject_privacy(): void
     {
         $sensitiveCategory = ComplaintCategory::create([

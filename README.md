@@ -19,6 +19,7 @@ When SDS closes a ticket as invalid, duplicate, out of scope, or no response, it
 ## Features
 
 - **Ticket lifecycle**: Submitted → Needs Clarification → Assigned → In Progress → Escalated / Referred → Resolved → Closed. A single set of rules decides who may take each action from each status.
+- **Student status updates**: the ticket page shows the current office, plain-language guidance for what is happening next, a dated timeline of student-visible events, and the date of the latest such event. Timeline dates use the application timezone. Staff action dates are not promised; the only displayed response date is the existing student response window after resolution.
 - **Routing**: categories set by the admin, each with suggested recipients and escalation paths. For “Complaint Against a Student,” the CBME and CICT paths are Program Chair → College Dean; SDS must confirm the College Dean's assessment and endorsement before referring any ticket to the Campus Disciplinary Committee.
 - **Informational tickets**: an informational ticket forwarded without closing stays stored as Submitted, but students and the receiving office see “Forwarded for information,” the receiving office and forwarding date. Forwarded items are excluded from SDS's awaiting-review queue and Submitted reminders; closing remains an SDS decision.
 - CODI referrals use the canonical Committee on Decorum and Investigation name. “Other” entries matching that name or the acronym CODI are recognized after normalization.

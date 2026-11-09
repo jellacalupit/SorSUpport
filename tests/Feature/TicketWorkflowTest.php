@@ -1335,10 +1335,10 @@ class TicketWorkflowTest extends TestCase
         $this->actingAs($this->admin)->get('/admin/analytics')->assertOk();
     }
 
-    public function test_ticket_details_show_last_updated_in_the_shared_student_order_for_all_roles(): void
+    public function test_ticket_details_show_last_updated_in_the_student_order_and_keep_staff_order(): void
     {
         $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
-        $detailsOrder = [
+        $staffDetailsOrder = [
             'My transcript has not been released.',
             'Category',
             'Assigned Recipient',
@@ -1349,18 +1349,33 @@ class TicketWorkflowTest extends TestCase
             'Days Open',
         ];
 
+        $this->actingAs($this->student)
+            ->get(route('student.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertSeeInOrder([
+                'My transcript has not been released.',
+                'Category',
+                'Assigned Recipient',
+                'Classification',
+                'Last updated',
+                'Current office',
+                'Waiting for',
+                'Created At',
+                'Created By',
+                'Days Open',
+            ]);
+
         foreach ([
-            [$this->student, route('student.complaints.show', $ticket->complaint)],
             [$this->handler, route('recipient.complaints.show', $ticket->complaint)],
             [$this->admin, route('admin.complaints.show', $ticket->complaint)],
         ] as [$user, $url]) {
-            $this->actingAs($user)->get($url)->assertOk()->assertSeeInOrder($detailsOrder);
+            $this->actingAs($user)->get($url)->assertOk()->assertSeeInOrder($staffDetailsOrder);
         }
 
         $this->actingAs($this->admin)
             ->get(route('admin.complaints.index'))
             ->assertOk()
-            ->assertSeeInOrder($detailsOrder);
+            ->assertSeeInOrder($staffDetailsOrder);
 
         $this->ticket(Ticket::STATUS_IN_PROGRESS, [
             'assigned_to' => null,

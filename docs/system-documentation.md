@@ -125,6 +125,8 @@ Validation and system rules:
 - A handler-selection action checks whether the proposed recipient appears by full name, first-and-last name, or (in the personnel-involved field) surname. It records a `conflict_of_interest_flagged` audit event when it detects a match. This is a flag, not an automatic block.
 - Student-facing notification details omit staff-only escalation reasons and disclose the referred destination without exposing the admin's referral note.
 - The audit search avoids matching performer names on anonymous complaints. Email audit messages refer to an anonymous submitter as “the student,” not by address.
+- The student ticket page shows a timeline using only the actions in the student notification action set. It displays plain-language labels and timestamps, never audit details; email events and staff-only actions are excluded. “Last updated” is the latest timestamp from that same set, rather than the ticket's general `updated_at` value.
+- The student ticket page also shows the current office/unit and status guidance: waiting for SDS review, waiting for the student's reply, awaiting office acknowledgment, in handling, escalated, referred, resolved response window, or the closure result. A forwarded informational ticket uses the “Forwarded for information” label and receiving office/date. These are status descriptions, not staff deadlines. Display dates use `config('app.timezone')`.
 
 ### Attachments
 
