@@ -160,6 +160,10 @@ class TicketWorkflow
             return $this->withinFurtherActionWindow($ticket);
         }
 
+        if ($action === self::REQUEST_WITHDRAWAL) {
+            return ! $this->hasWithdrawalRequestInCurrentReferralPeriod($ticket);
+        }
+
         return true;
     }
 
@@ -537,10 +541,29 @@ class TicketWorkflow
         $this->authorize($student, $ticket, self::REQUEST_WITHDRAWAL);
 
         DB::transaction(function () use ($ticket, $student, $reason): void {
+            $ticket = Ticket::query()->lockForUpdate()->findOrFail($ticket->id);
+            if ($this->hasWithdrawalRequestInCurrentReferralPeriod($ticket)) {
+                throw ValidationException::withMessages([
+                    'withdrawal_request' => 'You have already sent a withdrawal request to SDS for this referral.',
+                ]);
+            }
+
             $this->postMessage($ticket, $student, $reason);
             AuditLog::log($ticket->id, 'withdrawal_requested', $student->id, 'The student requested withdrawal after referral.');
             $this->notify($ticket, $this->admins(), EmailNotification::TYPE_WITHDRAWAL_REQUESTED);
         });
+    }
+
+    public function hasWithdrawalRequestInCurrentReferralPeriod(Ticket $ticket): bool
+    {
+        $latestReferralId = $ticket->auditLogs()
+            ->where('action', 'ticket_referred')
+            ->max('id');
+
+        return $latestReferralId !== null && $ticket->auditLogs()
+            ->where('action', 'withdrawal_requested')
+            ->where('id', '>', $latestReferralId)
+            ->exists();
     }
 
     // ------------------------------------------------------------------ helpers

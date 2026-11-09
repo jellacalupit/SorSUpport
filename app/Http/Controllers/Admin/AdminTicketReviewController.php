@@ -458,12 +458,18 @@ class AdminTicketReviewController extends Controller
     {
         $this->workflow->authorize(Auth::user(), $ticket, TicketWorkflow::REFER);
 
-        $normalizeDestination = static fn (string $destination): string => preg_replace('/[^a-z0-9]/', '', strtolower($destination)) ?? '';
+        $normalizeDestination = static fn (string $destination): string => preg_replace('/[\s\p{P}\p{S}]+/u', '', mb_strtolower(trim($destination))) ?? '';
         $otherDestination = $request->input('referred_to_other');
+        $normalizedOtherDestination = is_string($otherDestination) ? $normalizeDestination($otherDestination) : '';
+        $isCodiReferral = $request->input('referred_to') === Ticket::REFERRAL_DESTINATION_CODI
+            || ($request->input('referred_to') === 'other'
+                && in_array($normalizedOtherDestination, [
+                    $normalizeDestination(Ticket::REFERRAL_DESTINATION_CODI),
+                    'codi',
+                ], true));
         $isCampusDisciplinaryCommittee = $request->input('referred_to') === Ticket::REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY
             || ($request->input('referred_to') === 'other'
-                && is_string($otherDestination)
-                && $normalizeDestination($otherDestination) === $normalizeDestination(Ticket::REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY));
+                && $normalizedOtherDestination === $normalizeDestination(Ticket::REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY));
         $requiresDeanEndorsement = $isCampusDisciplinaryCommittee;
         $validated = $request->validate([
             'referred_to' => 'required|string|max:255',
@@ -480,7 +486,9 @@ class AdminTicketReviewController extends Controller
         ]);
 
         $referredTo = $validated['referred_to'] === 'other' ? trim($validated['referred_to_other']) : $validated['referred_to'];
-        if ($isCampusDisciplinaryCommittee) {
+        if ($isCodiReferral) {
+            $referredTo = Ticket::REFERRAL_DESTINATION_CODI;
+        } elseif ($isCampusDisciplinaryCommittee) {
             $referredTo = Ticket::REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY;
         }
 

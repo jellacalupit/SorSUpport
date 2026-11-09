@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Complaint;
 use App\Models\ComplaintCategory;
+use App\Models\AuditLog;
 use App\Models\EmailNotification;
 use App\Models\Recipient;
 use App\Models\Student;
@@ -532,6 +533,7 @@ class TicketWorkflowTest extends TestCase
     public function test_a_referred_student_can_only_request_withdrawal_with_a_reason_and_sds_is_notified(): void
     {
         $ticket = $this->ticket(Ticket::STATUS_REFERRED);
+        AuditLog::log($ticket->id, 'ticket_referred', $this->admin->id, 'Ticket referred to Student Disciplinary Board.');
         $ticket->complaint->update(['is_anonymous' => true]);
         $ticket->complaint->category->update(['is_sensitive' => true]);
         $reason = 'I no longer want to continue this concern.';
@@ -587,13 +589,93 @@ class TicketWorkflowTest extends TestCase
         $this->actingAs($this->student)
             ->get(route('student.complaints.show', $ticket->complaint))
             ->assertOk()
-            ->assertSee('Request Withdrawal')
+            ->assertSee('Your withdrawal request has been sent to SDS')
+            ->assertDontSee('Request Withdrawal')
             ->assertDontSee('Withdraw Ticket');
+
+        $messageCount = $ticket->thread->messages()->count();
+        $auditCount = $ticket->auditLogs()->count();
+        $emailCount = $ticket->emailNotifications()->count();
+        $this->actingAs($this->student)
+            ->post(route('student.complaints.request-withdrawal', $ticket->complaint), ['withdrawal_request_reason' => 'A second request.'])
+            ->assertSessionHasErrors('withdrawal_request');
+
+        $ticket->refresh();
+        $this->assertSame(Ticket::STATUS_REFERRED, $ticket->status);
+        $this->assertSame($messageCount, $ticket->thread->messages()->count());
+        $this->assertSame($auditCount, $ticket->auditLogs()->count());
+        $this->assertSame($emailCount, $ticket->emailNotifications()->count());
 
         $this->actingAs($this->admin)
             ->post(route('admin.tickets.outcome', $ticket), ['outcome' => 'The committee completed its review.'])
             ->assertSessionHasNoErrors();
         $this->assertSame(Ticket::STATUS_RESOLVED, $ticket->fresh()->status);
+    }
+
+    public function test_a_new_referral_period_allows_a_new_withdrawal_request(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_REFERRED);
+        AuditLog::log($ticket->id, 'ticket_referred', $this->admin->id, 'Ticket referred to Student Disciplinary Board.');
+        $workflow = app(TicketWorkflow::class);
+        $workflow->requestWithdrawal($ticket, $this->student, 'First referral period request.');
+
+        $workflow->recordOutcome($ticket->fresh(), $this->admin, 'The committee completed its review.');
+        $workflow->reopen($ticket->fresh(), $this->admin);
+        $workflow->refer($ticket->fresh(), $this->admin, 'Campus Review Board', 'Further review is needed.');
+
+        $this->assertTrue($workflow->can($this->student, $ticket->fresh(), TicketWorkflow::REQUEST_WITHDRAWAL));
+        $workflow->requestWithdrawal($ticket->fresh(), $this->student, 'Request for the new referral period.');
+
+        $this->assertSame(2, $ticket->auditLogs()->where('action', 'withdrawal_requested')->count());
+    }
+
+    public function test_other_codi_names_are_normalized_and_unrelated_names_are_not_flagged(): void
+    {
+        foreach ([
+            'CODI',
+            'codi',
+            'C.O.D.I.',
+            ' Committee   on Decorum and Investigation ',
+            'CODI Support Desk',
+        ] as $destination) {
+            $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
+
+            $this->actingAs($this->admin)
+                ->post(route('admin.tickets.refer', $ticket), [
+                    'referred_to' => 'other',
+                    'referred_to_other' => $destination,
+                    'referral_note' => 'The appropriate body will review this ticket.',
+                ])
+                ->assertSessionHasNoErrors();
+
+            $matchesCodi = ! in_array($destination, ['CODI Support Desk'], true);
+            $this->assertSame(
+                $matchesCodi ? Ticket::REFERRAL_DESTINATION_CODI : $destination,
+                $ticket->fresh()->referred_to
+            );
+            $this->assertSame($matchesCodi, $ticket->fresh()->is_codi_referral);
+        }
+    }
+
+    public function test_codi_referral_backfill_normalizes_existing_names_idempotently(): void
+    {
+        $codi = $this->ticket(Ticket::STATUS_REFERRED, [
+            'referred_to' => ' C.O.D.I. ',
+            'is_codi_referral' => false,
+        ]);
+        $unrelated = $this->ticket(Ticket::STATUS_REFERRED, [
+            'referred_to' => 'CODI Support Desk',
+            'is_codi_referral' => false,
+        ]);
+        $migration = require database_path('migrations/2026_11_09_200000_normalize_codi_referrals.php');
+
+        $migration->up();
+        $migration->up();
+
+        $this->assertSame(Ticket::REFERRAL_DESTINATION_CODI, $codi->fresh()->referred_to);
+        $this->assertTrue($codi->fresh()->is_codi_referral);
+        $this->assertSame('CODI Support Desk', $unrelated->fresh()->referred_to);
+        $this->assertFalse($unrelated->fresh()->is_codi_referral);
     }
 
     public function test_a_non_referred_student_cannot_request_withdrawal(): void

@@ -545,6 +545,12 @@ class ComplaintController extends Controller
     {
         $ticket = $this->ownTicket($complaint);
 
+        if ($workflow->hasWithdrawalRequestInCurrentReferralPeriod($ticket)) {
+            return back()->withErrors([
+                'withdrawal_request' => 'You have already sent a withdrawal request to SDS for this referral.',
+            ]);
+        }
+
         $workflow->authorize(Auth::user(), $ticket, TicketWorkflow::REQUEST_WITHDRAWAL);
 
         $validated = $request->validate([

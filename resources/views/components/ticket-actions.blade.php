@@ -21,6 +21,9 @@
     // The first review (valid or not, where it goes) closes or assigns a ticket on its own screen.
     $canClose = $can(TicketWorkflow::CLOSE) && ! $ticket->isAwaitingReview();
     $canEscalate = $role === 'admin' && $can(TicketWorkflow::ESCALATE) && $ticket->classification === Ticket::CLASSIFICATION_NEEDS_RESOLUTION;
+    $withdrawalRequestSent = $role === 'student'
+        && $ticket->status === Ticket::STATUS_REFERRED
+        && $workflow->hasWithdrawalRequestInCurrentReferralPeriod($ticket);
 
     $resolveUrl = $role === 'admin' ? route('admin.tickets.resolve', $ticket) : route('recipient.complaints.update-status', $complaint);
     $acknowledgeUrl = $role === 'admin' ? route('admin.tickets.acknowledge', $ticket) : route('recipient.complaints.acknowledge', $complaint);
@@ -82,6 +85,13 @@
         @else
             <p class="mt-0.5">Accept the resolution to close the ticket, or request further action{{ $furtherActionDeadline ? ' until ' . $furtherActionDeadline->format('M d, Y') : '' }} if the concern is not settled.</p>
         @endif
+    </div>
+@endif
+
+@if ($withdrawalRequestSent)
+    <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800" data-ticket-notice="withdrawal-requested">
+        <p class="font-semibold">Your withdrawal request has been sent to SDS</p>
+        @error('withdrawal_request')<p class="mt-1 text-destructive">{{ $message }}</p>@enderror
     </div>
 @endif
 

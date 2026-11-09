@@ -10,7 +10,7 @@ For the detailed implementation guide—including role permissions, status rules
 
 | Role | What they do |
 |---|---|
-| **Student** | Submits a ticket, with attachments, optionally hiding their identity. Follows its progress, talks with the handler, accepts the resolution or asks for further action, and rates how the concern was handled. Can withdraw before referral; after referral, can ask SDS to withdraw without closing the ticket. |
+| **Student** | Submits a ticket, with attachments, optionally hiding their identity. Follows its progress, talks with the handler, accepts the resolution or asks for further action, and rates how the concern was handled. Can withdraw before referral; after referral, can ask SDS to withdraw once per referral period without closing the ticket. |
 | **Recipient** (college or office staff) | Acknowledges tickets assigned to them, talks with the student and records the resolution. |
 | **SDS Administrator** | Reviews new tickets, classifies, assigns, escalates or refers them, closes them, manages accounts and settings, and reads the analytics and audit trail. |
 
@@ -20,6 +20,7 @@ When SDS closes a ticket as invalid, duplicate, out of scope, or no response, it
 
 - **Ticket lifecycle**: Submitted → Needs Clarification → Assigned → In Progress → Escalated / Referred → Resolved → Closed. A single set of rules decides who may take each action from each status.
 - **Routing**: categories set by the admin, each with suggested recipients and escalation paths. For “Complaint Against a Student,” the CBME and CICT paths are Program Chair → College Dean; SDS must confirm the College Dean's assessment and endorsement before referring any ticket to the Campus Disciplinary Committee.
+- CODI referrals use the canonical Committee on Decorum and Investigation name. “Other” entries matching that name or the acronym CODI are recognized after normalization.
 - **Confidentiality**: a student can hide their identity where the category allows it. Their name is then hidden from everyone in the system, including the SDS admin. Sensitive tickets are visible only to the SDS Office and the assigned handler. The system flags when a ticket goes to someone named in the complaint.
 - **Conversation**: each ticket has a message thread with file attachments, kept in private storage.
 - **Notifications**: in-app notifications and unread badges, plus an email at every step for each person involved.
