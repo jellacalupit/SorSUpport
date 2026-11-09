@@ -132,6 +132,8 @@ class NotificationController extends Controller
                     'body' => match (true) {
                         $log->action === 'ticket_assigned' => 'Ticket assigned to you for recipient handling.',
                         $log->action === 'message_posted' && $log->performed_by !== $user->id => $studentName . ' posted a reply message.',
+                        $log->action === 'ticket_referred' && $log->ticket?->referred_to => "Ticket referred to {$log->ticket->referred_to}.",
+                        $log->action === 'ticket_referred' => 'Ticket referred to a committee.',
                         default => $log->details ?: 'There is a new update on an assigned ticket.',
                     },
                     'at' => $log->created_at,

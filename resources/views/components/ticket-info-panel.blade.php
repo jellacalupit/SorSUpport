@@ -60,7 +60,8 @@
     $studentTimeline = $studentView
         ? $ticket->auditLogs
             ->whereIn('action', \App\Services\TicketUnreadService::STUDENT_CHANGE_ACTIONS)
-            ->filter(fn ($log) => isset($studentActionLabels[$log->action]))
+            ->filter(fn ($log) => isset($studentActionLabels[$log->action])
+                && ($log->action !== 'message_posted' || $log->performed_by !== \Illuminate\Support\Facades\Auth::id()))
             ->sortBy(fn ($log) => [$log->created_at?->timestamp ?? 0, $log->id])
             ->values()
         : collect();
