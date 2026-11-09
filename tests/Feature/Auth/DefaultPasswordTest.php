@@ -2,8 +2,11 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Complaint;
+use App\Models\ComplaintCategory;
 use App\Models\Recipient;
 use App\Models\Student;
+use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -66,7 +69,7 @@ class DefaultPasswordTest extends TestCase
         $this->assertTrue((bool) $student->is_active);
         $this->assertNotNull($student->email_verified_at);
 
-        auth()->logout();
+        $this->app['auth']->logout();
 
         $this->post(route('login'), ['username' => '20240001', 'password' => '20240001'])
             ->assertRedirect(route('password.force'));
@@ -88,6 +91,40 @@ class DefaultPasswordTest extends TestCase
 
         $this->post(route('login'), ['username' => '20240001', 'password' => '20240001'])
             ->assertRedirect(route('verification.notice'));
+    }
+
+    public function test_new_inactive_account_cannot_open_ticket_profile_or_password_pages_before_verification(): void
+    {
+        $student = $this->activatedStudent(['is_active' => false, 'email_verified_at' => null]);
+        $category = ComplaintCategory::create(['name' => 'General', 'is_active' => true]);
+        $complaint = Complaint::create([
+            'reference_number' => Complaint::generateReferenceNumber(),
+            'student_id' => $student->student->id,
+            'category_id' => $category->id,
+            'subject_title' => 'Verification test ticket',
+            'description' => 'A ticket for access testing.',
+            'is_anonymous' => false,
+            'status' => Ticket::STATUS_SUBMITTED,
+        ]);
+        Ticket::create([
+            'complaint_id' => $complaint->id,
+            'status' => Ticket::STATUS_SUBMITTED,
+        ]);
+
+        $protectedPages = [
+            route('student.complaints.show', $complaint),
+            route('profile.edit'),
+            route('password.force'),
+        ];
+
+        foreach ($protectedPages as $page) {
+            $this->post(route('login'), ['username' => '20240001', 'password' => '20240001'])
+                ->assertRedirect(route('verification.notice'));
+            $this->get($page)->assertRedirect(route('login'));
+        }
+
+        $this->assertFalse($student->fresh()->is_active);
+        $this->assertFalse($student->fresh()->hasVerifiedEmail());
     }
 
     public function test_a_student_on_the_default_password_cannot_open_any_page_first(): void

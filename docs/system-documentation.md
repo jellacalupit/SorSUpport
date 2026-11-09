@@ -46,13 +46,16 @@ All role pages require authentication, an active account, completion of required
 
 - Sign-in accepts the account `username` (student/staff ID), not an email address, plus a password.
 - The sign-in request is rate-limited to five attempts per transliterated username-and-IP key.
-- Admin-provisioned student and recipient accounts start inactive, unverified, and marked `must_change_password`. Their initial password is their student/staff ID. An account must be activated before the user can use protected pages.
-- Reactivating an account verifies its email and requires its role profile to be complete. First-time users still have to set a password.
+- **Normal path:** SDS creates student and recipient accounts inactive, unverified, and marked `must_change_password`; their initial password is their student or staff ID. Account creation itself does not send a verification email. On first sign-in with the ID, the user is stopped at email verification and receives a verification link. The user must click the valid emailed link, then set a personal password before reaching any page.
+- **SDS activation override:** If a user cannot complete verification (for example, the email address is wrong or unreachable), SDS may activate the account. This marks it active and verified. On the next sign-in, a user still required to change the initial password is sent to set a personal password without needing the verification link. Reactivation preserves an already-changed password and does not force another password change. Until the user first signs in, the password is still the initial ID, so SDS should activate only after confirming the person's identity and tell the user to sign in and set a password immediately. Activation is recorded in the audit trail with the SDS admin as performer.
+- Verification through the emailed link also activates the account, authenticates the user, and directs them to set a personal password. This verification-link activation is recorded with the user as performer, rather than an SDS admin.
 - A new password requires confirmation, at least eight characters, and cannot equal the username/ID.
 - If an account that should no longer use an initial password is still signed in using its username as its password, the sign-in flow sets `must_change_password` again.
 - When a user must change a password, non-admins are sent to the force-password page. SDS administrators are directed to their profile page. Profile/password/logout and verification routes are permitted during setup.
 - Email verification and password reset use custom notifications. Verification notification requests are throttled (six per minute). Password reset and email verification are part of the authentication routes in `routes/auth.php`.
 - Registration is not exposed.
+
+SDS has no resend control; the user requests a new verification link on the verification screen. Verification mail is queued. The verification notification writes an `email_notification_sent` audit entry while constructing the message, before delivery is confirmed; a failed verification email has no dedicated audit entry. A job that exhausts retries may appear in Laravel's `failed_jobs` table, depending on the configured queue.
 
 ### Account management
 
@@ -68,7 +71,7 @@ Creating an account:
 
 Updating an account changes the profile and account details. If the account still requires its initial password, changing its ID also resets that temporary password to the new ID. A password already chosen by the user is not reset by this helper.
 
-Deactivation prevents access and sends an account-update email. Reactivation requires a complete role profile, sets the account active, verifies its email, and sends an activation email. Account create/update/activation/deactivation/import actions are recorded as standalone audit activity.
+Deactivation prevents access and sends an account-update email. Reactivation requires a complete role profile, sets the account active and verified, and sends an activation email. Account create/update/activation/deactivation/import actions are recorded as standalone audit activity; for SDS activation and reactivation, the signed-in SDS admin is the audit performer.
 
 A recipient account cannot be deactivated while it is the assignee or current handler of an Assigned, In Progress, or Escalated ticket. The account page lists the affected ticket references with links; SDS must reassign them using the existing Assign action. Bulk imports that request deactivation skip the affected row and report the same reason.
 
@@ -82,7 +85,7 @@ SDS can remove student and recipient accounts. An account with a related complai
 - Student imports require the same configured college/program relationship and eight-digit student ID. Year level accepts `1`–`4`, optionally suffixed with `st`, `nd`, `rd`, or `th` and optionally `year`.
 - Recipient imports require staff ID; unit and designation can be blank in import rows, but account activation requires a complete profile.
 - The importer supports legacy headings: `year`, `position`, `department`, `course`, `college_office`, `office`, and `recipient_department`, as well as `full_name`.
-- Status accepts `active`, `inactive`, `1`, or `0`; omitted status defaults to active for an existing verified account. Newly created and unverified accounts remain inactive until activated by an administrator.
+- Status accepts `active`, `inactive`, `1`, or `0`; omitted status defaults to active for an existing verified account. Newly imported accounts are always created inactive and unverified regardless of the row status. Existing unverified accounts also remain inactive; SDS can activate them, or the user can complete email verification, which activates the account.
 - Existing records are matched by the selected account ID, then email, and updated only when the role matches. Duplicate IDs or emails in the same file are rejected. The result reports total/imported/failed/duplicate/created/updated counts and row errors; row errors can be downloaded as CSV.
 - An unreadable workbook returns an upload error; it is not reported as a successful import.
 
@@ -119,7 +122,9 @@ Validation and system rules:
 
 ### Identity and sensitive-content rules
 
-- For a hidden-identity complaint, the student who filed it can see their identity; all other viewers, including SDS administrators, see `Anonymous`.
+- For a hidden-identity complaint, the filer can see their identity in the interface; everyone else, including SDS administrators and recipients, sees `Anonymous`. The identity and its database relationship are still stored; hiding identity is not deletion or encryption of the record.
+- Analytics and its PDF/Excel exports show aggregate identified-versus-anonymous counts, not a hidden student's name or ID. Sensitive-category tickets remain in totals and category distribution but are excluded from student-attribute breakdowns. Analytics exports contain no ticket subjects, descriptions, or personnel-involved text.
+- Unmasking identity for a CODI sworn complaint is not automatic; it is a decision for SDS and the university's data privacy officer.
 - For a sensitive category, a dashboard/report/email-safe subject is `Confidential concern`, not the original subject.
 - Sensitive categories are always configured to allow hidden identity. The category editor forces `allows_hidden_identity` on whenever `is_sensitive` is on.
 - A handler-selection action checks whether the proposed recipient appears by full name, first-and-last name, or (in the personnel-involved field) surname. It records a `conflict_of_interest_flagged` audit event when it detects a match. This is a flag, not an automatic block.
@@ -312,10 +317,10 @@ Delivery rules:
 | Other referral, no outcome | Active SDS admin(s) | Off by default; adjustable system default | Working days |
 | Resolved, no student response | Active SDS admin(s) | 15 | Calendar days |
 
-Reminders are operational nudges to the person who must act next. They are not handbook deadlines and never change a ticket. The handbook states no deadline for ordinary complaints; the only timelines it states are for CODI harassment cases and disciplinary appeals.
+Reminders are operational nudges to the person who must act next. The handbook sets no deadline for acknowledging or resolving ordinary complaints. Every reminder is a system default, adjustable by SDS, not a handbook deadline, and reminders never change a ticket. The handbook's 15-day appeal periods apply to the respondent student; CODI timelines apply to CODI matters.
 
 - The 1-working-day sensitive-category reminder is a system default, derived from the CODI 24-hour notice timeline (Handbook p. 58). It is adjustable and is not a handbook deadline for SDS.
-- The CODI referral reminder uses the 10-working-day decision period stated for CODI (Handbook pp. 57 to 58); it is only sent for referrals flagged CODI.
+- The adjustable CODI referral reminder is set to 10 working days, informed by the decision period stated for CODI (Handbook pp. 57 to 58); it is only sent for referrals flagged CODI and is not a deadline for SDS.
 - The generic reminder for other referrals is a system default, not a handbook deadline. It is off by default; SDS can enable it and adjust its 1–30 working-day threshold.
 - The 15-day resolved-student-response reminder is a system default, adjustable by SDS.
 - Needs Clarification reminders are a system default, not a handbook deadline. SDS can adjust the student reminder interval from 1–30 working days. The reminder repeats at that interval; active SDS admins receive one notice at twice the interval for each wait period, suggesting they may follow up or close the ticket as no response. No ticket is closed automatically.
@@ -323,11 +328,11 @@ Reminders are operational nudges to the person who must act next. They are not h
 
 - Thresholds and enable/disable are editable by the SDS admin in settings. Each threshold must be 1–30 days.
 - Settings are stored as `SystemSetting` key/value rows and override `config/tickets.php`. Missing values use config defaults; day counts are clamped to at least one.
-- Working-day counting excludes Saturday and Sunday. It does not apply a holiday calendar.
+- Working-day counting defaults to Monday through Friday and applies the SDS-managed Working Calendar overrides. No holiday dates are shipped; SDS enters and maintains the calendar.
 - Regular waiting reminders repeat after the same threshold since the last reminder, measured from the latest non-email ticket action. Email-sent/failed audit events do not reset action time.
 - Needs Clarification waiting starts from the later of the clarification request and the latest non-email ticket action. The student reminder is normal priority, repeats after each threshold, and stops when the ticket leaves Needs Clarification. At twice the threshold, SDS admins receive one notice per wait period. These messages contain only the ticket reference and public-safe subject; sensitive descriptions and personnel-involved text are not included.
 - The resolved-student-response reminder is sent once after the deadline; it tells SDS the student can still accept until that deadline.
-- The scheduled check runs hourly on weekdays between 08:00 and 17:00.
+- The scheduled check runs hourly between 08:00 and 17:00 on dates marked as working in the Working Calendar.
 
 ## 8. SDS configuration and administration
 
@@ -478,7 +483,7 @@ The primary records and their responsibilities:
 | `SystemSetting` | Admin-overridable key/value settings, including reminders. |
 | `AnalyticsReport` | Report generator/metadata record. |
 
-Key `Ticket` computed behavior includes status/resolution/closure display labels, status-transition checks, awaiting-review/active/conversation state predicates, whole weekdays open, last non-email action time, further-action deadline, and rating eligibility. `Complaint` provides attachment metadata/URLs, sensitive public subject, anonymous display name, submitter ownership, conflict-name matching, and reference-number generation.
+Key `Ticket` computed behavior includes status/resolution/closure display labels, status-transition checks, awaiting-review/active/conversation state predicates, calendar-aware working days open, last non-email action time, further-action deadline, and rating eligibility. `Complaint` provides attachment metadata/URLs, sensitive public subject, anonymous display name, submitter ownership, conflict-name matching, and reference-number generation.
 
 ## 12. Service and controller responsibilities
 
@@ -554,3 +559,31 @@ For behavior changes, update this document alongside the implementation. Source 
 - Analytics: `app/Services/AnalyticsService.php` and `app/Http/Controllers/Admin/AnalyticsController.php`.
 - Default ticket settings: `config/tickets.php`.
 - Database structure: `database/migrations`.
+
+## 17. Handbook alignment
+
+| Handbook provision and page | How SorSUpport handles it | Type |
+|---|---|---|
+| p. 46: complaints against a student are filed with the SDS Coordinator or the teacher, adviser, or professor, then go to the Program Chair and College Dean; the University may start proceedings on its own. | Configured complaint routing follows the SDS/teacher-to-Program-Chair-to-Dean path, and SDS records the Dean's assessment and endorsement before a Campus Disciplinary Committee referral. The University-initiated authority remains a university decision, not an automatic system action. | Handbook rule |
+| pp. 46 to 49 and 47 to 48: the Campus Disciplinary Committee acts on matters endorsed by the Dean. | SorSUpport requires the SDS admin to confirm Dean assessment and endorsement before recording a referral to the Campus Disciplinary Committee. | Handbook rule |
+| pp. 46 to 49 and 47 to 48: appeal periods of 15 days apply to the respondent student. | The appeal periods belong to the respondent student; SorSUpport does not run or adjudicate an appeal. | Handbook rule |
+| pp. 46 to 49 and 47 to 48: hearings, sanctions, and appeals are outside the system. | The system records routing/referral and its outcome only; hearings, sanctions, and appeals are handled outside SorSUpport. | Outside the system |
+| p. 57 and p. 58: CODI, 10 working days; 24-hour notice to the respondent; complaints received by other offices are transmitted to CODI; withdrawal does not stop CODI; anonymous complaints are not prohibited. | SDS manually records CODI referrals and outcomes. Other-office transmission and respondent notice are handled outside the reminder process. Withdrawal does not stop CODI; the system supports anonymous complaints. | Handbook rule |
+| p. 57 and p. 58: CODI timelines inform reminder settings. | Adjustable 10-working-day CODI referral and 1-working-day sensitive-ticket reminders are system defaults, not automatic transmission, notice, or SDS deadlines. | System default |
+| p. 59: CODI report and decision periods. | Those report and decision periods remain outside the system; SorSUpport records the referral and recorded outcome only. | Outside the system |
+| p. 60: student rights to redress of grievances (right 13) and expeditious release of records (right 15); no deadline is set for these rights. | SorSUpport records action and message timestamps but does not create deadlines for these rights. | Handbook rule |
+
+The handbook sets no deadline for acknowledging or resolving ordinary complaints. Every reminder is a system default, adjustable by SDS, and is not a deadline.
+
+## 18. Limitations
+
+- Each ticket has one current handler at a time.
+- Formal hearings, sanctions, and appeals are not managed in SorSUpport.
+- Escalation, reassignment, and closing are manual SDS admin decisions. Reminders never change a ticket.
+- SDS enters and maintains the holiday list in the Working Calendar; no holiday list is shipped.
+- The system has one SDS admin account, held by the SDS Coordinator. There is no separate login for each SDS staff member and no per-person audit trail within SDS.
+- Recipient accounts are staff accounts associated with an office (for non-teaching staff) or a college (for example, Program Chairs and Deans). Individual teachers do not have accounts.
+
+### Handover
+
+When the SDS Coordinator changes, the outgoing coordinator or system maintainer updates the existing admin profile's name, username, and email. The incoming coordinator sets a new password. Record the handover date in the administrative handover record. Because the same account is reused, audit entries before that date belong to the previous coordinator; the audit trail does not distinguish individual SDS staff.
