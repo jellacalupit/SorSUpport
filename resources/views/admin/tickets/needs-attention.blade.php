@@ -1,6 +1,6 @@
-<x-app-layout :role="'admin'" title="Ticket Follow-up">
+<x-app-layout :role="'admin'" title="Needs Attention">
     <section class="-mt-1 sm:-mt-2">
-        <p class="mb-3 text-sm text-muted-foreground">This list highlights tickets with pending student requests, no recent action under the configured system defaults, or an inactive handler account.</p>
+        <p class="mb-3 text-xs text-muted-foreground">This list highlights tickets with pending student requests, no recent action under the configured system defaults, or an inactive handler account.</p>
 
         <form method="GET" action="{{ route('admin.tickets.needs-attention') }}" data-ticket-filter-form class="relative z-20 mb-2">
             <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
