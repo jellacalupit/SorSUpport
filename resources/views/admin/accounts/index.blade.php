@@ -190,6 +190,16 @@
             }
         }"
          x-init="if (!courseOptions[department]) { department = ''; selectedCourse = ''; }">
+        @if ($errors->has('account') && session('blocked_deactivation_tickets'))
+            <div class="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950" role="alert">
+                <p class="font-semibold">{{ $errors->first('account') }}</p>
+                <ul class="mt-2 list-inside list-disc">
+                    @foreach (session('blocked_deactivation_tickets') as $ticket)
+                        <li><a href="{{ $ticket['url'] }}" class="font-semibold underline">{{ $ticket['reference'] }}</a></li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div class="inline-flex items-center gap-6 border-b border-border">
                 <button type="button"
@@ -411,6 +421,7 @@
                                         Edit
                                     </button>
                                     @include('admin.accounts.partials.status-action', ['user' => $user])
+                                    @include('admin.accounts.partials.remove-action', ['user' => $user])
                                 </div>
                             </td>
                         </tr>
@@ -957,6 +968,7 @@
                                             Edit
                                         </button>
                                         @include('admin.accounts.partials.status-action', ['user' => $user])
+                                        @include('admin.accounts.partials.remove-action', ['user' => $user])
                                     @endif
                                 </div>
                             </td>

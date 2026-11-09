@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\AuditLog;
+use App\Services\AccountRetentionService;
 use App\Models\Unit;
 use App\Notifications\AccountUpdateNotification;
 use Illuminate\Http\RedirectResponse;
@@ -139,7 +140,7 @@ class ProfileController extends Controller
     /**
      * Delete the user's account.
      */
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(Request $request, AccountRetentionService $retention): RedirectResponse
     {
         $request->validateWithBag('userDeletion', [
             'password' => ['required', 'current_password'],
@@ -147,11 +148,8 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        AuditLog::activity('account_deleted', $user->id, sprintf('Deleted account for %s.', $user->name));
-
+        $retention->remove($user, $user);
         Auth::logout();
-
-        $user->delete();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

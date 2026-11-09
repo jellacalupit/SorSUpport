@@ -6,6 +6,7 @@ use App\Models\Recipient;
 use App\Models\Student;
 use App\Models\Unit;
 use App\Models\User;
+use App\Services\TicketAssignmentService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -79,6 +80,20 @@ class AccountsImport implements ToCollection, WithHeadingRow
 
                     if ($user && $user->role !== $this->accountType) {
                         throw new \RuntimeException('The email belongs to another account type.');
+                    }
+
+                    if ($user && $this->accountType === User::ROLE_RECIPIENT && $row['is_active'] === false) {
+                        $openTickets = app(TicketAssignmentService::class)->openTicketsHandledBy($user);
+
+                        if ($openTickets->isNotEmpty()) {
+                            $references = $openTickets
+                                ->map(fn ($ticket) => $ticket->complaint?->reference_number ?? "Ticket #{$ticket->id}")
+                                ->implode(', ');
+
+                            throw new \RuntimeException(
+                                "Reassign these open tickets using the Assign action before deactivating this account: {$references}."
+                            );
+                        }
                     }
 
                     if (! $user) {

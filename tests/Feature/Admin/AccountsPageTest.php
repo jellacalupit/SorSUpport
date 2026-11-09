@@ -3,8 +3,13 @@
 namespace Tests\Feature\Admin;
 
 use App\Models\Recipient;
+use App\Models\Complaint;
+use App\Models\ComplaintCategory;
+use App\Models\Student;
+use App\Models\Ticket;
 use App\Models\Unit;
 use App\Models\User;
+use App\Services\TicketWorkflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -131,5 +136,155 @@ class AccountsPageTest extends TestCase
             ->assertSee('#edit-recipient-account-form', false)
             ->assertSee('form[action*="/reactivate"]', false)
             ->assertSee('loadAccountResults(window.location.href, false)', false);
+    }
+
+    public function test_recipient_deactivation_waits_until_all_open_tickets_are_reassigned(): void
+    {
+        $recipientUser = User::factory()->create([
+            'role' => User::ROLE_RECIPIENT,
+            'is_active' => true,
+        ]);
+        $recipient = Recipient::create([
+            'user_id' => $recipientUser->id,
+            'staff_id' => 'STAFF-ORPHAN',
+            'unit' => 'Registrar',
+            'designation' => 'Staff',
+        ]);
+        $replacement = Recipient::create([
+            'user_id' => User::factory()->create(['role' => User::ROLE_RECIPIENT])->id,
+            'staff_id' => 'STAFF-REPLACEMENT',
+            'unit' => 'Registrar',
+            'designation' => 'Staff',
+        ]);
+        $studentUser = User::factory()->create(['role' => User::ROLE_STUDENT]);
+        $student = Student::create([
+            'user_id' => $studentUser->id,
+            'student_id' => '20249991',
+            'college' => 'CICT',
+            'program' => 'BSIT',
+            'year_level' => '1',
+            'block' => '1',
+        ]);
+        $category = ComplaintCategory::create(['name' => 'General', 'is_active' => true]);
+        $tickets = collect([Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED])
+            ->map(function (string $status) use ($student, $category, $recipientUser): Ticket {
+                $complaint = Complaint::create([
+                    'reference_number' => Complaint::generateReferenceNumber(),
+                    'student_id' => $student->id,
+                    'category_id' => $category->id,
+                    'subject_title' => 'Do not show this subject',
+                    'description' => 'Ticket description.',
+                    'status' => $status,
+                ]);
+
+                return Ticket::create([
+                    'complaint_id' => $complaint->id,
+                    'status' => $status,
+                    'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+                    'assigned_to' => $recipientUser->id,
+                    'current_handler_id' => $recipientUser->id,
+                ]);
+            });
+
+        $response = $this->actingAs($this->admin)
+            ->from(route('admin.accounts.index', ['category_filter' => 'recipients']))
+            ->patch(route('admin.accounts.deactivate', $recipientUser))
+            ->assertRedirect(route('admin.accounts.index', ['category_filter' => 'recipients']))
+            ->assertSessionHasErrors('account');
+
+        $response->assertSessionHas('blocked_deactivation_tickets', function (array $blocked) use ($tickets): bool {
+            return count($blocked) === 3
+                && collect($blocked)->pluck('reference')->sort()->values()->all()
+                    === $tickets->map(fn (Ticket $ticket) => $ticket->complaint->reference_number)->sort()->values()->all();
+        });
+        $blockedPage = $this->actingAs($this->admin)
+            ->get(route('admin.accounts.index', ['category_filter' => 'recipients']))
+            ->assertOk()
+            ->assertSee('Reassign these open tickets using the Assign action before deactivating this account.')
+            ->assertDontSee('Do not show this subject');
+        foreach ($tickets as $ticket) {
+            $blockedPage->assertSee($ticket->complaint->reference_number)
+                ->assertSee(route('admin.complaints.show', $ticket->complaint), false);
+            $this->assertDatabaseHas('users', ['id' => $recipientUser->id, 'is_active' => true]);
+            $this->assertDatabaseHas('tickets', [
+                'id' => $ticket->id,
+                'assigned_to' => $recipientUser->id,
+                'current_handler_id' => $recipientUser->id,
+            ]);
+        }
+
+        foreach ($tickets as $ticket) {
+            app(TicketWorkflow::class)->assign($ticket, $this->admin, $replacement);
+        }
+
+        $this->actingAs($this->admin)
+            ->patch(route('admin.accounts.deactivate', $recipientUser))
+            ->assertRedirect(route('admin.accounts.index', ['category_filter' => 'recipients']));
+        $this->assertDatabaseHas('users', ['id' => $recipientUser->id, 'is_active' => false]);
+        foreach ($tickets as $ticket) {
+            $this->assertSame($replacement->user_id, $ticket->fresh()->current_handler_id);
+            $this->assertSame($replacement->user_id, $ticket->fresh()->assigned_to);
+        }
+    }
+
+    public function test_admin_removal_anonymizes_accounts_with_ticket_records(): void
+    {
+        $recipientUser = User::factory()->create(['role' => User::ROLE_RECIPIENT]);
+        $recipient = Recipient::create([
+            'user_id' => $recipientUser->id,
+            'staff_id' => 'STAFF-RETAIN',
+            'unit' => 'Registrar',
+            'designation' => 'Staff',
+        ]);
+        $ticket = $this->makeAssignedTicket($recipientUser);
+        $oldId = $recipientUser->id;
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.accounts.destroy', $recipientUser))
+            ->assertRedirect(route('admin.accounts.index', ['category_filter' => 'recipients']));
+
+        $this->assertDatabaseHas('users', [
+            'id' => $oldId,
+            'name' => 'Deleted user',
+            'username' => "deleted-{$oldId}",
+            'email' => "deleted-{$oldId}@deleted.invalid",
+            'is_active' => false,
+        ]);
+        $this->assertDatabaseHas('tickets', ['id' => $ticket->id]);
+        $this->assertDatabaseHas('audit_logs', [
+            'ticket_id' => null,
+            'action' => 'account_anonymized',
+            'performed_by' => $this->admin->id,
+        ]);
+        $this->assertNotNull($recipient);
+    }
+
+    private function makeAssignedTicket(User $handler): Ticket
+    {
+        $studentUser = User::factory()->create(['role' => User::ROLE_STUDENT]);
+        $student = Student::create([
+            'user_id' => $studentUser->id,
+            'student_id' => '20249992',
+            'college' => 'CICT',
+            'program' => 'BSIT',
+            'year_level' => '1',
+            'block' => '1',
+        ]);
+        $category = ComplaintCategory::create(['name' => 'General', 'is_active' => true]);
+        $complaint = Complaint::create([
+            'reference_number' => Complaint::generateReferenceNumber(),
+            'student_id' => $student->id,
+            'category_id' => $category->id,
+            'subject_title' => 'Concern subject',
+            'description' => 'Concern details.',
+        ]);
+
+        return Ticket::create([
+            'complaint_id' => $complaint->id,
+            'status' => Ticket::STATUS_ASSIGNED,
+            'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+            'assigned_to' => $handler->id,
+            'current_handler_id' => $handler->id,
+        ]);
     }
 }

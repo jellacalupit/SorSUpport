@@ -112,6 +112,8 @@ Besides the usual Laravel settings, `.env` takes:
 
 Reminder timing is set by the SDS admin in System Settings, not in `.env`.
 
+SDS cannot deactivate a recipient while that account is assigned to an open ticket; the tickets must first be reassigned with the existing Assign action. Removing an account with ticket-related records anonymizes it and retains the records; accounts without such records may be deleted. Retention of anonymized records is a decision for SDS and the university's data privacy officer.
+
 Useful commands:
 
 ```bash

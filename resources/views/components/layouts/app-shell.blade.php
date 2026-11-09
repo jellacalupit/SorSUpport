@@ -1156,7 +1156,12 @@
                         @if (session('upload_summary.errors'))
                             <ul class="mt-2 space-y-0.5 text-xs font-normal text-green-50">
                                 @foreach (session('upload_summary.errors') as $error)
-                                    <li>Row {{ $error['row'] }}: {{ implode(' ', $error['messages']) }}</li>
+                                    <li>
+                                        Row {{ $error['row'] }}: {{ implode(' ', $error['messages']) }}
+                                        @foreach (($error['tickets'] ?? []) as $ticket)
+                                            <a href="{{ $ticket['url'] }}" class="font-semibold underline">{{ $ticket['reference'] }}</a>@if (! $loop->last),@endif
+                                        @endforeach
+                                    </li>
                                 @endforeach
                             </ul>
                             <a href="{{ route('admin.accounts.upload.errors') }}" class="mt-1 inline-block text-xs font-semibold text-white underline">Download error report</a>

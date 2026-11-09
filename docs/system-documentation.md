@@ -70,6 +70,10 @@ Updating an account changes the profile and account details. If the account stil
 
 Deactivation prevents access and sends an account-update email. Reactivation requires a complete role profile, sets the account active, verifies its email, and sends an activation email. Account create/update/activation/deactivation/import actions are recorded as standalone audit activity.
 
+A recipient account cannot be deactivated while it is the assignee or current handler of an Assigned, In Progress, or Escalated ticket. The account page lists the affected ticket references with links; SDS must reassign them using the existing Assign action. Bulk imports that request deactivation skip the affected row and report the same reason.
+
+SDS can remove student and recipient accounts. An account with a related complaint, ticket, message, or audit record is anonymized instead of hard-deleted: its name becomes “Deleted user”, its username/email are replaced with unique placeholders, its photo is cleared, and it is made inactive. Related ticket history is retained, and account-name references in audit details are redacted. An account without related records can still be hard-deleted. Self-service profile deletion keeps its current-password confirmation and follows the same retention rule. Retention of anonymized records is a decision for SDS and the university's data privacy officer.
+
 ### Bulk account import
 
 - Accepted upload types: CSV, XLSX, and XLS; maximum file size 10 MB.

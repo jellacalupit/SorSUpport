@@ -3,7 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\AuditLog;
+use App\Models\Complaint;
+use App\Models\ComplaintCategory;
+use App\Models\Student;
+use App\Models\ThreadMessage;
+use App\Models\Ticket;
+use App\Models\TicketThread;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ProfileTest extends TestCase
@@ -193,8 +201,93 @@ class ProfileTest extends TestCase
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'account_deleted',
             'performed_by' => null,
-            'details' => 'Deleted account for ' . $deletedUserName . '.',
+            'details' => 'Deleted account ID ' . $user->id . ' with no related ticket records.',
         ]);
+    }
+
+    public function test_deleting_an_account_with_ticket_records_anonymizes_it_and_preserves_history(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create([
+            'name' => 'Mary Privacy',
+            'first_name' => 'Mary',
+            'last_name' => 'Privacy',
+            'username' => 'mary.privacy',
+            'email' => 'mary.privacy@example.test',
+            'avatar_path' => 'avatars/mary.png',
+        ]);
+        Storage::disk('public')->put('avatars/mary.png', 'avatar');
+        $student = Student::create([
+            'user_id' => $user->id,
+            'student_id' => '20249981',
+            'college' => 'CICT',
+            'program' => 'BSIT',
+            'year_level' => '1',
+            'block' => '1',
+        ]);
+        $category = ComplaintCategory::create(['name' => 'General', 'is_active' => true]);
+        $complaint = Complaint::create([
+            'reference_number' => Complaint::generateReferenceNumber(),
+            'student_id' => $student->id,
+            'category_id' => $category->id,
+            'subject_title' => 'Retained concern',
+            'description' => 'Retained complaint details.',
+        ]);
+        $ticket = Ticket::create([
+            'complaint_id' => $complaint->id,
+            'status' => Ticket::STATUS_SUBMITTED,
+        ]);
+        $thread = TicketThread::create(['ticket_id' => $ticket->id, 'is_active' => true]);
+        $message = ThreadMessage::create([
+            'thread_id' => $thread->id,
+            'sender_id' => $user->id,
+            'content' => 'A retained message.',
+        ]);
+        $priorAudit = AuditLog::create([
+            'ticket_id' => $ticket->id,
+            'performed_by' => $user->id,
+            'action' => 'message_posted',
+            'details' => 'Mary Privacy posted a reply message.',
+        ]);
+        $id = $user->id;
+
+        $this->actingAs($user)
+            ->delete('/profile', ['password' => 'password'])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/');
+
+        $anonymized = User::findOrFail($id);
+        $this->assertGuest();
+        $this->assertSame('Deleted user', $anonymized->name);
+        $this->assertSame('Deleted user', $anonymized->display_name);
+        $this->assertSame("deleted-{$id}", $anonymized->username);
+        $this->assertSame("deleted-{$id}@deleted.invalid", $anonymized->email);
+        $this->assertFalse($anonymized->is_active);
+        $this->assertNull($anonymized->avatar_path);
+        Storage::disk('public')->assertMissing('avatars/mary.png');
+        $this->assertDatabaseHas('complaints', ['id' => $complaint->id]);
+        $this->assertDatabaseHas('tickets', ['id' => $ticket->id]);
+        $this->assertDatabaseHas('thread_messages', [
+            'id' => $message->id,
+            'sender_id' => $id,
+            'content' => 'A retained message.',
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'id' => $priorAudit->id,
+            'performed_by' => $id,
+            'details' => 'Deleted user posted a reply message.',
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'account_anonymized',
+            'performed_by' => $id,
+        ]);
+        $this->assertDatabaseMissing('users', ['username' => 'mary.privacy']);
+        $this->assertDatabaseMissing('users', ['email' => 'mary.privacy@example.test']);
+        $replacement = User::factory()->create([
+            'username' => 'mary.privacy',
+            'email' => 'mary.privacy@example.test',
+        ]);
+        $this->assertNotNull($replacement->id);
     }
 
     public function test_correct_password_must_be_provided_to_delete_account(): void

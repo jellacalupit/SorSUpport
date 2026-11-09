@@ -3,8 +3,11 @@
 namespace Tests\Feature\Admin;
 
 use App\Models\Recipient;
-use App\Models\Unit;
+use App\Models\Complaint;
+use App\Models\ComplaintCategory;
 use App\Models\Student;
+use App\Models\Ticket;
+use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -303,6 +306,65 @@ class BulkAccountUploadTest extends TestCase
         $this->assertSame(1, $summary['duplicates']);
         $this->assertDatabaseHas('students', ['student_id' => '20243001']);
         $this->assertDatabaseMissing('students', ['student_id' => '20243002']);
+    }
+
+    public function test_bulk_upload_skips_recipient_deactivation_rows_with_open_tickets(): void
+    {
+        $admin = $this->admin();
+        $recipientUser = User::factory()->create([
+            'role' => User::ROLE_RECIPIENT,
+            'email' => 'handled@recipient.test',
+            'is_active' => true,
+            'email_verified_at' => now(),
+        ]);
+        $recipient = Recipient::create([
+            'user_id' => $recipientUser->id,
+            'staff_id' => 'R2010',
+            'unit' => 'Registrar Office',
+            'designation' => 'Staff',
+        ]);
+        Unit::create(['name' => 'Registrar Office', 'type' => Unit::TYPE_OFFICE]);
+        $studentUser = User::factory()->create(['role' => User::ROLE_STUDENT]);
+        $student = Student::create([
+            'user_id' => $studentUser->id,
+            'student_id' => '20249010',
+            'college' => 'CICT',
+            'program' => 'BSIT',
+            'year_level' => '1',
+            'block' => '1',
+        ]);
+        $category = ComplaintCategory::create(['name' => 'General', 'is_active' => true]);
+        $complaint = Complaint::create([
+            'reference_number' => Complaint::generateReferenceNumber(),
+            'student_id' => $student->id,
+            'category_id' => $category->id,
+            'subject_title' => 'Private ticket subject',
+            'description' => 'Ticket details.',
+        ]);
+        Ticket::create([
+            'complaint_id' => $complaint->id,
+            'status' => Ticket::STATUS_IN_PROGRESS,
+            'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+            'assigned_to' => $recipientUser->id,
+            'current_handler_id' => $recipientUser->id,
+        ]);
+
+        $file = UploadedFile::fake()->createWithContent('recipients.csv', "Staff ID,Last Name,First Name,Email,Unit,Designation,Status\nR2010,Handler,Rey,handled@recipient.test,Registrar Office,Staff,Inactive\nR2011,New,Recipient,new@recipient.test,Registrar Office,Staff,Active\n");
+
+        $this->actingAs($admin)->post(route('admin.accounts.upload.store'), [
+            'account_type' => User::ROLE_RECIPIENT,
+            'file' => $file,
+        ])->assertRedirect(route('admin.accounts.index', ['category_filter' => 'recipients']));
+
+        $summary = session('upload_summary');
+        $this->assertSame(1, $summary['imported']);
+        $this->assertSame(1, $summary['failed']);
+        $this->assertStringContainsString('Reassign these open tickets using the Assign action', $summary['errors'][0]['messages'][0]);
+        $this->assertStringContainsString($complaint->reference_number, $summary['errors'][0]['messages'][0]);
+        $this->assertStringNotContainsString('Private ticket subject', $summary['errors'][0]['messages'][0]);
+        $this->assertTrue((bool) $recipientUser->fresh()->is_active);
+        $this->assertDatabaseHas('users', ['email' => 'new@recipient.test', 'is_active' => false]);
+        $this->assertNotNull($recipient);
     }
 
     public function test_bulk_upload_rejects_a_recipient_request_with_student_only_data(): void
