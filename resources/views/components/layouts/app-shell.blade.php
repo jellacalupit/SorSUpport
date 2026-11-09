@@ -177,6 +177,7 @@
 
                     <aside
                         data-admin-sidebar-nav
+                        x-ref="sidebar"
                         :class="
                             sidebarOpen
                                 ? 'translate-x-0 lg:w-60'
