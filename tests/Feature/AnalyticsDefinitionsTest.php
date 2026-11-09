@@ -5,9 +5,11 @@ namespace Tests\Feature;
 use App\Models\AuditLog;
 use App\Models\Complaint;
 use App\Models\ComplaintCategory;
+use App\Exports\AnalyticsReportExport;
 use App\Models\Recipient;
 use App\Models\Student;
 use App\Models\Ticket;
+use App\Models\ThreadMessage;
 use App\Models\User;
 use App\Services\AnalyticsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -174,6 +176,128 @@ class AnalyticsDefinitionsTest extends TestCase
         $this->assertSame(2.0, $this->durationFor($direct));
     }
 
+    public function test_staff_metrics_and_handler_performance_are_derived_from_existing_events(): void
+    {
+        $acknowledgmentTickets = [];
+        foreach (['2026-01-03', '2026-01-04', '2026-01-05'] as $index => $acknowledgedAt) {
+            $ticket = $this->ticket(Ticket::STATUS_ASSIGNED, [
+                'assigned_to' => $this->recipientUser->id,
+                'current_handler_id' => $this->recipientUser->id,
+                'acknowledged_at' => Carbon::parse($acknowledgedAt),
+            ]);
+            Complaint::query()->whereKey($ticket->complaint_id)->update(['created_at' => Carbon::parse('2026-01-01')]);
+            $this->audit($ticket, 'ticket_assigned', '2026-01-02');
+            $this->audit($ticket, 'ticket_acknowledged', $acknowledgedAt, $this->recipientUser->id);
+            $acknowledgmentTickets[] = $ticket->fresh();
+        }
+        $message = ThreadMessage::create([
+            'thread_id' => $acknowledgmentTickets[0]->thread->id,
+            'sender_id' => $this->recipientUser->id,
+            'content' => 'Staff response',
+        ]);
+        ThreadMessage::query()->whereKey($message->id)->update(['created_at' => Carbon::parse('2026-01-02 12:00:00')]);
+
+        $classified = $this->ticket(Ticket::STATUS_SUBMITTED);
+        Complaint::query()->whereKey($classified->complaint_id)->update(['created_at' => Carbon::parse('2026-01-01')]);
+        $this->audit($classified, 'ticket_classified', '2026-01-04');
+
+        $requestTicket = $acknowledgmentTickets[0];
+        $this->audit($requestTicket, 'update_requested', '2026-01-06', $this->student->id);
+        $this->audit($requestTicket, 'ticket_classified', '2026-01-06 01:00:00', User::factory()->create(['role' => User::ROLE_SDS_ADMIN])->id);
+        $this->audit($requestTicket, 'escalation_requested', '2026-01-07', $this->student->id);
+        $this->audit($requestTicket, 'ticket_escalated', '2026-01-07 01:00:00', User::factory()->create(['role' => User::ROLE_SDS_ADMIN])->id);
+
+        $resolvedTickets = [];
+        foreach (range(1, 3) as $index) {
+            $ticket = $this->timedTicket('2026-01-01', '2026-01-03');
+            $this->audit($ticket, 'complaint_resolved', '2026-01-03', $this->recipientUser->id);
+            $resolvedTickets[] = $ticket;
+        }
+        $this->audit($resolvedTickets[0], 'further_action_requested', '2026-01-04', $this->student->id);
+        $this->audit($resolvedTickets[1], 'ticket_reopened_from_resolved', '2026-01-05', User::factory()->create(['role' => User::ROLE_SDS_ADMIN])->id);
+        $extraOpen = $this->ticket(Ticket::STATUS_IN_PROGRESS, [
+            'assigned_to' => $this->recipientUser->id,
+            'current_handler_id' => $this->recipientUser->id,
+        ]);
+        Complaint::query()->whereKey($extraOpen->complaint_id)->update(['created_at' => Carbon::parse('2026-01-01')]);
+
+        $otherUser = User::factory()->create(['role' => User::ROLE_RECIPIENT]);
+        Recipient::create([
+            'user_id' => $otherUser->id,
+            'staff_id' => 'ANALYTICS-OTHER',
+            'unit' => 'Registrar Office',
+            'designation' => 'Officer',
+        ]);
+        foreach (range(1, 2) as $ignored) {
+            $ticket = $this->timedTicket('2026-01-01', '2026-01-03', [
+                'assigned_to' => $otherUser->id,
+                'current_handler_id' => $otherUser->id,
+            ]);
+            $this->audit($ticket, 'complaint_resolved', '2026-01-03', $otherUser->id);
+        }
+
+        $analytics = app(AnalyticsService::class);
+        $dashboard = $analytics->getDashboardData();
+        $metrics = $dashboard['performanceMetrics'];
+        $report = $analytics->getReportData();
+
+        $this->assertSame(1.5, $metrics['review_time']['average_days']);
+        $this->assertSame(1.0, $metrics['review_time']['median_days']);
+        $this->assertSame(2.0, $metrics['acknowledgment_time']['average_days']);
+        $this->assertSame(2.0, $metrics['acknowledgment_time']['median_days']);
+        $this->assertSame(1.5, $metrics['first_response_time']['average_days']);
+        $this->assertSame(20.0, $metrics['further_action_rate']);
+        $this->assertSame(5, $metrics['resolved_ticket_count']);
+        $this->assertSame(1, $metrics['further_action_ticket_count']);
+        $this->assertSame(1, $metrics['reopen_count']);
+        $this->assertSame(['count' => 1, 'followed_by_sds_action' => 1], $metrics['student_requests']['update']);
+        $this->assertSame(['count' => 1, 'followed_by_sds_action' => 1], $metrics['student_requests']['escalation']);
+        $this->assertSame(1, $metrics['escalation_count']);
+
+        $handler = collect($metrics['handler_rows'])->firstWhere('name', $this->recipientUser->table_name);
+        $otherHandler = collect($metrics['handler_rows'])->firstWhere('name', $otherUser->table_name);
+        $this->assertSame(4, $handler['open_tickets']);
+        $this->assertSame(round((now()->getTimestamp() - Carbon::parse('2026-01-01')->getTimestamp()) / 86400, 1), $handler['oldest_open_ticket_age_days']);
+        $this->assertSame(2.0, $handler['median_acknowledgment_days']);
+        $this->assertSame(3, $handler['resolved_tickets']);
+        $this->assertSame(2.0, $handler['handling_by_category']['Student Services']['median_days']);
+        $this->assertNull($handler['escalations']);
+        $this->assertNull($otherHandler['handling_by_category']['Student Services']['median_days']);
+        $this->assertSame(2, $otherHandler['handling_by_category']['Student Services']['ticket_count']);
+        $this->assertSame(5, $report['performance_metrics']['resolved_ticket_count']);
+
+        $office = collect($metrics['office_rows'])->firstWhere('name', 'Registrar Office');
+        $this->assertSame(4, $office['open_tickets']);
+        $this->assertSame(5, $office['resolved_tickets']);
+        $this->assertSame(2.0, $office['handling_by_category']['Student Services']['median_days']);
+
+        $performanceReport = view('admin.analytics.report', [
+            'reportData' => $report,
+            'filters' => [],
+            'sections' => ['performance'],
+        ])->render();
+        $this->assertStringContainsString('Staff and Office Performance', $performanceReport);
+        $this->assertStringContainsString('Not enough data', $performanceReport);
+        $this->assertStringNotContainsString('Analytics test ticket', $performanceReport);
+        $excelRows = collect((new AnalyticsReportExport($report))->array())
+            ->map(fn ($row) => implode(' | ', $row));
+        $this->assertTrue($excelRows->contains('Performance by Handler'));
+        $this->assertTrue($excelRows->contains('Performance by Office'));
+        $this->assertTrue($excelRows->contains(fn ($row) => str_contains($row, 'Not enough data')));
+
+        $reviewOnly = $analytics->getReportData(['status' => Ticket::STATUS_SUBMITTED]);
+        $this->assertSame(1, $reviewOnly['performance_metrics']['review_time']['sample_count']);
+        $this->assertSame(0, $reviewOnly['performance_metrics']['resolved_ticket_count']);
+
+        $admin = User::factory()->create(['role' => User::ROLE_SDS_ADMIN]);
+        $this->actingAs($admin)
+            ->get(route('admin.analytics.index'))
+            ->assertOk()
+            ->assertSee('Staff and office performance')
+            ->assertSee('Not enough data');
+        $this->assertArrayHasKey('office_rows', $report['performance_metrics']);
+    }
+
     protected function timedTicket(string $submittedAt, string $resolvedAt, array $attributes = []): Ticket
     {
         $ticket = $this->ticket(Ticket::STATUS_RESOLVED, array_merge([
@@ -186,11 +310,12 @@ class AnalyticsDefinitionsTest extends TestCase
         return $ticket->fresh();
     }
 
-    protected function audit(Ticket $ticket, string $action, string $at): void
+    protected function audit(Ticket $ticket, string $action, string $at, ?int $performedBy = null): void
     {
         $event = AuditLog::create([
             'ticket_id' => $ticket->id,
             'action' => $action,
+            'performed_by' => $performedBy,
         ]);
         AuditLog::query()->whereKey($event->id)->update(['created_at' => Carbon::parse($at)]);
     }

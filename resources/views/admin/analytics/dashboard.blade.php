@@ -214,6 +214,82 @@
             @endforeach
         </dl>
 
+        @php $performance = $data['performanceMetrics']; @endphp
+        <section class="{{ $cardClass }}">
+            <h2 class="{{ $titleClass }}">Staff and office performance</h2>
+            <p class="{{ $subtitleClass }}">Calendar-time measures use the active filters. Handler and office escalations cannot be attributed from the existing event history; {{ number_format($performance['escalation_count']) }} escalation(s) are counted overall.</p>
+            <div class="mt-3 grid gap-2 sm:grid-cols-3">
+                @foreach ([
+                    ['Review time', $performance['review_time']],
+                    ['Time to acknowledge', $performance['acknowledgment_time']],
+                    ['Time to first response', $performance['first_response_time']],
+                ] as [$label, $timing])
+                    <div class="rounded-xl border border-border bg-muted/30 p-3">
+                        <p class="text-xs font-semibold text-foreground">{{ $label }}</p>
+                        <p class="mt-1 text-sm font-bold text-primary">Average {{ $days($timing['average_days']) }}</p>
+                        <p class="mt-0.5 text-xs text-muted-foreground">Median {{ $days($timing['median_days']) }} · {{ number_format($timing['sample_count']) }} ticket(s)</p>
+                    </div>
+                @endforeach
+            </div>
+            <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
+                <span>Further-action rate: <strong class="text-foreground">{{ number_format($performance['further_action_rate'], 1) }}%</strong> ({{ number_format($performance['further_action_ticket_count']) }} of {{ number_format($performance['resolved_ticket_count']) }} resolved tickets)</span>
+                <span>Reopened by SDS: <strong class="text-foreground">{{ number_format($performance['reopen_count']) }}</strong></span>
+                <span>Student update requests: <strong class="text-foreground">{{ number_format($performance['student_requests']['update']['count']) }}</strong>, {{ number_format($performance['student_requests']['update']['followed_by_sds_action']) }} followed by SDS action</span>
+                <span>Student escalation requests: <strong class="text-foreground">{{ number_format($performance['student_requests']['escalation']['count']) }}</strong>, {{ number_format($performance['student_requests']['escalation']['followed_by_sds_action']) }} followed by SDS action</span>
+            </div>
+        </section>
+
+        @foreach ([
+            ['title' => 'Performance by handler', 'rows' => $performance['handler_rows']],
+            ['title' => 'Performance by office', 'rows' => $performance['office_rows']],
+        ] as $table)
+            <section class="{{ $cardClass }} overflow-hidden">
+                <h2 class="{{ $titleClass }}">{{ $table['title'] }}</h2>
+                <p class="{{ $subtitleClass }}">Handling medians are grouped by category; groups with fewer than three tickets show “Not enough data.” No ticket subjects are listed.</p>
+                <div class="mt-3 overflow-x-auto">
+                    <table class="w-full min-w-[850px] text-left text-xs">
+                        <thead class="border-b border-border text-muted-foreground">
+                            <tr>
+                                <th class="py-2 pr-3 font-semibold">{{ $table['title'] === 'Performance by office' ? 'Office' : 'Handler' }}</th>
+                                <th class="py-2 px-2 text-right font-semibold">Open</th>
+                                <th class="py-2 px-2 text-right font-semibold">Oldest open age</th>
+                                <th class="py-2 px-2 text-right font-semibold">Median to acknowledge</th>
+                                <th class="py-2 px-2 font-semibold">Median handling time by category</th>
+                                <th class="py-2 px-2 text-right font-semibold">Resolved</th>
+                                <th class="py-2 pl-2 text-right font-semibold">Escalations</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($table['rows'] as $row)
+                                <tr class="border-b border-border/70 align-top last:border-0">
+                                    <td class="py-2 pr-3">
+                                        <span class="font-semibold text-foreground">{{ $row['name'] }}</span>
+                                        @if ($table['title'] === 'Performance by handler')
+                                            <span class="block text-[10px] text-muted-foreground">{{ $row['unit'] }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="py-2 px-2 text-right tabular-nums">{{ number_format($row['open_tickets']) }}</td>
+                                    <td class="py-2 px-2 text-right">{{ $row['oldest_open_ticket_age_days'] === null ? '—' : $days($row['oldest_open_ticket_age_days']) }}</td>
+                                    <td class="py-2 px-2 text-right">{{ $row['median_acknowledgment_days'] === null ? 'Not enough data' : $days($row['median_acknowledgment_days']) }}</td>
+                                    <td class="py-2 px-2">
+                                        @forelse ($row['handling_by_category'] as $category => $timing)
+                                            <span class="mr-2 inline-block">{{ $category }}: {{ $timing['median_days'] === null ? 'Not enough data' : $days($timing['median_days']) }}</span>
+                                        @empty
+                                            <span class="text-muted-foreground">Not enough data</span>
+                                        @endforelse
+                                    </td>
+                                    <td class="py-2 px-2 text-right tabular-nums">{{ number_format($row['resolved_tickets']) }}</td>
+                                    <td class="py-2 pl-2 text-right text-muted-foreground">Not attributed</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="7" class="py-4 text-center text-muted-foreground">No handler activity in this period.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        @endforeach
+
         <!-- Trend -->
         <section class="{{ $cardClass }}">
             <h2 class="{{ $titleClass }}">Ticket volume over time</h2>

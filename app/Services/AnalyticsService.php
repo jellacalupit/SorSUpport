@@ -141,7 +141,7 @@ class AnalyticsService
     public function getDashboardData(array $filters = []): array
     {
         $tickets = $this->filterTickets(Ticket::query(), $filters)
-            ->with(['complaint.category', 'assignee.recipient', 'currentHandler.recipient', 'auditLogs'])
+            ->with(['complaint.category', 'assignee.recipient', 'currentHandler.recipient', 'auditLogs.performer', 'thread.messages.sender'])
             ->get();
         $categories = ComplaintCategory::query()->orderBy('name')->get();
         $categoryNames = $categories->pluck('name')->values();
@@ -150,6 +150,7 @@ class AnalyticsService
         $resolutionRate = $this->resolutionRateMetrics($tickets);
         $resolved = $resolutionTickets->whereIn('status', $finishedStatuses);
         $resolutionTimes = $this->resolutionTimeStats($tickets);
+        $performanceMetrics = $this->performanceMetricsForTickets($tickets, $resolutionTimes);
         $timeEntries = $resolutionTimes['entries']->keyBy('ticket_id');
         $resolutionDays = $resolutionTimes['entries']->pluck('days')->filter(fn ($days) => $days !== null);
         $escalationEvents = $tickets->flatMap->auditLogs->where('action', 'ticket_escalated');
@@ -238,6 +239,7 @@ class AnalyticsService
             'tickets' => $tickets, 'categories' => $categories, 'categoryNames' => $categoryNames,
             'total' => $tickets->count(), 'resolutionTickets' => $resolutionRate['total'], 'needsResolutionTickets' => $resolutionTickets->count(), 'resolved' => $resolutionRate['resolved'], 'resolutionRate' => $resolutionRate['rate'], 'resolutionMetrics' => $resolutionRate,
             'resolutionTime' => collect($resolutionTimes)->except('entries')->all(),
+            'performanceMetrics' => $performanceMetrics,
             'averageHours' => round($resolutionTimes['average_days'] * 24, 1),
             'fastestHours' => round(($resolutionDays->min() ?? 0) * 24, 1), 'longestHours' => round(($resolutionDays->max() ?? 0) * 24, 1),
             'volume' => ['labels' => $submittedSeries['labels'], 'submitted' => $submittedSeries['data'], 'resolved' => $resolvedSeries['data'], 'closed' => $closedSeries['data'], 'period' => $period],
@@ -534,6 +536,234 @@ class AnalyticsService
         ];
     }
 
+    protected function performanceMetricsForTickets(Collection $tickets, array $resolutionTimes): array
+    {
+        $staffActions = ['ticket_classified', 'ticket_assigned', 'ticket_acknowledged', 'clarification_requested'];
+        $reviewDurations = [];
+        $acknowledgmentDurations = [];
+        $firstResponseDurations = [];
+        $acknowledgmentsByHandler = [];
+        $resolvedByHandler = [];
+        $handlingByHandlerAndCategory = [];
+        $resolvedTicketIds = [];
+        $furtherActionTicketIds = [];
+        $reopenCount = 0;
+        $studentRequests = ['update_requested' => [], 'escalation_requested' => []];
+        $escalationCount = 0;
+        $handlerIds = [];
+        $handlerOpenTickets = [];
+        $openStatuses = [
+            Ticket::STATUS_SUBMITTED,
+            Ticket::STATUS_NEEDS_CLARIFICATION,
+            Ticket::STATUS_ASSIGNED,
+            Ticket::STATUS_IN_PROGRESS,
+            Ticket::STATUS_ESCALATED,
+            Ticket::STATUS_REFERRED,
+        ];
+
+        foreach ($tickets as $ticket) {
+            $logs = $ticket->auditLogs->sortBy(fn ($event) => [$event->created_at?->getTimestamp() ?? 0, $event->id])->values();
+            $submittedAt = $ticket->complaint?->created_at;
+            $reviewEvent = $logs
+                ->filter(fn ($event) => in_array($event->action, $staffActions, true))
+                ->first(fn ($event) => $submittedAt && $event->created_at && $event->created_at->greaterThanOrEqualTo($submittedAt));
+            if ($reviewEvent && $submittedAt) {
+                $reviewDurations[] = ($reviewEvent->created_at->getTimestamp() - $submittedAt->getTimestamp()) / 86400;
+            }
+
+            $pendingAssignment = null;
+            foreach ($logs as $event) {
+                if ($event->action === 'ticket_assigned') {
+                    $pendingAssignment = $event->created_at;
+                } elseif ($event->action === 'ticket_acknowledged' && $pendingAssignment && $event->created_at?->greaterThanOrEqualTo($pendingAssignment)) {
+                    $days = ($event->created_at->getTimestamp() - $pendingAssignment->getTimestamp()) / 86400;
+                    $acknowledgmentDurations[] = $days;
+                    if ($event->performed_by) {
+                        $acknowledgmentsByHandler[$event->performed_by][] = $days;
+                        $handlerIds[] = (int) $event->performed_by;
+                    }
+                    $pendingAssignment = null;
+                }
+            }
+
+            $firstStaffMessage = $ticket->thread?->messages
+                ->filter(fn ($message) => $message->sender && in_array($message->sender->role, [User::ROLE_RECIPIENT, User::ROLE_SDS_ADMIN], true))
+                ->sortBy(fn ($message) => [$message->created_at?->getTimestamp() ?? 0, $message->id])
+                ->first(fn ($message) => $submittedAt && $message->created_at && $message->created_at->greaterThanOrEqualTo($submittedAt));
+            if ($firstStaffMessage && $submittedAt) {
+                $firstResponseDurations[] = ($firstStaffMessage->created_at->getTimestamp() - $submittedAt->getTimestamp()) / 86400;
+            }
+
+            foreach ($logs->where('action', 'complaint_resolved') as $event) {
+                $resolvedTicketIds[$ticket->id] = true;
+                if ($event->performed_by) {
+                    $resolvedByHandler[$event->performed_by][$ticket->id] = true;
+                    $handlerIds[] = (int) $event->performed_by;
+                }
+            }
+            if ($logs->contains('action', 'referral_outcome_recorded') || $this->isRecordedResolution($ticket)) {
+                $resolvedTicketIds[$ticket->id] = true;
+            }
+            if ($logs->contains('action', 'further_action_requested')) {
+                $furtherActionTicketIds[$ticket->id] = true;
+            }
+            $reopenCount += $logs->where('action', 'ticket_reopened_from_resolved')->count();
+            $escalationCount += $logs->where('action', 'ticket_escalated')->count();
+
+            foreach (['update_requested', 'escalation_requested'] as $requestAction) {
+                $studentRequests[$requestAction] = [
+                    ...$studentRequests[$requestAction],
+                    ...$this->requestFollowUpCounts($logs, $requestAction),
+                ];
+            }
+
+            if (! $ticket->isForwardedInformational() && in_array($ticket->status, $openStatuses, true)) {
+                $handlerId = $ticket->assigned_to ?: $ticket->current_handler_id;
+                if ($handlerId) {
+                    $handlerIds[] = (int) $handlerId;
+                    $handlerOpenTickets[$handlerId][] = $ticket;
+                }
+            }
+        }
+
+        $timeEntries = collect($resolutionTimes['entries'])->keyBy('ticket_id');
+        foreach ($tickets as $ticket) {
+            $lastResolution = $ticket->auditLogs
+                ->where('action', 'complaint_resolved')
+                ->sortBy(fn ($event) => [$event->created_at?->getTimestamp() ?? 0, $event->id])
+                ->last();
+            $entry = $timeEntries->get($ticket->id);
+            if (! $lastResolution?->performed_by || ! $entry || $entry['committee'] || $entry['days'] === null) {
+                continue;
+            }
+
+            $handlerId = (int) $lastResolution->performed_by;
+            $category = $entry['category'];
+            $handlingByHandlerAndCategory[$handlerId][$category][] = $entry['days'];
+            $handlerIds[] = $handlerId;
+        }
+
+        $handlerIds = array_values(array_unique(array_filter($handlerIds)));
+        $handlers = User::query()->with('recipient')->whereIn('id', $handlerIds)->get()->keyBy('id');
+        $handlerRows = [];
+        foreach ($handlers as $handler) {
+            $handlerRows[] = $this->performanceRow(
+                $handler->table_name ?: 'Staff member',
+                $handler->recipient?->unit ?: 'SDS Office',
+                [$handler->id],
+                $handlerOpenTickets,
+                $acknowledgmentsByHandler,
+                $resolvedByHandler,
+                $handlingByHandlerAndCategory,
+            );
+        }
+        usort($handlerRows, fn ($left, $right) => $right['open_tickets'] <=> $left['open_tickets'] ?: strcmp($left['name'], $right['name']));
+
+        $handlerIdsByUnit = $handlers->groupBy(fn ($handler) => $handler->recipient?->unit ?: 'SDS Office', true);
+        $officeRows = [];
+        foreach ($handlerIdsByUnit as $unit => $unitHandlers) {
+            $officeRows[] = $this->performanceRow(
+                $unit,
+                $unit,
+                $unitHandlers->keys()->all(),
+                $handlerOpenTickets,
+                $acknowledgmentsByHandler,
+                $resolvedByHandler,
+                $handlingByHandlerAndCategory,
+            );
+        }
+        usort($officeRows, fn ($left, $right) => $right['open_tickets'] <=> $left['open_tickets'] ?: strcmp($left['name'], $right['name']));
+
+        return [
+            'review_time' => $this->durationSummary($reviewDurations),
+            'acknowledgment_time' => $this->durationSummary($acknowledgmentDurations),
+            'first_response_time' => $this->durationSummary($firstResponseDurations),
+            'further_action_rate' => count($resolvedTicketIds)
+                ? round(count(array_intersect_key($furtherActionTicketIds, $resolvedTicketIds)) / count($resolvedTicketIds) * 100, 1)
+                : 0,
+            'resolved_ticket_count' => count($resolvedTicketIds),
+            'further_action_ticket_count' => count(array_intersect_key($furtherActionTicketIds, $resolvedTicketIds)),
+            'reopen_count' => $reopenCount,
+            'student_requests' => [
+                'update' => ['count' => count($studentRequests['update_requested']), 'followed_by_sds_action' => array_sum($studentRequests['update_requested'])],
+                'escalation' => ['count' => count($studentRequests['escalation_requested']), 'followed_by_sds_action' => array_sum($studentRequests['escalation_requested'])],
+            ],
+            'escalation_count' => $escalationCount,
+            'handler_rows' => $handlerRows,
+            'office_rows' => $officeRows,
+            'handler_escalations_attribution_available' => false,
+        ];
+    }
+
+    protected function requestFollowUpCounts(Collection $logs, string $requestAction): array
+    {
+        $counts = [];
+        $requestIndexes = $logs->where('action', $requestAction)->keys()->values();
+
+        foreach ($requestIndexes as $position => $index) {
+            $nextRequestIndex = $requestIndexes->get($position + 1, $logs->count());
+            $followed = $logs
+                ->slice($index + 1, $nextRequestIndex - $index - 1)
+                ->contains(fn ($event) => $event->performer?->role === User::ROLE_SDS_ADMIN);
+            $counts[] = $followed ? 1 : 0;
+        }
+
+        return $counts;
+    }
+
+    protected function durationSummary(array $durations): array
+    {
+        return [
+            'average_days' => $durations ? round(array_sum($durations) / count($durations), 1) : null,
+            'median_days' => $durations ? round(collect($durations)->median(), 1) : null,
+            'sample_count' => count($durations),
+        ];
+    }
+
+    protected function performanceRow(
+        string $name,
+        string $unit,
+        array $handlerIds,
+        array $handlerOpenTickets,
+        array $acknowledgmentsByHandler,
+        array $resolvedByHandler,
+        array $handlingByHandlerAndCategory,
+    ): array {
+        $openTickets = collect($handlerIds)->flatMap(fn ($id) => $handlerOpenTickets[$id] ?? []);
+        $acknowledgmentDurations = collect($handlerIds)->flatMap(fn ($id) => $acknowledgmentsByHandler[$id] ?? [])->all();
+        $resolvedIds = collect($handlerIds)->flatMap(fn ($id) => array_keys($resolvedByHandler[$id] ?? []))->unique();
+        $categoryDurations = [];
+        foreach ($handlerIds as $id) {
+            foreach ($handlingByHandlerAndCategory[$id] ?? [] as $category => $durations) {
+                $categoryDurations[$category] = [...($categoryDurations[$category] ?? []), ...$durations];
+            }
+        }
+        $handlingCategories = [];
+        foreach ($categoryDurations as $category => $durations) {
+            $handlingCategories[$category] = [
+                'median_days' => count($durations) >= 3 ? round(collect($durations)->median(), 1) : null,
+                'ticket_count' => count($durations),
+            ];
+        }
+        $openAges = $openTickets
+            ->map(fn ($ticket) => $ticket->complaint?->created_at
+                ? max(0, now()->getTimestamp() - $ticket->complaint->created_at->getTimestamp()) / 86400
+                : null)
+            ->filter(fn ($age) => $age !== null);
+
+        return [
+            'name' => $name,
+            'unit' => $unit,
+            'open_tickets' => $openTickets->count(),
+            'oldest_open_ticket_age_days' => $openAges->isNotEmpty() ? round($openAges->max(), 1) : null,
+            'median_acknowledgment_days' => count($acknowledgmentDurations) >= 3 ? round(collect($acknowledgmentDurations)->median(), 1) : null,
+            'acknowledgment_ticket_count' => count($acknowledgmentDurations),
+            'handling_by_category' => $handlingCategories,
+            'resolved_tickets' => $resolvedIds->count(),
+            'escalations' => null,
+        ];
+    }
+
     protected function buildInsights(Collection $categoryCounts, Collection $durations, Collection $escalations, Collection $tickets, int $identified): array
     {
         $topCategory = $categoryCounts->sortDesc()->keys()->first() ?? 'No category';
@@ -544,6 +774,10 @@ class AnalyticsService
     public function getReportData(array $filters = []): array
     {
         $resolutionRate = $this->getResolutionRate($filters);
+        $tickets = $this->filterTickets(Ticket::query(), $filters)
+            ->with(['complaint.category', 'assignee.recipient', 'currentHandler.recipient', 'auditLogs.performer', 'thread.messages.sender'])
+            ->get();
+        $resolutionTimes = $this->resolutionTimeStats($tickets);
 
         return [
             'summary' => [
@@ -553,6 +787,7 @@ class AnalyticsService
                 'escalated_tickets' => array_sum($this->getEscalationFrequency($filters)['data']),
             ],
             'resolution_rate_details' => $resolutionRate,
+            'performance_metrics' => $this->performanceMetricsForTickets($tickets, $resolutionTimes),
             'category_breakdown' => $this->getComplaintDistributionByCategory($filters),
             'resolution_chart' => $this->getResolutionRate($filters)['chart'],
             'average_resolution_time' => $this->getAverageResolutionTimePerCategory($filters),

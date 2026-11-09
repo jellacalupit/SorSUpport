@@ -9,6 +9,7 @@
     $has = fn (string $key): bool => in_array($key, $sections, true);
     $breakdowns = $reportData['breakdowns'] ?? [];
     $overview = $reportData['overview'] ?? [];
+    $performance = $reportData['performance_metrics'] ?? [];
     $satisfaction = $breakdowns['satisfaction'] ?? ['count' => 0, 'average' => null, 'distribution' => []];
     $image = fn (string $name): string => public_path("branding/report/{$name}.png");
 
@@ -340,6 +341,53 @@
                         </tfoot>
                     </table>
                 @endif
+        @elseif ($key === 'performance')
+                <h2>Staff and Office Performance</h2>
+                <p class="about">Calendar-time averages and medians use the selected filters. A student request is counted as followed by SDS action when an SDS administrator performs a later audited action before another request of the same type. Escalations are counted overall; existing audit records do not identify the handler being escalated away from.</p>
+                <table class="data">
+                    <thead><tr><th>Measure</th><th class="wide number">Average (days)</th><th class="wide number">Median (days)</th><th class="wide number">Tickets</th></tr></thead>
+                    <tbody>
+                        @foreach (['Review time' => 'review_time', 'Time to acknowledge' => 'acknowledgment_time', 'Time to first response' => 'first_response_time'] as $label => $key)
+                            @php $timing = $performance[$key]; @endphp
+                            <tr><td>{{ $label }}</td><td class="wide number">{{ $duration($timing['average_days']) }}</td><td class="wide number">{{ $duration($timing['median_days']) }}</td><td class="wide number">{{ $timing['sample_count'] }}</td></tr>
+                        @endforeach
+                        <tr><td>Further-action rate</td><td class="wide number" colspan="2">{{ number_format($performance['further_action_rate'], 1) }}%</td><td class="wide number">{{ $performance['further_action_ticket_count'] }} of {{ $performance['resolved_ticket_count'] }}</td></tr>
+                        <tr><td>Reopened by SDS</td><td class="wide number" colspan="2">—</td><td class="wide number">{{ $performance['reopen_count'] }}</td></tr>
+                        <tr><td>Student update requests</td><td class="wide number" colspan="2">{{ $performance['student_requests']['update']['followed_by_sds_action'] }} followed by SDS action</td><td class="wide number">{{ $performance['student_requests']['update']['count'] }}</td></tr>
+                        <tr><td>Student escalation requests</td><td class="wide number" colspan="2">{{ $performance['student_requests']['escalation']['followed_by_sds_action'] }} followed by SDS action</td><td class="wide number">{{ $performance['student_requests']['escalation']['count'] }}</td></tr>
+                        <tr><td>Escalations (overall, not attributed to handler)</td><td class="wide number" colspan="2">—</td><td class="wide number">{{ $performance['escalation_count'] }}</td></tr>
+                    </tbody>
+                </table>
+
+                @foreach ([['Handlers', $performance['handler_rows']], ['Offices', $performance['office_rows']]] as [$heading, $staffRows])
+                    <h3>Performance by {{ Str::lower($heading) }}</h3>
+                    @if (empty($staffRows))
+                        <p class="empty">No handler activity in this period.</p>
+                    @else
+                        <table class="data">
+                            <thead><tr><th>{{ $heading === 'Handlers' ? 'Handler' : 'Office' }}</th><th class="number">Open</th><th class="wide number">Oldest open age</th><th class="wide number">Median to acknowledge</th><th>Median handling time by category</th><th class="number">Resolved</th><th class="wide number">Escalations</th></tr></thead>
+                            <tbody>
+                                @foreach ($staffRows as $row)
+                                    <tr>
+                                        <td>{{ $row['name'] }}@if ($heading === 'Handlers')<br><span class="note">{{ $row['unit'] }}</span>@endif</td>
+                                        <td class="number">{{ $row['open_tickets'] }}</td>
+                                        <td class="wide number">{{ $row['oldest_open_ticket_age_days'] === null ? 'Not available' : $duration($row['oldest_open_ticket_age_days']) }}</td>
+                                        <td class="wide number">{{ $row['median_acknowledgment_days'] === null ? 'Not enough data' : $duration($row['median_acknowledgment_days']) }}</td>
+                                        <td>
+                                            @forelse ($row['handling_by_category'] as $category => $timing)
+                                                {{ $category }}: {{ $timing['median_days'] === null ? 'Not enough data' : $duration($timing['median_days']) }}@if (! $loop->last); @endif
+                                            @empty
+                                                Not enough data
+                                            @endforelse
+                                        </td>
+                                        <td class="number">{{ $row['resolved_tickets'] }}</td>
+                                        <td class="wide number">Not attributed</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    @endif
+                @endforeach
         @elseif ($key === 'resolution_time')
                 <h2>Active Handling Time</h2>
                 <p class="about">Calendar days from submission to recorded resolution, less time waiting for student clarification and committee referral outcomes. Average and median are shown overall and by category. Committee outcomes are separate from category averages.</p>

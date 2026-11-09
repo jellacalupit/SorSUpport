@@ -72,6 +72,65 @@ class AnalyticsReportExport implements FromArray, WithHeadings, ShouldAutoSize
             ];
         }
 
+        $performance = $this->reportData['performance_metrics'] ?? [];
+        $rows[] = [];
+        $rows[] = ['Staff and Office Performance'];
+        $rows[] = ['Measure', 'Average days', 'Median days', 'Tickets'];
+        foreach ([
+            'Review time' => 'review_time',
+            'Time to acknowledge' => 'acknowledgment_time',
+            'Time to first response' => 'first_response_time',
+        ] as $label => $key) {
+            $timing = $performance[$key] ?? [];
+            $rows[] = [$label, $timing['average_days'] ?? 'Not available', $timing['median_days'] ?? 'Not available', $timing['sample_count'] ?? 0];
+        }
+        $rows[] = ['Further-action rate', ($performance['further_action_rate'] ?? 0) . '%', '', ($performance['further_action_ticket_count'] ?? 0) . ' of ' . ($performance['resolved_ticket_count'] ?? 0)];
+        $rows[] = ['Reopened by SDS', '', '', $performance['reopen_count'] ?? 0];
+        foreach (['update' => 'Student update requests', 'escalation' => 'Student escalation requests'] as $key => $label) {
+            $request = $performance['student_requests'][$key] ?? [];
+            $rows[] = [$label, '', ($request['followed_by_sds_action'] ?? 0) . ' followed by SDS action', $request['count'] ?? 0];
+        }
+        $rows[] = ['Escalations overall (not attributed to handler)', '', '', $performance['escalation_count'] ?? 0];
+
+        foreach ([
+            'handler_rows' => ['Performance by Handler', 'Handler'],
+            'office_rows' => ['Performance by Office', 'Office'],
+        ] as $key => [$title, $nameHeading]) {
+            $rows[] = [];
+            $rows[] = [$title];
+            $rows[] = [$nameHeading, 'Unit', 'Open Tickets', 'Oldest Open Age (Days)', 'Median Acknowledgment (Days)', 'Category', 'Median Handling Time (Days)', 'Resolved Tickets', 'Escalations'];
+            foreach ($performance[$key] ?? [] as $staffRow) {
+                if ($staffRow['handling_by_category'] === []) {
+                    $rows[] = [
+                        $staffRow['name'],
+                        $key === 'handler_rows' ? $staffRow['unit'] : $staffRow['name'],
+                        $staffRow['open_tickets'],
+                        $staffRow['oldest_open_ticket_age_days'] ?? 'Not available',
+                        $staffRow['median_acknowledgment_days'] ?? 'Not enough data',
+                        '',
+                        'Not enough data',
+                        $staffRow['resolved_tickets'],
+                        'Not attributed',
+                    ];
+                    continue;
+                }
+
+                foreach ($staffRow['handling_by_category'] as $category => $timing) {
+                    $rows[] = [
+                        $staffRow['name'],
+                        $key === 'handler_rows' ? $staffRow['unit'] : $staffRow['name'],
+                        $staffRow['open_tickets'],
+                        $staffRow['oldest_open_ticket_age_days'] ?? 'Not available',
+                        $staffRow['median_acknowledgment_days'] ?? 'Not enough data',
+                        $category,
+                        $timing['median_days'] ?? 'Not enough data',
+                        $staffRow['resolved_tickets'],
+                        'Not attributed',
+                    ];
+                }
+            }
+        }
+
         $rows[] = [];
         $rows[] = ['Escalation Frequency'];
         foreach ($this->reportData['escalation_frequency']['labels'] as $index => $label) {

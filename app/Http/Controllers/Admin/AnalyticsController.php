@@ -19,6 +19,7 @@ class AnalyticsController extends Controller
      */
     public const REPORT_SECTIONS = [
         'summary' => 'Summary',
+        'performance' => 'Staff and office performance',
         'categories' => 'Tickets by category',
         'resolution_rate' => 'Resolution rate',
         'resolution_time' => 'How long tickets took to resolve',
