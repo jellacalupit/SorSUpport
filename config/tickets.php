@@ -23,6 +23,9 @@ return [
         // Adjustable; not a handbook deadline for SDS.
         'sensitive_unreviewed_days' => 1,
 
+        // Needs clarification: student reply reminder. System default, not a handbook deadline.
+        'clarification_days' => 5,
+
         // Assigned and not yet acknowledged: the assigned handler is reminded.
         'unacknowledged_days' => 2,
 

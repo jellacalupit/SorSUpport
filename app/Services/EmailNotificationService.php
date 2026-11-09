@@ -149,7 +149,10 @@ class EmailNotificationService
             EmailNotification::TYPE_ASSIGNMENT, EmailNotification::TYPE_RECIPIENT_ASSIGNMENT, EmailNotification::TYPE_INFORMATIONAL_FORWARD => 'emails.notifications.assignment',
             EmailNotification::TYPE_STATUS_UPDATE, EmailNotification::TYPE_STUDENT_STATUS_UPDATE, EmailNotification::TYPE_ACKNOWLEDGED, EmailNotification::TYPE_RECIPIENT_RESOLVED, EmailNotification::TYPE_RESOLVED => 'emails.notifications.status_update',
             EmailNotification::TYPE_ESCALATED => 'emails.notifications.escalation',
-            EmailNotification::TYPE_DAILY_REMINDER, EmailNotification::TYPE_WAITING_REMINDER => 'emails.notifications.daily_reminder',
+            EmailNotification::TYPE_DAILY_REMINDER,
+            EmailNotification::TYPE_WAITING_REMINDER,
+            EmailNotification::TYPE_CLARIFICATION_REMINDER,
+            EmailNotification::TYPE_CLARIFICATION_NO_RESPONSE => 'emails.notifications.daily_reminder',
             EmailNotification::TYPE_CLOSED, EmailNotification::TYPE_COMPLAINT_CLOSED => 'emails.notifications.closure_resolved',
             default => 'emails.notifications.status_update',
         };

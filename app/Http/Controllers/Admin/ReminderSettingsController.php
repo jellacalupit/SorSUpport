@@ -21,6 +21,7 @@ class ReminderSettingsController extends Controller
             'enabled' => ['required', 'boolean'],
             'unreviewed_days' => $days,
             'sensitive_unreviewed_days' => $days,
+            'clarification_days' => $days,
             'unacknowledged_days' => $days,
             'idle_days' => $days,
             'referral_days' => $days,
@@ -35,20 +36,23 @@ class ReminderSettingsController extends Controller
         $reminders->saveSettings($validated);
 
         $studentDays = sprintf('Students have %d days to respond to a resolution.', $validated['student_response_days']);
+        $clarificationDays = sprintf('Student clarification reminder after %d working days.', $validated['clarification_days']);
 
         AuditLog::activity('reminder_settings_updated', details: $validated['enabled']
             ? sprintf(
-                'Updated reminders: not reviewed %d, sensitive not reviewed %d, not acknowledged %d, no action %d, CODI referral %d, generic referral %s (%d working days). %s',
+                'Updated reminders: not reviewed %d, sensitive not reviewed %d, clarification %d working days, not acknowledged %d, no action %d, CODI referral %d, generic referral %s (%d working days). %s %s',
                 $validated['unreviewed_days'],
                 $validated['sensitive_unreviewed_days'],
+                $validated['clarification_days'],
                 $validated['unacknowledged_days'],
                 $validated['idle_days'],
                 $validated['referral_days'],
                 $validated['generic_referral_enabled'] ? 'enabled' : 'disabled',
                 $validated['generic_referral_days'],
                 $studentDays,
+                $clarificationDays,
             )
-            : 'Turned off reminders for waiting tickets. ' . $studentDays);
+            : 'Turned off reminders for waiting tickets. ' . $studentDays . ' ' . $clarificationDays);
 
         return redirect()->route('admin.settings', ['settings_tab' => 'reminders'])
             ->with('success', 'Reminder settings saved.');

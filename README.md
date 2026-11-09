@@ -21,7 +21,7 @@ When SDS closes a ticket as invalid, duplicate, out of scope, or no response, it
 - **Ticket lifecycle**: Submitted → Needs Clarification → Assigned → In Progress → Escalated / Referred → Resolved → Closed. A single set of rules decides who may take each action from each status.
 - **Routing**: categories set by the admin, each with suggested recipients and escalation paths. For “Complaint Against a Student,” the CBME and CICT paths are Program Chair → College Dean; SDS must confirm the College Dean's assessment and endorsement before referring any ticket to the Campus Disciplinary Committee.
 - CODI referrals use the canonical Committee on Decorum and Investigation name. “Other” entries matching that name or the acronym CODI are recognized after normalization.
-- **Confidentiality**: a student can hide their identity where the category allows it. Their name is then hidden from everyone in the system, including the SDS admin. Sensitive tickets are visible only to the SDS Office and the assigned handler. The system flags when a ticket goes to someone named in the complaint.
+- **Confidentiality**: a student can hide their identity where the category allows it. Their name is then hidden from everyone in the system, including the SDS admin. Sensitive tickets are visible only to the SDS Office and the assigned handler; emails use “Confidential concern” and never include the real subject, description or personnel-involved text. The system flags when a ticket goes to someone named in the complaint.
 - **Conversation**: each ticket has a message thread with file attachments, kept in private storage.
 - **Notifications**: in-app notifications and unread badges, plus email requests to SDS when students ask for an update or for SDS to consider escalation. These requests do not notify the assigned handler.
 - **Reminders for waiting tickets**: a daily high-priority email when a ticket has waited too long (see below).
@@ -40,6 +40,7 @@ The system emails whoever has to act next on a ticket that has waited too long w
 |---|---|---|---|
 | Submitted, not yet classified or assigned | SDS Office | 2 working days | System default |
 | The same, in a sensitive category | SDS Office | 1 working day | System default, derived from the CODI 24-hour notice timeline (Handbook p. 58). Adjustable. Not a handbook deadline for SDS. |
+| Needs Clarification, student has not replied | Student; SDS Office once at twice the interval | 5 working days | System default, not a handbook deadline; adjustable from 1 to 30 working days |
 | Assigned, not yet acknowledged | Assigned handler | 2 working days | System default |
 | In progress or escalated, no action recorded | Assigned handler | 5 working days | System default |
 | Referred to CODI, no outcome recorded | SDS Office | 10 working days | CODI's decision period (Handbook pp. 57–58) |
@@ -47,6 +48,8 @@ The system emails whoever has to act next on a ticket that has waited too long w
 | Resolved, student did not respond | SDS Office, once | 15 days | System default |
 
 A reminder repeats every that many working days until someone acts, and any action on the ticket restarts the count. Reminders never change a ticket; escalating, reassigning and closing stay the SDS admin's decision. The SDS admin can change the waiting days, or turn reminders off, under **System Settings → Reminders**. The starting values are in [config/tickets.php](config/tickets.php).
+
+For Needs Clarification, the student reminder repeats at the configured interval after the latest non-email ticket action. At twice that interval, SDS admins receive a one-time notice for that wait period that they may follow up or close the ticket as no response. This system default is not a handbook deadline. Neither email changes the ticket, and the reminder is sent only while reminders are enabled.
 
 Reminders are operational nudges to the person who must act next. They are not handbook deadlines and never change a ticket. The handbook states no deadline for ordinary complaints; the only timelines it states are for CODI harassment cases and disciplinary appeals.
 

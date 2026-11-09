@@ -515,6 +515,7 @@
             $reminderRows = [
                 ['name' => 'unreviewed_days', 'label' => 'Not yet reviewed', 'who' => 'SDS Office', 'hint' => 'Submitted, but not yet classified or assigned.'],
                 ['name' => 'sensitive_unreviewed_days', 'label' => 'Sensitive, not yet reviewed', 'who' => 'SDS Office', 'hint' => 'System default, derived from the CODI 24-hour notice timeline (Handbook p. 58). Adjustable. Not a handbook deadline for SDS.'],
+                ['name' => 'clarification_days', 'label' => 'Student has not replied to clarification', 'who' => 'Student; SDS Office once at twice this interval', 'hint' => 'Needs Clarification, with no student reply. System default, not a handbook deadline. Adjustable. Student reminder repeats at this interval.'],
                 ['name' => 'unacknowledged_days', 'label' => 'Not yet acknowledged', 'who' => 'Assigned handler', 'hint' => 'Assigned, but the handler has not acknowledged it.'],
                 ['name' => 'idle_days', 'label' => 'No action recorded', 'who' => 'Assigned handler', 'hint' => 'In progress or escalated, with no reply or update.'],
                 ['name' => 'referral_days', 'label' => 'CODI referral, no outcome', 'who' => 'SDS Office', 'hint' => '10-working-day period stated for CODI referrals only (Handbook pp. 57 to 58).'],
@@ -528,7 +529,7 @@
                     <span class="grid h-10 w-10 shrink-0 place-items-center text-primary"><x-icons.bell class="h-7 w-7" /></span>
                     <div>
                         <h2 class="font-display text-lg font-bold text-foreground">Reminders for waiting tickets</h2>
-                        <p class="text-xs text-muted-foreground">When a ticket waits too long with nothing recorded on it, the person who has to act next gets a high-priority email. Days are working days (Monday to Friday). The reminder repeats until someone acts. Nothing on the ticket changes by itself, and escalation stays your decision.</p>
+                        <p class="text-xs text-muted-foreground">Waiting-ticket reminders are high priority; reminders asking a student to reply to a clarification are normal priority. Days are working days (Monday to Friday). Reminders repeat until someone acts. Nothing on the ticket changes by itself, and escalation stays your decision.</p>
                     </div>
                 </div>
 

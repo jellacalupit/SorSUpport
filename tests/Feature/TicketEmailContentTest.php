@@ -293,20 +293,54 @@ class TicketEmailContentTest extends TestCase
         $this->assertStringContainsString('You chose to hide your identity', $ack['text']);
     }
 
-    public function test_staff_emails_do_not_carry_the_subject_of_a_sensitive_ticket(): void
+    public function test_all_email_types_hide_sensitive_complaint_details_for_every_audience(): void
     {
         $sensitive = ComplaintCategory::create(['name' => 'Harassment', 'is_active' => true, 'is_sensitive' => true]);
-        $ticket = $this->ticket(Ticket::STATUS_ASSIGNED, [], ['category_id' => $sensitive->id, 'subject_title' => 'Groped in the corridor']);
+        $realSubject = 'SENSITIVE_SUBJECT_6F83D2';
+        $description = 'SENSITIVE_DESCRIPTION_A15C09';
+        $personnel = 'SENSITIVE_PERSONNEL_77B421';
+        $ticket = $this->ticket(Ticket::STATUS_ASSIGNED, [], [
+            'category_id' => $sensitive->id,
+            'subject_title' => $realSubject,
+            'description' => $description,
+            'personnel_involved' => $personnel,
+        ]);
+        $types = array_values(array_filter(
+            (new \ReflectionClass(EmailNotification::class))->getConstants(),
+            fn (string $name) => str_starts_with($name, 'TYPE_'),
+            ARRAY_FILTER_USE_KEY
+        ));
 
-        foreach ([$this->handler, $this->admin] as $to) {
-            $text = $this->email($ticket, EmailNotification::TYPE_RECIPIENT_ASSIGNMENT, $to)['text'];
+        foreach ($types as $type) {
+            foreach ([$this->student, $this->handler, $this->admin] as $audience) {
+                $email = $this->email($ticket, $type, $audience);
+                $content = implode(' ', [
+                    $email['subject'],
+                    $email['heading'],
+                    ...$email['lines'],
+                    $email['body'],
+                    ...array_values($email['details']),
+                    $email['text'],
+                ]);
 
-            $this->assertStringNotContainsString('Groped in the corridor', $text);
-            $this->assertStringContainsString('Confidential concern', $text);
+                foreach ([$realSubject, $description, $personnel] as $privateText) {
+                    $this->assertStringNotContainsString($privateText, $email['subject'], "{$type} subject for {$audience->role}");
+                    $this->assertStringNotContainsString($privateText, $email['body'], "{$type} body for {$audience->role}");
+                    $this->assertStringNotContainsString($privateText, $content, "{$type} full content for {$audience->role}");
+                }
+                $this->assertStringContainsString('Confidential concern', $email['text'], "{$type} for {$audience->role}");
+            }
         }
+    }
 
-        // The student wrote the subject, so their own email may show it.
-        $this->assertStringContainsString('Groped in the corridor', $this->email($ticket, EmailNotification::TYPE_STUDENT_STATUS_UPDATE, $this->student)['text']);
+    public function test_non_sensitive_student_email_still_shows_the_real_subject(): void
+    {
+        $subject = 'Unreleased transcript';
+        $ticket = $this->ticket(Ticket::STATUS_ASSIGNED, [], ['subject_title' => $subject]);
+        $email = $this->email($ticket, EmailNotification::TYPE_STUDENT_STATUS_UPDATE, $this->student);
+
+        $this->assertSame($subject, $email['details']['Subject']);
+        $this->assertStringContainsString($subject, $email['text']);
     }
 
     public function test_emails_do_not_quote_messages_from_the_conversation(): void

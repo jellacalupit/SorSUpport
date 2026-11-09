@@ -274,6 +274,189 @@ class TicketRemindersAndDeliveryTest extends TestCase
         $this->assertSame(1, $service->queueReminders());
     }
 
+    public function test_clarification_reminders_repeat_on_working_days_and_restart_after_an_action(): void
+    {
+        $this->admin();
+        $ticket = $this->at('2026-10-07 10:00', fn () => $this->ticket([
+            'status' => Ticket::STATUS_NEEDS_CLARIFICATION,
+            'clarification_requested_at' => now(),
+        ]));
+        $original = $ticket->only(['status', 'assigned_to', 'current_handler_id']);
+        $service = app(TicketReminderService::class);
+
+        $this->travelTo(Carbon::parse('2026-10-13 10:00'));
+        $this->assertSame(0, $service->queueReminders());
+
+        $this->travelTo(Carbon::parse(self::NOW));
+        $this->assertSame(1, $service->queueReminders());
+        $this->assertDatabaseHas('email_notifications', [
+            'ticket_id' => $ticket->id,
+            'recipient_email' => $ticket->complaint->student->user->email,
+            'type' => EmailNotification::TYPE_CLARIFICATION_REMINDER,
+            'status' => EmailNotification::STATUS_PENDING,
+        ]);
+        $this->assertSame(0, $service->queueReminders());
+
+        $this->travelTo(Carbon::parse('2026-10-21 10:00'));
+        $this->assertSame(1, $service->queueReminders());
+        $this->assertSame(2, $ticket->emailNotifications()->where('type', EmailNotification::TYPE_CLARIFICATION_REMINDER)->count());
+
+        AuditLog::log($ticket->id, 'ticket_details_updated', null, 'SDS updated the ticket.');
+        $this->assertSame(0, $service->queueReminders());
+        $this->travelTo(Carbon::parse('2026-10-27 10:00'));
+        $this->assertSame(0, $service->queueReminders());
+        $this->travelTo(Carbon::parse('2026-10-28 10:00'));
+        $this->assertSame(1, $service->queueReminders());
+
+        $this->assertSame($original, $ticket->fresh()->only(['status', 'assigned_to', 'current_handler_id']));
+        $this->assertSame(3, $ticket->emailNotifications()->where('type', EmailNotification::TYPE_CLARIFICATION_REMINDER)->count());
+    }
+
+    public function test_clarification_reminders_stop_after_the_student_replies_and_do_not_apply_to_other_statuses(): void
+    {
+        $this->admin();
+        $clarification = $this->at('2026-10-01 10:00', fn () => $this->ticket([
+            'status' => Ticket::STATUS_NEEDS_CLARIFICATION,
+            'clarification_requested_at' => now(),
+        ]));
+        app(\App\Services\TicketWorkflow::class)->provideClarification($clarification, $clarification->complaint->student->user);
+
+        $otherStatusTickets = [];
+        foreach ([
+            Ticket::STATUS_SUBMITTED,
+            Ticket::STATUS_ASSIGNED,
+            Ticket::STATUS_IN_PROGRESS,
+            Ticket::STATUS_ESCALATED,
+            Ticket::STATUS_REFERRED,
+            Ticket::STATUS_RESOLVED,
+            Ticket::STATUS_CLOSED,
+        ] as $status) {
+            $otherStatusTickets[] = $this->ticket([
+                'status' => $status,
+                'clarification_requested_at' => now()->subDays(10),
+            ]);
+        }
+
+        app(TicketReminderService::class)->queueReminders();
+
+        $this->assertDatabaseMissing('email_notifications', [
+            'ticket_id' => $clarification->id,
+            'type' => EmailNotification::TYPE_CLARIFICATION_REMINDER,
+        ]);
+        $this->assertDatabaseMissing('email_notifications', [
+            'ticket_id' => $clarification->id,
+            'type' => EmailNotification::TYPE_CLARIFICATION_NO_RESPONSE,
+        ]);
+        $this->assertSame(Ticket::STATUS_SUBMITTED, $clarification->fresh()->status);
+        foreach ($otherStatusTickets as $ticket) {
+            $this->assertDatabaseMissing('email_notifications', [
+                'ticket_id' => $ticket->id,
+                'type' => EmailNotification::TYPE_CLARIFICATION_REMINDER,
+            ]);
+            $this->assertDatabaseMissing('email_notifications', [
+                'ticket_id' => $ticket->id,
+                'type' => EmailNotification::TYPE_CLARIFICATION_NO_RESPONSE,
+            ]);
+        }
+    }
+
+    public function test_sds_is_notified_once_after_twice_the_clarification_threshold(): void
+    {
+        $admin = $this->admin();
+        $secondAdmin = User::factory()->create(['role' => User::ROLE_SDS_ADMIN]);
+        $inactiveAdmin = User::factory()->create(['role' => User::ROLE_SDS_ADMIN, 'is_active' => false]);
+        $ticket = $this->at('2026-10-01 10:00', fn () => $this->ticket([
+            'status' => Ticket::STATUS_NEEDS_CLARIFICATION,
+            'clarification_requested_at' => now(),
+        ]));
+        $service = app(TicketReminderService::class);
+
+        $this->assertSame(1, $service->queueReminders());
+        $this->assertSame(0, $ticket->emailNotifications()->where('type', EmailNotification::TYPE_CLARIFICATION_NO_RESPONSE)->count());
+
+        $this->travelTo(Carbon::parse('2026-10-15 10:00'));
+        $this->assertSame(1, $service->queueReminders());
+        $this->assertDatabaseHas('email_notifications', [
+            'ticket_id' => $ticket->id,
+            'recipient_email' => $admin->email,
+            'type' => EmailNotification::TYPE_CLARIFICATION_NO_RESPONSE,
+        ]);
+        $this->assertDatabaseHas('email_notifications', [
+            'ticket_id' => $ticket->id,
+            'recipient_email' => $secondAdmin->email,
+            'type' => EmailNotification::TYPE_CLARIFICATION_NO_RESPONSE,
+        ]);
+        $this->assertDatabaseMissing('email_notifications', [
+            'ticket_id' => $ticket->id,
+            'recipient_email' => $inactiveAdmin->email,
+            'type' => EmailNotification::TYPE_CLARIFICATION_NO_RESPONSE,
+        ]);
+        $this->assertSame(0, $service->queueReminders());
+
+        $this->travelTo(Carbon::parse('2026-10-22 10:00'));
+        $this->assertSame(1, $service->queueReminders());
+        $this->assertSame(2, $ticket->emailNotifications()->where('type', EmailNotification::TYPE_CLARIFICATION_NO_RESPONSE)->count());
+    }
+
+    public function test_clarification_emails_are_normal_priority_and_reveal_only_reference_and_safe_subject(): void
+    {
+        config(['mail.default' => 'array']);
+        $this->admin();
+        $ticket = $this->at('2026-10-01 10:00', fn () => $this->ticket([
+            'status' => Ticket::STATUS_NEEDS_CLARIFICATION,
+            'clarification_requested_at' => now(),
+        ], anonymous: true, sensitive: true));
+        $ticket->complaint->student->update(['student_id' => 'PRIVATE-STUDENT-ID']);
+        $ticket->complaint->update([
+            'subject_title' => 'Sensitive subject that must not appear',
+            'description' => 'Sensitive description that must not appear',
+            'personnel_involved' => 'Sensitive personnel name that must not appear',
+        ]);
+        $this->travelTo(Carbon::parse('2026-10-15 10:00'));
+
+        $this->assertSame(1, app(TicketReminderService::class)->queueReminders());
+        $notifications = $ticket->emailNotifications()->get();
+        $this->assertCount(2, $notifications);
+
+        foreach ($notifications as $notification) {
+            $email = app(\App\Services\TicketEmailComposer::class)->compose($notification);
+            $studentUser = $ticket->complaint->student->user;
+            $text = implode(' ', [
+                $email['subject'],
+                $email['heading'],
+                ...$email['lines'],
+                ...array_values($email['details']),
+                $email['body'],
+            ]);
+
+            $this->assertStringContainsString($ticket->complaint->reference_number, $text);
+            $this->assertStringContainsString('Confidential concern', $text);
+            $this->assertStringNotContainsString('Sensitive subject that must not appear', $text);
+            $this->assertStringNotContainsString('Sensitive description that must not appear', $text);
+            $this->assertStringNotContainsString('Sensitive personnel name that must not appear', $text);
+            $this->assertStringNotContainsString($studentUser->name, $text);
+            $this->assertStringNotContainsString($ticket->complaint->student->student_id, $text);
+            $this->assertSame(['Ticket', 'Subject'], array_keys($email['details']));
+        }
+
+        app(EmailNotificationService::class)->sendPendingNotifications();
+        $messages = app('mailer')->getSymfonyTransport()->messages();
+        $this->assertCount(2, $messages);
+        foreach ($messages as $message) {
+            $email = $message->getOriginalMessage();
+            $html = $email->getHtmlBody();
+            $this->assertNotSame(1, $email->getPriority());
+            $this->assertNull($email->getHeaders()->get('Importance'));
+            $this->assertIsString($html);
+            $this->assertStringNotContainsString('Sensitive subject that must not appear', $html);
+            $this->assertStringNotContainsString('Sensitive description that must not appear', $html);
+            $this->assertStringNotContainsString($ticket->complaint->student->user->name, $html);
+            $this->assertStringNotContainsString($ticket->complaint->student->student_id, $html);
+        }
+
+        $this->assertSame(Ticket::STATUS_NEEDS_CLARIFICATION, $ticket->fresh()->status);
+    }
+
     public function test_a_reminder_says_how_long_the_ticket_waited_and_is_marked_important(): void
     {
         config(['mail.default' => 'array']);
@@ -297,11 +480,16 @@ class TicketRemindersAndDeliveryTest extends TestCase
     {
         $this->admin();
         $this->at('2026-10-12 08:00', fn () => $this->ticket());
+        $clarification = $this->at('2026-10-01 08:00', fn () => $this->ticket([
+            'status' => Ticket::STATUS_NEEDS_CLARIFICATION,
+            'clarification_requested_at' => now(),
+        ]));
         $service = app(TicketReminderService::class);
 
         $service->saveSettings(['enabled' => false]);
 
         $this->assertSame(0, $service->queueReminders());
+        $this->assertSame(0, $clarification->emailNotifications()->count());
     }
 
     public function test_the_admin_changes_the_waiting_days_in_system_settings(): void
@@ -323,6 +511,7 @@ class TicketRemindersAndDeliveryTest extends TestCase
                 'enabled' => '1',
                 'unreviewed_days' => 4,
                 'sensitive_unreviewed_days' => 1,
+                'clarification_days' => 5,
                 'unacknowledged_days' => 2,
                 'idle_days' => 5,
                 'referral_days' => 10,
@@ -346,6 +535,7 @@ class TicketRemindersAndDeliveryTest extends TestCase
                 'enabled' => '1',
                 'unreviewed_days' => 0,
                 'sensitive_unreviewed_days' => 1,
+                'clarification_days' => 5,
                 'unacknowledged_days' => 2,
                 'idle_days' => 5,
                 'referral_days' => 10,
@@ -363,6 +553,7 @@ class TicketRemindersAndDeliveryTest extends TestCase
                 'enabled' => '1',
                 'unreviewed_days' => 2,
                 'sensitive_unreviewed_days' => 1,
+                'clarification_days' => 5,
                 'unacknowledged_days' => 2,
                 'idle_days' => 5,
                 'referral_days' => 10,
@@ -371,6 +562,41 @@ class TicketRemindersAndDeliveryTest extends TestCase
                 'student_response_days' => 15,
             ])
             ->assertSessionHasErrors('generic_referral_days');
+    }
+
+    public function test_clarification_reminder_days_must_be_between_one_and_thirty(): void
+    {
+        $admin = $this->admin();
+        $payload = [
+            'enabled' => '1',
+            'unreviewed_days' => 2,
+            'sensitive_unreviewed_days' => 1,
+            'clarification_days' => 5,
+            'unacknowledged_days' => 2,
+            'idle_days' => 5,
+            'referral_days' => 10,
+            'generic_referral_enabled' => '0',
+            'generic_referral_days' => 10,
+            'student_response_days' => 15,
+        ];
+
+        $this->actingAs($admin)
+            ->put(route('admin.settings.reminders.update'), array_replace($payload, ['clarification_days' => 0]))
+            ->assertSessionHasErrors('clarification_days');
+
+        $this->actingAs($admin)
+            ->put(route('admin.settings.reminders.update'), array_replace($payload, ['clarification_days' => 31]))
+            ->assertSessionHasErrors('clarification_days');
+
+        $this->actingAs($admin)
+            ->put(route('admin.settings.reminders.update'), array_replace($payload, ['clarification_days' => 1]))
+            ->assertSessionHasNoErrors();
+        $this->assertSame(1, app(TicketReminderService::class)->settings()['clarification_days']);
+
+        $this->actingAs($admin)
+            ->put(route('admin.settings.reminders.update'), array_replace($payload, ['clarification_days' => 30]))
+            ->assertSessionHasNoErrors();
+        $this->assertSame(30, app(TicketReminderService::class)->settings()['clarification_days']);
     }
 
     public function test_the_students_days_to_respond_can_be_changed(): void

@@ -275,7 +275,7 @@ The message composer creates audience-aware content and safe subject/details for
 - Messages, further-action request, accepted resolution, withdrawal.
 - Waiting-ticket reminders and legacy daily-reminder type.
 
-Emails include an action URL for the student, recipient, or admin complaint page. Recipient wording varies by audience. Sensitive tickets use the public subject; handlers do not receive the sensitive subject in email details. Student emails include closure explanations for invalid, duplicate, out-of-scope, and no-response closures; closure reasons are not sent to handlers as student explanations.
+Emails include an action URL for the student, recipient, or admin complaint page. Recipient wording varies by audience. For every email type and audience, sensitive tickets use the public subject (“Confidential concern”) everywhere; the real subject, description, and personnel-involved text are never included in an email. Authorized users can still view the full complaint on its ticket page after signing in. Student emails include closure explanations for invalid, duplicate, out-of-scope, and no-response closures; closure reasons are not sent to handlers as student explanations.
 
 Delivery rules:
 
@@ -286,12 +286,13 @@ Delivery rules:
 
 ## 7. Waiting-ticket reminders
 
-`TicketReminderService` checks Submitted, Assigned, In Progress, Escalated, Referred, and Resolved tickets. Reminders are not sent for closed tickets and never modify status or assignment.
+`TicketReminderService` checks Submitted, Needs Clarification, Assigned, In Progress, Escalated, Referred, and Resolved tickets. Reminders are not sent for closed tickets and never modify status or assignment.
 
 | Ticket state | Reminder recipient | Default threshold | Counted as |
 |---|---|---:|---|
 | Submitted, not reviewed | Active SDS admin(s) | 2 | Working days |
 | Submitted in sensitive category | Active SDS admin(s) | 1 | Working day |
+| Needs Clarification, no student reply | Student; active SDS admin(s) once at twice the threshold | 5; SDS notice at 10 | Working days |
 | Assigned, not acknowledged | Active current handler/assignee | 2 | Working days |
 | In Progress or Escalated with no action | Active handler | 5 | Working days |
 | CODI referral, no outcome | Active SDS admin(s) | 10 | Working days |
@@ -304,12 +305,14 @@ Reminders are operational nudges to the person who must act next. They are not h
 - The CODI referral reminder uses the 10-working-day decision period stated for CODI (Handbook pp. 57 to 58); it is only sent for referrals flagged CODI.
 - The generic reminder for other referrals is a system default, not a handbook deadline. It is off by default; SDS can enable it and adjust its 1–30 working-day threshold.
 - The 15-day resolved-student-response reminder is a system default, adjustable by SDS.
+- Needs Clarification reminders are a system default, not a handbook deadline. SDS can adjust the student reminder interval from 1–30 working days. The reminder repeats at that interval; active SDS admins receive one notice at twice the interval for each wait period, suggesting they may follow up or close the ticket as no response. No ticket is closed automatically.
 - All other reminder thresholds are system defaults.
 
 - Thresholds and enable/disable are editable by the SDS admin in settings. Each threshold must be 1–30 days.
 - Settings are stored as `SystemSetting` key/value rows and override `config/tickets.php`. Missing values use config defaults; day counts are clamped to at least one.
 - Working-day counting excludes Saturday and Sunday. It does not apply a holiday calendar.
 - Regular waiting reminders repeat after the same threshold since the last reminder, measured from the latest non-email ticket action. Email-sent/failed audit events do not reset action time.
+- Needs Clarification waiting starts from the later of the clarification request and the latest non-email ticket action. The student reminder is normal priority, repeats after each threshold, and stops when the ticket leaves Needs Clarification. At twice the threshold, SDS admins receive one notice per wait period. These messages contain only the ticket reference and public-safe subject; sensitive descriptions and personnel-involved text are not included.
 - The resolved-student-response reminder is sent once after the deadline; it tells SDS the student can still accept until that deadline.
 - The scheduled check runs hourly on weekdays between 08:00 and 17:00.
 

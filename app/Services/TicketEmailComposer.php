@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 /**
  * Writes each ticket email for its purpose and its reader. The same event reads differently for
  * the student, the office handling the ticket and the SDS Office, and never tells a handler who
- * a hidden-identity student is or what a sensitive ticket is about.
+ * a hidden-identity student is or exposes a sensitive ticket's subject.
  */
 class TicketEmailComposer
 {
@@ -104,6 +104,18 @@ class TicketEmailComposer
                     'Before your ticket can be reviewed, the SDS Office needs you to clarify something.',
                     'Open the ticket, read their message in the conversation, and reply there. Your ticket continues as soon as you answer.',
                 ],
+            ],
+
+            EmailNotification::TYPE_CLARIFICATION_REMINDER => [
+                "Reminder: reply to your ticket {$reference}",
+                'The SDS Office is waiting for your reply',
+                ['SDS is waiting for your reply to continue your concern. Reply in the conversation so it can move forward.'],
+            ],
+
+            EmailNotification::TYPE_CLARIFICATION_NO_RESPONSE => [
+                "No reply on ticket {$reference}",
+                'The student has not replied',
+                ['No reply from the student. You may follow up or close this ticket as no response.'],
             ],
 
             EmailNotification::TYPE_CLARIFICATION_PROVIDED => [
@@ -328,7 +340,7 @@ class TicketEmailComposer
     }
 
     /**
-     * The facts shown under the message. Handlers never get a sensitive subject by email.
+     * The facts shown under the message. Sensitive tickets use the public subject for every reader.
      *
      * @return array<string, string>
      */
@@ -337,9 +349,19 @@ class TicketEmailComposer
         $complaint = $ticket->complaint;
         $isStudent = $audience === self::AUDIENCE_STUDENT;
 
+        if (in_array($type, [
+            EmailNotification::TYPE_CLARIFICATION_REMINDER,
+            EmailNotification::TYPE_CLARIFICATION_NO_RESPONSE,
+        ], true)) {
+            return [
+                'Ticket' => (string) ($complaint?->reference_number ?? '#' . $ticket->id),
+                'Subject' => (string) ($complaint?->public_subject ?? 'Untitled'),
+            ];
+        }
+
         $details = [
             'Ticket' => (string) ($complaint?->reference_number ?? '#' . $ticket->id),
-            'Subject' => (string) ($isStudent ? ($complaint?->subject_title ?: 'Untitled') : ($complaint?->public_subject ?? 'Untitled')),
+            'Subject' => (string) ($complaint?->public_subject ?? 'Untitled'),
             'Category' => (string) ($complaint?->category?->name ?? 'Uncategorized'),
             'Status' => $ticket->status_label,
         ];

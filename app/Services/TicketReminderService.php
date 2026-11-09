@@ -13,7 +13,7 @@ use Illuminate\Support\Collection;
  * Finds tickets that have waited too long at one step and emails whoever has to act next:
  * the SDS Office for a ticket not yet reviewed, a CODI referral (or another referral when its
  * optional system-default reminder is enabled), or past the student's days to respond; the
- * handler for one not yet acknowledged or with no action recorded.
+ * student for an unanswered clarification; and the handler for one not yet acknowledged or idle.
  * Waiting is counted in working days, and a reminder repeats until someone acts.
  */
 class TicketReminderService
@@ -22,6 +22,7 @@ class TicketReminderService
         'enabled',
         'unreviewed_days',
         'sensitive_unreviewed_days',
+        'clarification_days',
         'unacknowledged_days',
         'idle_days',
         'referral_days',
@@ -32,6 +33,7 @@ class TicketReminderService
 
     public const WAITING_STATUSES = [
         Ticket::STATUS_SUBMITTED,
+        Ticket::STATUS_NEEDS_CLARIFICATION,
         Ticket::STATUS_ASSIGNED,
         Ticket::STATUS_IN_PROGRESS,
         Ticket::STATUS_ESCALATED,
@@ -42,7 +44,7 @@ class TicketReminderService
     /**
      * The reminder settings: what the SDS admin saved in System Settings, otherwise the defaults.
      *
-     * @return array{enabled: bool, unreviewed_days: int, sensitive_unreviewed_days: int, unacknowledged_days: int, idle_days: int, referral_days: int, generic_referral_enabled: bool, generic_referral_days: int, student_response_days: int}
+     * @return array{enabled: bool, unreviewed_days: int, sensitive_unreviewed_days: int, clarification_days: int, unacknowledged_days: int, idle_days: int, referral_days: int, generic_referral_enabled: bool, generic_referral_days: int, student_response_days: int}
      */
     public function settings(): array
     {
@@ -92,8 +94,16 @@ class TicketReminderService
 
         Ticket::query()
             ->whereIn('status', self::WAITING_STATUSES)
-            ->with(['complaint.category', 'currentHandler', 'assignee', 'auditLogs'])
+            ->with(['complaint.category', 'complaint.student.user', 'currentHandler', 'assignee', 'auditLogs'])
             ->each(function (Ticket $ticket) use (&$reminded, $settings): void {
+                if ($ticket->status === Ticket::STATUS_NEEDS_CLARIFICATION) {
+                    if ($this->queueClarificationReminders($ticket, $settings['clarification_days'])) {
+                        $reminded++;
+                    }
+
+                    return;
+                }
+
                 if (! $this->isDue($ticket, $settings)) {
                     return;
                 }
@@ -113,6 +123,94 @@ class TicketReminderService
             });
 
         return $reminded;
+    }
+
+    protected function queueClarificationReminders(Ticket $ticket, int $days): bool
+    {
+        $waitStartedAt = $this->clarificationWaitStartedAt($ticket);
+        if (! $waitStartedAt) {
+            return false;
+        }
+
+        $student = $ticket->complaint?->student?->user;
+        $queued = false;
+
+        if ($student && filled($student->email) && $this->clarificationReminderDue($ticket, $waitStartedAt, $days)) {
+            EmailNotification::create([
+                'ticket_id' => $ticket->id,
+                'recipient_email' => $student->email,
+                'type' => EmailNotification::TYPE_CLARIFICATION_REMINDER,
+                'status' => EmailNotification::STATUS_PENDING,
+            ]);
+            $queued = true;
+        }
+
+        if ($this->clarificationNoResponseDue($ticket, $waitStartedAt, $days)) {
+            $admins = User::query()
+                ->where('role', User::ROLE_SDS_ADMIN)
+                ->where('is_active', true)
+                ->whereNotNull('email')
+                ->where('email', '!=', '')
+                ->get();
+
+            $admins->each(fn (User $admin) => EmailNotification::create([
+                'ticket_id' => $ticket->id,
+                'recipient_email' => $admin->email,
+                'type' => EmailNotification::TYPE_CLARIFICATION_NO_RESPONSE,
+                'status' => EmailNotification::STATUS_PENDING,
+            ]));
+
+            $queued = $admins->isNotEmpty() || $queued;
+        }
+
+        return $queued;
+    }
+
+    protected function clarificationWaitStartedAt(Ticket $ticket): ?Carbon
+    {
+        $lastAction = $ticket->lastActionAt();
+        $clarificationRequestedAt = $ticket->clarification_requested_at;
+
+        if (! $clarificationRequestedAt) {
+            return $lastAction;
+        }
+
+        return ! $lastAction || $clarificationRequestedAt->greaterThan($lastAction)
+            ? $clarificationRequestedAt
+            : $lastAction;
+    }
+
+    protected function clarificationReminderDue(Ticket $ticket, Carbon $waitStartedAt, int $days): bool
+    {
+        if (self::workingDaysBetween($waitStartedAt, now()) < $days) {
+            return false;
+        }
+
+        $lastReminder = $this->lastClarificationEmailAt($ticket, EmailNotification::TYPE_CLARIFICATION_REMINDER);
+
+        return ! $lastReminder
+            || ! $lastReminder->greaterThan($waitStartedAt)
+            || self::workingDaysBetween($lastReminder, now()) >= $days;
+    }
+
+    protected function clarificationNoResponseDue(Ticket $ticket, Carbon $waitStartedAt, int $days): bool
+    {
+        if (self::workingDaysBetween($waitStartedAt, now()) < 2 * $days) {
+            return false;
+        }
+
+        $lastNotice = $this->lastClarificationEmailAt($ticket, EmailNotification::TYPE_CLARIFICATION_NO_RESPONSE);
+
+        return ! $lastNotice || ! $lastNotice->greaterThan($waitStartedAt);
+    }
+
+    protected function lastClarificationEmailAt(Ticket $ticket, string $type): ?Carbon
+    {
+        $latest = $ticket->emailNotifications()
+            ->where('type', $type)
+            ->max('created_at');
+
+        return $latest ? Carbon::parse($latest) : null;
     }
 
     /**

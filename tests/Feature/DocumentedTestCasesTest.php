@@ -228,6 +228,7 @@ class DocumentedTestCasesTest extends TestCase
             'enabled' => true,
             'unreviewed_days' => 2,
             'sensitive_unreviewed_days' => 1,
+            'clarification_days' => 5,
             'unacknowledged_days' => 2,
             'idle_days' => 5,
             'referral_days' => 10,
@@ -240,14 +241,16 @@ class DocumentedTestCasesTest extends TestCase
             ->get(route('admin.settings', ['settings_tab' => 'reminders']))
             ->assertOk()
             ->assertSee('Reminders for waiting tickets')
-            ->assertSee('Student did not respond');
+            ->assertSee('Student did not respond')
+            ->assertSee('Student has not replied to clarification')
+            ->assertSee('System default, not a handbook deadline. Adjustable.');
     }
 
     public function test_set_15_waiting_days_cannot_be_more_than_thirty(): void
     {
         $this->actingAs($this->admin)
             ->put(route('admin.settings.reminders.update'), [
-                'enabled' => '1', 'unreviewed_days' => 31, 'sensitive_unreviewed_days' => 1, 'unacknowledged_days' => 2,
+                'enabled' => '1', 'unreviewed_days' => 31, 'sensitive_unreviewed_days' => 1, 'clarification_days' => 5, 'unacknowledged_days' => 2,
                 'idle_days' => 5, 'referral_days' => 10, 'generic_referral_enabled' => '0', 'generic_referral_days' => 10, 'student_response_days' => 15,
             ])
             ->assertSessionHasErrors(['unreviewed_days' => 'Enter at most 30 days.']);
