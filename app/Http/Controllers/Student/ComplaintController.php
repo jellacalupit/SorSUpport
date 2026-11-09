@@ -45,7 +45,7 @@ class ComplaintController extends Controller
 
         $complaints = Complaint::query()
             ->where('student_id', $student->id)
-            ->with(['category.recipient.user', 'ticket.auditLogs'])
+            ->with(['category.recipient.user', 'ticket.auditLogs', 'ticket.forwardedRecipient'])
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('subject_title', 'like', '%' . $search . '%')
@@ -354,6 +354,7 @@ class ComplaintController extends Controller
         $complaint->load([
             'category.recipient.user',
             'ticket.assignee',
+            'ticket.forwardedRecipient',
             'ticket.thread' => function ($q) {
                 $q->with(['messages' => function ($q2) {
                     $q2->with('sender')->orderBy('created_at');

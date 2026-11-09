@@ -46,6 +46,7 @@ class ComplaintController extends Controller
                 'complaint.category',
                 'assignee',
                 'auditLogs',
+                'forwardedRecipient',
             ]);
 
         if ($request->filled('search')) {
@@ -102,6 +103,7 @@ class ComplaintController extends Controller
             'student.user',
             'category.recipient.user',
             'ticket.assignee',
+            'ticket.forwardedRecipient',
             'ticket.auditLogs.performer',
             'ticket.thread.messages.sender',
         ]);

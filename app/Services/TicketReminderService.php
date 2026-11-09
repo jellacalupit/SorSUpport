@@ -221,6 +221,10 @@ class TicketReminderService
     {
         $settings ??= $this->settings();
 
+        if ($ticket->isForwardedInformational()) {
+            return null;
+        }
+
         return match ($ticket->status) {
             Ticket::STATUS_SUBMITTED => $ticket->complaint?->isSensitive()
                 ? $settings['sensitive_unreviewed_days']

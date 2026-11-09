@@ -50,6 +50,11 @@
         ? $ticket->status_label
         : (\App\Models\Ticket::STATUS_LABELS[$status] ?? 'Submitted');
     $classification = $ticket?->classification;
+    $subjectDisplay = $role === 'student'
+        ? ($complaint?->subject_title ?? 'Untitled')
+        : ($complaint?->public_subject ?? 'Untitled');
+    $showForwardedInformational = $role !== 'admin' && $ticket?->isForwardedInformational();
+    $statusDisplay = $showForwardedInformational ? 'Forwarded for information' : $statusDisplay;
     $radiusClass = match (true) {
         $first && $last => 'rounded-xl',
         $first => 'rounded-t-xl rounded-b-none',
@@ -94,11 +99,16 @@
                     @endif
                 </span>
             </p>
-            <x-status-badge :status="$statusDisplay" :classification="$classification" :show-icon="false" class="max-w-28 truncate px-2 py-0 text-[10px]" />
+            <x-status-badge :status="$statusDisplay" :classification="$classification" :show-icon="false" class="{{ $showForwardedInformational ? 'max-w-40' : 'max-w-28' }} truncate px-2 py-0 text-[10px]" />
         </div>
+        @if ($showForwardedInformational)
+            <p class="text-[10px] text-muted-foreground">
+                {{ $ticket->forwardedRecipient?->unit ?: 'Receiving office' }} · {{ $ticket->forwarded_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y') }}
+            </p>
+        @endif
         <div class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
             <p class="line-clamp-2 min-w-0 break-words text-sm font-bold">
-                {{ $complaint?->subject_title ?? 'Untitled' }}
+                {{ $subjectDisplay }}
             </p>
             <span class="shrink-0 text-right text-[11px] leading-4 whitespace-nowrap text-muted-foreground">{{ $lastUpdate }}</span>
         </div>

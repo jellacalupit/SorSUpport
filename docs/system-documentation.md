@@ -147,6 +147,8 @@ During SDS review, a ticket may be classified as:
 
 Jurisdiction is `sds` or `recipient`. Classification does not itself assign a recipient. SDS may handle a ticket directly, assign it to a recipient, retain an informational item, or forward an informational item.
 
+When SDS forwards an informational ticket without closing it, it remains stored as `submitted`, with `classification=informational`, `jurisdiction=recipient`, the receiving recipient ID in `forwarded_to`, and the forwarding time in `forwarded_at`. Students and the receiving recipient see “Forwarded for information,” the receiving office, and the date; on the recipient page the notice says no reply or action is needed. This ticket is not in the SDS awaiting-review queue and does not receive a Submitted reminder. The stored status, analytics status counts, and status filters remain Submitted. SDS retains the decision to close it. Retained and already-closed informational tickets keep their existing Closed display.
+
 Before classification, an administrator can correct the category and suggested recipient. An initial recipient assignment must be configured for that category through its assigned recipient, suggested recipients, escalation hierarchy, or the student's suggested recipient.
 
 Referral destinations are stored on `Ticket.referred_to` as text. Tickets also store an `is_codi_referral` flag. The listed Committee on Decorum and Investigation destination, or an "Other" entry matching its full name or the acronym CODI after case/space/punctuation normalization, is stored under the canonical full name and flagged as CODI. The backfill migration applies the same matching to existing referral names. Other partial or unrelated names do not receive the flag.
@@ -292,7 +294,7 @@ Delivery rules:
 
 ## 7. Waiting-ticket reminders
 
-`TicketReminderService` checks Submitted, Needs Clarification, Assigned, In Progress, Escalated, Referred, and Resolved tickets. Reminders are not sent for closed tickets and never modify status or assignment.
+`TicketReminderService` checks Submitted, Needs Clarification, Assigned, In Progress, Escalated, Referred, and Resolved tickets. Forwarded informational tickets still stored as Submitted are exempt from the Submitted reminder. Reminders are not sent for closed tickets and never modify status or assignment.
 
 | Ticket state | Reminder recipient | Default threshold | Counted as |
 |---|---|---:|---|

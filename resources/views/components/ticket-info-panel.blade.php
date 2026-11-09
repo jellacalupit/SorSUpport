@@ -32,7 +32,13 @@
             ?? $ticket->assignee
             ?? $complaint?->category?->recipient?->user));
     $holderDisplayName = $holder?->table_name ?? '—';
-    $statusDisplay = $ticket->status_label;
+    $showForwardedInformational = $ticket->isForwardedInformational()
+        && (\Illuminate\Support\Facades\Auth::user()?->isStudent() || \Illuminate\Support\Facades\Auth::user()?->isRecipient());
+    $statusDisplay = $showForwardedInformational ? 'Forwarded for information' : $ticket->status_label;
+    $forwardedOffice = $showForwardedInformational ? $ticket->forwardedRecipient?->unit : null;
+    $forwardedDate = $showForwardedInformational
+        ? $ticket->forwarded_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y')
+        : null;
     $lastUpdatedAt = $ticket->updated_at ?? $complaint?->updated_at;
 @endphp
 
@@ -44,8 +50,13 @@
                 {{ $complaint?->reference_number ?? $ticket->id }}
             </span>
         </p>
-        <div class="flex shrink-0 items-center gap-2">
+        <div class="flex shrink-0 flex-col items-end gap-1">
             <x-status-badge :status="$statusDisplay" :classification="$ticket->classification" :show-icon="false" class="px-3 py-1 text-xs" />
+            @if ($showForwardedInformational)
+                <p class="text-right text-[10px] text-muted-foreground">
+                    {{ $forwardedOffice ?: 'Receiving office' }} · {{ $forwardedDate }}
+                </p>
+            @endif
             @if ($canEditDetails)
                 <button type="button" x-show="!editingDetails" x-on:click="editingDetails = true" aria-label="Edit ticket details" class="inline-flex shrink-0 items-center gap-1 rounded-full border border-primary px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary-soft">
                     <x-icons.pencil class="h-3 w-3" />
@@ -56,8 +67,8 @@
     </div>
 
     <div class="mt-2">
-        <h2 class="min-w-0 truncate font-display text-[15px] font-bold leading-tight sm:text-base" title="{{ $complaint?->subject_title ?? 'Untitled' }}">
-            {{ $complaint?->subject_title ?? 'Untitled' }}
+        <h2 class="min-w-0 truncate font-display text-[15px] font-bold leading-tight sm:text-base" title="{{ $studentView ? ($complaint?->subject_title ?? 'Untitled') : ($complaint?->public_subject ?? 'Untitled') }}">
+            {{ $studentView ? ($complaint?->subject_title ?? 'Untitled') : ($complaint?->public_subject ?? 'Untitled') }}
         </h2>
     </div>
     <div class="mt-1">

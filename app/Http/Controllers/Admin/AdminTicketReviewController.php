@@ -106,6 +106,11 @@ class AdminTicketReviewController extends Controller
     {
         $tickets = Ticket::query()
             ->whereIn('status', [Ticket::STATUS_SUBMITTED, Ticket::STATUS_NEEDS_CLARIFICATION, Ticket::STATUS_RESOLVED])
+            ->whereNot(fn ($query) => $query
+                ->where('status', Ticket::STATUS_SUBMITTED)
+                ->where('classification', Ticket::CLASSIFICATION_INFORMATIONAL)
+                ->whereNotNull('forwarded_to')
+                ->whereNotNull('forwarded_at'))
             ->with([
                 'complaint.student.user',
                 'complaint.suggestedRecipient.user',
