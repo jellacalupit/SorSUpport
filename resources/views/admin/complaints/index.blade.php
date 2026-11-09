@@ -382,22 +382,22 @@
             }
 
             .admin-ticket-thread #ticket-reply-form textarea {
-                min-height: 2.25rem;
-                padding: 0.5rem 0.875rem;
-                font-size: 14px;
-                line-height: 1.25rem;
+                min-height: 2rem;
+                padding: 0.375rem 0.75rem;
+                font-size: 13px;
+                line-height: 1.125rem;
             }
 
             .admin-ticket-thread #ticket-reply-form > label,
             .admin-ticket-thread #ticket-reply-form > button {
-                height: 2.25rem;
-                width: 2.25rem;
+                height: 2rem;
+                width: 2rem;
             }
 
             .admin-ticket-thread #ticket-reply-form > label svg,
             .admin-ticket-thread #ticket-reply-form > button svg {
-                height: 1rem;
-                width: 1rem;
+                height: 0.875rem;
+                width: 0.875rem;
             }
         </style>
 
