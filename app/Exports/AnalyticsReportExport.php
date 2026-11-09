@@ -41,11 +41,35 @@ class AnalyticsReportExport implements FromArray, WithHeadings, ShouldAutoSize
         foreach ($this->reportData['resolution_chart']['labels'] as $index => $label) {
             $rows[] = [$label, $this->reportData['resolution_chart']['data'][$index] ?? 0];
         }
+        $rows[] = [];
+        $rows[] = ['Resolution Rate Excluded Closures'];
+        foreach ($this->reportData['resolution_rate_details']['excluded'] ?? [] as $type => $count) {
+            if ($count > 0) {
+                $rows[] = [Str::headline($type), $count];
+            }
+        }
 
         $rows[] = [];
-        $rows[] = ['Average Resolution Time Per Category (Days)'];
-        foreach ($this->reportData['average_resolution_time']['labels'] as $index => $label) {
-            $rows[] = [$label, $this->reportData['average_resolution_time']['data'][$index] ?? 0];
+        $resolutionTime = $this->reportData['average_resolution_time'];
+        $rows[] = [];
+        $rows[] = ['Active Handling Time (Calendar Days)'];
+        $rows[] = ['Overall average', $resolutionTime['average_days'] ?? 0];
+        $rows[] = ['Overall median', $resolutionTime['median_days'] ?? 0];
+        $rows[] = ['Tickets using full elapsed time', $resolutionTime['fallback_count'] ?? 0];
+        $committee = $resolutionTime['committee_outcomes'] ?? [];
+        $rows[] = ['Committee outcomes average', $committee['average_days'] ?? 0];
+        $rows[] = ['Committee outcomes median', $committee['median_days'] ?? 0];
+        $rows[] = ['Committee outcomes tickets using full elapsed time', $committee['fallback_count'] ?? 0];
+        $rows[] = [];
+        $rows[] = ['Category', 'Average days', 'Median days', 'Tickets', 'Tickets using full elapsed time'];
+        foreach ($resolutionTime['categories'] ?? [] as $category => $timing) {
+            $rows[] = [
+                $category,
+                $timing['average_days'] ?? 0,
+                $timing['median_days'] ?? 0,
+                $timing['ticket_count'] ?? 0,
+                $timing['fallback_count'] ?? 0,
+            ];
         }
 
         $rows[] = [];

@@ -31,7 +31,7 @@ When SDS closes a ticket as invalid, duplicate, out of scope, or no response, it
 - **Reminders for waiting tickets**: a daily high-priority email when a ticket has waited too long (see below).
 - **Needs attention**: an SDS-only dashboard and paginated ticket list highlights pending student requests, tickets returned by an office until SDS acts, tickets with no recent action under existing adjustable reminder settings, and inactive handler accounts. It is informational only; SDS makes any ticket decision manually.
 - **Accounts**: created one by one or in bulk from an Excel file. New users must set their own password on first login.
-- **Analytics**: ticket volume, resolution rate and time, escalations, performance per office, and satisfaction ratings, exportable to PDF and Excel.
+- **Analytics**: forwarded informational tickets have their own status bucket. The resolution rate counts recorded resolutions and excludes withdrawn, duplicate, out-of-scope, invalid, and no-response closures. Average and median resolution times show active handling in calendar days, excluding clarification and referral waits where their audit intervals can be determined; committee outcomes are shown separately. Analytics are exportable to PDF and Excel.
 - **Audit trail**: every action and every email sent, searchable by person, ticket and date.
 
 The handbook path for a complaint about a student's misconduct starts with the SDS Coordinator or the student's teacher, adviser or professor, then proceeds to the Program Chair and College Dean. A referral to the Campus Disciplinary Committee requires SDS to confirm that the Dean assessed and endorsed the matter. Informal settlement, parent or guardian notification, hearings and sanctions take place outside SorSUpport.

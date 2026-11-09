@@ -4,11 +4,7 @@
         $total = (int) $data['total'];
         $percent = fn ($count, $of = null) => ($of ?? $total) > 0 ? round($count / ($of ?? $total) * 100, 1) : 0;
         $formatDate = fn ($date) => $date ? \Illuminate\Support\Carbon::parse($date)->format('M j, Y') : null;
-        $hours = function ($value) {
-            $value = (float) $value;
-
-            return $value >= 48 ? round($value / 24, 1) . ' d' : round($value, 1) . ' h';
-        };
+        $days = fn ($value) => $value === null ? 'Not available' : number_format((float) $value, 1) . ' days';
 
         $periodLabel = ($filters['start_date'] ?? null) || ($filters['end_date'] ?? null)
             ? ($formatDate($filters['start_date'] ?? null) ?? 'Start') . ' – ' . ($formatDate($filters['end_date'] ?? null) ?? 'Today')
@@ -16,17 +12,23 @@
         $activeFilters = collect([
             ($filters['category_id'] ?? null) ? $categoryOptions->firstWhere('id', $filters['category_id'])?->name : null,
             ($filters['classification'] ?? null) ? ucwords(str_replace('_', ' ', $filters['classification'])) : null,
-            ($filters['status'] ?? null) ? ucwords(str_replace('_', ' ', $filters['status'])) : null,
+            ($filters['status'] ?? null) ? (($filters['status'] === \App\Services\AnalyticsService::FORWARDED_INFORMATION_STATUS)
+                ? \App\Services\AnalyticsService::FORWARDED_INFORMATION_LABEL
+                : ucwords(str_replace('_', ' ', $filters['status']))) : null,
             $filters['unit'] ?? null,
         ])->filter()->values();
 
         $inProgress = (int) (($data['statusCounts']['Assigned'] ?? 0) + ($data['statusCounts']['In Progress'] ?? 0) + ($data['statusCounts']['Referred'] ?? 0));
         $awaitingReview = (int) (($data['statusCounts']['Submitted'] ?? 0) + ($data['statusCounts']['Needs Clarification'] ?? 0));
         $open = (int) ($awaitingReview + $inProgress + ($data['statusCounts']['Escalated'] ?? 0));
+        $notCounted = collect($data['resolutionMetrics']['excluded'])
+            ->filter()
+            ->map(fn ($count, $type) => str_replace('_', ' ', $type) . ' ' . $count)
+            ->implode(', ');
         $kpis = [
             ['label' => 'Total tickets', 'value' => number_format($total), 'hint' => $periodLabel, 'icon' => 'ticket', 'tone' => 'bg-primary-soft text-primary'],
-            ['label' => 'Resolution rate', 'value' => $percent($data['resolved']) . '%', 'hint' => number_format($data['resolved']) . ' resolved or closed', 'icon' => 'check', 'tone' => 'bg-emerald-50 text-emerald-700'],
-            ['label' => 'Avg. resolution time', 'value' => $hours($data['averageHours']), 'hint' => 'From submission to resolution', 'icon' => 'clock', 'tone' => 'bg-blue-50 text-blue-700'],
+            ['label' => 'Resolution rate', 'value' => number_format($data['resolutionRate'], 1) . '%', 'hint' => number_format($data['resolved']) . ' of ' . number_format($data['resolutionTickets']) . ' counted tickets', 'detail' => $notCounted ? 'Not counted: ' . $notCounted : null, 'icon' => 'check', 'tone' => 'bg-emerald-50 text-emerald-700'],
+            ['label' => 'Avg. resolution time', 'value' => $days($data['resolutionTime']['average_days']), 'hint' => 'Median ' . $days($data['resolutionTime']['median_days']) . ' · active handling', 'icon' => 'clock', 'tone' => 'bg-blue-50 text-blue-700'],
             ['label' => 'Escalation rate', 'value' => $data['escalations']['rate'] . '%', 'hint' => number_format($data['escalations']['tickets']) . ' ticket(s) escalated', 'icon' => 'alert-triangle', 'tone' => 'bg-red-50 text-red-700'],
         ];
         $pulse = [
@@ -38,6 +40,7 @@
 
         $statusSegments = [
             ['label' => 'Submitted', 'color' => '#facc15', 'count' => $awaitingReview],
+            ['label' => 'Forwarded for information', 'color' => '#a78bfa', 'count' => (int) ($data['statusCounts']['Forwarded for information'] ?? 0)],
             ['label' => 'In Progress', 'color' => '#2563eb', 'count' => $inProgress],
             ['label' => 'Escalated', 'color' => '#dc2626', 'count' => (int) ($data['statusCounts']['Escalated'] ?? 0)],
             ['label' => 'Resolved', 'color' => '#16a34a', 'count' => (int) ($data['statusCounts']['Resolved'] ?? 0)],
@@ -65,7 +68,7 @@
         $filterDropdowns = [
             ['name' => 'category_id', 'label' => 'Category', 'all' => 'All categories', 'options' => $categoryOptions->mapWithKeys(fn ($category) => [(string) $category->id => $category->name])->all()],
             ['name' => 'classification', 'label' => 'Classification', 'all' => 'All classifications', 'options' => ['needs_resolution' => 'Needs Resolution', 'informational' => 'Informational', 'invalid' => 'Invalid', 'unclassified' => 'Unclassified']],
-            ['name' => 'status', 'label' => 'Status', 'all' => 'All statuses', 'options' => \App\Models\Ticket::STATUS_LABELS],
+            ['name' => 'status', 'label' => 'Status', 'all' => 'All statuses', 'options' => \App\Models\Ticket::STATUS_LABELS + [\App\Services\AnalyticsService::FORWARDED_INFORMATION_STATUS => \App\Services\AnalyticsService::FORWARDED_INFORMATION_LABEL]],
             ['name' => 'unit', 'label' => 'College / Office', 'all' => 'All colleges and offices', 'options' => $unitOptions->mapWithKeys(fn ($unit) => [$unit => $unit])->all()],
         ];
         $cardClass = 'min-w-0 rounded-2xl border border-border bg-white p-4 shadow-sm';
@@ -196,6 +199,9 @@
                     </div>
                     <p class="mt-1 font-display text-2xl font-bold leading-none text-primary sm:text-3xl">{{ $kpi['value'] }}</p>
                     <p class="mt-1.5 truncate text-[11px] text-muted-foreground">{{ $kpi['hint'] }}</p>
+                    @if (! empty($kpi['detail']))
+                        <p class="mt-1 text-[10px] leading-tight text-muted-foreground">{{ $kpi['detail'] }}</p>
+                    @endif
                 </div>
             @endforeach
         </div>
@@ -269,19 +275,39 @@
         <section class="{{ $cardClass }}">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <h2 class="{{ $titleClass }}">Resolution time by category</h2>
-                    <p class="{{ $subtitleClass }}">Average days from submission to resolution.</p>
+                    <h2 class="{{ $titleClass }}">Active handling time by category</h2>
+                    <p class="{{ $subtitleClass }}">Calendar days from submission to resolution, less clarification and referral waits.</p>
                 </div>
                 <dl class="grid grid-cols-3 divide-x divide-border text-center">
-                    @foreach ([['Average', $data['averageHours']], ['Fastest', $data['fastestHours']], ['Longest', $data['longestHours']]] as [$label, $value])
+                    @foreach ([['Average', $data['resolutionTime']['average_days']], ['Median', $data['resolutionTime']['median_days']], ['Tickets using full time', $data['resolutionTime']['fallback_count']]] as [$label, $value])
                         <div class="px-3 first:pl-0 last:pr-0">
-                            <dd class="font-display text-base font-bold leading-none text-primary">{{ $hours($value) }}</dd>
+                            <dd class="font-display text-base font-bold leading-none text-primary">{{ $label === 'Tickets using full time' ? number_format($value) : $days($value) }}</dd>
                             <dt class="mt-1 text-[10px] text-muted-foreground">{{ $label }}</dt>
                         </div>
                     @endforeach
                 </dl>
             </div>
             <div data-resolution-box class="mt-3 h-64"><canvas id="resolutionChart"></canvas></div>
+            <div class="mt-3 overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="text-muted-foreground"><tr><th class="py-2 font-semibold">Category</th><th class="py-2 text-right font-semibold">Average</th><th class="py-2 text-right font-semibold">Median</th><th class="py-2 text-right font-semibold">Tickets</th></tr></thead>
+                    <tbody>
+                        @forelse ($data['resolutionTime']['categories'] as $category => $timing)
+                            <tr class="border-t border-border"><td class="py-2">{{ $category }}</td><td class="py-2 text-right">{{ $days($timing['average_days'] ?? 0) }}</td><td class="py-2 text-right">{{ $days($timing['median_days'] ?? 0) }}</td><td class="py-2 text-right">{{ number_format($timing['ticket_count']) }}</td></tr>
+                        @empty
+                            <tr class="border-t border-border"><td colspan="4" class="py-3 text-center text-muted-foreground">No resolved tickets in this period.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            <p class="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
+                Committee outcomes: average {{ $days($data['resolutionTime']['committee_outcomes']['average_days'] ?? 0) }},
+                median {{ $days($data['resolutionTime']['committee_outcomes']['median_days'] ?? 0) }}
+                ({{ number_format($data['resolutionTime']['committee_outcomes']['ticket_count']) }} ticket(s)).
+                @if ($data['resolutionTime']['committee_outcomes']['fallback_count'])
+                    {{ number_format($data['resolutionTime']['committee_outcomes']['fallback_count']) }} used the full elapsed time because a wait interval could not be determined.
+                @endif
+            </p>
         </section>
 
         <!-- Who raises tickets, and how they end -->

@@ -25,7 +25,9 @@
             'unclassified' => 'Unclassified',
             default => null,
         },
-        'Status' => filled($filters['status'] ?? null) ? ucfirst(str_replace('_', ' ', $filters['status'])) : null,
+        'Status' => ($filters['status'] ?? null) === \App\Services\AnalyticsService::FORWARDED_INFORMATION_STATUS
+            ? \App\Services\AnalyticsService::FORWARDED_INFORMATION_LABEL
+            : (filled($filters['status'] ?? null) ? ucfirst(str_replace('_', ' ', $filters['status'])) : null),
         'College / Office' => $filters['unit'] ?? null,
     ]);
 
@@ -33,18 +35,12 @@
     $count = fn (int $number, string $word): string => $number . ' ' . Str::plural($word, $number);
     $verb = fn (int $number, string $one, string $many): string => $number === 1 ? $one : $many;
     $percent = fn (int|float $part, int|float $whole): float => $whole > 0 ? round($part / $whole * 100, 1) : 0;
-    $duration = function (?float $hours): string {
-        if ($hours === null) {
+    $duration = function (?float $days): string {
+        if ($days === null) {
             return 'Not available';
         }
-        if ($hours < 1) {
-            return 'Less than 1 hour';
-        }
-        if ($hours < 24) {
-            return round($hours) . ' ' . Str::plural('hour', (int) round($hours));
-        }
 
-        return round($hours / 24, 1) . ' ' . (round($hours / 24, 1) == 1 ? 'day' : 'days');
+        return number_format($days, 1) . ' calendar days';
     };
 
     // label => value rows built from a chart's labels and data.
@@ -52,7 +48,13 @@
 
     $total = $overview['total'] ?? 0;
     $needsAction = $overview['needs_action'] ?? 0;
+    $needsActionDenominator = $overview['needs_action_denominator'] ?? 0;
     $needsActionResolved = $overview['needs_action_resolved'] ?? 0;
+    $excludedClosures = collect($overview['excluded_closures'] ?? [])->filter();
+    $excludedClosureText = $excludedClosures
+        ->map(fn ($count, $type) => str_replace('_', ' ', $type) . ' ' . $count)
+        ->implode(', ');
+    $committeeOutcomes = $overview['committee_outcomes'] ?? [];
     $escalatedTickets = $overview['escalated_tickets'] ?? 0;
 
     $categories = collect($rows($reportData['category_breakdown'] ?? null))->sortDesc();
@@ -72,10 +74,14 @@
         ],
         'resolution_rate' => [
             'Resolution Rate',
-            "Counts only the {$count($needsAction, 'ticket')} classified as Needs Resolution, meaning an office had to act on them. Tickets that were for information only, invalid or not yet classified are left out.",
-            'Outcome', 'Tickets', $needsAction > 0 ? ['Resolved' => $needsActionResolved, 'Still being handled' => $needsAction - $needsActionResolved] : [],
+            "Counts recorded resolutions among {$count($needsActionDenominator, 'eligible ticket')} classified as Needs Resolution. Withdrawn, duplicate, out-of-scope, invalid and no-response closures are excluded from the denominator.",
+            'Outcome', 'Tickets', $needsAction > 0 ? array_filter([
+                'Resolved' => $needsActionResolved,
+                'Still being handled' => $needsActionDenominator - $needsActionResolved,
+                'Not counted' => $overview['excluded_closures_total'] ?? 0,
+            ], fn ($value) => $value > 0) : [],
             'No ticket in this period needed an office to act.',
-            null,
+            $excludedClosureText ? 'Not counted: ' . $excludedClosureText . '.' : null,
         ],
         'escalation' => [
             'Escalations by Month',
@@ -139,6 +145,7 @@
         'Referred' => 'Sent to another office or body to handle',
         'Resolved' => 'A resolution has been given',
         'Closed' => 'Finished, with nothing more to do',
+        \App\Services\AnalyticsService::FORWARDED_INFORMATION_LABEL => 'Forwarded for information; no action or reply is expected',
     ];
     $openLabels = collect(Ticket::STATUS_LABELS)->except([Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED])->values();
 
@@ -156,11 +163,11 @@
         }
 
         $findings[] = $needsAction > 0
-            ? "{$needsAction} of the {$count($total, 'ticket')} needed an office to act. {$needsActionResolved} of those {$verb($needsActionResolved, 'is', 'are')} resolved ({$percent($needsActionResolved, $needsAction)}%) and " . ($needsAction - $needsActionResolved) . " {$verb($needsAction - $needsActionResolved, 'is', 'are')} still being handled."
+            ? "{$needsAction} of the {$count($total, 'ticket')} needed an office to act. {$needsActionResolved} of the {$needsActionDenominator} counted tickets {$verb($needsActionResolved, 'has', 'have')} a recorded resolution ({$percent($needsActionResolved, $needsActionDenominator)}%)." . ($excludedClosureText ? ' Not counted: ' . $excludedClosureText . '.' : '')
             : 'None of the tickets has been classified as needing an office to act.';
 
-        if (($overview['average_hours'] ?? null) !== null) {
-            $findings[] = 'On average, a ticket took ' . Str::lower($duration($overview['average_hours'])) . ' from filing to resolution.';
+        if (($overview['average_days'] ?? null) !== null) {
+            $findings[] = 'Active handling averaged ' . $duration($overview['average_days']) . ' (median ' . $duration($overview['median_days']) . '), excluding clarification and referral waits.';
         }
 
         $findings[] = $escalatedTickets > 0
@@ -299,9 +306,9 @@
                                 <div class="hint">Resolved or closed</div>
                             </td>
                             <td>
-                                <div class="figure">{{ $percent($needsActionResolved, $needsAction) }}%</div>
+                                <div class="figure">{{ $percent($needsActionResolved, $needsActionDenominator) }}%</div>
                                 <div class="label">Resolution rate</div>
-                                <div class="hint">{{ $needsActionResolved }} of {{ $needsAction }} that needed action</div>
+                                <div class="hint">{{ $needsActionResolved }} of {{ $needsActionDenominator }} counted tickets</div>
                             </td>
                         </tr>
                     </table>
@@ -334,29 +341,33 @@
                     </table>
                 @endif
         @elseif ($key === 'resolution_time')
-                <h2>How Long Tickets Took to Resolve</h2>
-                <p class="about">The average time from the day a ticket was filed to the day it was resolved, slowest category first. Only resolved tickets classified as Needs Resolution are counted.</p>
-                @if (empty($overview['resolution_times']))
+                <h2>Active Handling Time</h2>
+                <p class="about">Calendar days from submission to recorded resolution, less time waiting for student clarification and committee referral outcomes. Average and median are shown overall and by category. Committee outcomes are separate from category averages.</p>
+                @if (empty($overview['resolution_times']) && empty($committeeOutcomes['ticket_count']) && empty($committeeOutcomes['fallback_count']))
                     <p class="empty">No tickets have been resolved in this period.</p>
                 @else
                     <table class="data">
                         <thead>
-                            <tr><th>Category</th><th class="wide number">Tickets resolved</th><th class="wide number">Average time</th></tr>
+                            <tr><th>Category / outcome</th><th class="wide number">Tickets</th><th class="wide number">Average</th><th class="wide number">Median</th></tr>
                         </thead>
                         <tbody>
                             @foreach ($overview['resolution_times'] as $category => $time)
-                                <tr><td>{{ $category }}</td><td class="wide number">{{ $time['tickets'] }}</td><td class="wide number">{{ $duration($time['hours']) }}</td></tr>
+                                <tr><td>{{ $category }}</td><td class="wide number">{{ $time['tickets'] }}</td><td class="wide number">{{ $duration($time['average_days']) }}</td><td class="wide number">{{ $duration($time['median_days']) }}</td></tr>
                             @endforeach
+                            @if (($committeeOutcomes['ticket_count'] ?? 0) > 0 || ($committeeOutcomes['fallback_count'] ?? 0) > 0)
+                                <tr><td>Committee outcomes</td><td class="wide number">{{ $committeeOutcomes['ticket_count'] }}</td><td class="wide number">{{ $duration($committeeOutcomes['average_days']) }}</td><td class="wide number">{{ $duration($committeeOutcomes['median_days']) }}</td></tr>
+                            @endif
                         </tbody>
                         <tfoot>
-                            <tr><td>All categories</td><td class="wide number">{{ collect($overview['resolution_times'])->sum('tickets') }}</td><td class="wide number">{{ $duration($overview['average_hours']) }}</td></tr>
+                            <tr><td>Overall (including committee outcomes)</td><td class="wide number">{{ $overview['resolution_time_ticket_count'] }}</td><td class="wide number">{{ $duration($overview['average_days']) }}</td><td class="wide number">{{ $duration($overview['median_days']) }}</td></tr>
                         </tfoot>
                     </table>
+                    <p class="note">{{ $overview['resolution_time_fallback_count'] }} ticket(s) used full elapsed time because a clarification or referral wait interval could not be determined.</p>
                 @endif
         @elseif ($key === 'statuses')
             @php $statuses = $rows($reportData['status_distribution'] ?? null); @endphp
                 <h2>Tickets by Status</h2>
-                <p class="about">Where each ticket stands right now. The first {{ $openLabels->count() }} statuses are still open; Resolved and Closed are finished.</p>
+                <p class="about">Where each ticket stands right now. Forwarded informational tickets are shown separately from Submitted; Resolved and Closed are finished.</p>
                 <table class="data">
                     <thead>
                         <tr><th>Status</th><th class="meaning">What it means</th><th class="number">Tickets</th><th class="number">Share</th></tr>

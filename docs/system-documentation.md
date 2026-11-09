@@ -150,7 +150,7 @@ During SDS review, a ticket may be classified as:
 
 Jurisdiction is `sds` or `recipient`. Classification does not itself assign a recipient. SDS may handle a ticket directly, assign it to a recipient, retain an informational item, or forward an informational item.
 
-When SDS forwards an informational ticket without closing it, it remains stored as `submitted`, with `classification=informational`, `jurisdiction=recipient`, the receiving recipient ID in `forwarded_to`, and the forwarding time in `forwarded_at`. Students and the receiving recipient see “Forwarded for information,” the receiving office, and the date; on the recipient page the notice says no reply or action is needed. This ticket is not in the SDS awaiting-review queue and does not receive a Submitted reminder. The stored status, analytics status counts, and status filters remain Submitted. SDS retains the decision to close it. Retained and already-closed informational tickets keep their existing Closed display.
+When SDS forwards an informational ticket without closing it, it remains stored as `submitted`, with `classification=informational`, `jurisdiction=recipient`, the receiving recipient ID in `forwarded_to`, and the forwarding time in `forwarded_at`. Students and the receiving recipient see “Forwarded for information,” the receiving office, and the date; on the recipient page the notice says no reply or action is needed. This ticket is not in the SDS awaiting-review queue and does not receive a Submitted reminder. The stored status and ticket-workflow status filters remain Submitted; analytics status counts, charts, and the analytics status filter show a separate “Forwarded for information” bucket. Analytics recipient and unit filters include the receiving office. SDS retains the decision to close it. Retained and already-closed informational tickets keep their existing Closed display.
 
 Before classification, an administrator can correct the category and suggested recipient. An initial recipient assignment must be configured for that category through its assigned recipient, suggested recipients, escalation hierarchy, or the student's suggested recipient.
 
@@ -363,15 +363,15 @@ Only the SDS admin analytics routes are exposed. Filters include date range, cat
 Dashboard and report metrics include:
 
 - Complaint and ticket totals, status counts, ticket volume series by day/week/month, and category distribution.
-- Resolution rate for `needs_resolution` tickets: resolved or closed count divided by all needs-resolution tickets. Informational and invalid tickets are excluded from that denominator.
-- Average resolution time from complaint submission to `resolved_at`, overall and by category.
+- Resolution rate for `needs_resolution` tickets: numerator is tickets in Resolved, or Closed with `resolved` / `resolved_accepted` closure. The denominator excludes tickets closed as withdrawn, duplicate, out of scope, invalid, or no response. Exclusion counts are shown beside the rate; informational and invalid-classification tickets are outside the needs-resolution population.
+- Resolution time is active handling time in calendar days from complaint submission through recorded resolution, minus time from clarification request to student reply and from referral to recorded outcome. These intervals are derived from existing timestamps and audit events, with no schema change. If an interval is incomplete or inconsistent, the ticket uses its full elapsed time and is counted in the fallback total. Overall and by category, reports show average and median to one decimal place. Committee referral outcomes have a separate line and are excluded from handler and category averages.
 - Escalation event count, unique tickets escalated, escalation occurrence frequency, count by category, and escalation-level breakdown.
 - Recipient/handler workload and performance rows, active/open tickets, oldest open tickets, and unit-level rollups.
 - Classification counts for needs-resolution, informational, invalid, and unclassified; identified vs anonymous submissions; college/program origin (anonymous students appear as “Not disclosed”).
 - Resolution-type and closure-reason breakdowns and satisfaction-rating count, average, and 1–5 distribution.
 - Subject/insight summaries for the selected period.
 
-Complaint date/category filters apply through the complaint relation. Ticket filters additionally apply status, classification, handler user ID, and handler unit. Resolution timing is based on the complaint's creation time through ticket `resolved_at`; it is not business-day timing.
+Complaint date/category filters apply through the complaint relation. Ticket filters additionally apply status, classification, handler user ID, and handler unit; the analytics recipient/unit filters also match the recipient recorded in `forwarded_to` for forwarded informational tickets. Resolution timing uses calendar time, not business days. Hidden-identity and sensitive-ticket handling is unchanged: analytics continues to use disclosed-origin labels and public-safe subjects.
 
 PDF export can include selected sections: summary, category, resolution rate/time, escalation by month, status, college, program, resolution type, closure reason, escalation levels, and satisfaction. At least one section must be selected. A direct export with no `sections` parameter includes all sections. Excel export uses the report data and exports the available report tables. Filenames include the current timestamp.
 

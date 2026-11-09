@@ -599,7 +599,9 @@ class TicketWorkflowTest extends TestCase
             ->assertOk()
             ->assertSee('Pending student requests')
             ->assertSee('Student requested an update')
-            ->assertSee('Please share a progress update.');
+            ->assertSee('Please share a progress update.')
+            ->assertDontSee($this->student->name)
+            ->assertDontSee('Private student complaint title');
     }
 
     public function test_update_and_escalation_requests_are_only_available_in_their_allowed_statuses(): void
@@ -715,7 +717,8 @@ class TicketWorkflowTest extends TestCase
             ->assertSee('Student requested escalation')
             ->assertSee($reason)
             ->assertDontSee($this->student->name)
-            ->assertDontSee($this->student->email);
+            ->assertDontSee($this->student->email)
+            ->assertDontSee('Private student conduct matter');
         $this->actingAs($this->handler)
             ->get(route('recipient.complaints.show', $ticket->complaint))
             ->assertOk()

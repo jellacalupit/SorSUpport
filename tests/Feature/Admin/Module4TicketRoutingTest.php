@@ -52,6 +52,17 @@ class Module4TicketRoutingTest extends TestCase
             'unit' => 'Student Affairs',
             'designation' => 'Officer',
         ]);
+        $otherRecipientUser = User::factory()->create([
+            'role' => User::ROLE_RECIPIENT,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+        $otherRecipient = Recipient::create([
+            'user_id' => $otherRecipientUser->id,
+            'staff_id' => 'R1002',
+            'unit' => 'Registrar',
+            'designation' => 'Officer',
+        ]);
 
         $category = ComplaintCategory::create([
             'name' => 'Academic Concern',
@@ -97,9 +108,29 @@ class Module4TicketRoutingTest extends TestCase
         $this->assertNull($ticket->deadline);
         $this->assertTrue($ticket->thread->is_active);
 
+        $this->actingAs($admin)
+            ->post(route('admin.tickets.assign', $ticket), [
+                'assignment_mode' => 'recipient',
+                'recipient_id' => $otherRecipient->id,
+            ])
+            ->assertRedirect(route('admin.tickets.review.index'));
+
+        $ticket->refresh();
+        $this->assertSame(Ticket::STATUS_ASSIGNED, $ticket->status);
+        $this->assertSame($otherRecipient->user_id, $ticket->current_handler_id);
+        $this->assertSame($otherRecipient->user_id, $ticket->assigned_to);
+        $this->assertNull($ticket->acknowledged_at);
+
         $this->assertDatabaseHas('email_notifications', [
             'ticket_id' => $ticket->id,
             'recipient_email' => $recipientUser->email,
+            'type' => \App\Models\EmailNotification::TYPE_RECIPIENT_ASSIGNMENT,
+            'status' => \App\Models\EmailNotification::STATUS_PENDING,
+        ]);
+
+        $this->assertDatabaseHas('email_notifications', [
+            'ticket_id' => $ticket->id,
+            'recipient_email' => $otherRecipientUser->email,
             'type' => \App\Models\EmailNotification::TYPE_RECIPIENT_ASSIGNMENT,
             'status' => \App\Models\EmailNotification::STATUS_PENDING,
         ]);
