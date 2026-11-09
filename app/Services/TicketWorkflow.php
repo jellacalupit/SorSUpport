@@ -661,9 +661,18 @@ class TicketWorkflow
             return null;
         }
 
-        $latestStatusChangeId = $ticket->auditLogs()
-            ->whereIn('action', self::STATUS_PERIOD_ACTIONS)
-            ->max('id');
+        $auditLogs = $ticket->relationLoaded('auditLogs') ? $ticket->auditLogs : null;
+        $latestStatusChangeId = $auditLogs !== null
+            ? $auditLogs->whereIn('action', self::STATUS_PERIOD_ACTIONS)->max('id')
+            : $ticket->auditLogs()->whereIn('action', self::STATUS_PERIOD_ACTIONS)->max('id');
+
+        if ($auditLogs !== null) {
+            return $auditLogs
+                ->where('action', 'update_requested')
+                ->filter(fn (AuditLog $log): bool => $latestStatusChangeId === null || $log->id > $latestStatusChangeId)
+                ->sortByDesc('id')
+                ->first();
+        }
 
         return $ticket->auditLogs()
             ->where('action', 'update_requested')
@@ -679,26 +688,33 @@ class TicketWorkflow
 
     public function pendingEscalationRequest(Ticket $ticket): ?AuditLog
     {
-        $request = $ticket->auditLogs()
-            ->where('action', 'escalation_requested')
-            ->orderByDesc('id')
-            ->first();
+        $auditLogs = $ticket->relationLoaded('auditLogs') ? $ticket->auditLogs : null;
+        $request = $auditLogs !== null
+            ? $auditLogs->where('action', 'escalation_requested')->sortByDesc('id')->first()
+            : $ticket->auditLogs()->where('action', 'escalation_requested')->orderByDesc('id')->first();
 
         if (! $request) {
             return null;
         }
 
-        $wasActedOn = $ticket->auditLogs()
-            ->where('id', '>', $request->id)
-            ->whereIn('action', self::ESCALATION_REQUEST_CLEARED_BY_ACTIONS)
-            ->exists();
+        $wasActedOn = $auditLogs !== null
+            ? $auditLogs->contains(fn (AuditLog $log): bool => $log->id > $request->id
+                && in_array($log->action, self::ESCALATION_REQUEST_CLEARED_BY_ACTIONS, true))
+            : $ticket->auditLogs()
+                ->where('id', '>', $request->id)
+                ->whereIn('action', self::ESCALATION_REQUEST_CLEARED_BY_ACTIONS)
+                ->exists();
 
         if (! $wasActedOn) {
-            $wasActedOn = $ticket->auditLogs()
-                ->where('id', '>', $request->id)
-                ->where('action', 'message_posted')
-                ->whereHas('performer', fn ($query) => $query->where('role', User::ROLE_SDS_ADMIN))
-                ->exists();
+            $wasActedOn = $auditLogs !== null
+                ? $auditLogs->contains(fn (AuditLog $log): bool => $log->id > $request->id
+                    && $log->action === 'message_posted'
+                    && $log->performer?->isSdsAdmin())
+                : $ticket->auditLogs()
+                    ->where('id', '>', $request->id)
+                    ->where('action', 'message_posted')
+                    ->whereHas('performer', fn ($query) => $query->where('role', User::ROLE_SDS_ADMIN))
+                    ->exists();
         }
 
         return $wasActedOn ? null : $request;

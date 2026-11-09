@@ -27,13 +27,14 @@ All role pages require authentication, an active account, completion of required
 |---|---|
 | `student` | Create and track own complaints; view own ticket and conversation; reply and attach files while the conversation is open; answer clarification requests; request an update while Submitted or Needs Clarification; ask SDS to consider escalation while Assigned, In Progress, or Escalated; withdraw an unresolved ticket before referral or request withdrawal from SDS after referral; accept a resolution or request further action; rate eligible closed tickets; manage notifications and profile photo. |
 | `recipient` | View tickets assigned to the recipient account and informational tickets forwarded to that recipient; acknowledge assigned work; exchange messages on assigned tickets; mark assigned tickets resolved; manage notifications and profile photo. Recipients cannot assign, escalate, refer, close, or reject tickets. |
-| `sds_admin` | Review all submissions; edit pre-classification category/suggested-recipient details; classify, assign, handle, request clarification, escalate, refer, record referral outcomes, reopen, reject, close, and retain/forward informational tickets; manage accounts, categories, escalation paths, units, reminder settings; view analytics and audit trail. |
+| `sds_admin` | Review all submissions; edit pre-classification category/suggested-recipient details; classify, assign, handle, request clarification, escalate, refer, record referral outcomes, reopen, reject, close, and retain/forward informational tickets; review the read-only Needs attention list; manage accounts, categories, escalation paths, units, reminder settings; view analytics and audit trail. |
 
 ### Access checks
 
 - Admin routes use `auth`, `active.user`, `force.password`, and `role:sds_admin`.
 - Student and recipient page groups apply the same first three checks with their respective role.
 - Ticket actions additionally pass through `TicketWorkflow`'s actor/status rules.
+- The Needs attention dashboard/list is display-only and is available only through the SDS-admin route group.
 - Complaint and ticket pages check ownership or handler status; recipient access is restricted to their assigned ticket or an informational ticket forwarded to their recipient profile.
 - Ticket attachment routes require authentication, an active account, and the same ticket-visibility check. Files are read from private storage and streamed; direct public-file URLs are not used for ticket attachments.
 - An inactive account is logged out on protected requests. Verification and logout routes are allowed through the active-account middleware.
@@ -232,6 +233,13 @@ Additional constraints:
 - Every escalation changes assigned/current handler, preserves the `escalated` status on repeat escalation, updates `escalated_at`, logs the reason, may flag a conflict of interest, and queues emails for the acting admin, target recipient, and student.
 - A student may ask SDS to consider escalation while the ticket is Assigned, In Progress, or Escalated, with a 10–1,000 character reason. This request is advisory only: escalation remains a manual SDS administrator decision. It does not change the ticket or handler, is not shown to or emailed to the current handler, and stays pending until SDS escalates/reassigns, resolves/closes, or replies in the conversation. The student's reason is visible to SDS only in the audit and pending-request panel.
 
+### Needs attention
+
+- The SDS admin dashboard shows the count and up to ten tickets that may need attention; `GET /admin/tickets/needs-attention` provides the full, searchable, filterable, paginated list. The page is display-only: opening or filtering it does not change tickets, statuses, handlers, or reminders.
+- A ticket appears when it has a pending `update_requested` or `escalation_requested` event according to `TicketWorkflow`'s pending-request helpers; when its current status has reached the existing reminder system's working-day threshold without a non-email action; or when its current handler or assignee is inactive. Resolved and Closed tickets are excluded.
+- No-action thresholds use the existing `TicketReminderService` status thresholds, `SystemSetting` values, working-day counter, and `Ticket::lastActionAt()` behavior, including the sensitive Submitted threshold and the configured referral rule. The thresholds are applied even if reminder emails are disabled; no additional thresholds or settings are introduced.
+- Rows are ordered with pending student requests first, then oldest tickets first. They show the public-safe subject, filer name as `Anonymous` when identity is hidden, handler/office, reason badges, status, and age. Sensitive subjects use `Confidential concern`. No-action wording is informational, not a deadline or handbook requirement; system-default thresholds remain adjustable under System Settings → Reminders. SDS decides manually what to do.
+
 ## 6. Conversation, unread state, and notifications
 
 ### Ticket conversation
@@ -378,7 +386,7 @@ Authenticated routes: `GET /verify-email`, throttled `POST /email/verification-n
 
 | Path | Function |
 |---|---|
-| `GET /admin/dashboard` | Admin overview. |
+| `GET /admin/dashboard` | Admin overview, including the Needs attention count and up to ten matching tickets. |
 | `GET/POST /admin/accounts` | List/search/filter accounts and create account. |
 | `GET /admin/accounts/{user}/edit` | Redirects to account list. |
 | `PUT /admin/accounts/{user}` | Update account. |
@@ -392,6 +400,7 @@ Authenticated routes: `GET /verify-email`, throttled `POST /email/verification-n
 | `GET /admin/complaints`, `GET /admin/complaints/{complaint}` | Complaint queue/detail. |
 | `POST /admin/complaints/{complaint}/reply` | Admin reply route. |
 | `GET /admin/tickets/review`, `POST /admin/tickets/{ticket}/read` | Review queue and mark read. |
+| `GET /admin/tickets/needs-attention` | Read-only, searchable, filterable and paginated list of tickets that may need SDS attention. |
 | `GET /admin/tickets/my` | Admin's own handled tickets. |
 | `PATCH /admin/tickets/{ticket}/details` | Update category/suggested recipient before classification. |
 | `POST /admin/tickets/{ticket}/reject`, `/classify`, `/forward`, `/retain-informational`, `/forward-informational-close`, `/assign`, `/acknowledge`, `/clarification`, `/refer`, `/outcome`, `/resolve`, `/not-yet-resolved`, `/close`, `/escalate` | Review and lifecycle actions described above. |

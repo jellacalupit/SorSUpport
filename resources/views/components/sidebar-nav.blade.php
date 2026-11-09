@@ -12,6 +12,7 @@
             'label' => 'Ticket Management',
             'items' => [
                 ['route' => 'admin.tickets.review.index', 'label' => 'Ticket Review', 'icon' => 'inbox', 'badge' => $pendingReview ?? null],
+                ['route' => 'admin.tickets.needs-attention', 'label' => 'Needs Attention', 'icon' => 'alert-triangle'],
                 ['route' => 'admin.tickets.my', 'label' => 'My Tickets', 'icon' => 'briefcase'],
                 ['route' => 'admin.complaints.index', 'label' => 'All Tickets', 'icon' => 'files-2'],
             ],

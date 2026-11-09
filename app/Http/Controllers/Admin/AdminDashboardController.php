@@ -8,6 +8,7 @@ use App\Models\Complaint;
 use App\Models\ComplaintCategory;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\TicketAttentionService;
 use Illuminate\Support\Facades\Auth;
 
 class AdminDashboardController extends Controller
@@ -15,10 +16,11 @@ class AdminDashboardController extends Controller
     /**
      * Display the SDS Administrator dashboard.
      */
-    public function index()
+    public function index(TicketAttentionService $attentionService)
     {
         $admin = Auth::user();
         $tickets = Ticket::query()->with('complaint.category')->get();
+        $needsAttention = $attentionService->tickets();
         $recentTickets = Ticket::query()
             ->with('complaint')
             ->join('complaints', 'complaints.id', '=', 'tickets.complaint_id')
@@ -115,6 +117,7 @@ class AdminDashboardController extends Controller
                 ->count(),
             'totalCategories' => ComplaintCategory::query()->where('is_active', true)->count(),
             'recentTickets' => $recentTickets,
+            'needsAttention' => $needsAttention,
             'categoryVolume' => $categoryVolume,
             'recentActivity' => $recentActivity,
             'statusBreakdown' => $statusBreakdown,

@@ -228,6 +228,9 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
         Route::get('/tickets/my', [AdminTicketReviewController::class, 'myTickets'])
             ->name('tickets.my');
 
+        Route::get('/tickets/needs-attention', [AdminTicketReviewController::class, 'needsAttention'])
+            ->name('tickets.needs-attention');
+
         Route::patch('/tickets/{ticket}/details', [AdminTicketReviewController::class, 'updateDetails'])
             ->name('tickets.update-details');
 

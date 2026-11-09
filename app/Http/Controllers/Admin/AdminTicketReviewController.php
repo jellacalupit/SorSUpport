@@ -11,6 +11,7 @@ use App\Models\Recipient;
 use App\Models\Ticket;
 use App\Models\TicketThread;
 use App\Services\TicketEscalationService;
+use App\Services\TicketAttentionService;
 use App\Services\TicketUnreadService;
 use App\Services\TicketWorkflow;
 use Illuminate\Http\RedirectResponse;
@@ -34,6 +35,57 @@ class AdminTicketReviewController extends Controller
         $unreadService->markTicketsViewed(Auth::user(), [(string) $ticket->complaint_id]);
 
         return response()->noContent();
+    }
+
+    /**
+     * Display tickets that may need SDS attention without changing them.
+     */
+    public function needsAttention(Request $request, TicketAttentionService $attentionService): View
+    {
+        $rows = $attentionService->tickets();
+        $search = trim((string) $request->input('search'));
+
+        $rows = $rows
+            ->when($search !== '', fn ($items) => $items->filter(function (array $row) use ($search): bool {
+                $ticket = $row['ticket'];
+                $complaint = $ticket->complaint;
+                $handler = $ticket->currentHandler ?? $ticket->assignee;
+                $searchable = [
+                    $complaint?->reference_number,
+                    $complaint?->public_subject,
+                    $complaint?->category?->name,
+                    $complaint?->filerNameFor(Auth::user()),
+                    $handler?->display_name,
+                    $handler?->recipient?->unit,
+                    $ticket->status_label,
+                ];
+
+                return collect($searchable)->contains(
+                    fn ($value): bool => filled($value) && str_contains(mb_strtolower((string) $value), mb_strtolower($search))
+                );
+            }))
+            ->when($request->filled('status_filter'), fn ($items) => $items->filter(
+                fn (array $row): bool => $row['ticket']->status === $request->input('status_filter')
+            ))
+            ->when($request->filled('category_filter'), fn ($items) => $items->filter(
+                fn (array $row): bool => (string) $row['ticket']->complaint?->category_id === (string) $request->input('category_filter')
+            ))
+            ->values();
+
+        $page = max(1, $request->integer('page', 1));
+        $tickets = new \Illuminate\Pagination\LengthAwarePaginator(
+            $rows->forPage($page, 15)->values(),
+            $rows->count(),
+            15,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return view('admin.tickets.needs-attention', [
+            'tickets' => $tickets,
+            'categories' => \App\Models\ComplaintCategory::query()->orderBy('name')->get(),
+            'statuses' => collect(Ticket::STATUS_LABELS)->except([Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED]),
+        ]);
     }
 
     /**
