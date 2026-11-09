@@ -352,13 +352,15 @@ class VisibilityAndFeedbackTest extends TestCase
 
         $this->actingAs($this->admin)->get('/admin/analytics')
             ->assertOk()
-            ->assertSee('Tickets by college')
-            ->assertSee('Tickets by program')
+            ->assertSee('Overview')
+            ->assertSee('Response and resolution')
+            ->assertSee('Staff and offices')
+            ->assertSee('Students and feedback')
+            ->assertSee('Who raises tickets')
             ->assertSee('How tickets were resolved')
             ->assertSee('Settled between the parties')
             ->assertSee('Why tickets were closed')
-            ->assertSee('Escalation level')
-            ->assertSee('Student satisfaction')
+            ->assertSee('Satisfaction')
             ->assertSee('4.0');
 
         $reportData = app(AnalyticsService::class)->getReportData();
@@ -397,7 +399,7 @@ class VisibilityAndFeedbackTest extends TestCase
         $this->assertNull($top->firstWhere('staff_id', $this->otherRecipient->recipient->staff_id));
     }
 
-    public function test_analytics_bars_are_as_long_as_their_percentage(): void
+    public function test_dashboard_category_bars_show_their_actual_percentages(): void
     {
         $other = ComplaintCategory::create(['name' => 'Library Services', 'is_active' => true]);
         foreach (range(1, 3) as $ignored) {
@@ -408,9 +410,9 @@ class VisibilityAndFeedbackTest extends TestCase
 
         $page = $this->actingAs($this->admin)->get('/admin/analytics')->assertOk()->getContent();
 
-        // Three of four tickets is 75% and one of four is 25%: the larger bar is not drawn full.
-        $this->assertStringContainsString('bg-primary" style="width: 75%"', $page);
-        $this->assertStringContainsString('bg-primary" style="width: 25%"', $page);
+        $this->assertStringContainsString('3 (75.0%)', $page);
+        $this->assertStringContainsString('1 (25.0%)', $page);
+        $this->assertStringNotContainsString('Common subjects', $page);
     }
 
     public function test_the_admin_chooses_which_parts_of_the_report_to_generate(): void
@@ -468,7 +470,7 @@ class VisibilityAndFeedbackTest extends TestCase
     {
         $this->actingAs($this->admin)->get('/admin/analytics')
             ->assertOk()
-            ->assertSee('No ratings in this period.')
-            ->assertSee('No resolved tickets in this period.');
+            ->assertSee('No satisfaction ratings in this period.')
+            ->assertSee('No handling-time data in this period.');
     }
 }

@@ -299,8 +299,8 @@ class AnalyticsDefinitionsTest extends TestCase
             ->assertOk()
             ->assertSee('Staff and office performance')
             ->assertSee('First staff reply (SDS or recipient)')
-            ->assertSee('Not tracked per handler')
-            ->assertSee('Not enough data');
+            ->assertSee('Escalations are counted by category and level, not per handler.')
+            ->assertSee('n/a means fewer than 3 tickets');
         $this->assertArrayHasKey('office_rows', $report['performance_metrics']);
     }
 
@@ -435,7 +435,7 @@ class AnalyticsDefinitionsTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.analytics.index'))
             ->assertOk()
-            ->assertSee('Confidential concern')
+            ->assertDontSee('Confidential concern')
             ->assertSee('Sensitive categories (not broken down)')
             ->assertDontSee('PRIVATE_SENSITIVE_SUBJECT')
             ->assertDontSee('PRIVATE_SENSITIVE_DESCRIPTION')
