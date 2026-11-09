@@ -23,12 +23,13 @@
     }
 
     .communication-card .message-scrollbar:not(.overflow-visible) {
-        flex: 1 1 auto;
+        flex: 1 1 0%;
         margin-right: -0.75rem;
         padding-right: 0.75rem;
         min-height: 0;
         max-height: 100%;
         overflow-y: scroll !important;
+        justify-content: safe flex-end;
         overscroll-behavior: contain;
     }
 
