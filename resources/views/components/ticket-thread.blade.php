@@ -202,9 +202,9 @@
                         ></textarea>
                     </div>
 
-                    <label class="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-colors {{ $isReadOnly ? 'cursor-not-allowed' : 'cursor-pointer hover:border-primary hover:bg-primary-soft hover:text-primary' }}" title="Attach a file">
+                    <label class="grid {{ $viewerRole === 'admin' ? 'h-8 w-8' : 'h-9 w-9' }} shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-colors {{ $isReadOnly ? 'cursor-not-allowed' : 'cursor-pointer hover:border-primary hover:bg-primary-soft hover:text-primary' }}" title="Attach a file">
                         <input type="file" name="file_attachment" accept=".pdf,.docx,.jpg,.jpeg,.png,.heic" class="hidden" @disabled($isReadOnly)>
-                        <x-icons.paperclip class="h-4 w-4" />
+                        <x-icons.paperclip class="{{ $viewerRole === 'admin' ? 'h-3.5 w-3.5' : 'h-4 w-4' }}" />
                     </label>
 
                     <button type="submit" @disabled($isReadOnly) class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed" aria-label="Send message" title="Send message">
