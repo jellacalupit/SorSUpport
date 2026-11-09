@@ -261,7 +261,7 @@ class AnalyticsDefinitionsTest extends TestCase
         $this->assertSame(2.0, $handler['median_acknowledgment_days']);
         $this->assertSame(3, $handler['resolved_tickets']);
         $this->assertSame(2.0, $handler['handling_by_category']['Student Services']['median_days']);
-        $this->assertNull($handler['escalations']);
+        $this->assertSame('Not tracked per handler', $handler['escalations']);
         $this->assertNull($otherHandler['handling_by_category']['Student Services']['median_days']);
         $this->assertSame(2, $otherHandler['handling_by_category']['Student Services']['ticket_count']);
         $this->assertSame(5, $report['performance_metrics']['resolved_ticket_count']);
@@ -277,12 +277,16 @@ class AnalyticsDefinitionsTest extends TestCase
             'sections' => ['performance'],
         ])->render();
         $this->assertStringContainsString('Staff and Office Performance', $performanceReport);
+        $this->assertStringContainsString('First staff reply (SDS or recipient)', $performanceReport);
+        $this->assertStringContainsString('Not tracked per handler', $performanceReport);
         $this->assertStringContainsString('Not enough data', $performanceReport);
         $this->assertStringNotContainsString('Analytics test ticket', $performanceReport);
         $excelRows = collect((new AnalyticsReportExport($report))->array())
             ->map(fn ($row) => implode(' | ', $row));
         $this->assertTrue($excelRows->contains('Performance by Handler'));
         $this->assertTrue($excelRows->contains('Performance by Office'));
+        $this->assertTrue($excelRows->contains(fn ($row) => str_contains($row, 'First staff reply (SDS or recipient)')));
+        $this->assertTrue($excelRows->contains(fn ($row) => str_contains($row, 'Not tracked per handler')));
         $this->assertTrue($excelRows->contains(fn ($row) => str_contains($row, 'Not enough data')));
 
         $reviewOnly = $analytics->getReportData(['status' => Ticket::STATUS_SUBMITTED]);
@@ -294,8 +298,34 @@ class AnalyticsDefinitionsTest extends TestCase
             ->get(route('admin.analytics.index'))
             ->assertOk()
             ->assertSee('Staff and office performance')
+            ->assertSee('First staff reply (SDS or recipient)')
+            ->assertSee('Not tracked per handler')
             ->assertSee('Not enough data');
         $this->assertArrayHasKey('office_rows', $report['performance_metrics']);
+    }
+
+    public function test_reopened_ticket_resolution_is_attributed_only_to_its_last_resolving_handler(): void
+    {
+        $otherUser = User::factory()->create(['role' => User::ROLE_RECIPIENT]);
+        Recipient::create([
+            'user_id' => $otherUser->id,
+            'staff_id' => 'ANALYTICS-LAST-RESOLVER',
+            'unit' => 'Registrar Office',
+            'designation' => 'Officer',
+        ]);
+
+        $ticket = $this->timedTicket('2026-01-01', '2026-01-06');
+        $this->audit($ticket, 'complaint_resolved', '2026-01-03', $this->recipientUser->id);
+        $this->audit($ticket, 'ticket_reopened_from_resolved', '2026-01-04', $this->student->id);
+        $this->audit($ticket, 'complaint_resolved', '2026-01-06', $otherUser->id);
+
+        $metrics = app(AnalyticsService::class)->getDashboardData()['performanceMetrics'];
+        $firstHandler = collect($metrics['handler_rows'])->firstWhere('name', $this->recipientUser->table_name);
+        $lastHandler = collect($metrics['handler_rows'])->firstWhere('name', $otherUser->table_name);
+
+        $this->assertSame(1, $metrics['resolved_ticket_count']);
+        $this->assertSame(0, $firstHandler['resolved_tickets']);
+        $this->assertSame(1, $lastHandler['resolved_tickets']);
     }
 
     public function test_sensitive_tickets_are_counted_but_not_broken_down_by_student_attributes_or_exposed_in_analytics(): void

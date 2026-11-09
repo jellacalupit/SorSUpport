@@ -222,7 +222,7 @@
                 @foreach ([
                     ['Review time', $performance['review_time']],
                     ['Time to acknowledge', $performance['acknowledgment_time']],
-                    ['Time to first response', $performance['first_response_time']],
+                    ['First staff reply (SDS or recipient)', $performance['first_response_time']],
                 ] as [$label, $timing])
                     <div class="rounded-xl border border-border bg-muted/30 p-3">
                         <p class="text-xs font-semibold text-foreground">{{ $label }}</p>
@@ -279,7 +279,7 @@
                                         @endforelse
                                     </td>
                                     <td class="py-2 px-2 text-right tabular-nums">{{ number_format($row['resolved_tickets']) }}</td>
-                                    <td class="py-2 pl-2 text-right text-muted-foreground">Not attributed</td>
+                                    <td class="py-2 pl-2 text-right text-muted-foreground">{{ $row['escalations'] }}</td>
                                 </tr>
                             @empty
                                 <tr><td colspan="7" class="py-4 text-center text-muted-foreground">No handler activity in this period.</td></tr>

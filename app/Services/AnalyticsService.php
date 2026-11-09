@@ -607,11 +607,17 @@ class AnalyticsService
                 $firstResponseDurations[] = ($firstStaffMessage->created_at->getTimestamp() - $submittedAt->getTimestamp()) / 86400;
             }
 
-            foreach ($logs->where('action', 'complaint_resolved') as $event) {
-                $resolvedTicketIds[$ticket->id] = true;
+            $resolutionEvents = $logs->where('action', 'complaint_resolved');
+            foreach ($resolutionEvents as $event) {
                 if ($event->performed_by) {
-                    $resolvedByHandler[$event->performed_by][$ticket->id] = true;
                     $handlerIds[] = (int) $event->performed_by;
+                }
+            }
+            if ($resolutionEvents->isNotEmpty()) {
+                $resolvedTicketIds[$ticket->id] = true;
+                $lastResolution = $resolutionEvents->last();
+                if ($lastResolution->performed_by) {
+                    $resolvedByHandler[$lastResolution->performed_by][$ticket->id] = true;
                 }
             }
             if ($logs->contains('action', 'referral_outcome_recorded') || $this->isRecordedResolution($ticket)) {
@@ -773,7 +779,7 @@ class AnalyticsService
             'acknowledgment_ticket_count' => count($acknowledgmentDurations),
             'handling_by_category' => $handlingCategories,
             'resolved_tickets' => $resolvedIds->count(),
-            'escalations' => null,
+            'escalations' => 'Not tracked per handler',
         ];
     }
 
