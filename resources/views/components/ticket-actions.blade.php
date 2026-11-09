@@ -40,11 +40,11 @@
         'request_withdrawal' => $role === 'student' && $can(TicketWorkflow::REQUEST_WITHDRAWAL),
     ])->filter();
 
-    $fields = ['clarification_message', 'resolution_type', 'resolution_message', 'referred_to', 'referral_note', 'outcome', 'closure_type', 'closure_reason', 'further_action_reason', 'withdraw_reason', 'withdrawal_request_reason', 'status'];
+    $fields = ['clarification_message', 'resolution_type', 'resolution_message', 'referred_to', 'referred_to_other', 'referral_note', 'dean_endorsed', 'outcome', 'closure_type', 'closure_reason', 'further_action_reason', 'withdraw_reason', 'withdrawal_request_reason', 'status'];
     $openPanel = match (true) {
         $errors->hasAny(['clarification_message']) => 'clarify',
         $errors->hasAny(['resolution_type', 'resolution_message']) => 'resolve',
-        $errors->hasAny(['referred_to', 'referral_note']) => 'refer',
+        $errors->hasAny(['referred_to', 'referred_to_other', 'referral_note', 'dean_endorsed']) => 'refer',
         $errors->has('outcome') => 'outcome',
         $errors->hasAny(['closure_type', 'closure_reason']) => 'close',
         $errors->has('further_action_reason') => 'further',
@@ -212,11 +212,15 @@
             <div x-data="{ committee: @js(old('referred_to', '')) }" x-on:picked="committee = $event.detail">
                 <x-picker name="referred_to" required id="referred-to-{{ $ticket->id }}" label="Referred to" class="mt-2" placeholder="Select the committee or board" :selected="old('referred_to', '')" :options="[
                     ['value' => Ticket::REFERRAL_DESTINATION_CODI, 'label' => Ticket::REFERRAL_DESTINATION_CODI, 'detail' => 'Sexual harassment and gender-based cases'],
-                    ['value' => 'Campus Disciplinary Committee', 'label' => 'Campus Disciplinary Committee', 'detail' => 'Student discipline cases on this campus'],
+                    ['value' => Ticket::REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY, 'label' => Ticket::REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY, 'detail' => 'Student discipline cases on this campus'],
                     ['value' => 'University Investigation and Disciplinary Committee', 'label' => 'University Investigation and Disciplinary Committee', 'detail' => 'Appeals and university-level cases'],
                     ['value' => 'other', 'label' => 'Other committee or board', 'detail' => 'Type its name below'],
                 ]" />
                 <input x-show="committee === 'other'" x-cloak x-bind:required="committee === 'other'" x-bind:disabled="committee !== 'other'" name="referred_to_other" type="text" maxlength="255" value="{{ old('referred_to_other') }}" class="{{ $input }}" placeholder="Name of the committee or board" aria-label="Name of the committee or board">
+                <label x-show="committee === @js(Ticket::REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY)" x-cloak class="mt-3 flex items-start gap-2 text-xs text-foreground">
+                    <input type="checkbox" name="dean_endorsed" value="1" x-bind:required="committee === @js(Ticket::REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY)" x-bind:disabled="committee !== @js(Ticket::REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY)" @checked(old('dean_endorsed')) class="mt-0.5 h-4 w-4 shrink-0 rounded accent-red-800">
+                    <span>The College Dean has assessed this matter and endorsed it to the Campus Disciplinary Committee.</span>
+                </label>
             </div>
             <textarea name="referral_note" rows="3" required maxlength="1000" class="{{ $input }}" placeholder="Why is this ticket being referred? This is recorded on the ticket.">{{ old('referral_note') }}</textarea>
             <div class="mt-3 grid grid-cols-2 gap-2">

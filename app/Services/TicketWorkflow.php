@@ -9,6 +9,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * The life of a ticket in one place: which actions exist, who may take each one from which
@@ -340,11 +341,19 @@ class TicketWorkflow
      * Send the ticket to a committee or board outside the system (for example the Committee on
      * Decorum and Investigation). The SDS Office records the outcome when it is decided.
      */
-    public function refer(Ticket $ticket, User $admin, string $referredTo, ?string $note = null): void
+    public function refer(Ticket $ticket, User $admin, string $referredTo, ?string $note = null, bool $deanEndorsed = false): void
     {
         $this->authorize($admin, $ticket, self::REFER);
 
-        DB::transaction(function () use ($ticket, $admin, $referredTo, $note): void {
+        if ($referredTo === Ticket::REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY && ! $deanEndorsed) {
+            throw ValidationException::withMessages([
+                'dean_endorsed' => 'Confirm that the College Dean assessed and endorsed this matter.',
+            ]);
+        }
+
+        $deanEndorsed = $referredTo === Ticket::REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY && $deanEndorsed;
+
+        DB::transaction(function () use ($ticket, $admin, $referredTo, $note, $deanEndorsed): void {
             $ticket->update([
                 'status' => Ticket::STATUS_REFERRED,
                 'referred_to' => $referredTo,
@@ -352,7 +361,10 @@ class TicketWorkflow
                 'referred_at' => now(),
             ]);
 
-            AuditLog::log($ticket->id, 'ticket_referred', $admin->id, trim("Ticket referred to {$referredTo}. " . ($note ?? '')));
+            $endorsement = $deanEndorsed
+                ? ' The College Dean assessed this matter and endorsed it to the Campus Disciplinary Committee.'
+                : '';
+            AuditLog::log($ticket->id, 'ticket_referred', $admin->id, trim("Ticket referred to {$referredTo}. " . ($note ?? '') . $endorsement));
             $this->notify($ticket, [$this->student($ticket), $this->handler($ticket)], EmailNotification::TYPE_REFERRED, except: $admin);
         });
     }

@@ -2,9 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\Complaint;
 use App\Models\ComplaintCategory;
 use App\Models\Recipient;
+use App\Models\Student;
+use App\Models\Ticket;
 use App\Models\User;
+use App\Services\TicketEscalationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -29,6 +33,11 @@ class HandbookCategoryAlignmentTest extends TestCase
         (require database_path('migrations/2026_10_10_100000_align_categories_with_the_handbook.php'))->up();
     }
 
+    protected function alignStudentMisconductEscalation(): void
+    {
+        (require database_path('migrations/2026_11_09_100000_align_student_misconduct_escalation.php'))->up();
+    }
+
     public function test_categories_follow_the_handbook(): void
     {
         $sds = $this->staff('230515', 'Student Development and Services', 'SDS Coordinator');
@@ -38,6 +47,8 @@ class HandbookCategoryAlignmentTest extends TestCase
         $faculty = $this->staff('240145', 'CBME', 'Faculty');
         $chair = $this->staff('210537', 'CBME', 'BPA PC');
         $dean = $this->staff('200214', 'CBME', 'Dean');
+        $cictChair = $this->staff('210751', 'CICT', 'BSCS PC');
+        $cictDean = $this->staff('200926', 'CICT', 'Dean');
         $director = $this->staff('200043', 'Office of the Campus Director', 'Campus Director');
 
         $harassment = $this->category('Gender-Based Sexual Harassment');
@@ -46,22 +57,104 @@ class HandbookCategoryAlignmentTest extends TestCase
         $overlap = $this->category('Academic Concerns');
 
         $this->align();
+        $this->alignStudentMisconductEscalation();
 
         $this->assertEqualsCanonicalizing([$gad->id, $guidance->id], $harassment->suggestedRecipients()->pluck('recipients.id')->all());
 
-        // Filed with the SDS Coordinator or a teacher, kept confidential, escalated PC > Dean > Director.
+        // Filed with SDS or faculty, kept confidential, and escalated to Program Chair > College Dean.
         $againstStudent->refresh();
         $this->assertTrue($againstStudent->is_sensitive);
         $this->assertEqualsCanonicalizing([$sds->id, $faculty->id], $againstStudent->suggestedRecipients()->pluck('recipients.id')->all());
         $this->assertSame(
-            [[1, $chair->id], [2, $dean->id], [3, $director->id]],
+            [[1, $chair->id], [2, $dean->id]],
             $againstStudent->escalationHierarchies()->where('path_name', 'CBME')->get()->map(fn ($step) => [(int) $step->level, (int) $step->recipient_id])->all()
         );
+        $this->assertSame(
+            [[1, $cictChair->id], [2, $cictDean->id]],
+            $againstStudent->escalationHierarchies()->where('path_name', 'CICT')->get()->map(fn ($step) => [(int) $step->level, (int) $step->recipient_id])->all()
+        );
+        $this->assertNotContains($director->id, $againstStudent->suggestedRecipients()->pluck('recipients.id')->all());
 
         // Guidance issues the Certificate of Good Moral Character.
         $this->assertEqualsCanonicalizing([$registrar->id, $guidance->id], $records->suggestedRecipients()->pluck('recipients.id')->all());
 
         $this->assertFalse($overlap->fresh()->is_active);
+    }
+
+    public function test_student_misconduct_path_migration_is_idempotent_and_preserves_escalated_tickets(): void
+    {
+        $chair = $this->staff('210537', 'CBME', 'BPA PC');
+        $dean = $this->staff('200214', 'CBME', 'Dean');
+        $cictChair = $this->staff('210751', 'CICT', 'BSCS PC');
+        $cictDean = $this->staff('200926', 'CICT', 'Dean');
+        $director = $this->staff('200043', 'Office of the Campus Director', 'Campus Director');
+        $category = $this->category('Complaint Against a Student');
+        $unrelatedCategory = $this->category('Other Concern');
+
+        $this->align();
+        $category->refresh();
+        $category->suggestedRecipients()->syncWithoutDetaching([$director->id]);
+        $unrelatedCategory->escalationHierarchies()->create([
+            'path_number' => 1,
+            'path_name' => 'CBME',
+            'level' => 3,
+            'recipient_id' => $director->id,
+        ]);
+
+        $student = Student::create([
+            'user_id' => User::factory()->create(['role' => User::ROLE_STUDENT])->id,
+            'student_id' => 'S9002',
+            'college' => 'CBME',
+            'program' => 'BPA',
+            'year_level' => '2nd Year',
+            'block' => 'A',
+        ]);
+        $complaint = Complaint::create([
+            'reference_number' => Complaint::generateReferenceNumber(),
+            'student_id' => $student->id,
+            'category_id' => $category->id,
+            'subject_title' => 'Student conduct concern',
+            'description' => 'A report requiring review.',
+            'is_anonymous' => false,
+            'status' => Ticket::STATUS_ESCALATED,
+        ]);
+        $ticket = Ticket::create([
+            'complaint_id' => $complaint->id,
+            'status' => Ticket::STATUS_ESCALATED,
+            'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+            'jurisdiction' => Ticket::JURISDICTION_RECIPIENT,
+            'assigned_to' => $director->user_id,
+            'current_handler_id' => $director->user_id,
+        ]);
+
+        $this->alignStudentMisconductEscalation();
+        $this->alignStudentMisconductEscalation();
+
+        $this->assertSame(
+            [[1, $chair->id], [2, $dean->id]],
+            $category->fresh()->escalationHierarchies()->where('path_name', 'CBME')
+                ->get()->map(fn ($step) => [(int) $step->level, (int) $step->recipient_id])->all()
+        );
+        $this->assertSame(
+            [[1, $cictChair->id], [2, $cictDean->id]],
+            $category->fresh()->escalationHierarchies()->where('path_name', 'CICT')
+                ->get()->map(fn ($step) => [(int) $step->level, (int) $step->recipient_id])->all()
+        );
+        $this->assertDatabaseMissing('complaint_category_suggested_recipients', [
+            'complaint_category_id' => $category->id,
+            'recipient_id' => $director->id,
+        ]);
+        $this->assertDatabaseHas('escalation_hierarchies', [
+            'complaint_category_id' => $unrelatedCategory->id,
+            'path_name' => 'CBME',
+            'level' => 3,
+            'recipient_id' => $director->id,
+        ]);
+        $ticket->refresh();
+        $this->assertSame(Ticket::STATUS_ESCALATED, $ticket->status);
+        $this->assertSame($director->user_id, (int) $ticket->current_handler_id);
+        $this->assertSame($director->user_id, (int) $ticket->assigned_to);
+        $this->assertNotEmpty(app(TicketEscalationService::class)->escalationTargets($ticket));
     }
 
     public function test_the_overlapping_categories_are_deleted_unless_a_ticket_uses_them(): void

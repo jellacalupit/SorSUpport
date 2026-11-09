@@ -2,7 +2,7 @@
 
 SorSUpport is a web-based complaint ticketing system for **Sorsogon State University – Bulan Campus**. Students submit concerns online. The Student Development Services (SDS) Office reviews them and sends each one to the college or office that can act on it. Every step is tracked until the concern is resolved and closed.
 
-The system follows the procedures of the **SorSU Student Handbook (Revised 2024)** within its scope: taking in complaints, routing them, communicating about them, tracking them and reporting on them. Hearings and sanctions happen outside the system; SorSUpport records only the referral and its outcome.
+The system follows the procedures of the **SorSU Student Handbook (Revised 2024)** within its scope: taking in complaints, routing them, communicating about them, tracking them and reporting on them. Informal settlement, parent or guardian notification, hearings and sanctions happen outside the system; SorSUpport records only the referral and its outcome.
 
 For the detailed implementation guide—including role permissions, status rules, validation, privacy, routes, scheduled tasks, reports, and the data model—see [System Documentation](docs/system-documentation.md).
 
@@ -19,7 +19,7 @@ When SDS closes a ticket as invalid, duplicate, out of scope, or no response, it
 ## Features
 
 - **Ticket lifecycle**: Submitted → Needs Clarification → Assigned → In Progress → Escalated / Referred → Resolved → Closed. A single set of rules decides who may take each action from each status.
-- **Routing**: categories set by the admin, each with suggested recipients and escalation paths.
+- **Routing**: categories set by the admin, each with suggested recipients and escalation paths. For “Complaint Against a Student,” the CBME and CICT paths are Program Chair → College Dean; SDS must confirm the College Dean's assessment and endorsement before referring any ticket to the Campus Disciplinary Committee.
 - **Confidentiality**: a student can hide their identity where the category allows it. Their name is then hidden from everyone in the system, including the SDS admin. Sensitive tickets are visible only to the SDS Office and the assigned handler. The system flags when a ticket goes to someone named in the complaint.
 - **Conversation**: each ticket has a message thread with file attachments, kept in private storage.
 - **Notifications**: in-app notifications and unread badges, plus an email at every step for each person involved.
@@ -27,6 +27,8 @@ When SDS closes a ticket as invalid, duplicate, out of scope, or no response, it
 - **Accounts**: created one by one or in bulk from an Excel file. New users must set their own password on first login.
 - **Analytics**: ticket volume, resolution rate and time, escalations, performance per office, and satisfaction ratings, exportable to PDF and Excel.
 - **Audit trail**: every action and every email sent, searchable by person, ticket and date.
+
+The handbook path for a complaint about a student's misconduct starts with the SDS Coordinator or the student's teacher, adviser or professor, then proceeds to the Program Chair and College Dean. A referral to the Campus Disciplinary Committee requires SDS to confirm that the Dean assessed and endorsed the matter. Informal settlement, parent or guardian notification, hearings and sanctions take place outside SorSUpport.
 
 ### Reminders for waiting tickets
 

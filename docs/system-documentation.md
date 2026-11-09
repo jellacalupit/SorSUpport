@@ -146,6 +146,10 @@ Before classification, an administrator can correct the category and suggested r
 
 Referral destinations are stored on `Ticket.referred_to` as text. Tickets also store an `is_codi_referral` flag, set by the system only when the destination is the listed Committee on Decorum and Investigation (CODI); existing exact CODI destinations are flagged by migration. Other named or free-text destinations do not receive that flag.
 
+For the `Complaint Against a Student` category, the configured CBME and CICT escalation paths are Program Chair followed by College Dean; the Campus Director is not a level in these paths. A complaint about student misconduct starts with the SDS Coordinator or the student's teacher, adviser, or professor. Any referral to the Campus Disciplinary Committee requires SDS to confirm that the College Dean assessed and endorsed the matter, regardless of category. The confirmation is validated server-side and recorded in the referral audit entry. Existing escalated tickets keep their current handler when the paths are updated.
+
+Informal settlement, parent or guardian notification, hearings, and sanctions happen outside SorSUpport. The system records referrals and their outcomes; it does not conduct those procedures.
+
 ### Status definitions
 
 | Status | Meaning |
@@ -188,7 +192,7 @@ The following is the model-level transition map. The “actor/action rules” be
 | Assign/reassign | SDS admin | Submitted, Needs Clarification, Assigned, In Progress, or Escalated | Assigned; sets current handler and clears acknowledgment. Without a recipient, handler is the admin and `assigned_to` is null. |
 | Acknowledge | Current handler (SDS admin or assigned recipient) | Assigned | In Progress; sets acknowledgment timestamp and current handler. |
 | Escalate | SDS admin | Assigned, In Progress, or Escalated | Escalated; changes handler to selected active recipient and updates escalation time. |
-| Refer | SDS admin | Assigned, In Progress, or Escalated | Referred; stores the committee/board text, a CODI flag for the listed CODI destination only, and referral time. |
+| Refer | SDS admin | Assigned, In Progress, or Escalated | Referred; stores the committee/board text, a CODI flag for the listed CODI destination only, and referral time. Campus Disciplinary Committee referrals additionally require confirmation of College Dean assessment and endorsement; this is recorded in the audit entry. |
 | Record referral outcome | SDS admin | Referred | Resolved; records resolution type/time and posts the outcome. |
 | Resolve | Current handler | In Progress or Escalated | Resolved; stores resolution type/time and optionally posts a resolution message. |
 | Reopen resolved ticket | SDS admin | Resolved | In Progress; clears resolution type/time and closure timestamp. |
@@ -203,6 +207,7 @@ Additional constraints:
 - A handler must be an SDS admin or recipient and match `current_handler_id` or `assigned_to`; the student must own the complaint.
 - A student can request further action through the end of the deadline (`resolved_at` plus configured calendar days). An expired request is denied.
 - A student cannot withdraw a referred ticket directly. They can request withdrawal with a reason; the ticket remains Referred while SDS considers the request.
+- Referral to the Campus Disciplinary Committee is blocked unless SDS confirms that the College Dean assessed and endorsed the matter. This confirmation is required for every category and is not required for CODI, the University Investigation and Disciplinary Committee, or an "Other" destination.
 - For gender-based sexual harassment, withdrawing at any stage does not stop CODI from continuing its investigation (Handbook p. 58). For student discipline, the University may initiate proceedings even if the aggrieved student does not want to file (Handbook p. 46). SDS may record the referral outcome or close the ticket as withdrawn using its existing actions; no automatic closure occurs.
 - Withdrawal-request notifications to SDS do not identify the student or include the reason in the notification. The reason is posted in the ticket conversation and uses the existing hidden-identity display rules.
 - In the admin review queue, `reject` only applies to awaiting-review tickets and classifies them invalid. It accepts invalid, duplicate, out-of-scope, and no-response closure types, each requiring a 10–1,000 character student-facing explanation. Generic `close` is blocked for awaiting-review tickets; they use review actions instead.

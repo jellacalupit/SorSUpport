@@ -743,7 +743,10 @@ class TicketWorkflowTest extends TestCase
             ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $this->otherRecipient->recipient->id])
             ->assertSessionHasErrors('escalation_note');
         $this->actingAs($this->admin)
-            ->post(route('admin.tickets.refer', $ticket), ['referred_to' => 'Campus Disciplinary Committee'])
+            ->post(route('admin.tickets.refer', $ticket), [
+                'referred_to' => Ticket::REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY,
+                'dean_endorsed' => '1',
+            ])
             ->assertSessionHasErrors('referral_note');
         $this->actingAs($this->admin)
             ->post(route('admin.tickets.refer', $ticket), ['referred_to' => 'other', 'referral_note' => 'Needs a formal hearing.'])
@@ -823,6 +826,87 @@ class TicketWorkflowTest extends TestCase
         $this->assertSame(Ticket::RESOLUTION_COMMITTEE_DECISION, $ticket->resolution_type);
         $this->assertDatabaseHas('thread_messages', ['content' => 'The board issued a written reprimand.']);
         $this->assertDatabaseHas('audit_logs', ['ticket_id' => $ticket->id, 'action' => 'referral_outcome_recorded']);
+    }
+
+    public function test_campus_disciplinary_referral_requires_and_audits_dean_endorsement_for_any_category(): void
+    {
+        $categories = [
+            $this->category,
+            ComplaintCategory::create(['name' => 'Complaint Against a Student', 'is_active' => true]),
+        ];
+
+        foreach ($categories as $category) {
+            $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
+            $ticket->complaint->update(['category_id' => $category->id]);
+            $payload = [
+                'referred_to' => Ticket::REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY,
+                'referral_note' => 'The College Dean assessed this matter for referral.',
+            ];
+
+            $this->actingAs($this->admin)
+                ->post(route('admin.tickets.refer', $ticket), $payload)
+                ->assertSessionHasErrors('dean_endorsed');
+            $this->assertSame(Ticket::STATUS_IN_PROGRESS, $ticket->fresh()->status);
+
+            $this->actingAs($this->admin)
+                ->post(route('admin.tickets.refer', $ticket), $payload + ['dean_endorsed' => '1'])
+                ->assertSessionHasNoErrors();
+
+            $ticket->refresh();
+            $this->assertSame(Ticket::STATUS_REFERRED, $ticket->status);
+            $this->assertTrue($ticket->auditLogs()
+                ->where('action', 'ticket_referred')
+                ->where('details', 'like', '%College Dean assessed this matter and endorsed it to the Campus Disciplinary Committee%')
+                ->exists());
+        }
+    }
+
+    public function test_other_referral_destinations_do_not_require_dean_endorsement(): void
+    {
+        foreach ([
+            [Ticket::REFERRAL_DESTINATION_CODI, null],
+            ['University Investigation and Disciplinary Committee', null],
+            ['other', 'Student Appeals Board'],
+        ] as [$destination, $otherDestination]) {
+            $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
+            $payload = [
+                'referred_to' => $destination,
+                'referral_note' => 'The case is being sent to the appropriate body.',
+            ];
+            if ($otherDestination !== null) {
+                $payload['referred_to_other'] = $otherDestination;
+            }
+
+            $this->actingAs($this->admin)
+                ->post(route('admin.tickets.refer', $ticket), $payload)
+                ->assertSessionHasNoErrors();
+
+            $expectedDestination = $otherDestination ?? $destination;
+            $this->assertSame($expectedDestination, $ticket->fresh()->referred_to);
+        }
+    }
+
+    public function test_other_destination_matching_campus_disciplinary_committee_requires_endorsement(): void
+    {
+        foreach ([' campus   disciplinary committee ', 'CAMPUS-DISCIPLINARY COMMITTEE'] as $typedDestination) {
+            $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
+            $payload = [
+                'referred_to' => 'other',
+                'referred_to_other' => $typedDestination,
+                'referral_note' => 'The College Dean assessed this matter for referral.',
+            ];
+
+            $this->actingAs($this->admin)
+                ->post(route('admin.tickets.refer', $ticket), $payload)
+                ->assertSessionHasErrors('dean_endorsed');
+            $this->assertSame(Ticket::STATUS_IN_PROGRESS, $ticket->fresh()->status);
+
+            $this->actingAs($this->admin)
+                ->post(route('admin.tickets.refer', $ticket), $payload + ['dean_endorsed' => '1'])
+                ->assertSessionHasNoErrors();
+
+            $this->assertSame(Ticket::REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY, $ticket->fresh()->referred_to);
+        }
     }
 
     // ------------------------------------------------------------------ escalation

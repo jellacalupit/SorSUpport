@@ -458,20 +458,39 @@ class AdminTicketReviewController extends Controller
     {
         $this->workflow->authorize(Auth::user(), $ticket, TicketWorkflow::REFER);
 
+        $normalizeDestination = static fn (string $destination): string => preg_replace('/[^a-z0-9]/', '', strtolower($destination)) ?? '';
+        $otherDestination = $request->input('referred_to_other');
+        $isCampusDisciplinaryCommittee = $request->input('referred_to') === Ticket::REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY
+            || ($request->input('referred_to') === 'other'
+                && is_string($otherDestination)
+                && $normalizeDestination($otherDestination) === $normalizeDestination(Ticket::REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY));
+        $requiresDeanEndorsement = $isCampusDisciplinaryCommittee;
         $validated = $request->validate([
             'referred_to' => 'required|string|max:255',
             // Typed in when the committee is not one of the listed ones.
             'referred_to_other' => 'nullable|required_if:referred_to,other|string|max:255',
             'referral_note' => 'required|string|max:1000',
+            'dean_endorsed' => $requiresDeanEndorsement ? 'required|accepted' : 'nullable|boolean',
         ], [
             'referred_to.required' => 'Select the committee or board the ticket is referred to.',
             'referred_to_other.required_if' => 'Enter the name of the committee or board.',
             'referral_note.required' => 'Explain why the ticket is being referred.',
+            'dean_endorsed.required' => 'Confirm the College Dean assessed and endorsed this matter.',
+            'dean_endorsed.accepted' => 'Confirm the College Dean assessed and endorsed this matter.',
         ]);
 
         $referredTo = $validated['referred_to'] === 'other' ? trim($validated['referred_to_other']) : $validated['referred_to'];
+        if ($isCampusDisciplinaryCommittee) {
+            $referredTo = Ticket::REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY;
+        }
 
-        $this->workflow->refer($ticket, Auth::user(), $referredTo, trim($validated['referral_note']));
+        $this->workflow->refer(
+            $ticket,
+            Auth::user(),
+            $referredTo,
+            trim($validated['referral_note']),
+            $requiresDeanEndorsement && (bool) ($validated['dean_endorsed'] ?? false)
+        );
 
         return back()->with('success', sprintf('Ticket referred to %s.', $referredTo));
     }

@@ -30,6 +30,8 @@ class Ticket extends Model
 
     public const REFERRAL_DESTINATION_CODI = 'Committee on Decorum and Investigation';
 
+    public const REFERRAL_DESTINATION_CAMPUS_DISCIPLINARY = 'Campus Disciplinary Committee';
+
     /**
      * Every status in the order a ticket normally moves through them, with its display label.
      */
