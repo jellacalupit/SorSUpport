@@ -48,6 +48,10 @@ class TicketWorkflow
 
     public const REQUEST_WITHDRAWAL = 'request_withdrawal';
 
+    public const REQUEST_UPDATE = 'request_update';
+
+    public const REQUEST_ESCALATION = 'request_escalation';
+
     public const BY_ADMIN = 'admin';
 
     public const BY_HANDLER = 'handler';
@@ -55,7 +59,7 @@ class TicketWorkflow
     public const BY_STUDENT = 'student';
 
     /**
-     * action => who may take it, from which statuses, and the status it leads to.
+     * action => who may take it, from which statuses, and (where applicable) the status it leads to.
      * "handler" is the admin or recipient the ticket is currently assigned to; "student" is the
      * student who submitted it.
      */
@@ -135,6 +139,48 @@ class TicketWorkflow
             'from' => [Ticket::STATUS_REFERRED],
             'to' => Ticket::STATUS_REFERRED,
         ],
+        self::REQUEST_UPDATE => [
+            'by' => self::BY_STUDENT,
+            'from' => [Ticket::STATUS_SUBMITTED, Ticket::STATUS_NEEDS_CLARIFICATION],
+        ],
+        self::REQUEST_ESCALATION => [
+            'by' => self::BY_STUDENT,
+            'from' => [Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED],
+        ],
+    ];
+
+    private const STATUS_PERIOD_ACTIONS = [
+        'clarification_requested',
+        'clarification_provided',
+        'ticket_acknowledged',
+        'ticket_assigned',
+        'ticket_escalated',
+        'ticket_referred',
+        'referral_outcome_recorded',
+        'complaint_resolved',
+        'ticket_reopened_from_resolved',
+        'further_action_requested',
+        'resolution_accepted',
+        'ticket_closed',
+        'ticket_closed_invalid',
+        'complaint_closed',
+        'ticket_withdrawn',
+        'ticket_retained_in_sds_records',
+        'ticket_forwarded_and_closed',
+    ];
+
+    private const ESCALATION_REQUEST_CLEARED_BY_ACTIONS = [
+        'ticket_escalated',
+        'ticket_assigned',
+        'complaint_resolved',
+        'referral_outcome_recorded',
+        'ticket_closed',
+        'ticket_closed_invalid',
+        'complaint_closed',
+        'ticket_retained_in_sds_records',
+        'ticket_forwarded_and_closed',
+        'resolution_accepted',
+        'ticket_withdrawn',
     ];
 
     public function can(User $user, Ticket $ticket, string $action): bool
@@ -162,6 +208,14 @@ class TicketWorkflow
 
         if ($action === self::REQUEST_WITHDRAWAL) {
             return ! $this->hasWithdrawalRequestInCurrentReferralPeriod($ticket);
+        }
+
+        if ($action === self::REQUEST_UPDATE) {
+            return ! $this->hasUpdateRequestInCurrentStatusPeriod($ticket);
+        }
+
+        if ($action === self::REQUEST_ESCALATION) {
+            return ! $this->hasPendingEscalationRequest($ticket);
         }
 
         return true;
@@ -552,6 +606,102 @@ class TicketWorkflow
             AuditLog::log($ticket->id, 'withdrawal_requested', $student->id, 'The student requested withdrawal after referral.');
             $this->notify($ticket, $this->admins(), EmailNotification::TYPE_WITHDRAWAL_REQUESTED);
         });
+    }
+
+    /**
+     * The student asks SDS for an update without changing the ticket or opening its conversation.
+     */
+    public function requestUpdate(Ticket $ticket, User $student, ?string $note = null): void
+    {
+        $this->authorize($student, $ticket, self::REQUEST_UPDATE);
+
+        DB::transaction(function () use ($ticket, $student, $note): void {
+            $ticket = Ticket::query()->lockForUpdate()->findOrFail($ticket->id);
+            if ($this->hasUpdateRequestInCurrentStatusPeriod($ticket)) {
+                throw ValidationException::withMessages([
+                    'update_request' => 'You have already requested an update during this status period.',
+                ]);
+            }
+            $this->authorize($student, $ticket, self::REQUEST_UPDATE);
+
+            AuditLog::log($ticket->id, 'update_requested', $student->id, filled($note) ? trim($note) : null);
+            $this->notify($ticket, $this->admins(), EmailNotification::TYPE_UPDATE_REQUESTED);
+        });
+    }
+
+    /**
+     * The student asks SDS to consider escalation. The reason remains in SDS-only audit activity.
+     */
+    public function requestEscalation(Ticket $ticket, User $student, string $reason): void
+    {
+        $this->authorize($student, $ticket, self::REQUEST_ESCALATION);
+
+        DB::transaction(function () use ($ticket, $student, $reason): void {
+            $ticket = Ticket::query()->lockForUpdate()->findOrFail($ticket->id);
+            if ($this->hasPendingEscalationRequest($ticket)) {
+                throw ValidationException::withMessages([
+                    'escalation_request' => 'You already have a pending escalation request with SDS.',
+                ]);
+            }
+            $this->authorize($student, $ticket, self::REQUEST_ESCALATION);
+
+            AuditLog::log($ticket->id, 'escalation_requested', $student->id, trim($reason));
+            $this->notify($ticket, $this->admins(), EmailNotification::TYPE_ESCALATION_REQUESTED);
+        });
+    }
+
+    public function hasUpdateRequestInCurrentStatusPeriod(Ticket $ticket): bool
+    {
+        return $this->pendingUpdateRequest($ticket) !== null;
+    }
+
+    public function pendingUpdateRequest(Ticket $ticket): ?AuditLog
+    {
+        if (! in_array($ticket->status, [Ticket::STATUS_SUBMITTED, Ticket::STATUS_NEEDS_CLARIFICATION], true)) {
+            return null;
+        }
+
+        $latestStatusChangeId = $ticket->auditLogs()
+            ->whereIn('action', self::STATUS_PERIOD_ACTIONS)
+            ->max('id');
+
+        return $ticket->auditLogs()
+            ->where('action', 'update_requested')
+            ->when($latestStatusChangeId !== null, fn ($query) => $query->where('id', '>', $latestStatusChangeId))
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    public function hasPendingEscalationRequest(Ticket $ticket): bool
+    {
+        return $this->pendingEscalationRequest($ticket) !== null;
+    }
+
+    public function pendingEscalationRequest(Ticket $ticket): ?AuditLog
+    {
+        $request = $ticket->auditLogs()
+            ->where('action', 'escalation_requested')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $request) {
+            return null;
+        }
+
+        $wasActedOn = $ticket->auditLogs()
+            ->where('id', '>', $request->id)
+            ->whereIn('action', self::ESCALATION_REQUEST_CLEARED_BY_ACTIONS)
+            ->exists();
+
+        if (! $wasActedOn) {
+            $wasActedOn = $ticket->auditLogs()
+                ->where('id', '>', $request->id)
+                ->where('action', 'message_posted')
+                ->whereHas('performer', fn ($query) => $query->where('role', User::ROLE_SDS_ADMIN))
+                ->exists();
+        }
+
+        return $wasActedOn ? null : $request;
     }
 
     public function hasWithdrawalRequestInCurrentReferralPeriod(Ticket $ticket): bool

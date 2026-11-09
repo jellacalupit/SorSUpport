@@ -401,6 +401,12 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:student'])
         Route::post('/complaints/{complaint}/request-withdrawal', [ComplaintController::class, 'requestWithdrawal'])
             ->name('complaints.request-withdrawal');
 
+        Route::post('/complaints/{complaint}/request-update', [ComplaintController::class, 'requestUpdate'])
+            ->name('complaints.request-update');
+
+        Route::post('/complaints/{complaint}/request-escalation', [ComplaintController::class, 'requestEscalation'])
+            ->name('complaints.request-escalation');
+
         Route::post('/complaints/{complaint}/rating', [ComplaintController::class, 'rate'])
             ->name('complaints.rate');
 

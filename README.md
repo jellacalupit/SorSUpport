@@ -10,7 +10,7 @@ For the detailed implementation guide—including role permissions, status rules
 
 | Role | What they do |
 |---|---|
-| **Student** | Submits a ticket, with attachments, optionally hiding their identity. Follows its progress, talks with the handler, accepts the resolution or asks for further action, and rates how the concern was handled. Can withdraw before referral; after referral, can ask SDS to withdraw once per referral period without closing the ticket. |
+| **Student** | Submits a ticket, with attachments, optionally hiding their identity. Follows its progress, talks with the handler, accepts the resolution or asks for further action, and rates how the concern was handled. Can request an update while Submitted or Needs Clarification, ask SDS to consider escalation while Assigned, In Progress or Escalated, and request withdrawal once per referral period after referral. These requests do not change the ticket or its handler. |
 | **Recipient** (college or office staff) | Acknowledges tickets assigned to them, talks with the student and records the resolution. |
 | **SDS Administrator** | Reviews new tickets, classifies, assigns, escalates or refers them, closes them, manages accounts and settings, and reads the analytics and audit trail. |
 
@@ -23,7 +23,7 @@ When SDS closes a ticket as invalid, duplicate, out of scope, or no response, it
 - CODI referrals use the canonical Committee on Decorum and Investigation name. “Other” entries matching that name or the acronym CODI are recognized after normalization.
 - **Confidentiality**: a student can hide their identity where the category allows it. Their name is then hidden from everyone in the system, including the SDS admin. Sensitive tickets are visible only to the SDS Office and the assigned handler. The system flags when a ticket goes to someone named in the complaint.
 - **Conversation**: each ticket has a message thread with file attachments, kept in private storage.
-- **Notifications**: in-app notifications and unread badges, plus an email at every step for each person involved.
+- **Notifications**: in-app notifications and unread badges, plus email requests to SDS when students ask for an update or for SDS to consider escalation. These requests do not notify the assigned handler.
 - **Reminders for waiting tickets**: a daily high-priority email when a ticket has waited too long (see below).
 - **Accounts**: created one by one or in bulk from an Excel file. New users must set their own password on first login.
 - **Analytics**: ticket volume, resolution rate and time, escalations, performance per office, and satisfaction ratings, exportable to PDF and Excel.

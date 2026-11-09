@@ -24,6 +24,8 @@
     $withdrawalRequestSent = $role === 'student'
         && $ticket->status === Ticket::STATUS_REFERRED
         && $workflow->hasWithdrawalRequestInCurrentReferralPeriod($ticket);
+    $updateRequestSent = $role === 'student' && $workflow->hasUpdateRequestInCurrentStatusPeriod($ticket);
+    $escalationRequestSent = $role === 'student' && $workflow->hasPendingEscalationRequest($ticket);
 
     $resolveUrl = $role === 'admin' ? route('admin.tickets.resolve', $ticket) : route('recipient.complaints.update-status', $complaint);
     $acknowledgeUrl = $role === 'admin' ? route('admin.tickets.acknowledge', $ticket) : route('recipient.complaints.acknowledge', $complaint);
@@ -41,9 +43,11 @@
         'further' => $role === 'student' && $can(TicketWorkflow::REQUEST_FURTHER_ACTION),
         'withdraw' => $role === 'student' && $can(TicketWorkflow::WITHDRAW),
         'request_withdrawal' => $role === 'student' && $can(TicketWorkflow::REQUEST_WITHDRAWAL),
+        'request_update' => $role === 'student' && $can(TicketWorkflow::REQUEST_UPDATE),
+        'request_escalation' => $role === 'student' && $can(TicketWorkflow::REQUEST_ESCALATION),
     ])->filter();
 
-    $fields = ['clarification_message', 'resolution_type', 'resolution_message', 'referred_to', 'referred_to_other', 'referral_note', 'dean_endorsed', 'outcome', 'closure_type', 'closure_reason', 'further_action_reason', 'withdraw_reason', 'withdrawal_request_reason', 'status'];
+    $fields = ['clarification_message', 'resolution_type', 'resolution_message', 'referred_to', 'referred_to_other', 'referral_note', 'dean_endorsed', 'outcome', 'closure_type', 'closure_reason', 'further_action_reason', 'withdraw_reason', 'withdrawal_request_reason', 'update_request_note', 'escalation_request_reason', 'status'];
     $openPanel = match (true) {
         $errors->hasAny(['clarification_message']) => 'clarify',
         $errors->hasAny(['resolution_type', 'resolution_message']) => 'resolve',
@@ -53,6 +57,8 @@
         $errors->has('further_action_reason') => 'further',
         $errors->has('withdraw_reason') => 'withdraw',
         $errors->has('withdrawal_request_reason') => 'request_withdrawal',
+        $errors->has('update_request_note') => 'request_update',
+        $errors->has('escalation_request_reason') => 'request_escalation',
         $errors->has('recipient_id') => 'escalate',
         default => null,
     };
@@ -92,6 +98,15 @@
     <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800" data-ticket-notice="withdrawal-requested">
         <p class="font-semibold">Your withdrawal request has been sent to SDS</p>
         @error('withdrawal_request')<p class="mt-1 text-destructive">{{ $message }}</p>@enderror
+    </div>
+@endif
+
+@if ($updateRequestSent || $escalationRequestSent)
+    <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800" data-ticket-notice="student-request-pending">
+        <p class="font-semibold">Your request was sent to SDS</p>
+        <p class="mt-0.5">SDS will review your request. It does not change your ticket status or handler.</p>
+        @error('update_request')<p class="mt-1 text-destructive">{{ $message }}</p>@enderror
+        @error('escalation_request')<p class="mt-1 text-destructive">{{ $message }}</p>@enderror
     </div>
 @endif
 
@@ -172,6 +187,12 @@
         @endif
         @if ($buttons->has('request_withdrawal'))
             <button type="button" x-on:click="action = 'request_withdrawal'" class="{{ $outlineButton }}">Request Withdrawal</button>
+        @endif
+        @if ($buttons->has('request_update'))
+            <button type="button" x-on:click="action = 'request_update'" class="{{ $outlineButton }}">Request Update</button>
+        @endif
+        @if ($buttons->has('request_escalation'))
+            <button type="button" x-on:click="action = 'request_escalation'" class="{{ $outlineButton }}">Request Escalation</button>
         @endif
     </div>
 
@@ -320,6 +341,34 @@
             <p class="{{ $panelHint }}">Your concern was referred to a committee. Request withdrawal from SDS; the committee may continue its process.</p>
             <textarea name="withdrawal_request_reason" rows="3" required maxlength="1000" class="{{ $input }}" placeholder="Why are you requesting withdrawal?">{{ old('withdrawal_request_reason') }}</textarea>
             @error('withdrawal_request_reason')<p class="mt-1 text-xs text-destructive">{{ $message }}</p>@enderror
+            <div class="mt-3 grid grid-cols-2 gap-2">
+                <button type="button" x-on:click="action = null" class="{{ $smallCancel }}">Cancel</button>
+                <button type="submit" class="{{ $smallPrimary }}">Send Request</button>
+            </div>
+        </form>
+    @endif
+
+    @if ($buttons->has('request_update'))
+        <form x-show="action === 'request_update'" x-cloak method="POST" action="{{ route('student.complaints.request-update', $complaint) }}" class="surface p-4">
+            @csrf
+            <p class="{{ $panelTitle }}">Request an update from SDS</p>
+            <p class="{{ $panelHint }}">This sends a request to SDS without changing your ticket or opening a conversation.</p>
+            <textarea name="update_request_note" rows="3" maxlength="500" class="{{ $input }}" placeholder="Note (optional)">{{ old('update_request_note') }}</textarea>
+            @error('update_request_note')<p class="mt-1 text-xs text-destructive">{{ $message }}</p>@enderror
+            <div class="mt-3 grid grid-cols-2 gap-2">
+                <button type="button" x-on:click="action = null" class="{{ $smallCancel }}">Cancel</button>
+                <button type="submit" class="{{ $smallPrimary }}">Send Request</button>
+            </div>
+        </form>
+    @endif
+
+    @if ($buttons->has('request_escalation'))
+        <form x-show="action === 'request_escalation'" x-cloak method="POST" action="{{ route('student.complaints.request-escalation', $complaint) }}" class="surface p-4">
+            @csrf
+            <p class="{{ $panelTitle }}">Request escalation from SDS</p>
+            <p class="{{ $panelHint }}">SDS will decide manually whether to escalate your ticket. You can send another request after SDS responds or acts on this one.</p>
+            <textarea name="escalation_request_reason" rows="3" required minlength="10" maxlength="1000" class="{{ $input }}" placeholder="Why should SDS consider escalation?">{{ old('escalation_request_reason') }}</textarea>
+            @error('escalation_request_reason')<p class="mt-1 text-xs text-destructive">{{ $message }}</p>@enderror
             <div class="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" x-on:click="action = null" class="{{ $smallCancel }}">Cancel</button>
                 <button type="submit" class="{{ $smallPrimary }}">Send Request</button>

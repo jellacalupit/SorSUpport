@@ -12,6 +12,9 @@
                         <span class="text-border"> · </span>
                         <span>{{ $log->created_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}</span>
                     </p>
+                    @if (in_array($log->action, ['update_requested', 'escalation_requested'], true))
+                        <p class="mt-1 whitespace-pre-line text-xs text-foreground">{{ filled($log->details) ? $log->details : 'No note provided.' }}</p>
+                    @endif
                 </div>
             </li>
         @empty

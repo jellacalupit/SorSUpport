@@ -171,6 +171,18 @@ class TicketEmailComposer
                 ['The student requested withdrawal after the ticket was referred. The ticket remains open; please review the request.'],
             ],
 
+            EmailNotification::TYPE_UPDATE_REQUESTED => [
+                "Update requested on {$reference}",
+                'The student requested an update',
+                ['A student has requested an update on this ticket. Please open it to review the request.'],
+            ],
+
+            EmailNotification::TYPE_ESCALATION_REQUESTED => [
+                "Escalation requested for {$reference}",
+                'The student requested escalation',
+                ['A student asked the SDS Office to review this ticket for possible escalation. Escalation remains an SDS decision. Please open the ticket to review the reason.'],
+            ],
+
             EmailNotification::TYPE_INVALID_CLOSURE => [
                 "Your ticket {$reference} was closed",
                 'Your ticket could not be acted on',

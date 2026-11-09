@@ -566,6 +566,59 @@ class ComplaintController extends Controller
     }
 
     /**
+     * Ask SDS for an update without changing the ticket or opening its conversation.
+     */
+    public function requestUpdate(Request $request, Complaint $complaint, TicketWorkflow $workflow): RedirectResponse
+    {
+        $ticket = $this->ownTicket($complaint);
+
+        if ($workflow->hasUpdateRequestInCurrentStatusPeriod($ticket)) {
+            return back()->withErrors([
+                'update_request' => 'You have already requested an update during this status period.',
+            ]);
+        }
+
+        $workflow->authorize(Auth::user(), $ticket, TicketWorkflow::REQUEST_UPDATE);
+
+        $validated = $request->validate([
+            'update_request_note' => 'nullable|string|max:500',
+        ]);
+
+        $workflow->requestUpdate($ticket, Auth::user(), $validated['update_request_note'] ?? null);
+
+        return redirect()->route('student.complaints.show', $complaint)
+            ->with('success', 'Your request was sent to SDS');
+    }
+
+    /**
+     * Ask SDS to consider escalation; only SDS can decide whether to escalate the ticket.
+     */
+    public function requestEscalation(Request $request, Complaint $complaint, TicketWorkflow $workflow): RedirectResponse
+    {
+        $ticket = $this->ownTicket($complaint);
+
+        if ($workflow->hasPendingEscalationRequest($ticket)) {
+            return back()->withErrors([
+                'escalation_request' => 'You already have a pending escalation request with SDS.',
+            ]);
+        }
+
+        $workflow->authorize(Auth::user(), $ticket, TicketWorkflow::REQUEST_ESCALATION);
+
+        $validated = $request->validate([
+            'escalation_request_reason' => 'required|string|min:10|max:1000',
+        ], [
+            'escalation_request_reason.required' => 'Tell SDS why you are requesting escalation.',
+            'escalation_request_reason.min' => 'The reason must be at least 10 characters.',
+        ]);
+
+        $workflow->requestEscalation($ticket, Auth::user(), $validated['escalation_request_reason']);
+
+        return redirect()->route('student.complaints.show', $complaint)
+            ->with('success', 'Your request was sent to SDS');
+    }
+
+    /**
      * Rate how a resolved and closed ticket was handled. One rating per ticket.
      */
     public function rate(Request $request, Complaint $complaint): RedirectResponse

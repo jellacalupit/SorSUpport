@@ -36,7 +36,14 @@
         'status_updated' => 'Status updated',
         'classification_changed' => 'Classification changed',
         'ticket_details_updated' => 'Details corrected',
+        'update_requested' => 'Student requested an update',
+        'escalation_requested' => 'Student requested escalation',
     ];
+    $workflow = app(\App\Services\TicketWorkflow::class);
+    $pendingStudentRequests = collect([
+        $workflow->pendingUpdateRequest($ticket),
+        $workflow->pendingEscalationRequest($ticket),
+    ])->filter();
 @endphp
 
 <div x-data="{ tab: @js($hasThread) && window.location.hash === '#in-ticket-communication' ? 'thread' : 'details' }">
@@ -62,6 +69,21 @@
             <h2 class="mb-0.5 hidden font-display text-base font-bold lg:block">Ticket Details</h2>
             <div class="grid gap-3">
                 <x-ticket-info-panel :ticket="$ticket" :show-filed-by="true" :show-closed-at="true" :editable="true" :categories="$categories" :recipients="$recipients" />
+
+                @if ($pendingStudentRequests->isNotEmpty())
+                    <section class="surface border-l-4 border-l-amber-500 p-4" aria-label="Pending student requests">
+                        <h3 class="font-display text-sm font-semibold text-foreground">Pending student requests</h3>
+                        <div class="mt-2 grid gap-3">
+                            @foreach ($pendingStudentRequests as $requestLog)
+                                <article class="rounded-md bg-amber-50 p-3 text-sm text-amber-950">
+                                    <p class="font-semibold">{{ $auditLabels[$requestLog->action] }}</p>
+                                    <p class="mt-0.5 text-xs text-amber-800">{{ $requestLog->created_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}</p>
+                                    <p class="mt-2 whitespace-pre-line">{{ filled($requestLog->details) ? $requestLog->details : 'No note provided.' }}</p>
+                                </article>
+                            @endforeach
+                        </div>
+                    </section>
+                @endif
 
                 @unless ($isPendingReview)
                     {{-- With a conversation, desktop shows this under the conversation instead. --}}

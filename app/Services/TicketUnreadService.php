@@ -62,6 +62,8 @@ class TicketUnreadService
         'complaint_rejected',
         'clarification_provided',
         'withdrawal_requested',
+        'update_requested',
+        'escalation_requested',
         'further_action_requested',
         'resolution_accepted',
         'ticket_withdrawn',

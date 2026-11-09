@@ -25,7 +25,7 @@ All role pages require authentication, an active account, completion of required
 
 | Role | Main capabilities |
 |---|---|
-| `student` | Create and track own complaints; view own ticket and conversation; reply and attach files while the conversation is open; answer clarification requests; withdraw an unresolved ticket before referral or request withdrawal from SDS after referral; accept a resolution or request further action; rate eligible closed tickets; manage notifications and profile photo. |
+| `student` | Create and track own complaints; view own ticket and conversation; reply and attach files while the conversation is open; answer clarification requests; request an update while Submitted or Needs Clarification; ask SDS to consider escalation while Assigned, In Progress, or Escalated; withdraw an unresolved ticket before referral or request withdrawal from SDS after referral; accept a resolution or request further action; rate eligible closed tickets; manage notifications and profile photo. |
 | `recipient` | View tickets assigned to the recipient account and informational tickets forwarded to that recipient; acknowledge assigned work; exchange messages on assigned tickets; mark assigned tickets resolved; manage notifications and profile photo. Recipients cannot assign, escalate, refer, close, or reject tickets. |
 | `sds_admin` | Review all submissions; edit pre-classification category/suggested-recipient details; classify, assign, handle, request clarification, escalate, refer, record referral outcomes, reopen, reject, close, and retain/forward informational tickets; manage accounts, categories, escalation paths, units, reminder settings; view analytics and audit trail. |
 
@@ -201,6 +201,8 @@ The following is the model-level transition map. The “actor/action rules” be
 | Close | SDS admin | Any non-closed status in the workflow matrix | Closed with closure type/time. Invalid, duplicate, out-of-scope, and no-response closures require a 10–1,000 character student-facing explanation; resolved and informational closures do not. Review queue actions have additional restrictions described below. |
 | Withdraw | Submitting student | Submitted, Needs Clarification, Assigned, In Progress, or Escalated | Closed with `withdrawn` closure and optional reason. Not available after referral or once resolved. |
 | Request withdrawal | Submitting student | Referred | Remains Referred; one request per referral period. Requires a reason (maximum 1,000 characters), posts it to the conversation, records `withdrawal_requested`, and notifies SDS. |
+| Request update | Submitting student | Submitted or Needs Clarification | Status, handler, and conversation remain unchanged. Optional note (maximum 500 characters); one request per status period. Records `update_requested` and notifies SDS admins. |
+| Request escalation | Submitting student | Assigned, In Progress, or Escalated | Status and handler remain unchanged. Requires a 10–1,000 character reason; only one request may be pending. Records `escalation_requested` and notifies SDS admins, not the current recipient handler. |
 
 Additional constraints:
 
@@ -208,9 +210,12 @@ Additional constraints:
 - A student can request further action through the end of the deadline (`resolved_at` plus configured calendar days). An expired request is denied.
 - A student cannot withdraw a referred ticket directly. They can request withdrawal with a reason; the ticket remains Referred while SDS considers the request.
 - Only one withdrawal request is accepted during a Referred period. Once sent, the request button is hidden and the student sees a confirmation; a duplicate submission is rejected without another message, audit entry, or email. A later referral after the ticket leaves Referred starts a new period and permits another request.
+- A student may request one update during each Submitted or Needs Clarification status period. The request does not open or post to the conversation, change status/handler, or reset reminders. A status change ends that period.
+- An escalation request remains pending until SDS escalates or reassigns the ticket, the ticket is resolved or closed, or an SDS admin replies in the conversation. While pending, the student sees confirmation and cannot submit another request. The request itself does not change status/handler or reset reminders.
 - Referral to the Campus Disciplinary Committee is blocked unless SDS confirms that the College Dean assessed and endorsed the matter. This confirmation is required for every category and is not required for CODI, the University Investigation and Disciplinary Committee, or an "Other" destination.
 - For gender-based sexual harassment, withdrawing at any stage does not stop CODI from continuing its investigation (Handbook p. 58). For student discipline, the University may initiate proceedings even if the aggrieved student does not want to file (Handbook p. 46). SDS may record the referral outcome or close the ticket as withdrawn using its existing actions; no automatic closure occurs.
 - Withdrawal-request notifications to SDS do not identify the student or include the reason in the notification. The reason is posted in the ticket conversation and uses the existing hidden-identity display rules.
+- Update and escalation requests notify active SDS admins by in-app ticket activity and email only. Emails do not include the request note/reason or student identity; sensitive-category email subjects/details use “Confidential concern.” Request details are kept in SDS-only audit activity and the pending-request panel, not the shared conversation, so the assigned handler cannot see them.
 - In the admin review queue, `reject` only applies to awaiting-review tickets and classifies them invalid. It accepts invalid, duplicate, out-of-scope, and no-response closure types, each requiring a 10–1,000 character student-facing explanation. Generic `close` is blocked for awaiting-review tickets; they use review actions instead.
 - For resolved tickets, admin close records `resolved` (SDS-confirmed), with no explanation required. For other non-review tickets, closure type is one of invalid, duplicate, out-of-scope, no-response, or withdrawn. Invalid, duplicate, out-of-scope, and no-response require a 10–1,000 character explanation; withdrawn is optional. Informational closure also does not require an explanation.
 - Recipients can only resolve, never close. The student accepts or SDS closes after resolution.
@@ -225,6 +230,7 @@ Additional constraints:
 - The suggested next target is the next higher level along the current handler's path, otherwise the first available option from the first path.
 - The administrator must select the target and enter a reason (maximum 1,000 characters). The system does not trigger escalation based on time or reminders.
 - Every escalation changes assigned/current handler, preserves the `escalated` status on repeat escalation, updates `escalated_at`, logs the reason, may flag a conflict of interest, and queues emails for the acting admin, target recipient, and student.
+- A student may ask SDS to consider escalation while the ticket is Assigned, In Progress, or Escalated, with a 10–1,000 character reason. This request is advisory only: escalation remains a manual SDS administrator decision. It does not change the ticket or handler, is not shown to or emailed to the current handler, and stays pending until SDS escalates/reassigns, resolves/closes, or replies in the conversation. The student's reason is visible to SDS only in the audit and pending-request panel.
 
 ## 6. Conversation, unread state, and notifications
 

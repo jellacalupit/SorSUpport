@@ -496,6 +496,292 @@ class TicketWorkflowTest extends TestCase
         $this->assertSame(Ticket::CLOSURE_RESOLVED, $confirmed->closure_type);
     }
 
+    public function test_student_update_requests_are_limited_to_their_current_review_status_period(): void
+    {
+        $workflow = app(TicketWorkflow::class);
+        $ticket = $this->ticket(Ticket::STATUS_SUBMITTED);
+        $ticket->complaint->update(['is_anonymous' => true, 'subject_title' => 'Private student complaint title']);
+        $ticket->complaint->category->update(['is_sensitive' => true]);
+        $lastActionAt = $ticket->lastActionAt();
+        $originalHandler = $ticket->current_handler_id;
+
+        $this->actingAs($this->student)
+            ->get(route('student.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertSee('Request Update')
+            ->assertDontSee('Request Escalation');
+
+        $this->actingAs($this->student)
+            ->post(route('student.complaints.request-update', $ticket->complaint))
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', 'Your request was sent to SDS');
+
+        $ticket->refresh();
+        $this->assertSame(Ticket::STATUS_SUBMITTED, $ticket->status);
+        $this->assertSame($originalHandler, $ticket->current_handler_id);
+        $this->assertSame($lastActionAt?->timestamp, $ticket->lastActionAt()?->timestamp);
+        $this->assertDatabaseMissing('ticket_threads', ['ticket_id' => $ticket->id]);
+        $this->assertDatabaseHas('audit_logs', [
+            'ticket_id' => $ticket->id,
+            'performed_by' => $this->student->id,
+            'action' => 'update_requested',
+            'details' => null,
+        ]);
+        $this->assertSame(1, app(TicketUnreadService::class)->unreadCountForTicket($this->admin, $ticket));
+        $this->assertDatabaseHas('email_notifications', [
+            'ticket_id' => $ticket->id,
+            'recipient_email' => $this->admin->email,
+            'type' => EmailNotification::TYPE_UPDATE_REQUESTED,
+            'status' => EmailNotification::STATUS_PENDING,
+        ]);
+        $this->assertDatabaseMissing('email_notifications', [
+            'ticket_id' => $ticket->id,
+            'recipient_email' => $this->handler->email,
+            'type' => EmailNotification::TYPE_UPDATE_REQUESTED,
+        ]);
+        $this->assertDatabaseMissing('email_notifications', [
+            'ticket_id' => $ticket->id,
+            'recipient_email' => $this->student->email,
+            'type' => EmailNotification::TYPE_UPDATE_REQUESTED,
+        ]);
+        $notification = EmailNotification::query()->where([
+            'ticket_id' => $ticket->id,
+            'recipient_email' => $this->admin->email,
+            'type' => EmailNotification::TYPE_UPDATE_REQUESTED,
+        ])->firstOrFail();
+        $email = app(TicketEmailComposer::class)->compose($notification);
+        $emailText = implode(' ', [
+            $email['subject'],
+            $email['heading'],
+            ...$email['lines'],
+            ...array_values($email['details']),
+            $email['body'],
+        ]);
+        $this->assertStringContainsString('Confidential concern', $emailText);
+        $this->assertStringNotContainsString('Private student complaint title', $emailText);
+        $this->assertStringNotContainsString($this->student->name, $emailText);
+        $this->assertStringNotContainsString($this->student->email, $emailText);
+        $this->assertSame(0, app(TicketUnreadService::class)->unreadCountForTicket($this->handler, $ticket));
+
+        $this->actingAs($this->student)
+            ->get(route('student.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertSee('Your request was sent to SDS')
+            ->assertDontSee('Request Update');
+
+        $auditCount = $ticket->auditLogs()->count();
+        $emailCount = $ticket->emailNotifications()->count();
+        $this->actingAs($this->student)
+            ->post(route('student.complaints.request-update', $ticket->complaint), ['update_request_note' => 'Another request.'])
+            ->assertSessionHasErrors('update_request');
+        $this->assertSame($auditCount, $ticket->auditLogs()->count());
+        $this->assertSame($emailCount, $ticket->emailNotifications()->count());
+
+        app(TicketWorkflow::class)->requestClarification($ticket->fresh(), $this->admin, 'Please clarify this detail.');
+        $messageCount = $ticket->thread->messages()->count();
+        $this->assertContains(TicketWorkflow::REQUEST_UPDATE, $workflow->availableActions($this->student, $ticket->fresh()));
+
+        $this->actingAs($this->student)
+            ->post(route('student.complaints.request-update', $ticket->complaint), ['update_request_note' => 'Please share a progress update.'])
+            ->assertSessionHasNoErrors();
+
+        $ticket->refresh();
+        $this->assertSame(Ticket::STATUS_NEEDS_CLARIFICATION, $ticket->status);
+        $this->assertSame($originalHandler, $ticket->current_handler_id);
+        $this->assertSame($messageCount, $ticket->thread->messages()->count());
+        $this->assertDatabaseHas('audit_logs', [
+            'ticket_id' => $ticket->id,
+            'action' => 'update_requested',
+            'details' => 'Please share a progress update.',
+        ]);
+        $this->actingAs($this->admin)
+            ->get(route('admin.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertSee('Pending student requests')
+            ->assertSee('Student requested an update')
+            ->assertSee('Please share a progress update.');
+    }
+
+    public function test_update_and_escalation_requests_are_only_available_in_their_allowed_statuses(): void
+    {
+        $workflow = app(TicketWorkflow::class);
+
+        foreach ([Ticket::STATUS_SUBMITTED, Ticket::STATUS_NEEDS_CLARIFICATION] as $status) {
+            $ticket = $this->ticket($status);
+            $this->assertContains(TicketWorkflow::REQUEST_UPDATE, $workflow->availableActions($this->student, $ticket));
+            $this->assertNotContains(TicketWorkflow::REQUEST_ESCALATION, $workflow->availableActions($this->student, $ticket));
+            $this->actingAs($this->student)
+                ->post(route('student.complaints.request-escalation', $ticket->complaint), ['escalation_request_reason' => 'Please consider escalation.'])
+                ->assertForbidden();
+
+            $this->actingAs($this->student)
+                ->post(route('student.complaints.request-update', $ticket->complaint), ['update_request_note' => str_repeat('n', 501)])
+                ->assertSessionHasErrors('update_request_note');
+        }
+
+        foreach ([Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED] as $status) {
+            $ticket = $this->ticket($status);
+            $this->assertContains(TicketWorkflow::REQUEST_ESCALATION, $workflow->availableActions($this->student, $ticket));
+            $this->assertNotContains(TicketWorkflow::REQUEST_UPDATE, $workflow->availableActions($this->student, $ticket));
+            $this->actingAs($this->student)
+                ->post(route('student.complaints.request-update', $ticket->complaint), ['update_request_note' => 'Please send an update.'])
+                ->assertForbidden();
+
+            $this->actingAs($this->student)
+                ->post(route('student.complaints.request-escalation', $ticket->complaint), [])
+                ->assertSessionHasErrors('escalation_request_reason');
+            $this->actingAs($this->student)
+                ->post(route('student.complaints.request-escalation', $ticket->complaint), ['escalation_request_reason' => 'Too short'])
+                ->assertSessionHasErrors('escalation_request_reason');
+            $this->actingAs($this->student)
+                ->post(route('student.complaints.request-escalation', $ticket->complaint), ['escalation_request_reason' => str_repeat('r', 1001)])
+                ->assertSessionHasErrors('escalation_request_reason');
+        }
+
+        foreach ([Ticket::STATUS_REFERRED, Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED] as $status) {
+            $ticket = $this->ticket($status);
+            $this->assertNotContains(TicketWorkflow::REQUEST_UPDATE, $workflow->availableActions($this->student, $ticket));
+            $this->assertNotContains(TicketWorkflow::REQUEST_ESCALATION, $workflow->availableActions($this->student, $ticket));
+            $this->actingAs($this->student)
+                ->post(route('student.complaints.request-update', $ticket->complaint), ['update_request_note' => 'Please send an update.'])
+                ->assertForbidden();
+            $this->actingAs($this->student)
+                ->post(route('student.complaints.request-escalation', $ticket->complaint), ['escalation_request_reason' => 'Please consider escalation.'])
+                ->assertForbidden();
+        }
+
+        foreach ([
+            [Ticket::STATUS_SUBMITTED, 'student.complaints.request-update', ['update_request_note' => 'Please send an update.']],
+            [Ticket::STATUS_IN_PROGRESS, 'student.complaints.request-escalation', ['escalation_request_reason' => 'Please consider escalation.']],
+        ] as [$status, $route, $payload]) {
+            $ticket = $this->ticket($status);
+            foreach ([$this->otherStudent, $this->handler, $this->otherRecipient] as $user) {
+                $this->actingAs($user)
+                    ->post(route($route, $ticket->complaint), $payload)
+                    ->assertForbidden();
+            }
+
+            $closed = $this->ticket(Ticket::STATUS_CLOSED);
+            $this->actingAs($this->student)
+                ->post(route($route, $closed->complaint), $payload)
+                ->assertForbidden();
+        }
+    }
+
+    public function test_escalation_requests_are_sds_only_pending_until_sds_acts(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
+        $ticket->complaint->update(['is_anonymous' => true, 'subject_title' => 'Private student conduct matter']);
+        $ticket->complaint->category->update(['is_sensitive' => true]);
+        $reason = 'The current handling has not addressed the impact on my studies.';
+        $originalHandler = $ticket->current_handler_id;
+        $messageCount = $ticket->thread->messages()->count();
+        $lastActionAt = $ticket->lastActionAt();
+
+        $this->actingAs($this->student)
+            ->post(route('student.complaints.request-escalation', $ticket->complaint), ['escalation_request_reason' => $reason])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', 'Your request was sent to SDS');
+
+        $ticket->refresh();
+        $this->assertSame(Ticket::STATUS_IN_PROGRESS, $ticket->status);
+        $this->assertSame($originalHandler, $ticket->current_handler_id);
+        $this->assertSame($messageCount, $ticket->thread->messages()->count());
+        $this->assertSame($lastActionAt?->timestamp, $ticket->lastActionAt()?->timestamp);
+        $this->assertTrue(app(TicketWorkflow::class)->hasPendingEscalationRequest($ticket));
+        $this->assertSame(1, app(TicketUnreadService::class)->unreadCountForTicket($this->admin, $ticket));
+        $this->assertSame(0, app(TicketUnreadService::class)->unreadCountForTicket($this->handler, $ticket));
+        $this->assertDatabaseHas('email_notifications', [
+            'ticket_id' => $ticket->id,
+            'recipient_email' => $this->admin->email,
+            'type' => EmailNotification::TYPE_ESCALATION_REQUESTED,
+            'status' => EmailNotification::STATUS_PENDING,
+        ]);
+        $this->assertDatabaseMissing('email_notifications', [
+            'ticket_id' => $ticket->id,
+            'recipient_email' => $this->handler->email,
+            'type' => EmailNotification::TYPE_ESCALATION_REQUESTED,
+        ]);
+
+        $this->actingAs($this->student)
+            ->get(route('student.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertSee('Your request was sent to SDS')
+            ->assertDontSee('Request Escalation');
+        $this->actingAs($this->admin)
+            ->get(route('admin.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertSee('Pending student requests')
+            ->assertSee('Student requested escalation')
+            ->assertSee($reason)
+            ->assertDontSee($this->student->name)
+            ->assertDontSee($this->student->email);
+        $this->actingAs($this->handler)
+            ->get(route('recipient.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertDontSee($reason);
+        $auditCount = $ticket->auditLogs()->count();
+        $emailCount = $ticket->emailNotifications()->count();
+        $this->actingAs($this->student)
+            ->post(route('student.complaints.request-escalation', $ticket->complaint), ['escalation_request_reason' => 'A second escalation request.'])
+            ->assertSessionHasErrors('escalation_request');
+        $this->assertSame($auditCount, $ticket->auditLogs()->count());
+        $this->assertSame($emailCount, $ticket->emailNotifications()->count());
+
+        $notification = EmailNotification::query()->where([
+            'ticket_id' => $ticket->id,
+            'recipient_email' => $this->admin->email,
+            'type' => EmailNotification::TYPE_ESCALATION_REQUESTED,
+        ])->firstOrFail();
+        $email = app(TicketEmailComposer::class)->compose($notification);
+        $emailText = implode(' ', [
+            $email['subject'],
+            $email['heading'],
+            ...$email['lines'],
+            ...array_values($email['details']),
+            $email['body'],
+        ]);
+        $this->assertStringContainsString('Confidential concern', $emailText);
+        $this->assertStringNotContainsString('Private student conduct matter', $emailText);
+        $this->assertStringNotContainsString($reason, $emailText);
+        $this->assertStringNotContainsString($this->student->name, $emailText);
+        $this->assertStringNotContainsString($this->student->email, $emailText);
+
+        $ticket->complaint->category->escalationHierarchies()->create([
+            'path_number' => 1,
+            'level' => 1,
+            'recipient_id' => $this->otherRecipient->recipient->id,
+        ]);
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.escalate', $ticket), [
+                'recipient_id' => $this->otherRecipient->recipient->id,
+                'escalation_note' => 'The ticket needs a higher review level.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $ticket->refresh();
+        $this->assertSame(Ticket::STATUS_ESCALATED, $ticket->status);
+        $this->assertFalse(app(TicketWorkflow::class)->hasPendingEscalationRequest($ticket));
+        $this->actingAs($this->student)
+            ->get(route('student.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertDontSee('Your request was sent to SDS')
+            ->assertSee('Request Escalation');
+    }
+
+    public function test_only_an_sds_reply_clears_a_pending_escalation_request(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_ASSIGNED);
+        app(TicketWorkflow::class)->requestEscalation($ticket, $this->student, 'Please review this assignment again.');
+
+        AuditLog::log($ticket->id, 'message_posted', $this->handler->id, 'Recipient posted a reply message.');
+        $this->assertTrue(app(TicketWorkflow::class)->hasPendingEscalationRequest($ticket->fresh()));
+
+        AuditLog::log($ticket->id, 'message_posted', $this->admin->id, 'Admin posted a reply message.');
+        $this->assertFalse(app(TicketWorkflow::class)->hasPendingEscalationRequest($ticket->fresh()));
+        $this->assertTrue(app(TicketWorkflow::class)->can($this->student, $ticket->fresh(), TicketWorkflow::REQUEST_ESCALATION));
+    }
+
     // ------------------------------------------------------------------ withdrawal and closing
 
     public function test_the_student_can_withdraw_before_resolution_only(): void

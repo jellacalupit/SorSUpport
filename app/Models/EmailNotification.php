@@ -34,6 +34,8 @@ class EmailNotification extends Model
     public const TYPE_RESOLUTION_ACCEPTED = 'resolution_accepted';
     public const TYPE_WITHDRAWN = 'withdrawn';
     public const TYPE_WITHDRAWAL_REQUESTED = 'withdrawal_requested';
+    public const TYPE_UPDATE_REQUESTED = 'update_requested';
+    public const TYPE_ESCALATION_REQUESTED = 'escalation_requested';
     public const TYPE_WAITING_REMINDER = 'waiting_reminder';
 
     // Status constants

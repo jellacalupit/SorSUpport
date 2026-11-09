@@ -306,7 +306,13 @@ class Ticket extends Model
      */
     public function lastActionAt(): ?\Illuminate\Support\Carbon
     {
-        $emailActions = ['email_notification_sent', 'email_notification_failed'];
+        $emailActions = [
+            'email_notification_sent',
+            'email_notification_failed',
+            // Student requests notify SDS but do not restart the ticket's reminder clock.
+            'update_requested',
+            'escalation_requested',
+        ];
 
         $latest = $this->relationLoaded('auditLogs')
             ? $this->auditLogs->whereNotIn('action', $emailActions)->max('created_at')
