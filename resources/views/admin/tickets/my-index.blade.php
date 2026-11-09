@@ -99,8 +99,8 @@
                 <table class="w-full table-auto text-xs">
                     <thead class="border-b bg-primary text-white">
                         <tr class="text-left">
-                            <th class="whitespace-nowrap rounded-tl-lg px-2 py-2 font-semibold sm:px-3">Ticket ID</th>
-                            <th class="w-[20%] px-2 py-2 font-semibold sm:px-3">Subject Title</th>
+                            <th class="whitespace-nowrap rounded-tl-lg px-2 py-2 font-semibold sm:pl-3 sm:pr-1">Ticket ID</th>
+                            <th class="w-[20%] px-2 py-2 font-semibold sm:pl-1 sm:pr-3">Subject Title</th>
                             <th class="hidden px-2 py-2 font-semibold sm:px-3 lg:table-cell">Classification</th>
                             <th class="px-2 py-2 font-semibold sm:px-3">Status</th>
                             <th class="hidden whitespace-nowrap px-2 py-2 font-semibold sm:px-3 md:table-cell">Escalated</th>
@@ -129,10 +129,10 @@
                                 $studentCourseYearBlock = trim(($student?->program ?? 'Program not specified') . ' ' . ($student?->year_level ?? 'N/A') . (($student?->block ?? '') !== '' ? '-' . $student->block : ''));
                             @endphp
                             <tr data-my-ticket-row data-read-url="{{ route('admin.tickets.read', $ticket) }}" data-unread="{{ $isUnread ? 'true' : 'false' }}" class="align-top transition-colors hover:bg-primary-soft {{ $isUnread ? 'bg-primary-soft/70' : '' }}">
-                                <td class="whitespace-nowrap px-2 py-2 font-mono font-semibold text-primary sm:px-3">
+                                <td class="whitespace-nowrap px-2 py-2 font-mono font-semibold text-primary sm:pl-3 sm:pr-1">
                                     <a href="{{ route('admin.complaints.show', $ticket->complaint) }}" data-my-ticket-link="ticket-{{ $ticket->id }}" class="hover:underline">{{ $ticket->complaint?->reference_number ?? $ticket->id }}</a>
                                 </td>
-                                <td class="px-2 py-2 sm:px-3 {{ $isUnread ? 'text-black' : 'text-muted-foreground' }}">
+                                <td class="px-2 py-2 sm:pl-1 sm:pr-3 {{ $isUnread ? 'text-black' : 'text-muted-foreground' }}">
                                     <a href="{{ route('admin.complaints.show', $ticket->complaint) }}" data-my-ticket-link="ticket-{{ $ticket->id }}" class="block truncate hover:text-primary hover:underline">{{ $ticket->complaint?->subject_title ?? 'Untitled' }}</a>
                                 </td>
                                 <td class="hidden px-2 py-2 sm:px-3 lg:table-cell"><x-classification-badge :classification="$classification" class="text-[10px]" /></td>

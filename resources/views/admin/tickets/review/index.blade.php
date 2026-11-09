@@ -1,5 +1,6 @@
 <x-app-layout :role="'admin'" title="Ticket Review">
     <div class="-mt-1 sm:-mt-2">
+        <p class="mb-3 text-xs text-muted-foreground">Review tickets awaiting SDS action, verify their details and classification, and decide the next step.</p>
         <form method="GET" action="{{ route('admin.tickets.review.index') }}" class="relative z-20 mb-2" data-ticket-filter-form>
             <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <div class="w-full sm:w-auto sm:flex-1 sm:min-w-[280px]">
