@@ -298,6 +298,129 @@ class AnalyticsDefinitionsTest extends TestCase
         $this->assertArrayHasKey('office_rows', $report['performance_metrics']);
     }
 
+    public function test_sensitive_tickets_are_counted_but_not_broken_down_by_student_attributes_or_exposed_in_analytics(): void
+    {
+        $regular = $this->ticket(Ticket::STATUS_SUBMITTED);
+        Complaint::query()->whereKey($regular->complaint_id)->update([
+            'subject_title' => 'PUBLIC_TEST_SUBJECT',
+            'description' => 'PUBLIC_TEST_DESCRIPTION',
+            'personnel_involved' => 'PUBLIC_TEST_PERSONNEL',
+        ]);
+        $privateCategory = ComplaintCategory::create([
+            'name' => 'Sensitive Analytics Category',
+            'is_active' => true,
+            'is_sensitive' => true,
+        ]);
+        $privateStudentUser = User::factory()->create([
+            'role' => User::ROLE_STUDENT,
+            'name' => 'PRIVATE_HIDDEN_STUDENT_NAME',
+        ]);
+        $privateStudent = Student::create([
+            'user_id' => $privateStudentUser->id,
+            'student_id' => 'PRIVATE_STUDENT_NUMBER',
+            'college' => 'PRIVATE_COLLEGE',
+            'program' => 'PRIVATE_PROGRAM',
+            'year_level' => 'PRIVATE_YEAR',
+            'block' => 'PRIVATE_BLOCK',
+        ]);
+        $sensitive = $this->ticket(Ticket::STATUS_SUBMITTED);
+        Complaint::query()->whereKey($sensitive->complaint_id)->update([
+            'category_id' => $privateCategory->id,
+            'student_id' => $privateStudent->id,
+            'subject_title' => 'PRIVATE_SENSITIVE_SUBJECT',
+            'description' => 'PRIVATE_SENSITIVE_DESCRIPTION',
+            'personnel_involved' => 'PRIVATE_SENSITIVE_PERSONNEL',
+            'is_anonymous' => true,
+        ]);
+
+        $analytics = app(AnalyticsService::class);
+        $dashboard = $analytics->getDashboardData();
+        $report = $analytics->getReportData();
+        $breakdowns = $dashboard['breakdowns'];
+        $reportBreakdowns = $report['breakdowns'];
+
+        $this->assertSame(2, $dashboard['total']);
+        $this->assertSame(2, $report['summary']['total_tickets']);
+        $this->assertSame(1, $dashboard['categoryCounts']['Sensitive Analytics Category']);
+        $categoryIndex = array_search('Sensitive Analytics Category', $report['category_breakdown']['labels'], true);
+        $this->assertNotFalse($categoryIndex);
+        $this->assertSame(1, $report['category_breakdown']['data'][$categoryIndex]);
+        $this->assertSame(1, $breakdowns['sensitive_not_broken_down']);
+        $this->assertSame(1, $reportBreakdowns['sensitive_not_broken_down']);
+
+        foreach (['colleges' => 'CICT', 'programs' => 'BSIT', 'year_levels' => '1', 'blocks' => 'A', 'origin' => 'Identified'] as $key => $regularLabel) {
+            $this->assertSame([$regularLabel => 1], $breakdowns[$key]);
+            $this->assertSame([$regularLabel => 1], $reportBreakdowns[$key]);
+            $this->assertArrayNotHasKey('PRIVATE_COLLEGE', $breakdowns[$key]);
+            $this->assertArrayNotHasKey('PRIVATE_PROGRAM', $breakdowns[$key]);
+            $this->assertArrayNotHasKey('PRIVATE_YEAR', $breakdowns[$key]);
+            $this->assertArrayNotHasKey('PRIVATE_BLOCK', $breakdowns[$key]);
+            $this->assertArrayNotHasKey('Anonymous', $breakdowns[$key]);
+        }
+
+        $subjectSummary = $dashboard['subjects']->all();
+        $this->assertArrayHasKey('Confidential concern', $subjectSummary);
+        $this->assertArrayNotHasKey('PRIVATE_SENSITIVE_SUBJECT', $subjectSummary);
+
+        $privateValues = [
+            'PUBLIC_TEST_SUBJECT',
+            'PUBLIC_TEST_DESCRIPTION',
+            'PUBLIC_TEST_PERSONNEL',
+            'PRIVATE_HIDDEN_STUDENT_NAME',
+            'PRIVATE_SENSITIVE_SUBJECT',
+            'PRIVATE_SENSITIVE_DESCRIPTION',
+            'PRIVATE_SENSITIVE_PERSONNEL',
+            'PRIVATE_COLLEGE',
+            'PRIVATE_PROGRAM',
+            'PRIVATE_YEAR',
+            'PRIVATE_BLOCK',
+        ];
+        $reportJson = json_encode($report, JSON_THROW_ON_ERROR);
+        $excelRows = (new AnalyticsReportExport($report))->array();
+        $excelData = json_encode($excelRows, JSON_THROW_ON_ERROR);
+        foreach ($privateValues as $privateValue) {
+            $this->assertStringNotContainsString($privateValue, $reportJson);
+            $this->assertStringNotContainsString($privateValue, $excelData);
+        }
+        $sensitiveExcelRows = collect($excelRows)
+            ->filter(fn ($row) => ($row[0] ?? null) === 'Sensitive categories (not broken down)')
+            ->values();
+        $this->assertCount(5, $sensitiveExcelRows);
+        $this->assertSame(1, $sensitiveExcelRows->first()[1]);
+
+        $pdfHtml = view('admin.analytics.report', [
+            'reportData' => $report,
+            'filters' => [],
+            'sections' => array_keys(\App\Http\Controllers\Admin\AnalyticsController::REPORT_SECTIONS),
+        ])->render();
+        foreach ($privateValues as $privateValue) {
+            $this->assertStringNotContainsString($privateValue, $pdfHtml);
+        }
+        foreach (['Sensitive categories (not broken down)', 'Tickets by Year Level', 'Tickets by Block', 'Identified and Anonymous Origin'] as $expectedText) {
+            $this->assertStringContainsString($expectedText, $pdfHtml);
+        }
+        $this->assertSame(5, substr_count($pdfHtml, 'Sensitive categories (not broken down)'));
+
+        $admin = User::factory()->create(['role' => User::ROLE_SDS_ADMIN]);
+        $this->actingAs($admin)
+            ->get(route('admin.analytics.index'))
+            ->assertOk()
+            ->assertSee('Confidential concern')
+            ->assertSee('Sensitive categories (not broken down)')
+            ->assertDontSee('PRIVATE_SENSITIVE_SUBJECT')
+            ->assertDontSee('PRIVATE_SENSITIVE_DESCRIPTION')
+            ->assertDontSee('PRIVATE_SENSITIVE_PERSONNEL')
+            ->assertDontSee('PRIVATE_HIDDEN_STUDENT_NAME');
+        $this->actingAs($admin)
+            ->get(route('admin.analytics.export.pdf'))
+            ->assertOk();
+        $this->actingAs($admin)
+            ->get(route('admin.analytics.export.excel'))
+            ->assertOk();
+
+        $this->assertSame($this->category->id, $regular->fresh()->complaint->category_id);
+    }
+
     protected function timedTicket(string $submittedAt, string $resolvedAt, array $attributes = []): Ticket
     {
         $ticket = $this->ticket(Ticket::STATUS_RESOLVED, array_merge([

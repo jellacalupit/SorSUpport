@@ -266,12 +266,21 @@ class AnalyticsService
     public function getBreakdowns(array $filters = [], ?Collection $tickets = null): array
     {
         $tickets ??= $this->filterTickets(Ticket::query(), $filters)->with(['complaint.student', 'auditLogs'])->get();
-        $tickets->loadMissing(['complaint.student', 'auditLogs']);
+        $tickets->loadMissing(['complaint.category', 'complaint.student', 'auditLogs']);
 
-        $origin = fn (string $field) => $tickets
+        $studentAttributeTickets = $tickets
+            ->reject(fn ($ticket) => $ticket->complaint?->isSensitive())
+            ->values();
+        $sensitiveNotBrokenDown = $tickets->count() - $studentAttributeTickets->count();
+        $origin = fn (string $field) => $studentAttributeTickets
             ->groupBy(fn ($ticket) => $ticket->complaint?->is_anonymous
                 ? 'Not disclosed'
                 : ($ticket->complaint?->student?->{$field} ?: 'Not specified'))
+            ->map->count()
+            ->sortDesc()
+            ->toArray();
+        $identityOrigin = $studentAttributeTickets
+            ->groupBy(fn ($ticket) => $ticket->complaint?->is_anonymous ? 'Anonymous' : 'Identified')
             ->map->count()
             ->sortDesc()
             ->toArray();
@@ -293,6 +302,10 @@ class AnalyticsService
         return [
             'colleges' => $origin('college'),
             'programs' => $origin('program'),
+            'year_levels' => $origin('year_level'),
+            'blocks' => $origin('block'),
+            'origin' => $identityOrigin,
+            'sensitive_not_broken_down' => $sensitiveNotBrokenDown,
             'resolution_types' => $labelled('resolution_type', Ticket::RESOLUTION_LABELS),
             'closure_reasons' => $labelled('closure_type', Ticket::CLOSURE_LABELS),
             'escalation_levels' => [

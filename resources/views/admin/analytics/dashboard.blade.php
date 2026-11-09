@@ -347,6 +347,23 @@
             </section>
         </div>
 
+        <div class="grid gap-3 sm:gap-4">
+            <section class="{{ $cardClass }}">
+                <h2 class="{{ $titleClass }}">Common subjects</h2>
+                <p class="{{ $subtitleClass }}">Sensitive tickets are shown as “Confidential concern.”</p>
+                <div class="mt-3 grid gap-2.5">
+                    @forelse ($data['subjects'] as $subject => $count)
+                        <div class="flex justify-between gap-2 border-b border-border py-2 text-xs last:border-0">
+                            <span class="min-w-0 truncate text-foreground">{{ $subject }}</span>
+                            <strong class="shrink-0 tabular-nums">{{ $count }}</strong>
+                        </div>
+                    @empty
+                        <p class="py-6 text-center text-xs text-muted-foreground">No tickets in this period.</p>
+                    @endforelse
+                </div>
+            </section>
+        </div>
+
         <!-- How fast tickets are resolved -->
         <section class="{{ $cardClass }}">
             <div class="flex flex-wrap items-start justify-between gap-3">
@@ -390,8 +407,11 @@
         @php
             $breakdowns = $data['breakdowns'];
             $breakdownCards = [
-                ['title' => 'Tickets by college', 'hint' => 'Where the students raising tickets belong. Students who hid their identity are not disclosed.', 'rows' => $breakdowns['colleges'], 'color' => 'bg-primary', 'empty' => 'No tickets in this period.'],
-                ['title' => 'Tickets by program', 'hint' => 'The programs students raising tickets are enrolled in.', 'rows' => $breakdowns['programs'], 'color' => 'bg-[#c4785a]', 'empty' => 'No tickets in this period.'],
+                ['title' => 'Tickets by college', 'hint' => 'Where the students raising tickets belong. Students who hid their identity are not disclosed.', 'rows' => $breakdowns['colleges'], 'sensitive_count' => $breakdowns['sensitive_not_broken_down'], 'color' => 'bg-primary', 'empty' => 'No tickets in this period.'],
+                ['title' => 'Tickets by program', 'hint' => 'The programs students raising tickets are enrolled in.', 'rows' => $breakdowns['programs'], 'sensitive_count' => $breakdowns['sensitive_not_broken_down'], 'color' => 'bg-[#c4785a]', 'empty' => 'No tickets in this period.'],
+                ['title' => 'Tickets by year level', 'hint' => 'Year levels of students raising tickets.', 'rows' => $breakdowns['year_levels'], 'sensitive_count' => $breakdowns['sensitive_not_broken_down'], 'color' => 'bg-indigo-600', 'empty' => 'No tickets in this period.'],
+                ['title' => 'Tickets by block', 'hint' => 'Blocks of students raising tickets.', 'rows' => $breakdowns['blocks'], 'sensitive_count' => $breakdowns['sensitive_not_broken_down'], 'color' => 'bg-cyan-600', 'empty' => 'No tickets in this period.'],
+                ['title' => 'Ticket origin', 'hint' => 'Whether the student identified themselves or hid their identity.', 'rows' => $breakdowns['origin'], 'sensitive_count' => $breakdowns['sensitive_not_broken_down'], 'color' => 'bg-violet-600', 'empty' => 'No tickets in this period.'],
                 ['title' => 'How tickets were resolved', 'hint' => 'The type of resolution the handler recorded.', 'rows' => $breakdowns['resolution_types'], 'color' => 'bg-emerald-600', 'empty' => 'No resolved tickets in this period.'],
                 ['title' => 'Why tickets were closed', 'hint' => 'The reason recorded when each ticket was closed.', 'rows' => $breakdowns['closure_reasons'], 'color' => 'bg-slate-600', 'empty' => 'No closed tickets in this period.'],
                 ['title' => 'Escalation level', 'hint' => 'How many times tickets needing resolution were escalated.', 'rows' => $breakdowns['escalation_levels'], 'color' => 'bg-red-600', 'empty' => 'No tickets needing resolution in this period.'],
@@ -400,7 +420,7 @@
         @endphp
         <div class="grid gap-3 sm:gap-4 lg:grid-cols-2" data-analytics-breakdowns>
             @foreach ($breakdownCards as $card)
-                @php $cardTotal = max(1, array_sum($card['rows'])); @endphp
+                @php $cardTotal = max(1, array_sum($card['rows']) + ($card['sensitive_count'] ?? 0)); @endphp
                 <section class="{{ $cardClass }}">
                     <h2 class="{{ $titleClass }}">{{ $card['title'] }}</h2>
                     <p class="{{ $subtitleClass }}">{{ $card['hint'] }}</p>
@@ -411,8 +431,16 @@
                                 <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full {{ $card['color'] }}" style="width: {{ min(100, round($count / $cardTotal * 100)) }}%"></div></div>
                             </div>
                         @empty
-                            <p class="py-6 text-center text-xs text-muted-foreground">{{ $card['empty'] }}</p>
+                            @if (($card['sensitive_count'] ?? 0) === 0)
+                                <p class="py-6 text-center text-xs text-muted-foreground">{{ $card['empty'] }}</p>
+                            @endif
                         @endforelse
+                        @if (array_key_exists('sensitive_count', $card))
+                            <div>
+                                <div class="mb-1 flex justify-between gap-2 text-xs"><span class="min-w-0 truncate text-foreground">Sensitive categories (not broken down)</span><strong class="shrink-0 tabular-nums">{{ $card['sensitive_count'] }} <span class="font-normal text-muted-foreground">({{ round($card['sensitive_count'] / $cardTotal * 100) }}%)</span></strong></div>
+                                <div class="h-2 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full {{ $card['color'] }}" style="width: {{ min(100, round($card['sensitive_count'] / $cardTotal * 100)) }}%"></div></div>
+                            </div>
+                        @endif
                     </div>
                 </section>
             @endforeach

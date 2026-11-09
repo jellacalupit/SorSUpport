@@ -57,6 +57,8 @@
         ->implode(', ');
     $committeeOutcomes = $overview['committee_outcomes'] ?? [];
     $escalatedTickets = $overview['escalated_tickets'] ?? 0;
+    $studentAttributeBreakdownKeys = ['colleges', 'programs', 'year_levels', 'blocks', 'origin'];
+    $sensitiveNotBrokenDown = $breakdowns['sensitive_not_broken_down'] ?? 0;
 
     $categories = collect($rows($reportData['category_breakdown'] ?? null))->sortDesc();
     $emptyCategories = $categories->filter(fn ($tickets) => $tickets === 0)->keys();
@@ -93,15 +95,36 @@
         ],
         'colleges' => [
             'Tickets by College',
-            'The college of the student who filed each ticket. "Not disclosed" means the student chose to hide their identity.',
+            'The college of the student who filed each ticket. "Not disclosed" means the student chose to hide their identity. Sensitive-category tickets are counted separately and not broken down by student attributes.',
             'College', 'Tickets', $breakdowns['colleges'] ?? [],
             'No tickets were received in this period.',
             null,
         ],
         'programs' => [
             'Tickets by Program',
-            'The program of the student who filed each ticket. "Not disclosed" means the student chose to hide their identity.',
+            'The program of the student who filed each ticket. "Not disclosed" means the student chose to hide their identity. Sensitive-category tickets are counted separately and not broken down by student attributes.',
             'Program', 'Tickets', $breakdowns['programs'] ?? [],
+            'No tickets were received in this period.',
+            null,
+        ],
+        'year_levels' => [
+            'Tickets by Year Level',
+            'Year level of the student who filed each ticket. Sensitive-category tickets are counted separately and not broken down by student attributes.',
+            'Year level', 'Tickets', $breakdowns['year_levels'] ?? [],
+            'No tickets were received in this period.',
+            null,
+        ],
+        'blocks' => [
+            'Tickets by Block',
+            'Block of the student who filed each ticket. Sensitive-category tickets are counted separately and not broken down by student attributes.',
+            'Block', 'Tickets', $breakdowns['blocks'] ?? [],
+            'No tickets were received in this period.',
+            null,
+        ],
+        'origin' => [
+            'Identified and Anonymous Origin',
+            'Whether the student identified themselves or hid their identity. Sensitive-category tickets are counted separately and not broken down by student attributes.',
+            'Origin', 'Tickets', $breakdowns['origin'] ?? [],
             'No tickets were received in this period.',
             null,
         ],
@@ -436,9 +459,13 @@
                 </table>
         @else
             @php [$title, $about, $column, $valueColumn, $data, $emptyText, $note] = $tables[$key]; @endphp
+                @php
+                    $isStudentAttributeBreakdown = in_array($key, $studentAttributeBreakdownKeys, true);
+                    $tableTotal = array_sum($data) + ($isStudentAttributeBreakdown ? $sensitiveNotBrokenDown : 0);
+                @endphp
                 <h2>{{ $title }}</h2>
                 <p class="about">{{ $about }}</p>
-                @if (array_sum($data) === 0)
+                @if ($tableTotal === 0 && ! $isStudentAttributeBreakdown)
                     <p class="empty">{{ $emptyText }}</p>
                 @else
                     <table class="data">
@@ -451,12 +478,20 @@
                                     <td>{{ $label }}</td>
                                     <td class="number">{{ $value }}</td>
                                     <td class="share"><div class="track"><div class="fill" style="width: {{ $percent($value, array_sum($data)) }}%"></div></div></td>
-                                    <td class="number">{{ $percent($value, array_sum($data)) }}%</td>
+                                    <td class="number">{{ $percent($value, $tableTotal) }}%</td>
                                 </tr>
                             @endforeach
+                            @if ($isStudentAttributeBreakdown)
+                                <tr>
+                                    <td>Sensitive categories (not broken down)</td>
+                                    <td class="number">{{ $sensitiveNotBrokenDown }}</td>
+                                    <td class="share"><div class="track"><div class="fill" style="width: {{ $percent($sensitiveNotBrokenDown, $tableTotal) }}%"></div></div></td>
+                                    <td class="number">{{ $percent($sensitiveNotBrokenDown, $tableTotal) }}%</td>
+                                </tr>
+                            @endif
                         </tbody>
                         <tfoot>
-                            <tr><td>Total</td><td class="number">{{ array_sum($data) }}</td><td colspan="2"></td></tr>
+                            <tr><td>Total</td><td class="number">{{ $tableTotal }}</td><td colspan="2"></td></tr>
                         </tfoot>
                     </table>
                     @if ($note)
