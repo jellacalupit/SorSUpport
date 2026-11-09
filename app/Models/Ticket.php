@@ -120,9 +120,9 @@ class Ticket extends Model
     ];
 
     /**
-     * Default days a student has to ask for further action after a ticket is resolved, from the
-     * Student Handbook's 15-day appeal period. The SDS admin may change it in System Settings;
-     * read the current value with furtherActionDays().
+     * System-default days a student has to ask for further action after a ticket is resolved.
+     * The SDS admin may change it in System Settings; read the current value with
+     * furtherActionDays().
      */
     public const FURTHER_ACTION_DAYS = 15;
 

@@ -230,7 +230,7 @@ class TicketEmailComposer
                 array_values(array_filter([
                     "This ticket has not been classified or assigned for {$days}. The student is waiting to hear that their concern is being looked at.",
                     $ticket?->complaint?->isSensitive()
-                        ? 'It is in a sensitive category. For sexual harassment complaints, the Student Handbook requires action within 24 hours of receipt.'
+                    ? 'System default, derived from the CODI 24-hour notice timeline (Handbook p. 58). Adjustable. Not a handbook deadline for SDS.'
                         : null,
                     'Please review it: assign it to the office that should handle it, handle it directly, refer it to the proper committee, or ask the student for more details.',
                 ])),
@@ -239,7 +239,7 @@ class TicketEmailComposer
                 "Follow up: no outcome recorded for {$reference} after {$days}",
                 "A referred ticket has waited {$days} for its outcome",
                 [
-                    'This ticket was referred to ' . ($ticket?->referred_to ?: 'a committee') . " and no outcome has been recorded for {$days}. The Student Handbook gives the Committee on Decorum and Investigation 10 working days to decide.",
+                    'This ticket was referred to ' . ($ticket?->referred_to ?: 'a committee') . " and no outcome has been recorded for {$days}. System default, based on the CODI 10-working-day period (pp. 57 to 58). Applies to CODI referrals only.",
                     'Please follow up with the committee, and record the outcome on the ticket once it is decided so the student is informed.',
                 ],
             ],

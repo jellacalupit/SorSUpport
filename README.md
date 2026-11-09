@@ -4,6 +4,8 @@ SorSUpport is a web-based complaint ticketing system for **Sorsogon State Univer
 
 The system follows the procedures of the **SorSU Student Handbook (Revised 2024)** within its scope: taking in complaints, routing them, communicating about them, tracking them and reporting on them. Hearings and sanctions happen outside the system; SorSUpport records only the referral and its outcome.
 
+For the detailed implementation guide—including role permissions, status rules, validation, privacy, routes, scheduled tasks, reports, and the data model—see [System Documentation](docs/system-documentation.md).
+
 ## Who uses it
 
 | Role | What they do |
@@ -31,13 +33,15 @@ The system emails whoever has to act next on a ticket that has waited too long w
 | Ticket is… | Who is reminded | After | Basis |
 |---|---|---|---|
 | Submitted, not yet classified or assigned | SDS Office | 2 working days | System default |
-| The same, in a sensitive category | SDS Office | 1 working day | Handbook p. 58: harassment complaints acted on within 24 hours |
+| The same, in a sensitive category | SDS Office | 1 working day | System default, derived from the CODI 24-hour notice timeline (Handbook p. 58). Adjustable. Not a handbook deadline for SDS. |
 | Assigned, not yet acknowledged | Assigned handler | 2 working days | System default |
 | In progress or escalated, no action recorded | Assigned handler | 5 working days | System default |
-| Referred to a committee, no outcome recorded | SDS Office | 10 working days | Handbook p. 57: the committee decides within 10 working days |
-| Resolved, student did not respond | SDS Office, once | 15 days | Handbook pp. 47–48: 15-day appeal period |
+| Referred to a committee, no outcome recorded | SDS Office | 10 working days | System default, based on the CODI 10-working-day period (pp. 57 to 58). Applies to CODI referrals only. |
+| Resolved, student did not respond | SDS Office, once | 15 days | System default |
 
 A reminder repeats every that many working days until someone acts, and any action on the ticket restarts the count. Reminders never change a ticket; escalating, reassigning and closing stay the SDS admin's decision. The SDS admin can change the waiting days, or turn reminders off, under **System Settings → Reminders**. The starting values are in [config/tickets.php](config/tickets.php).
+
+Reminders are operational nudges to the person who must act next. They are not handbook deadlines and never change a ticket. The handbook states no deadline for ordinary complaints; the only timelines it states are for CODI harassment cases and disciplinary appeals.
 
 ### Email delivery
 

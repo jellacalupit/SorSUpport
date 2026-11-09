@@ -138,6 +138,22 @@ class TicketEmailContentTest extends TestCase
         $this->assertSame($subjects, array_unique($subjects), 'Every purpose must have a different subject.');
     }
 
+    public function test_waiting_reminder_emails_describe_handbook_timelines_as_system_defaults(): void
+    {
+        $sensitiveCategory = ComplaintCategory::create(['name' => 'Sensitive category', 'is_active' => true, 'is_sensitive' => true]);
+        $sensitive = $this->ticket(Ticket::STATUS_SUBMITTED, [], ['category_id' => $sensitiveCategory->id]);
+        $sensitiveEmail = $this->email($sensitive, EmailNotification::TYPE_WAITING_REMINDER, $this->admin);
+
+        $this->assertStringContainsString('System default, derived from the CODI 24-hour notice timeline (Handbook p. 58). Adjustable. Not a handbook deadline for SDS.', $sensitiveEmail['text']);
+        $this->assertStringNotContainsString('requires action within 24 hours', $sensitiveEmail['text']);
+
+        $referred = $this->ticket(Ticket::STATUS_REFERRED, ['referred_to' => 'Committee on Decorum and Investigation']);
+        $referredEmail = $this->email($referred, EmailNotification::TYPE_WAITING_REMINDER, $this->admin);
+
+        $this->assertStringContainsString('System default, based on the CODI 10-working-day period (pp. 57 to 58). Applies to CODI referrals only.', $referredEmail['text']);
+        $this->assertStringNotContainsString('The Student Handbook gives the Committee', $referredEmail['text']);
+    }
+
     public function test_a_status_update_tells_the_student_what_the_status_means(): void
     {
         $assigned = $this->email($this->ticket(Ticket::STATUS_ASSIGNED), EmailNotification::TYPE_STUDENT_STATUS_UPDATE, $this->student);

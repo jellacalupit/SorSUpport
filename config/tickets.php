@@ -19,8 +19,8 @@ return [
         // Submitted and not yet classified or assigned: the SDS Office is reminded.
         'unreviewed_days' => 2,
 
-        // The same for a ticket in a sensitive category. The Student Handbook (p. 58) requires
-        // a sexual harassment complaint to be acted on within 24 hours of receipt.
+        // System default derived from the CODI 24-hour notice timeline (Handbook p. 58).
+        // Adjustable; not a handbook deadline for SDS.
         'sensitive_unreviewed_days' => 1,
 
         // Assigned and not yet acknowledged: the assigned handler is reminded.
@@ -29,13 +29,12 @@ return [
         // In progress or escalated with no action recorded: the handler is reminded.
         'idle_days' => 5,
 
-        // Referred to a committee with no outcome recorded: the SDS Office is reminded to follow
-        // up. The Student Handbook (p. 57) gives the committee 10 working days to decide.
+        // System default based on the CODI 10-working-day period (Handbook pp. 57 to 58).
+        // Applies to CODI referrals only.
         'referral_days' => 10,
 
-        // Calendar days a student has to accept a resolution or ask for further action, after
-        // which the SDS Office is told once so it can close the ticket. The Student Handbook
-        // (pp. 47–48) gives 15 days to appeal a decision.
+        // System default for the student's response period after resolution, adjustable by the
+        // SDS admin in System Settings.
         'student_response_days' => \App\Models\Ticket::FURTHER_ACTION_DAYS,
     ],
 

@@ -273,7 +273,10 @@ class TicketRemindersAndDeliveryTest extends TestCase
 
         $this->actingAs($admin)->get(route('admin.settings', ['settings_tab' => 'reminders']))
             ->assertOk()
-            ->assertSee('Reminders for waiting tickets');
+            ->assertSee('Reminders for waiting tickets')
+            ->assertSee('System default, derived from the CODI 24-hour notice timeline (Handbook p. 58). Adjustable. Not a handbook deadline for SDS.')
+            ->assertSee('System default, based on the CODI 10-working-day period (pp. 57 to 58). Applies to CODI referrals only.')
+            ->assertSee('This response period is a system default, not a handbook deadline, and can be adjusted by the SDS admin.');
 
         $this->actingAs($admin)
             ->put(route('admin.settings.reminders.update'), [

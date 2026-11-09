@@ -514,10 +514,10 @@
         @php
             $reminderRows = [
                 ['name' => 'unreviewed_days', 'label' => 'Not yet reviewed', 'who' => 'SDS Office', 'hint' => 'Submitted, but not yet classified or assigned.'],
-                ['name' => 'sensitive_unreviewed_days', 'label' => 'Sensitive, not yet reviewed', 'who' => 'SDS Office', 'hint' => 'The same, for tickets in a sensitive category. The Student Handbook (p. 58) requires harassment complaints to be acted on within 24 hours.'],
+                ['name' => 'sensitive_unreviewed_days', 'label' => 'Sensitive, not yet reviewed', 'who' => 'SDS Office', 'hint' => 'System default, derived from the CODI 24-hour notice timeline (Handbook p. 58). Adjustable. Not a handbook deadline for SDS.'],
                 ['name' => 'unacknowledged_days', 'label' => 'Not yet acknowledged', 'who' => 'Assigned handler', 'hint' => 'Assigned, but the handler has not acknowledged it.'],
                 ['name' => 'idle_days', 'label' => 'No action recorded', 'who' => 'Assigned handler', 'hint' => 'In progress or escalated, with no reply or update.'],
-                ['name' => 'referral_days', 'label' => 'Referred, no outcome', 'who' => 'SDS Office', 'hint' => 'Referred to a committee, with no outcome recorded. The Student Handbook (p. 57) gives the committee 10 working days to decide.'],
+                ['name' => 'referral_days', 'label' => 'Referred, no outcome', 'who' => 'SDS Office', 'hint' => 'System default, based on the CODI 10-working-day period (pp. 57 to 58). Applies to CODI referrals only.'],
             ];
         @endphp
         <div x-cloak x-data="{ remindersOn: @js((bool) old('enabled', $reminderSettings['enabled'])) }" x-bind:class="settingsTab === 'reminders' ? 'opacity-100' : 'pointer-events-none opacity-0'" class="col-start-1 row-start-1 transition-opacity duration-150 ease-out">
@@ -559,7 +559,7 @@
                 <div class="grid gap-2 rounded-lg border border-border px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">
                     <div class="min-w-0">
                         <label for="reminder-student_response_days" class="text-sm font-semibold text-foreground">Student did not respond</label>
-                        <p class="text-xs text-muted-foreground">Days a student has to accept a resolution or ask for further action. Afterwards they can only accept, and the SDS Office is told once so it can close the ticket. The Student Handbook gives {{ \App\Models\Ticket::FURTHER_ACTION_DAYS }} days to appeal a decision (pp. 47–48). <span class="font-medium text-foreground">Reminds: SDS Office.</span></p>
+                        <p class="text-xs text-muted-foreground">Days a student has to accept a resolution or ask for further action. Afterwards they can only accept, and the SDS Office is told once so it can close the ticket. This response period is a system default, not a handbook deadline, and can be adjusted by the SDS admin. <span class="font-medium text-foreground">Reminds: SDS Office.</span></p>
                         @error('student_response_days')<p class="mt-1 text-xs text-destructive">{{ $message }}</p>@enderror
                     </div>
                     <div class="flex items-center gap-2">
