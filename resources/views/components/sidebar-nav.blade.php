@@ -36,6 +36,7 @@
 <nav
     data-admin-navigation
     class="relative flex flex-col gap-3"
+    x-data="{ tooltipVisible: false, tooltipLabel: '', tooltipTop: 0 }"
 >
     @foreach($adminNav as $section)
         <div class="relative z-10 border-b border-sidebar-border pb-3 last:border-b-0 last:pb-0">
@@ -65,6 +66,11 @@
                         @if ($locked) aria-disabled="true" tabindex="-1" onclick="return false" @endif
                         :class="sidebarOpen ? 'px-2' : 'justify-center px-0'"
                         class="group relative z-10 flex min-h-9 items-center gap-3 rounded-md text-sm font-medium {{ $locked ? 'pointer-events-none !bg-transparent text-sidebar-foreground/55' : 'transition-colors ' . ($isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/85') }}"
+                        @if(!$locked)
+                            x-on:mouseenter="!sidebarOpen && (tooltipLabel = '{{ $item['label'] }}', tooltipTop = $refs['nav-{{ $item['route'] }}']?.getBoundingClientRect().top - $refs.sidebar?.getBoundingClientRect().top ?? 0, tooltipVisible = true)"
+                            x-on:mouseleave="tooltipVisible = false"
+                        @endif
+                        x-ref="nav-{{ $item['route'] }}"
                     >
 
                         <x-dynamic-component
@@ -95,4 +101,20 @@
             </div>
         </div>
     @endforeach
+
+    <!-- Tooltip for collapsed sidebar -->
+    <div
+        x-show="!sidebarOpen && tooltipVisible"
+        x-transition:enter="transition ease-out duration-100"
+        x-transition:enter-start="opacity-0 transform translate-x-2"
+        x-transition:enter-end="opacity-100 transform translate-x-0"
+        x-transition:leave="transition ease-in duration-75"
+        x-transition:leave-start="opacity-100 transform translate-x-0"
+        x-transition:leave-end="opacity-0 transform translate-x-2"
+        :style="'top: ' + tooltipTop + 'px'"
+        class="absolute left-full ml-2 z-50 px-2 py-1.5 text-xs font-medium text-sidebar-foreground bg-sidebar border border-sidebar-border rounded-md shadow-lg whitespace-nowrap pointer-events-none"
+        aria-hidden="true"
+    >
+        <span x-text="tooltipLabel"></span>
+    </div>
 </nav>
