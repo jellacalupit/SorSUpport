@@ -502,13 +502,13 @@ class TicketWorkflowTest extends TestCase
             $this->actingAs($this->otherStudent)->post(route('student.complaints.withdraw', $ticket->complaint))->assertForbidden();
 
             $this->actingAs($this->student)
-                ->post(route('student.complaints.withdraw', $ticket->complaint), ['withdraw_reason' => 'Settled on our own.'])
+                ->post(route('student.complaints.withdraw', $ticket->complaint))
                 ->assertSessionHasNoErrors();
 
             $ticket->refresh();
             $this->assertSame(Ticket::STATUS_CLOSED, $ticket->status, $status);
             $this->assertSame(Ticket::CLOSURE_WITHDRAWN, $ticket->closure_type);
-            $this->assertSame('Settled on our own.', $ticket->closure_reason);
+            $this->assertNull($ticket->closure_reason);
             $this->assertDatabaseHas('audit_logs', ['ticket_id' => $ticket->id, 'action' => 'ticket_withdrawn']);
         }
 
@@ -545,23 +545,46 @@ class TicketWorkflowTest extends TestCase
         $this->assertFalse($ticket->thread->is_active);
     }
 
-    public function test_closing_an_unresolved_ticket_without_optional_details_succeeds(): void
+    public function test_admin_closures_requiring_an_explanation_reject_missing_or_invalid_reasons(): void
     {
-        $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
+        foreach ([
+            Ticket::CLOSURE_INVALID,
+            Ticket::CLOSURE_DUPLICATE,
+            Ticket::CLOSURE_OUT_OF_SCOPE,
+            Ticket::CLOSURE_NO_RESPONSE,
+        ] as $closureType) {
+            $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
+            $url = route('admin.tickets.close', $ticket);
 
-        $this->actingAs($this->admin)
-            ->post(route('admin.tickets.close', $ticket), ['closure_type' => Ticket::CLOSURE_DUPLICATE])
-            ->assertSessionHasNoErrors();
+            $this->actingAs($this->admin)
+                ->post($url, ['closure_type' => $closureType])
+                ->assertSessionHasErrors('closure_reason');
 
-        $ticket->refresh();
-        $this->assertSame(Ticket::STATUS_CLOSED, $ticket->status);
-        $this->assertSame(Ticket::CLOSURE_DUPLICATE, $ticket->closure_type);
-        $this->assertNull($ticket->closure_reason);
+            $this->actingAs($this->admin)
+                ->post($url, ['closure_type' => $closureType, 'closure_reason' => 'Too short'])
+                ->assertSessionHasErrors('closure_reason');
+
+            $this->actingAs($this->admin)
+                ->post($url, ['closure_type' => $closureType, 'closure_reason' => str_repeat('x', 1001)])
+                ->assertSessionHasErrors('closure_reason');
+
+            $reason = 'A written explanation for ' . $closureType . ' closure.';
+            $this->actingAs($this->admin)
+                ->post($url, ['closure_type' => $closureType, 'closure_reason' => $reason])
+                ->assertSessionHasNoErrors();
+
+            $this->assertSame(Ticket::CLOSURE_LABELS[$closureType], $ticket->fresh()->closure_label);
+            $this->assertSame($reason, $ticket->fresh()->closure_reason);
+        }
     }
 
     public function test_a_ticket_under_review_is_closed_with_the_reason_it_cannot_be_acted_on(): void
     {
         $ticket = $this->ticket(Ticket::STATUS_SUBMITTED);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.reject', $ticket), ['closure_type' => Ticket::CLOSURE_OUT_OF_SCOPE])
+            ->assertSessionHasErrors('closure_reason');
 
         $this->actingAs($this->admin)
             ->post(route('admin.tickets.reject', $ticket), ['closure_type' => Ticket::CLOSURE_OUT_OF_SCOPE, 'closure_reason' => 'This concerns a private landlord.'])
@@ -579,18 +602,23 @@ class TicketWorkflowTest extends TestCase
             ->assertSee('This concerns a private landlord.');
     }
 
-    public function test_a_ticket_under_review_can_be_closed_without_optional_details(): void
+    public function test_a_ticket_under_review_cannot_be_rejected_without_an_explanation(): void
     {
         $ticket = $this->ticket(Ticket::STATUS_SUBMITTED);
 
         $this->actingAs($this->admin)
             ->post(route('admin.tickets.reject', $ticket))
-            ->assertSessionHasNoErrors();
+            ->assertSessionHasErrors('closure_reason');
 
         $ticket->refresh();
-        $this->assertSame(Ticket::STATUS_CLOSED, $ticket->status);
-        $this->assertSame(Ticket::CLOSURE_INVALID, $ticket->closure_type);
-        $this->assertNull($ticket->closure_reason);
+        $this->assertSame(Ticket::STATUS_SUBMITTED, $ticket->status);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.reject', $ticket), ['closure_reason' => 'This complaint is not valid.'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(Ticket::CLOSURE_INVALID, $ticket->fresh()->closure_type);
+        $this->assertSame('This complaint is not valid.', $ticket->fresh()->closure_reason);
     }
 
     public function test_informational_tickets_close_as_recorded_for_information(): void
@@ -602,6 +630,18 @@ class TicketWorkflowTest extends TestCase
         $ticket->refresh();
         $this->assertSame(Ticket::STATUS_CLOSED, $ticket->status);
         $this->assertSame(Ticket::CLOSURE_INFORMATIONAL, $ticket->closure_type);
+    }
+
+    public function test_admin_can_choose_withdrawn_closure_without_an_explanation(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.close', $ticket), ['closure_type' => Ticket::CLOSURE_WITHDRAWN])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(Ticket::CLOSURE_WITHDRAWN, $ticket->fresh()->closure_type);
+        $this->assertNull($ticket->fresh()->closure_reason);
     }
 
     // ------------------------------------------------------------------ referral

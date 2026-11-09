@@ -357,12 +357,13 @@
                         </div>
                     </div>
 
-                    <form x-show="validity === 'invalid'" x-cloak method="POST" action="{{ route('admin.tickets.reject', $ticket) }}" class="mt-5 border-t border-border pt-4">
+                    <form x-show="validity === 'invalid'" x-cloak x-data="{ closureType: @js(old('closure_type', \App\Models\Ticket::CLOSURE_INVALID)) }" x-on:picked="closureType = $event.detail" method="POST" action="{{ route('admin.tickets.reject', $ticket) }}" class="mt-5 border-t border-border pt-4">
                         @csrf
                         <p class="text-sm font-semibold text-black">Why can it not be acted on?</p>
-                        <x-picker name="closure_type" id="closure-type-review-{{ $ticket->id }}" label="Why can it not be acted on?" class="mt-2 mb-3" :selected="\App\Models\Ticket::CLOSURE_INVALID" :options="collect([\App\Models\Ticket::CLOSURE_INVALID, \App\Models\Ticket::CLOSURE_DUPLICATE, \App\Models\Ticket::CLOSURE_OUT_OF_SCOPE, \App\Models\Ticket::CLOSURE_NO_RESPONSE])->map(fn ($closureType) => ['value' => $closureType, 'label' => \App\Models\Ticket::CLOSURE_LABELS[$closureType]])->all()" />
-                        <label for="closure-reason-{{ $ticket->id }}" class="text-sm font-semibold text-black">Details (optional)</label>
-                        <textarea id="closure-reason-{{ $ticket->id }}" name="closure_reason" rows="4" class="mt-2 w-full rounded-lg border border-input bg-muted px-3 py-2.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" placeholder="Reason of invalidity (optional)"></textarea>
+                        <x-picker name="closure_type" id="closure-type-review-{{ $ticket->id }}" label="Why can it not be acted on?" class="mt-2 mb-3" :selected="old('closure_type', \App\Models\Ticket::CLOSURE_INVALID)" :options="collect([\App\Models\Ticket::CLOSURE_INVALID, \App\Models\Ticket::CLOSURE_DUPLICATE, \App\Models\Ticket::CLOSURE_OUT_OF_SCOPE, \App\Models\Ticket::CLOSURE_NO_RESPONSE])->map(fn ($closureType) => ['value' => $closureType, 'label' => \App\Models\Ticket::CLOSURE_LABELS[$closureType]])->all()" />
+                        <label for="closure-reason-{{ $ticket->id }}" class="text-sm font-semibold text-black">Explanation for the student (required)</label>
+                        <textarea id="closure-reason-{{ $ticket->id }}" name="closure_reason" rows="4" x-bind:required="['invalid', 'duplicate', 'out_of_scope', 'no_response'].includes(closureType)" x-bind:minlength="['invalid', 'duplicate', 'out_of_scope', 'no_response'].includes(closureType) ? 10 : null" maxlength="1000" class="mt-2 w-full rounded-lg border border-input bg-muted px-3 py-2.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" placeholder="Explain why this ticket cannot be acted on (10–1,000 characters)">{{ old('closure_reason') }}</textarea>
+                        @error('closure_reason')<p class="mt-1 text-xs text-destructive">{{ $message }}</p>@enderror
                         <button type="submit" class="mt-3 w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Close Ticket</button>
                     </form>
                     </div>

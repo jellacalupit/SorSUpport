@@ -192,15 +192,15 @@ The following is the model-level transition map. The “actor/action rules” be
 | Reopen resolved ticket | SDS admin | Resolved | In Progress; clears resolution type/time and closure timestamp. |
 | Request further action | Submitting student | Resolved, within the configured response window | In Progress; clears resolution type/time, posts the student's reason, and notifies handler/SDS. |
 | Accept resolution | Submitting student | Resolved | Closed with `resolved_accepted` closure and closed time. |
-| Close | SDS admin | Any non-closed status in the workflow matrix | Closed with closure type/time and optional reason. Review queue actions have additional restrictions described below. |
+| Close | SDS admin | Any non-closed status in the workflow matrix | Closed with closure type/time. Invalid, duplicate, out-of-scope, and no-response closures require a 10–1,000 character student-facing explanation; resolved and informational closures do not. Review queue actions have additional restrictions described below. |
 | Withdraw | Submitting student | Submitted, Needs Clarification, Assigned, In Progress, Escalated, or Referred | Closed with `withdrawn` closure and optional reason. Not available once resolved. |
 
 Additional constraints:
 
 - A handler must be an SDS admin or recipient and match `current_handler_id` or `assigned_to`; the student must own the complaint.
 - A student can request further action through the end of the deadline (`resolved_at` plus configured calendar days). An expired request is denied.
-- In the admin review queue, `reject` only applies to awaiting-review tickets and classifies them invalid. Generic `close` is blocked for awaiting-review tickets; they use review actions instead.
-- For resolved tickets, admin close records `resolved` (SDS-confirmed). For other non-review tickets, closure type is one of invalid, duplicate, out-of-scope, no-response, or withdrawn. Admin closure reasons are optional and limited to 1,000 characters.
+- In the admin review queue, `reject` only applies to awaiting-review tickets and classifies them invalid. It accepts invalid, duplicate, out-of-scope, and no-response closure types, each requiring a 10–1,000 character student-facing explanation. Generic `close` is blocked for awaiting-review tickets; they use review actions instead.
+- For resolved tickets, admin close records `resolved` (SDS-confirmed), with no explanation required. For other non-review tickets, closure type is one of invalid, duplicate, out-of-scope, no-response, or withdrawn. Invalid, duplicate, out-of-scope, and no-response require a 10–1,000 character explanation; withdrawn is optional. Informational closure also does not require an explanation.
 - Recipients can only resolve, never close. The student accepts or SDS closes after resolution.
 - Resolution types are corrective action taken, explanation/information provided, settled between parties, committee decision, or no basis found after review.
 - An informational ticket may be retained by SDS and closed (`informational` closure), forwarded once to a recipient while remaining submitted, or forwarded and closed. The information-only recipient is told no reply/action is needed.
@@ -249,7 +249,7 @@ The message composer creates audience-aware content and safe subject/details for
 - Messages, further-action request, accepted resolution, withdrawal.
 - Waiting-ticket reminders and legacy daily-reminder type.
 
-Emails include an action URL for the student, recipient, or admin complaint page. Recipient wording varies by audience. Sensitive tickets use the public subject; handlers do not receive the sensitive subject in email details. Student emails can include the closure explanation, except for withdrawn tickets.
+Emails include an action URL for the student, recipient, or admin complaint page. Recipient wording varies by audience. Sensitive tickets use the public subject; handlers do not receive the sensitive subject in email details. Student emails include closure explanations for invalid, duplicate, out-of-scope, and no-response closures; closure reasons are not sent to handlers as student explanations.
 
 Delivery rules:
 

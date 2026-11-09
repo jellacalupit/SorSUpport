@@ -236,7 +236,7 @@
     @endif
 
     @if ($buttons->has('close'))
-        <form x-show="action === 'close'" x-cloak method="POST" action="{{ route('admin.tickets.close', $ticket) }}" class="surface p-4">
+        <form x-show="action === 'close'" x-cloak x-data="{ closureType: @js(old('closure_type', '')) }" x-on:picked="closureType = $event.detail" method="POST" action="{{ route('admin.tickets.close', $ticket) }}" class="surface p-4">
             @csrf
             @if ($ticket->status === Ticket::STATUS_RESOLVED)
                 <p class="{{ $panelTitle }}">Close this ticket?</p>
@@ -245,7 +245,9 @@
                 <p class="{{ $panelTitle }}">Close without a resolution</p>
                 <p class="{{ $panelHint }}">Use this only when the ticket cannot continue. The student is notified with the reason. This cannot be undone.</p>
                 <x-picker name="closure_type" required id="closure-type-{{ $ticket->id }}" label="Reason for closing" class="mt-2" placeholder="Why is it being closed?" :selected="old('closure_type', '')" :options="collect(Ticket::ADMIN_CLOSURE_TYPES)->map(fn ($value) => ['value' => $value, 'label' => Ticket::CLOSURE_LABELS[$value]])->all()" />
-                <textarea name="closure_reason" rows="2" maxlength="1000" class="{{ $input }}" placeholder="Closure details (optional)">{{ old('closure_reason') }}</textarea>
+                <label for="closure-reason-{{ $ticket->id }}" class="mt-2 text-xs font-semibold text-foreground">Explanation for the student <span x-text="['invalid', 'duplicate', 'out_of_scope', 'no_response'].includes(closureType) ? '(required)' : '(optional)'"></span></label>
+                <textarea id="closure-reason-{{ $ticket->id }}" name="closure_reason" rows="2" x-bind:required="['invalid', 'duplicate', 'out_of_scope', 'no_response'].includes(closureType)" x-bind:minlength="['invalid', 'duplicate', 'out_of_scope', 'no_response'].includes(closureType) ? 10 : null" maxlength="1000" class="{{ $input }}" placeholder="Required for invalid, duplicate, out-of-scope, or no-response closure (10–1,000 characters); optional for withdrawal">{{ old('closure_reason') }}</textarea>
+                @error('closure_reason')<p class="mt-1 text-xs text-destructive">{{ $message }}</p>@enderror
             @endif
             <div class="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" x-on:click="action = null" class="{{ $smallCancel }}">Cancel</button>

@@ -171,7 +171,7 @@ class AdminTicketReviewController extends Controller
         abort_unless($ticket->isAwaitingReview(), 404);
 
         $validated = $request->validate([
-            'closure_reason' => 'nullable|string|max:1000',
+            'closure_reason' => 'required|string|min:10|max:1000',
             'closure_type' => ['nullable', Rule::in([Ticket::CLOSURE_INVALID, Ticket::CLOSURE_DUPLICATE, Ticket::CLOSURE_OUT_OF_SCOPE, Ticket::CLOSURE_NO_RESPONSE])],
         ]);
 
@@ -594,8 +594,7 @@ class AdminTicketReviewController extends Controller
     }
 
     /**
-     * Close a ticket. A resolved ticket is simply confirmed; any other needs the reason it is
-     * being closed without a resolution.
+     * Confirm a resolved ticket or close it under an allowed closure type.
      */
     public function close(Request $request, Ticket $ticket): RedirectResponse
     {
@@ -605,11 +604,21 @@ class AdminTicketReviewController extends Controller
         if ($ticket->status === Ticket::STATUS_RESOLVED) {
             $this->workflow->close($ticket, Auth::user(), Ticket::CLOSURE_RESOLVED);
         } else {
+            $requiresClosureReason = in_array($request->input('closure_type'), [
+                Ticket::CLOSURE_INVALID,
+                Ticket::CLOSURE_DUPLICATE,
+                Ticket::CLOSURE_OUT_OF_SCOPE,
+                Ticket::CLOSURE_NO_RESPONSE,
+            ], true);
+
             $validated = $request->validate([
                 'closure_type' => ['required', Rule::in(Ticket::ADMIN_CLOSURE_TYPES)],
-                'closure_reason' => 'nullable|string|max:1000',
+                'closure_reason' => $requiresClosureReason
+                    ? 'required|string|min:10|max:1000'
+                    : 'nullable|string|max:1000',
             ], [
                 'closure_type.required' => 'Select why the ticket is being closed.',
+                'closure_reason.required' => 'Explain why the ticket is being closed.',
             ]);
 
             $this->workflow->close($ticket, Auth::user(), $validated['closure_type'], $validated['closure_reason'] ?? null);

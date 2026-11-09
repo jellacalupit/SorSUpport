@@ -217,6 +217,42 @@ class TicketEmailContentTest extends TestCase
         $this->assertStringContainsString('rate how your concern was handled', $this->email($resolved, EmailNotification::TYPE_COMPLAINT_CLOSED, $this->student)['text']);
     }
 
+    public function test_rejecting_a_ticket_emails_the_student_its_explanation(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_SUBMITTED);
+        $reason = 'This complaint is not a valid submission.';
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.reject', $ticket), [
+                'closure_type' => Ticket::CLOSURE_INVALID,
+                'closure_reason' => $reason,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('email_notifications', [
+            'ticket_id' => $ticket->id,
+            'recipient_email' => $this->student->email,
+            'type' => EmailNotification::TYPE_INVALID_CLOSURE,
+        ]);
+
+        AuditLog::create([
+            'ticket_id' => $ticket->id,
+            'performed_by' => $this->admin->id,
+            'action' => 'admin_private_note',
+            'details' => 'Staff-only note must not be sent.',
+        ]);
+
+        $email = $this->email($ticket->fresh(), EmailNotification::TYPE_INVALID_CLOSURE, $this->student);
+        $this->assertStringContainsString($reason, $email['text']);
+        $this->assertStringNotContainsString('Staff-only note must not be sent.', $email['text']);
+
+        $this->actingAs($this->student)
+            ->get(route('student.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertSee($reason)
+            ->assertDontSee('Staff-only note must not be sent.');
+    }
+
     public function test_a_referral_email_names_the_committee(): void
     {
         $ticket = $this->ticket(Ticket::STATUS_REFERRED, ['referred_to' => 'Student Disciplinary Board', 'referred_at' => now()]);

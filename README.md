@@ -14,6 +14,8 @@ For the detailed implementation guide—including role permissions, status rules
 | **Recipient** (college or office staff) | Acknowledges tickets assigned to them, talks with the student and records the resolution. |
 | **SDS Administrator** | Reviews new tickets, classifies, assigns, escalates or refers them, closes them, manages accounts and settings, and reads the analytics and audit trail. |
 
+When SDS closes a ticket as invalid, duplicate, out of scope, or no response, it must provide the student a written explanation of 10–1,000 characters. Explanations are optional for SDS-confirmed resolved, informational, and student-withdrawn closures.
+
 ## Features
 
 - **Ticket lifecycle**: Submitted → Needs Clarification → Assigned → In Progress → Escalated / Referred → Resolved → Closed. A single set of rules decides who may take each action from each status.
