@@ -165,6 +165,12 @@ class TicketEmailComposer
                 ['The student withdrew this ticket, so it is now closed. No further action is needed.'],
             ],
 
+            EmailNotification::TYPE_WITHDRAWAL_REQUESTED => [
+                "Withdrawal requested for {$reference}",
+                'The student requested withdrawal',
+                ['The student requested withdrawal after the ticket was referred. The ticket remains open; please review the request.'],
+            ],
+
             EmailNotification::TYPE_INVALID_CLOSURE => [
                 "Your ticket {$reference} was closed",
                 'Your ticket could not be acted on',

@@ -37,9 +37,10 @@
         'accept' => $role === 'student' && $can(TicketWorkflow::ACCEPT_RESOLUTION),
         'further' => $role === 'student' && $can(TicketWorkflow::REQUEST_FURTHER_ACTION),
         'withdraw' => $role === 'student' && $can(TicketWorkflow::WITHDRAW),
+        'request_withdrawal' => $role === 'student' && $can(TicketWorkflow::REQUEST_WITHDRAWAL),
     ])->filter();
 
-    $fields = ['clarification_message', 'resolution_type', 'resolution_message', 'referred_to', 'referral_note', 'outcome', 'closure_type', 'closure_reason', 'further_action_reason', 'withdraw_reason', 'status'];
+    $fields = ['clarification_message', 'resolution_type', 'resolution_message', 'referred_to', 'referral_note', 'outcome', 'closure_type', 'closure_reason', 'further_action_reason', 'withdraw_reason', 'withdrawal_request_reason', 'status'];
     $openPanel = match (true) {
         $errors->hasAny(['clarification_message']) => 'clarify',
         $errors->hasAny(['resolution_type', 'resolution_message']) => 'resolve',
@@ -48,6 +49,7 @@
         $errors->hasAny(['closure_type', 'closure_reason']) => 'close',
         $errors->has('further_action_reason') => 'further',
         $errors->has('withdraw_reason') => 'withdraw',
+        $errors->has('withdrawal_request_reason') => 'request_withdrawal',
         $errors->has('recipient_id') => 'escalate',
         default => null,
     };
@@ -157,6 +159,9 @@
         @endif
         @if ($buttons->has('withdraw'))
             <button type="button" x-on:click="action = 'withdraw'" class="h-10 w-full rounded-full border border-border bg-white px-3 text-center text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Withdraw Ticket</button>
+        @endif
+        @if ($buttons->has('request_withdrawal'))
+            <button type="button" x-on:click="action = 'request_withdrawal'" class="{{ $outlineButton }}">Request Withdrawal</button>
         @endif
     </div>
 
@@ -290,6 +295,20 @@
             <div class="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" x-on:click="action = null" class="{{ $smallCancel }}">Cancel</button>
                 <button type="submit" class="{{ $smallPrimary }}">Yes, withdraw</button>
+            </div>
+        </form>
+    @endif
+
+    @if ($buttons->has('request_withdrawal'))
+        <form x-show="action === 'request_withdrawal'" x-cloak method="POST" action="{{ route('student.complaints.request-withdrawal', $complaint) }}" class="surface p-4">
+            @csrf
+            <p class="{{ $panelTitle }}">Request withdrawal</p>
+            <p class="{{ $panelHint }}">Your concern was referred to a committee. Request withdrawal from SDS; the committee may continue its process.</p>
+            <textarea name="withdrawal_request_reason" rows="3" required maxlength="1000" class="{{ $input }}" placeholder="Why are you requesting withdrawal?">{{ old('withdrawal_request_reason') }}</textarea>
+            @error('withdrawal_request_reason')<p class="mt-1 text-xs text-destructive">{{ $message }}</p>@enderror
+            <div class="mt-3 grid grid-cols-2 gap-2">
+                <button type="button" x-on:click="action = null" class="{{ $smallCancel }}">Cancel</button>
+                <button type="submit" class="{{ $smallPrimary }}">Send Request</button>
             </div>
         </form>
     @endif

@@ -10,7 +10,7 @@ For the detailed implementation guide—including role permissions, status rules
 
 | Role | What they do |
 |---|---|
-| **Student** | Submits a ticket, with attachments, optionally hiding their identity. Follows its progress, talks with the handler, accepts the resolution or asks for further action, and rates how the concern was handled. |
+| **Student** | Submits a ticket, with attachments, optionally hiding their identity. Follows its progress, talks with the handler, accepts the resolution or asks for further action, and rates how the concern was handled. Can withdraw before referral; after referral, can ask SDS to withdraw without closing the ticket. |
 | **Recipient** (college or office staff) | Acknowledges tickets assigned to them, talks with the student and records the resolution. |
 | **SDS Administrator** | Reviews new tickets, classifies, assigns, escalates or refers them, closes them, manages accounts and settings, and reads the analytics and audit trail. |
 

@@ -25,7 +25,7 @@ All role pages require authentication, an active account, completion of required
 
 | Role | Main capabilities |
 |---|---|
-| `student` | Create and track own complaints; view own ticket and conversation; reply and attach files while the conversation is open; answer clarification requests; withdraw an unresolved ticket; accept a resolution or request further action; rate eligible closed tickets; manage notifications and profile photo. |
+| `student` | Create and track own complaints; view own ticket and conversation; reply and attach files while the conversation is open; answer clarification requests; withdraw an unresolved ticket before referral or request withdrawal from SDS after referral; accept a resolution or request further action; rate eligible closed tickets; manage notifications and profile photo. |
 | `recipient` | View tickets assigned to the recipient account and informational tickets forwarded to that recipient; acknowledge assigned work; exchange messages on assigned tickets; mark assigned tickets resolved; manage notifications and profile photo. Recipients cannot assign, escalate, refer, close, or reject tickets. |
 | `sds_admin` | Review all submissions; edit pre-classification category/suggested-recipient details; classify, assign, handle, request clarification, escalate, refer, record referral outcomes, reopen, reject, close, and retain/forward informational tickets; manage accounts, categories, escalation paths, units, reminder settings; view analytics and audit trail. |
 
@@ -195,12 +195,16 @@ The following is the model-level transition map. The “actor/action rules” be
 | Request further action | Submitting student | Resolved, within the configured response window | In Progress; clears resolution type/time, posts the student's reason, and notifies handler/SDS. |
 | Accept resolution | Submitting student | Resolved | Closed with `resolved_accepted` closure and closed time. |
 | Close | SDS admin | Any non-closed status in the workflow matrix | Closed with closure type/time. Invalid, duplicate, out-of-scope, and no-response closures require a 10–1,000 character student-facing explanation; resolved and informational closures do not. Review queue actions have additional restrictions described below. |
-| Withdraw | Submitting student | Submitted, Needs Clarification, Assigned, In Progress, Escalated, or Referred | Closed with `withdrawn` closure and optional reason. Not available once resolved. |
+| Withdraw | Submitting student | Submitted, Needs Clarification, Assigned, In Progress, or Escalated | Closed with `withdrawn` closure and optional reason. Not available after referral or once resolved. |
+| Request withdrawal | Submitting student | Referred | Remains Referred; requires a reason (maximum 1,000 characters), posts it to the conversation, records `withdrawal_requested`, and notifies SDS. |
 
 Additional constraints:
 
 - A handler must be an SDS admin or recipient and match `current_handler_id` or `assigned_to`; the student must own the complaint.
 - A student can request further action through the end of the deadline (`resolved_at` plus configured calendar days). An expired request is denied.
+- A student cannot withdraw a referred ticket directly. They can request withdrawal with a reason; the ticket remains Referred while SDS considers the request.
+- For gender-based sexual harassment, withdrawing at any stage does not stop CODI from continuing its investigation (Handbook p. 58). For student discipline, the University may initiate proceedings even if the aggrieved student does not want to file (Handbook p. 46). SDS may record the referral outcome or close the ticket as withdrawn using its existing actions; no automatic closure occurs.
+- Withdrawal-request notifications to SDS do not identify the student or include the reason in the notification. The reason is posted in the ticket conversation and uses the existing hidden-identity display rules.
 - In the admin review queue, `reject` only applies to awaiting-review tickets and classifies them invalid. It accepts invalid, duplicate, out-of-scope, and no-response closure types, each requiring a 10–1,000 character student-facing explanation. Generic `close` is blocked for awaiting-review tickets; they use review actions instead.
 - For resolved tickets, admin close records `resolved` (SDS-confirmed), with no explanation required. For other non-review tickets, closure type is one of invalid, duplicate, out-of-scope, no-response, or withdrawn. Invalid, duplicate, out-of-scope, and no-response require a 10–1,000 character explanation; withdrawn is optional. Informational closure also does not require an explanation.
 - Recipients can only resolve, never close. The student accepts or SDS closes after resolution.

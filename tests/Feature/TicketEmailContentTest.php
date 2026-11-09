@@ -119,6 +119,7 @@ class TicketEmailContentTest extends TestCase
             [EmailNotification::TYPE_FURTHER_ACTION_REQUESTED, $this->handler, "Further action requested on {$reference}", 'in progress again'],
             [EmailNotification::TYPE_RESOLUTION_ACCEPTED, $this->handler, "Resolution accepted for {$reference}", 'accepted the resolution'],
             [EmailNotification::TYPE_WITHDRAWN, $this->admin, "Ticket {$reference} was withdrawn", 'withdrew this ticket'],
+            [EmailNotification::TYPE_WITHDRAWAL_REQUESTED, $this->admin, "Withdrawal requested for {$reference}", 'please review the request'],
             [EmailNotification::TYPE_INVALID_CLOSURE, $this->student, "Your ticket {$reference} was closed", 'could not be acted on'],
             [EmailNotification::TYPE_COMPLAINT_CLOSED, $this->student, "Your ticket {$reference} is closed", 'has been closed'],
         ];

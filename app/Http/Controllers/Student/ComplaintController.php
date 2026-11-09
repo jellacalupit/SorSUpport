@@ -539,6 +539,27 @@ class ComplaintController extends Controller
     }
 
     /**
+     * Ask SDS to withdraw a ticket that has already been referred.
+     */
+    public function requestWithdrawal(Request $request, Complaint $complaint, TicketWorkflow $workflow): RedirectResponse
+    {
+        $ticket = $this->ownTicket($complaint);
+
+        $workflow->authorize(Auth::user(), $ticket, TicketWorkflow::REQUEST_WITHDRAWAL);
+
+        $validated = $request->validate([
+            'withdrawal_request_reason' => 'required|string|max:1000',
+        ], [
+            'withdrawal_request_reason.required' => 'Tell SDS why you are requesting withdrawal.',
+        ]);
+
+        $workflow->requestWithdrawal($ticket, Auth::user(), $validated['withdrawal_request_reason']);
+
+        return redirect()->route('student.complaints.show', $complaint)
+            ->with('success', 'Your request was sent to SDS. Because your concern was referred to a committee, it may continue even if you withdraw.');
+    }
+
+    /**
      * Rate how a resolved and closed ticket was handled. One rating per ticket.
      */
     public function rate(Request $request, Complaint $complaint): RedirectResponse

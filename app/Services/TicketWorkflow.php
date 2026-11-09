@@ -45,6 +45,8 @@ class TicketWorkflow
 
     public const WITHDRAW = 'withdraw';
 
+    public const REQUEST_WITHDRAWAL = 'request_withdrawal';
+
     public const BY_ADMIN = 'admin';
 
     public const BY_HANDLER = 'handler';
@@ -124,8 +126,13 @@ class TicketWorkflow
         ],
         self::WITHDRAW => [
             'by' => self::BY_STUDENT,
-            'from' => [Ticket::STATUS_SUBMITTED, Ticket::STATUS_NEEDS_CLARIFICATION, Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED, Ticket::STATUS_REFERRED],
+            'from' => [Ticket::STATUS_SUBMITTED, Ticket::STATUS_NEEDS_CLARIFICATION, Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED],
             'to' => Ticket::STATUS_CLOSED,
+        ],
+        self::REQUEST_WITHDRAWAL => [
+            'by' => self::BY_STUDENT,
+            'from' => [Ticket::STATUS_REFERRED],
+            'to' => Ticket::STATUS_REFERRED,
         ],
     ];
 
@@ -507,6 +514,20 @@ class TicketWorkflow
 
             AuditLog::log($ticket->id, 'ticket_withdrawn', $student->id, trim('The student withdrew the ticket. ' . ($reason ?? '')));
             $this->notify($ticket, [$this->handler($ticket), ...$this->admins()], EmailNotification::TYPE_WITHDRAWN);
+        });
+    }
+
+    /**
+     * The student asks SDS to withdraw a ticket after it has been referred.
+     */
+    public function requestWithdrawal(Ticket $ticket, User $student, string $reason): void
+    {
+        $this->authorize($student, $ticket, self::REQUEST_WITHDRAWAL);
+
+        DB::transaction(function () use ($ticket, $student, $reason): void {
+            $this->postMessage($ticket, $student, $reason);
+            AuditLog::log($ticket->id, 'withdrawal_requested', $student->id, 'The student requested withdrawal after referral.');
+            $this->notify($ticket, $this->admins(), EmailNotification::TYPE_WITHDRAWAL_REQUESTED);
         });
     }
 

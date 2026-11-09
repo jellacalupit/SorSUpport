@@ -4,11 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\Complaint;
 use App\Models\ComplaintCategory;
+use App\Models\EmailNotification;
 use App\Models\Recipient;
 use App\Models\Student;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\TicketWorkflow;
+use App\Services\TicketEmailComposer;
+use App\Services\TicketUnreadService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -496,7 +499,7 @@ class TicketWorkflowTest extends TestCase
 
     public function test_the_student_can_withdraw_before_resolution_only(): void
     {
-        foreach ([Ticket::STATUS_SUBMITTED, Ticket::STATUS_NEEDS_CLARIFICATION, Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED, Ticket::STATUS_REFERRED] as $status) {
+        foreach ([Ticket::STATUS_SUBMITTED, Ticket::STATUS_NEEDS_CLARIFICATION, Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED] as $status) {
             $ticket = $this->ticket($status);
 
             $this->actingAs($this->otherStudent)->post(route('student.complaints.withdraw', $ticket->complaint))->assertForbidden();
@@ -512,10 +515,95 @@ class TicketWorkflowTest extends TestCase
             $this->assertDatabaseHas('audit_logs', ['ticket_id' => $ticket->id, 'action' => 'ticket_withdrawn']);
         }
 
+        $referred = $this->ticket(Ticket::STATUS_REFERRED);
+        $this->actingAs($this->student)
+            ->post(route('student.complaints.withdraw', $referred->complaint))
+            ->assertForbidden();
+        $this->assertSame(Ticket::STATUS_REFERRED, $referred->fresh()->status);
+
         foreach ([Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED] as $status) {
             $ticket = $this->ticket($status);
 
             $this->actingAs($this->student)->post(route('student.complaints.withdraw', $ticket->complaint))->assertForbidden();
+            $this->assertSame($status, $ticket->fresh()->status);
+        }
+    }
+
+    public function test_a_referred_student_can_only_request_withdrawal_with_a_reason_and_sds_is_notified(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_REFERRED);
+        $ticket->complaint->update(['is_anonymous' => true]);
+        $ticket->complaint->category->update(['is_sensitive' => true]);
+        $reason = 'I no longer want to continue this concern.';
+        $workflow = app(TicketWorkflow::class);
+
+        $this->assertContains(TicketWorkflow::REQUEST_WITHDRAWAL, $workflow->availableActions($this->student, $ticket));
+        $this->assertNotContains(TicketWorkflow::WITHDRAW, $workflow->availableActions($this->student, $ticket));
+
+        $this->actingAs($this->student)
+            ->post(route('student.complaints.request-withdrawal', $ticket->complaint), [])
+            ->assertSessionHasErrors('withdrawal_request_reason');
+
+        $this->actingAs($this->student)
+            ->post(route('student.complaints.request-withdrawal', $ticket->complaint), ['withdrawal_request_reason' => $reason])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', 'Your request was sent to SDS. Because your concern was referred to a committee, it may continue even if you withdraw.');
+
+        $ticket->refresh();
+        $this->assertSame(Ticket::STATUS_REFERRED, $ticket->status);
+        $this->assertDatabaseHas('thread_messages', [
+            'thread_id' => $ticket->thread->id,
+            'sender_id' => $this->student->id,
+            'content' => $reason,
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'ticket_id' => $ticket->id,
+            'performed_by' => $this->student->id,
+            'action' => 'withdrawal_requested',
+            'details' => 'The student requested withdrawal after referral.',
+        ]);
+        $this->assertSame(1, app(TicketUnreadService::class)->unreadCountForTicket($this->admin, $ticket));
+        $notification = EmailNotification::query()->where([
+            'ticket_id' => $ticket->id,
+            'recipient_email' => $this->admin->email,
+            'type' => EmailNotification::TYPE_WITHDRAWAL_REQUESTED,
+            'status' => EmailNotification::STATUS_PENDING,
+        ])->firstOrFail();
+        $this->assertDatabaseMissing('email_notifications', [
+            'ticket_id' => $ticket->id,
+            'recipient_email' => $this->student->email,
+            'type' => EmailNotification::TYPE_WITHDRAWAL_REQUESTED,
+        ]);
+        $adminEmail = app(TicketEmailComposer::class)->compose($notification);
+        $adminEmailText = implode(' ', [
+            $adminEmail['subject'],
+            $adminEmail['heading'],
+            ...$adminEmail['lines'],
+            ...array_values($adminEmail['details']),
+        ]);
+        $this->assertStringNotContainsString($this->student->name, $adminEmailText);
+        $this->assertStringNotContainsString($this->student->email, $adminEmailText);
+
+        $this->actingAs($this->student)
+            ->get(route('student.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertSee('Request Withdrawal')
+            ->assertDontSee('Withdraw Ticket');
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.outcome', $ticket), ['outcome' => 'The committee completed its review.'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame(Ticket::STATUS_RESOLVED, $ticket->fresh()->status);
+    }
+
+    public function test_a_non_referred_student_cannot_request_withdrawal(): void
+    {
+        foreach ([Ticket::STATUS_SUBMITTED, Ticket::STATUS_NEEDS_CLARIFICATION, Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED, Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED] as $status) {
+            $ticket = $this->ticket($status);
+
+            $this->actingAs($this->student)
+                ->post(route('student.complaints.request-withdrawal', $ticket->complaint), ['withdrawal_request_reason' => 'Please withdraw my concern.'])
+                ->assertForbidden();
             $this->assertSame($status, $ticket->fresh()->status);
         }
     }
