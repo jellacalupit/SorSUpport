@@ -18,17 +18,6 @@
         ];
     @endphp
 
-    <section class="mb-3 overflow-hidden rounded-xl border border-border bg-white shadow-sm">
-        <div class="flex items-center justify-between gap-3 border-b border-border bg-muted/50 px-4 py-2.5">
-            <div>
-                <h2 class="text-sm font-semibold text-foreground">Needs attention <span class="ml-1 rounded-full bg-primary-soft px-2 py-0.5 text-xs text-primary">{{ $needsAttention->count() }}</span></h2>
-                <p class="mt-0.5 text-xs text-muted-foreground">Informational only; SDS decides what action to take.</p>
-            </div>
-            <a data-admin-page-nav href="{{ route('admin.tickets.needs-attention') }}" class="shrink-0 text-xs font-medium text-primary hover:underline">View All</a>
-        </div>
-        @include('admin.tickets.partials.needs-attention-list', ['tickets' => $needsAttention->take(10)])
-    </section>
-
     {{-- Phones and tablets --}}
     <div class="lg:hidden">
     <div class="grid min-w-0 gap-3">
