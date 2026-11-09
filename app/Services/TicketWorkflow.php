@@ -341,6 +341,7 @@ class TicketWorkflow
             $ticket->update([
                 'status' => Ticket::STATUS_REFERRED,
                 'referred_to' => $referredTo,
+                'is_codi_referral' => $referredTo === Ticket::REFERRAL_DESTINATION_CODI,
                 'referred_at' => now(),
             ]);
 

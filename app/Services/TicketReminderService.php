@@ -11,8 +11,9 @@ use Illuminate\Support\Collection;
 
 /**
  * Finds tickets that have waited too long at one step and emails whoever has to act next:
- * the SDS Office for a ticket not yet reviewed, referred to a committee, or past the student's
- * days to respond; the handler for one not yet acknowledged or with no action recorded.
+ * the SDS Office for a ticket not yet reviewed, a CODI referral (or another referral when its
+ * optional system-default reminder is enabled), or past the student's days to respond; the
+ * handler for one not yet acknowledged or with no action recorded.
  * Waiting is counted in working days, and a reminder repeats until someone acts.
  */
 class TicketReminderService
@@ -24,6 +25,8 @@ class TicketReminderService
         'unacknowledged_days',
         'idle_days',
         'referral_days',
+        'generic_referral_enabled',
+        'generic_referral_days',
         'student_response_days',
     ];
 
@@ -39,7 +42,7 @@ class TicketReminderService
     /**
      * The reminder settings: what the SDS admin saved in System Settings, otherwise the defaults.
      *
-     * @return array{enabled: bool, unreviewed_days: int, sensitive_unreviewed_days: int, unacknowledged_days: int, idle_days: int, referral_days: int, student_response_days: int}
+     * @return array{enabled: bool, unreviewed_days: int, sensitive_unreviewed_days: int, unacknowledged_days: int, idle_days: int, referral_days: int, generic_referral_enabled: bool, generic_referral_days: int, student_response_days: int}
      */
     public function settings(): array
     {
@@ -51,7 +54,9 @@ class TicketReminderService
 
         foreach (self::SETTINGS as $key) {
             $value = $saved["reminders.{$key}"] ?? config("tickets.reminders.{$key}");
-            $settings[$key] = $key === 'enabled' ? (bool) $value : max(1, (int) $value);
+            $settings[$key] = in_array($key, ['enabled', 'generic_referral_enabled'], true)
+                ? (bool) $value
+                : max(1, (int) $value);
         }
 
         return $settings;
@@ -61,7 +66,12 @@ class TicketReminderService
     {
         foreach (self::SETTINGS as $key) {
             if (array_key_exists($key, $settings)) {
-                SystemSetting::put("reminders.{$key}", $key === 'enabled' ? (int) (bool) $settings[$key] : (int) $settings[$key]);
+                SystemSetting::put(
+                    "reminders.{$key}",
+                    in_array($key, ['enabled', 'generic_referral_enabled'], true)
+                        ? (int) (bool) $settings[$key]
+                        : (int) $settings[$key]
+                );
             }
         }
     }
@@ -119,7 +129,9 @@ class TicketReminderService
                 : $settings['unreviewed_days'],
             Ticket::STATUS_ASSIGNED => $settings['unacknowledged_days'],
             Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED => $settings['idle_days'],
-            Ticket::STATUS_REFERRED => $settings['referral_days'],
+            Ticket::STATUS_REFERRED => $ticket->is_codi_referral
+                ? $settings['referral_days']
+                : ($settings['generic_referral_enabled'] ? $settings['generic_referral_days'] : null),
             default => null,
         };
     }

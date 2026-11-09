@@ -28,6 +28,8 @@ class Ticket extends Model
 
     public const STATUS_CLOSED = 'closed';
 
+    public const REFERRAL_DESTINATION_CODI = 'Committee on Decorum and Investigation';
+
     /**
      * Every status in the order a ticket normally moves through them, with its display label.
      */
@@ -147,6 +149,7 @@ class Ticket extends Model
         'closure_type',
         'resolution_type',
         'referred_to',
+        'is_codi_referral',
         'referred_at',
         'clarification_requested_at',
         'acknowledged_at',
@@ -172,6 +175,7 @@ class Ticket extends Model
             'clarification_requested_at' => 'datetime',
             'rated_at' => 'datetime',
             'satisfaction_rating' => 'integer',
+            'is_codi_referral' => 'boolean',
         ];
     }
 

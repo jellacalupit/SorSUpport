@@ -231,6 +231,8 @@ class DocumentedTestCasesTest extends TestCase
             'unacknowledged_days' => 2,
             'idle_days' => 5,
             'referral_days' => 10,
+            'generic_referral_enabled' => false,
+            'generic_referral_days' => 10,
             'student_response_days' => 15,
         ], app(TicketReminderService::class)->settings());
 
@@ -246,7 +248,7 @@ class DocumentedTestCasesTest extends TestCase
         $this->actingAs($this->admin)
             ->put(route('admin.settings.reminders.update'), [
                 'enabled' => '1', 'unreviewed_days' => 31, 'sensitive_unreviewed_days' => 1, 'unacknowledged_days' => 2,
-                'idle_days' => 5, 'referral_days' => 10, 'student_response_days' => 15,
+                'idle_days' => 5, 'referral_days' => 10, 'generic_referral_enabled' => '0', 'generic_referral_days' => 10, 'student_response_days' => 15,
             ])
             ->assertSessionHasErrors(['unreviewed_days' => 'Enter at most 30 days.']);
     }

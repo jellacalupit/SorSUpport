@@ -694,6 +694,7 @@ class TicketWorkflowTest extends TestCase
         $ticket->refresh();
         $this->assertSame(Ticket::STATUS_REFERRED, $ticket->status);
         $this->assertSame('Student Disciplinary Board', $ticket->referred_to);
+        $this->assertFalse($ticket->is_codi_referral);
         $this->assertNotNull($ticket->referred_at);
         $this->assertDatabaseHas('audit_logs', ['ticket_id' => $ticket->id, 'action' => 'ticket_referred']);
         $this->assertDatabaseHas('email_notifications', ['ticket_id' => $ticket->id, 'type' => 'referred', 'recipient_email' => $this->student->email]);
@@ -711,6 +712,15 @@ class TicketWorkflowTest extends TestCase
             ->assertOk()
             ->assertSee('Referred')
             ->assertSee('Student Disciplinary Board');
+
+        $codiTicket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.refer', $codiTicket), [
+                'referred_to' => Ticket::REFERRAL_DESTINATION_CODI,
+                'referral_note' => 'Refer this harassment complaint to CODI.',
+            ])
+            ->assertSessionHasNoErrors();
+        $this->assertTrue($codiTicket->fresh()->is_codi_referral);
 
         $this->actingAs($this->admin)
             ->post(route('admin.tickets.outcome', $ticket), [])

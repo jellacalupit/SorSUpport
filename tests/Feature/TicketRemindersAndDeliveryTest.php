@@ -186,12 +186,50 @@ class TicketRemindersAndDeliveryTest extends TestCase
     {
         $admin = $this->admin();
         $handler = User::factory()->create(['role' => User::ROLE_RECIPIENT]);
-        $late = $this->at('2026-09-29 09:00', fn () => $this->ticket(['status' => Ticket::STATUS_REFERRED, 'referred_to' => 'Committee on Decorum and Investigation', 'current_handler_id' => $handler->id]));
+        $late = $this->at('2026-09-29 09:00', fn () => $this->ticket([
+            'status' => Ticket::STATUS_REFERRED,
+            'referred_to' => Ticket::REFERRAL_DESTINATION_CODI,
+            'is_codi_referral' => true,
+            'current_handler_id' => $handler->id,
+        ]));
         $this->at('2026-10-01 09:00', fn () => $this->ticket(['status' => Ticket::STATUS_REFERRED]));
 
         $this->assertSame(1, app(TicketReminderService::class)->queueReminders());
         $this->assertDatabaseHas('email_notifications', ['ticket_id' => $late->id, 'recipient_email' => $admin->email]);
         $this->assertDatabaseMissing('email_notifications', ['recipient_email' => $handler->email]);
+    }
+
+    public function test_a_non_codi_referral_does_not_get_a_reminder_after_ten_working_days_by_default(): void
+    {
+        $this->admin();
+        $ticket = $this->at('2026-09-29 09:00', fn () => $this->ticket([
+            'status' => Ticket::STATUS_REFERRED,
+            'referred_to' => 'Campus Disciplinary Committee',
+        ]));
+
+        $this->assertFalse(app(TicketReminderService::class)->settings()['generic_referral_enabled']);
+        $this->assertSame(0, app(TicketReminderService::class)->queueReminders());
+        $this->assertDatabaseMissing('email_notifications', ['ticket_id' => $ticket->id, 'type' => EmailNotification::TYPE_WAITING_REMINDER]);
+    }
+
+    public function test_the_generic_referral_reminder_can_be_enabled_for_non_codi_referrals(): void
+    {
+        $admin = $this->admin();
+        $ticket = $this->at('2026-09-29 09:00', fn () => $this->ticket([
+            'status' => Ticket::STATUS_REFERRED,
+            'referred_to' => 'Campus Disciplinary Committee',
+        ]));
+        $service = app(TicketReminderService::class);
+
+        $this->assertSame(0, $service->queueReminders());
+        $service->saveSettings(['generic_referral_enabled' => true, 'generic_referral_days' => 10]);
+
+        $this->assertSame(1, $service->queueReminders());
+        $this->assertDatabaseHas('email_notifications', [
+            'ticket_id' => $ticket->id,
+            'recipient_email' => $admin->email,
+            'type' => EmailNotification::TYPE_WAITING_REMINDER,
+        ]);
     }
 
     public function test_the_sds_office_is_told_once_when_the_student_does_not_respond(): void
@@ -275,7 +313,9 @@ class TicketRemindersAndDeliveryTest extends TestCase
             ->assertOk()
             ->assertSee('Reminders for waiting tickets')
             ->assertSee('System default, derived from the CODI 24-hour notice timeline (Handbook p. 58). Adjustable. Not a handbook deadline for SDS.')
-            ->assertSee('System default, based on the CODI 10-working-day period (pp. 57 to 58). Applies to CODI referrals only.')
+            ->assertSee('10-working-day period stated for CODI referrals only (Handbook pp. 57 to 58).')
+            ->assertSee('Generic referral reminder')
+            ->assertSee('System default, not a handbook deadline. Off by default; applies to referrals other than CODI.')
             ->assertSee('This response period is a system default, not a handbook deadline, and can be adjusted by the SDS admin.');
 
         $this->actingAs($admin)
@@ -286,12 +326,15 @@ class TicketRemindersAndDeliveryTest extends TestCase
                 'unacknowledged_days' => 2,
                 'idle_days' => 5,
                 'referral_days' => 10,
+                'generic_referral_enabled' => '1',
+                'generic_referral_days' => 10,
                 'student_response_days' => 15,
             ])
             ->assertRedirect(route('admin.settings', ['settings_tab' => 'reminders']))
             ->assertSessionHasNoErrors();
 
         $this->assertSame(4, app(TicketReminderService::class)->settings()['unreviewed_days']);
+        $this->assertTrue(app(TicketReminderService::class)->settings()['generic_referral_enabled']);
         $this->assertSame(0, app(TicketReminderService::class)->queueReminders());
         $this->assertDatabaseHas('audit_logs', ['action' => 'reminder_settings_updated']);
     }
@@ -306,9 +349,28 @@ class TicketRemindersAndDeliveryTest extends TestCase
                 'unacknowledged_days' => 2,
                 'idle_days' => 5,
                 'referral_days' => 10,
+                'generic_referral_enabled' => '0',
+                'generic_referral_days' => 10,
                 'student_response_days' => 15,
             ])
             ->assertSessionHasErrors('unreviewed_days');
+    }
+
+    public function test_generic_referral_days_keep_the_one_to_thirty_day_validation(): void
+    {
+        $this->actingAs($this->admin())
+            ->put(route('admin.settings.reminders.update'), [
+                'enabled' => '1',
+                'unreviewed_days' => 2,
+                'sensitive_unreviewed_days' => 1,
+                'unacknowledged_days' => 2,
+                'idle_days' => 5,
+                'referral_days' => 10,
+                'generic_referral_enabled' => '1',
+                'generic_referral_days' => 31,
+                'student_response_days' => 15,
+            ])
+            ->assertSessionHasErrors('generic_referral_days');
     }
 
     public function test_the_students_days_to_respond_can_be_changed(): void

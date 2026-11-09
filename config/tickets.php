@@ -29,9 +29,12 @@ return [
         // In progress or escalated with no action recorded: the handler is reminded.
         'idle_days' => 5,
 
-        // System default based on the CODI 10-working-day period (Handbook pp. 57 to 58).
-        // Applies to CODI referrals only.
+        // The handbook's 10-working-day period applies only to CODI referrals (pp. 57 to 58).
         'referral_days' => 10,
+
+        // Generic referral reminders are a system default, not a handbook deadline.
+        'generic_referral_enabled' => false,
+        'generic_referral_days' => 10,
 
         // System default for the student's response period after resolution, adjustable by the
         // SDS admin in System Settings.

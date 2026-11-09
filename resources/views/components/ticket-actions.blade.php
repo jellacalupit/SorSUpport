@@ -206,7 +206,7 @@
             {{-- The committees the Student Handbook names; any other is typed in. --}}
             <div x-data="{ committee: @js(old('referred_to', '')) }" x-on:picked="committee = $event.detail">
                 <x-picker name="referred_to" required id="referred-to-{{ $ticket->id }}" label="Referred to" class="mt-2" placeholder="Select the committee or board" :selected="old('referred_to', '')" :options="[
-                    ['value' => 'Committee on Decorum and Investigation', 'label' => 'Committee on Decorum and Investigation', 'detail' => 'Sexual harassment and gender-based cases'],
+                    ['value' => Ticket::REFERRAL_DESTINATION_CODI, 'label' => Ticket::REFERRAL_DESTINATION_CODI, 'detail' => 'Sexual harassment and gender-based cases'],
                     ['value' => 'Campus Disciplinary Committee', 'label' => 'Campus Disciplinary Committee', 'detail' => 'Student discipline cases on this campus'],
                     ['value' => 'University Investigation and Disciplinary Committee', 'label' => 'University Investigation and Disciplinary Committee', 'detail' => 'Appeals and university-level cases'],
                     ['value' => 'other', 'label' => 'Other committee or board', 'detail' => 'Type its name below'],

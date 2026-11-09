@@ -517,7 +517,7 @@
                 ['name' => 'sensitive_unreviewed_days', 'label' => 'Sensitive, not yet reviewed', 'who' => 'SDS Office', 'hint' => 'System default, derived from the CODI 24-hour notice timeline (Handbook p. 58). Adjustable. Not a handbook deadline for SDS.'],
                 ['name' => 'unacknowledged_days', 'label' => 'Not yet acknowledged', 'who' => 'Assigned handler', 'hint' => 'Assigned, but the handler has not acknowledged it.'],
                 ['name' => 'idle_days', 'label' => 'No action recorded', 'who' => 'Assigned handler', 'hint' => 'In progress or escalated, with no reply or update.'],
-                ['name' => 'referral_days', 'label' => 'Referred, no outcome', 'who' => 'SDS Office', 'hint' => 'System default, based on the CODI 10-working-day period (pp. 57 to 58). Applies to CODI referrals only.'],
+                ['name' => 'referral_days', 'label' => 'CODI referral, no outcome', 'who' => 'SDS Office', 'hint' => '10-working-day period stated for CODI referrals only (Handbook pp. 57 to 58).'],
             ];
         @endphp
         <div x-cloak x-data="{ remindersOn: @js((bool) old('enabled', $reminderSettings['enabled'])) }" x-bind:class="settingsTab === 'reminders' ? 'opacity-100' : 'pointer-events-none opacity-0'" class="col-start-1 row-start-1 transition-opacity duration-150 ease-out">
@@ -554,6 +554,24 @@
                             </li>
                         @endforeach
                     </ul>
+                </div>
+
+                <div class="grid gap-2 rounded-lg border border-border px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">
+                    <div class="min-w-0">
+                        <label for="reminder-generic_referral_days" class="text-sm font-semibold text-foreground">Generic referral reminder</label>
+                        <p class="text-xs text-muted-foreground">System default, not a handbook deadline. Off by default; applies to referrals other than CODI. <span class="font-medium text-foreground">Reminds: SDS Office.</span></p>
+                        @error('generic_referral_enabled')<p class="mt-1 text-xs text-destructive">{{ $message }}</p>@enderror
+                        @error('generic_referral_days')<p class="mt-1 text-xs text-destructive">{{ $message }}</p>@enderror
+                        <label class="mt-2 inline-flex items-center gap-2 text-xs text-muted-foreground">
+                            <input type="hidden" name="generic_referral_enabled" value="0">
+                            <input type="checkbox" name="generic_referral_enabled" value="1" @checked(old('generic_referral_enabled', $reminderSettings['generic_referral_enabled'])) class="h-4 w-4 rounded accent-red-800">
+                            Enable generic referral reminder
+                        </label>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input id="reminder-generic_referral_days" name="generic_referral_days" type="number" min="1" max="30" required value="{{ old('generic_referral_days', $reminderSettings['generic_referral_days']) }}" class="h-8 w-20 rounded-md border border-input bg-white px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring">
+                        <span class="w-22 text-xs text-muted-foreground">working days</span>
+                    </div>
                 </div>
 
                 <div class="grid gap-2 rounded-lg border border-border px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">

@@ -38,7 +38,8 @@ The system emails whoever has to act next on a ticket that has waited too long w
 | The same, in a sensitive category | SDS Office | 1 working day | System default, derived from the CODI 24-hour notice timeline (Handbook p. 58). Adjustable. Not a handbook deadline for SDS. |
 | Assigned, not yet acknowledged | Assigned handler | 2 working days | System default |
 | In progress or escalated, no action recorded | Assigned handler | 5 working days | System default |
-| Referred to a committee, no outcome recorded | SDS Office | 10 working days | System default, based on the CODI 10-working-day period (pp. 57 to 58). Applies to CODI referrals only. |
+| Referred to CODI, no outcome recorded | SDS Office | 10 working days | CODI's decision period (Handbook pp. 57–58) |
+| Referred to another committee, no outcome recorded | SDS Office | Off by default | System default, not a handbook deadline; the SDS admin can enable and adjust it |
 | Resolved, student did not respond | SDS Office, once | 15 days | System default |
 
 A reminder repeats every that many working days until someone acts, and any action on the ticket restarts the count. Reminders never change a ticket; escalating, reassigning and closing stay the SDS admin's decision. The SDS admin can change the waiting days, or turn reminders off, under **System Settings → Reminders**. The starting values are in [config/tickets.php](config/tickets.php).

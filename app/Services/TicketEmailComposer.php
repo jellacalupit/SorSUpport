@@ -239,7 +239,9 @@ class TicketEmailComposer
                 "Follow up: no outcome recorded for {$reference} after {$days}",
                 "A referred ticket has waited {$days} for its outcome",
                 [
-                    'This ticket was referred to ' . ($ticket?->referred_to ?: 'a committee') . " and no outcome has been recorded for {$days}. System default, based on the CODI 10-working-day period (pp. 57 to 58). Applies to CODI referrals only.",
+                    'This ticket was referred to ' . ($ticket?->referred_to ?: 'a committee') . " and no outcome has been recorded for {$days}. " . ($ticket?->is_codi_referral
+                        ? 'System default, based on the CODI 10-working-day period (pp. 57 to 58). Applies to CODI referrals only.'
+                        : 'System default, not a handbook deadline.'),
                     'Please follow up with the committee, and record the outcome on the ticket once it is decided so the student is informed.',
                 ],
             ],

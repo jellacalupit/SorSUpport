@@ -147,11 +147,19 @@ class TicketEmailContentTest extends TestCase
         $this->assertStringContainsString('System default, derived from the CODI 24-hour notice timeline (Handbook p. 58). Adjustable. Not a handbook deadline for SDS.', $sensitiveEmail['text']);
         $this->assertStringNotContainsString('requires action within 24 hours', $sensitiveEmail['text']);
 
-        $referred = $this->ticket(Ticket::STATUS_REFERRED, ['referred_to' => 'Committee on Decorum and Investigation']);
+        $referred = $this->ticket(Ticket::STATUS_REFERRED, [
+            'referred_to' => Ticket::REFERRAL_DESTINATION_CODI,
+            'is_codi_referral' => true,
+        ]);
         $referredEmail = $this->email($referred, EmailNotification::TYPE_WAITING_REMINDER, $this->admin);
 
         $this->assertStringContainsString('System default, based on the CODI 10-working-day period (pp. 57 to 58). Applies to CODI referrals only.', $referredEmail['text']);
         $this->assertStringNotContainsString('The Student Handbook gives the Committee', $referredEmail['text']);
+
+        $otherReferral = $this->ticket(Ticket::STATUS_REFERRED, ['referred_to' => 'Campus Disciplinary Committee']);
+        $otherReferralEmail = $this->email($otherReferral, EmailNotification::TYPE_WAITING_REMINDER, $this->admin);
+        $this->assertStringContainsString('System default, not a handbook deadline.', $otherReferralEmail['text']);
+        $this->assertStringNotContainsString('CODI 10-working-day period', $otherReferralEmail['text']);
     }
 
     public function test_a_status_update_tells_the_student_what_the_status_means(): void

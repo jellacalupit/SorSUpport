@@ -144,6 +144,8 @@ Jurisdiction is `sds` or `recipient`. Classification does not itself assign a re
 
 Before classification, an administrator can correct the category and suggested recipient. An initial recipient assignment must be configured for that category through its assigned recipient, suggested recipients, escalation hierarchy, or the student's suggested recipient.
 
+Referral destinations are stored on `Ticket.referred_to` as text. Tickets also store an `is_codi_referral` flag, set by the system only when the destination is the listed Committee on Decorum and Investigation (CODI); existing exact CODI destinations are flagged by migration. Other named or free-text destinations do not receive that flag.
+
 ### Status definitions
 
 | Status | Meaning |
@@ -186,7 +188,7 @@ The following is the model-level transition map. The “actor/action rules” be
 | Assign/reassign | SDS admin | Submitted, Needs Clarification, Assigned, In Progress, or Escalated | Assigned; sets current handler and clears acknowledgment. Without a recipient, handler is the admin and `assigned_to` is null. |
 | Acknowledge | Current handler (SDS admin or assigned recipient) | Assigned | In Progress; sets acknowledgment timestamp and current handler. |
 | Escalate | SDS admin | Assigned, In Progress, or Escalated | Escalated; changes handler to selected active recipient and updates escalation time. |
-| Refer | SDS admin | Assigned, In Progress, or Escalated | Referred; stores committee/board and referral time. |
+| Refer | SDS admin | Assigned, In Progress, or Escalated | Referred; stores the committee/board text, a CODI flag for the listed CODI destination only, and referral time. |
 | Record referral outcome | SDS admin | Referred | Resolved; records resolution type/time and posts the outcome. |
 | Resolve | Current handler | In Progress or Escalated | Resolved; stores resolution type/time and optionally posts a resolution message. |
 | Reopen resolved ticket | SDS admin | Resolved | In Progress; clears resolution type/time and closure timestamp. |
@@ -268,13 +270,15 @@ Delivery rules:
 | Submitted in sensitive category | Active SDS admin(s) | 1 | Working day |
 | Assigned, not acknowledged | Active current handler/assignee | 2 | Working days |
 | In Progress or Escalated with no action | Active handler | 5 | Working days |
-| Referred, no outcome | Active SDS admin(s) | 10 | Working days |
+| CODI referral, no outcome | Active SDS admin(s) | 10 | Working days |
+| Other referral, no outcome | Active SDS admin(s) | Off by default; adjustable system default | Working days |
 | Resolved, no student response | Active SDS admin(s) | 15 | Calendar days |
 
 Reminders are operational nudges to the person who must act next. They are not handbook deadlines and never change a ticket. The handbook states no deadline for ordinary complaints; the only timelines it states are for CODI harassment cases and disciplinary appeals.
 
 - The 1-working-day sensitive-category reminder is a system default, derived from the CODI 24-hour notice timeline (Handbook p. 58). It is adjustable and is not a handbook deadline for SDS.
-- The 10-working-day referral reminder is a system default, based on the CODI 10-working-day period (pp. 57 to 58). It applies to CODI referrals only.
+- The CODI referral reminder uses the 10-working-day decision period stated for CODI (Handbook pp. 57 to 58); it is only sent for referrals flagged CODI.
+- The generic reminder for other referrals is a system default, not a handbook deadline. It is off by default; SDS can enable it and adjust its 1–30 working-day threshold.
 - The 15-day resolved-student-response reminder is a system default, adjustable by SDS.
 - All other reminder thresholds are system defaults.
 

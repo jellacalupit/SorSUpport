@@ -24,6 +24,8 @@ class ReminderSettingsController extends Controller
             'unacknowledged_days' => $days,
             'idle_days' => $days,
             'referral_days' => $days,
+            'generic_referral_enabled' => ['required', 'boolean'],
+            'generic_referral_days' => $days,
             'student_response_days' => $days,
         ], [
             '*.min' => 'Enter at least 1 day.',
@@ -36,12 +38,14 @@ class ReminderSettingsController extends Controller
 
         AuditLog::activity('reminder_settings_updated', details: $validated['enabled']
             ? sprintf(
-                'Updated reminders: not reviewed %d, sensitive not reviewed %d, not acknowledged %d, no action %d, referred %d working days. %s',
+                'Updated reminders: not reviewed %d, sensitive not reviewed %d, not acknowledged %d, no action %d, CODI referral %d, generic referral %s (%d working days). %s',
                 $validated['unreviewed_days'],
                 $validated['sensitive_unreviewed_days'],
                 $validated['unacknowledged_days'],
                 $validated['idle_days'],
                 $validated['referral_days'],
+                $validated['generic_referral_enabled'] ? 'enabled' : 'disabled',
+                $validated['generic_referral_days'],
                 $studentDays,
             )
             : 'Turned off reminders for waiting tickets. ' . $studentDays);
