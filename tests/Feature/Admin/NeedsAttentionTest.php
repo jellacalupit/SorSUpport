@@ -148,7 +148,7 @@ class NeedsAttentionTest extends TestCase
                 && $rows->first()['ticket']->is($update)
                 && $rows->get(1)['ticket']->is($escalation);
         });
-        $response->assertSee('Age:');
+        $response->assertSee('working day');
     }
 
     public function test_no_action_reasons_use_existing_thresholds_even_when_reminder_emails_are_disabled(): void
@@ -252,7 +252,7 @@ class NeedsAttentionTest extends TestCase
         $this->assertSame($auditCount, $ticket->auditLogs()->count());
     }
 
-    public function test_list_filters_and_pagination_work_and_dashboard_shows_count_and_top_ten(): void
+    public function test_list_filters_and_pagination_work_and_dashboard_keeps_the_list_off_dashboard(): void
     {
         $inactiveHandler = $this->user(User::ROLE_RECIPIENT, 'Ira Inactive', false);
         Recipient::create([
@@ -275,28 +275,29 @@ class NeedsAttentionTest extends TestCase
 
         $firstPage = $this->actingAs($this->admin)
             ->get(route('admin.tickets.needs-attention'))
-            ->assertOk()
-            ->assertSee('17 tickets may need attention')
-            ->assertSee('Next');
+            ->assertOk();
+        $firstPageContent = $firstPage->getContent();
+        $this->assertStringContainsString('17 tickets', $firstPageContent);
+        $this->assertStringContainsString('<table', $firstPageContent);
+        $this->assertStringContainsString('data-follow-up-ticket-link', $firstPageContent);
+        $this->assertStringContainsString('data-follow-up-ticket-drawer', $firstPageContent);
+        $this->assertStringContainsString('Next', $firstPageContent);
         $this->assertCount(15, $firstPage->viewData('tickets')->items());
 
         $secondPage = $this->get(route('admin.tickets.needs-attention', ['page' => 2]))
             ->assertOk();
         $this->assertCount(2, $secondPage->viewData('tickets')->items());
 
-        $this->get(route('admin.tickets.needs-attention', [
+        $filteredPage = $this->get(route('admin.tickets.needs-attention', [
             'category_filter' => $tickets->first()->complaint->category_id,
             'status_filter' => Ticket::STATUS_IN_PROGRESS,
             'search' => $tickets->first()->complaint->reference_number,
-        ]))
-            ->assertOk()
-            ->assertSee($tickets->first()->complaint->reference_number)
-            ->assertDontSee($tickets->last()->complaint->reference_number);
+        ]))->assertOk();
+        $filteredPageContent = $filteredPage->getContent();
+        $this->assertStringContainsString($tickets->first()->complaint->reference_number, $filteredPageContent);
+        $this->assertStringNotContainsString($tickets->last()->complaint->reference_number, $filteredPageContent);
 
         $dashboard = $this->get(route('admin.dashboard'))->assertOk();
-        $dashboard->assertSee('Needs attention')
-            ->assertViewHas('needsAttention', fn ($rows): bool => $rows->count() === 17);
-        $this->assertSame(10, $dashboard->viewData('needsAttention')->take(10)->count());
-        $this->assertSame(10, substr_count($dashboard->getContent(), 'data-needs-attention-ticket'));
+        $this->assertStringNotContainsString('data-needs-attention-ticket', $dashboard->getContent());
     }
 }
