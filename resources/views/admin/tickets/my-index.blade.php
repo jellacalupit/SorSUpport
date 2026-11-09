@@ -272,55 +272,6 @@
                 overflow: hidden;
             }
 
-            .admin-ticket-thread .admin-communication-card:hover [data-ticket-message-list].admin-message-scrollbar,
-            .admin-ticket-thread .admin-communication-card:focus [data-ticket-message-list].admin-message-scrollbar,
-            .admin-ticket-thread .admin-communication-card:focus-within [data-ticket-message-list].admin-message-scrollbar {
-                scrollbar-color: oklch(0.72 0 0) transparent;
-                scrollbar-width: thin;
-            }
-
-            .admin-ticket-thread [data-ticket-message-list].admin-message-scrollbar::-webkit-scrollbar {
-                width: 0 !important;
-                height: 0 !important;
-            }
-
-            .admin-ticket-thread .admin-communication-card:hover [data-ticket-message-list].admin-message-scrollbar::-webkit-scrollbar,
-            .admin-ticket-thread .admin-communication-card:focus [data-ticket-message-list].admin-message-scrollbar::-webkit-scrollbar,
-            .admin-ticket-thread .admin-communication-card:focus-within [data-ticket-message-list].admin-message-scrollbar::-webkit-scrollbar {
-                width: 2px !important;
-                height: 2px !important;
-            }
-
-            .admin-ticket-thread [data-ticket-message-list].admin-message-scrollbar::-webkit-scrollbar-button {
-                display: none !important;
-                height: 0 !important;
-                width: 0 !important;
-                background: transparent !important;
-                border: 0 !important;
-                -webkit-appearance: none;
-            }
-
-            .admin-ticket-thread [data-ticket-message-list].admin-message-scrollbar::-webkit-scrollbar-button:start:decrement,
-            .admin-ticket-thread [data-ticket-message-list].admin-message-scrollbar::-webkit-scrollbar-button:end:increment,
-            .admin-ticket-thread [data-ticket-message-list].admin-message-scrollbar::-webkit-scrollbar-button:vertical:start:decrement,
-            .admin-ticket-thread [data-ticket-message-list].admin-message-scrollbar::-webkit-scrollbar-button:vertical:end:increment {
-                display: none !important;
-                height: 0 !important;
-                width: 0 !important;
-            }
-
-            .admin-ticket-thread [data-ticket-message-list].admin-message-scrollbar::-webkit-scrollbar-track,
-            .admin-ticket-thread [data-ticket-message-list].admin-message-scrollbar::-webkit-scrollbar-corner {
-                background: oklch(0.92 0 0) !important;
-                border-radius: 999px !important;
-            }
-
-            .admin-ticket-thread [data-ticket-message-list].admin-message-scrollbar::-webkit-scrollbar-thumb {
-                min-height: 24px !important;
-                border-radius: 999px !important;
-                background: oklch(0.62 0 0) !important;
-            }
-
             .admin-ticket-thread #ticket-reply-form {
                 gap: 0.5rem;
             }

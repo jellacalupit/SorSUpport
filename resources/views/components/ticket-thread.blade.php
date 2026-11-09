@@ -18,16 +18,8 @@
 
 <style>
     .communication-card .message-scrollbar {
-        scrollbar-width: none !important;
         min-height: 0;
         overflow-y: scroll !important;
-    }
-
-    .communication-card:hover .message-scrollbar,
-    .communication-card:focus .message-scrollbar,
-    .communication-card:focus-within .message-scrollbar {
-        scrollbar-width: thin !important;
-        scrollbar-color: oklch(0.62 0 0) oklch(0.92 0 0) !important;
     }
 
     .communication-card .message-scrollbar:not(.overflow-visible) {
@@ -54,63 +46,6 @@
 
     .communication-card .message-scrollbar:not(.overflow-visible) > [data-message-row] {
         flex-shrink: 0;
-    }
-
-    .communication-card .message-scrollbar::-webkit-scrollbar {
-        width: 0 !important;
-        height: 0 !important;
-    }
-
-    .communication-card:hover .message-scrollbar::-webkit-scrollbar,
-    .communication-card:focus .message-scrollbar::-webkit-scrollbar,
-    .communication-card:focus-within .message-scrollbar::-webkit-scrollbar {
-        width: 8px !important;
-        height: 8px !important;
-    }
-
-    .communication-card.admin-communication-card .message-scrollbar::-webkit-scrollbar {
-        width: 0 !important;
-        height: 0 !important;
-    }
-
-    .communication-card.admin-communication-card:hover .message-scrollbar::-webkit-scrollbar,
-    .communication-card.admin-communication-card:focus .message-scrollbar::-webkit-scrollbar,
-    .communication-card.admin-communication-card:focus-within .message-scrollbar::-webkit-scrollbar {
-        width: 2px !important;
-        height: 2px !important;
-    }
-
-    .communication-card .message-scrollbar::-webkit-scrollbar-button {
-        display: none !important;
-        width: 0 !important;
-        height: 0 !important;
-        min-width: 0 !important;
-        min-height: 0 !important;
-        background: transparent !important;
-        border: 0 !important;
-        -webkit-appearance: none !important;
-    }
-
-    .communication-card .message-scrollbar::-webkit-scrollbar-button:single-button,
-    .communication-card .message-scrollbar::-webkit-scrollbar-button:start:decrement,
-    .communication-card .message-scrollbar::-webkit-scrollbar-button:end:increment,
-    .communication-card .message-scrollbar::-webkit-scrollbar-button:vertical:start:decrement,
-    .communication-card .message-scrollbar::-webkit-scrollbar-button:vertical:end:increment {
-        display: none !important;
-        width: 0 !important;
-        height: 0 !important;
-    }
-
-    .communication-card .message-scrollbar::-webkit-scrollbar-track,
-    .communication-card .message-scrollbar::-webkit-scrollbar-corner {
-        background: oklch(0.92 0 0) !important;
-        border-radius: 999px !important;
-    }
-
-    .communication-card .message-scrollbar::-webkit-scrollbar-thumb {
-        min-height: 24px !important;
-        border-radius: 999px !important;
-        background: oklch(0.62 0 0) !important;
     }
 
 </style>

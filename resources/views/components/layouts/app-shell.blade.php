@@ -930,43 +930,6 @@
                             }
                         );
 
-                        document
-                            .querySelectorAll(
-                                '.auto-hide-scrollbar'
-                            )
-                            .forEach((scrollArea) => {
-
-                                let scrollTimeout;
-
-                                scrollArea.addEventListener(
-                                    'scroll',
-                                    () => {
-
-                                        scrollArea.classList.add(
-                                            'is-scrolling'
-                                        );
-
-                                        clearTimeout(
-                                            scrollTimeout
-                                        );
-
-                                        scrollTimeout =
-                                            setTimeout(
-                                                () => {
-
-                                                    scrollArea.classList.remove(
-                                                        'is-scrolling'
-                                                    );
-
-                                                },
-                                                700
-                                            );
-
-                                    }
-                                );
-
-                            });
-
                         document.addEventListener(
                             'click',
                             (event) => {
