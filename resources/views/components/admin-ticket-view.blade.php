@@ -27,6 +27,7 @@
         : $ticket->auditLogs()->with('performer')->orderByDesc('created_at')->orderByDesc('id')->limit(5)->get();
     $auditLabels = [
         'ticket_assigned' => 'Ticket assigned',
+        'returned_to_sds' => 'Returned by office',
         'ticket_started' => 'Ticket started',
         'message_posted' => 'Message posted',
         'ticket_resolved' => 'Ticket resolved',

@@ -195,6 +195,16 @@ class TicketEmailComposer
                 ['A student asked the SDS Office to review this ticket for possible escalation. Escalation remains an SDS decision. Please open the ticket to review the reason.'],
             ],
 
+            EmailNotification::TYPE_RETURNED_TO_SDS => [
+                'Ticket returned to SDS',
+                'A ticket was returned to SDS',
+                array_values(array_filter([
+                    'A recipient returned a ticket to the SDS Office for review.',
+                    $ticket?->complaint?->isSensitive() ? 'Concern: Confidential concern.' : null,
+                    'Please open SorSUpport to see the ticket.',
+                ])),
+            ],
+
             EmailNotification::TYPE_INVALID_CLOSURE => [
                 "Your ticket {$reference} was closed",
                 'Your ticket could not be acted on',
@@ -348,6 +358,10 @@ class TicketEmailComposer
     {
         $complaint = $ticket->complaint;
         $isStudent = $audience === self::AUDIENCE_STUDENT;
+
+        if ($type === EmailNotification::TYPE_RETURNED_TO_SDS) {
+            return [];
+        }
 
         if (in_array($type, [
             EmailNotification::TYPE_CLARIFICATION_REMINDER,

@@ -64,6 +64,7 @@ class TicketUnreadService
         'withdrawal_requested',
         'update_requested',
         'escalation_requested',
+        'returned_to_sds',
         'further_action_requested',
         'resolution_accepted',
         'ticket_withdrawn',

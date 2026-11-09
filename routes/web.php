@@ -470,6 +470,8 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:recipient'])
             ->name('complaints.update-status');
         Route::post('/complaints/{complaint}/acknowledge', [\App\Http\Controllers\Recipient\ComplaintController::class, 'acknowledge'])
             ->name('complaints.acknowledge');
+        Route::post('/complaints/{complaint}/return-to-sds', [\App\Http\Controllers\Recipient\ComplaintController::class, 'returnToSds'])
+            ->name('complaints.return-to-sds');
     });
 
 Route::middleware(['auth', 'active.user', 'force.password'])->group(function () {

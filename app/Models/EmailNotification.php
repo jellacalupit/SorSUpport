@@ -36,6 +36,7 @@ class EmailNotification extends Model
     public const TYPE_WITHDRAWAL_REQUESTED = 'withdrawal_requested';
     public const TYPE_UPDATE_REQUESTED = 'update_requested';
     public const TYPE_ESCALATION_REQUESTED = 'escalation_requested';
+    public const TYPE_RETURNED_TO_SDS = 'returned_to_sds';
     public const TYPE_WAITING_REMINDER = 'waiting_reminder';
     public const TYPE_CLARIFICATION_REMINDER = 'clarification_reminder';
     public const TYPE_CLARIFICATION_NO_RESPONSE = 'clarification_no_response';

@@ -196,6 +196,7 @@ The following is the model-level transition map. The “actor/action rules” be
 | Handle directly | SDS admin | Submitted or Needs Clarification | In Progress; classification becomes needs-resolution, jurisdiction SDS, handler is that admin, and acknowledgment is recorded. |
 | Assign/reassign | SDS admin | Submitted, Needs Clarification, Assigned, In Progress, or Escalated | Assigned; sets current handler and clears acknowledgment. Without a recipient, handler is the admin and `assigned_to` is null. |
 | Acknowledge | Current handler (SDS admin or assigned recipient) | Assigned | In Progress; sets acknowledgment timestamp and current handler. |
+| Return to SDS | Current assigned recipient | Assigned, In Progress, or Escalated | Assigned; current handler becomes an active SDS admin, `assigned_to` is cleared, SDS admins are notified in-app and by email, and the recipient-provided 10–500 character reason is shown to SDS only. No separate student email is sent; the recipient loses ticket access. |
 | Escalate | SDS admin | Assigned, In Progress, or Escalated | Escalated; changes handler to selected active recipient and updates escalation time. |
 | Refer | SDS admin | Assigned, In Progress, or Escalated | Referred; stores the committee/board text, a CODI flag for the listed CODI destination only, and referral time. Campus Disciplinary Committee referrals additionally require confirmation of College Dean assessment and endorsement; this is recorded in the audit entry. |
 | Record referral outcome | SDS admin | Referred | Resolved; records resolution type/time and posts the outcome. |
@@ -236,11 +237,12 @@ Additional constraints:
 - The administrator must select the target and enter a reason (maximum 1,000 characters). The system does not trigger escalation based on time or reminders.
 - Every escalation changes assigned/current handler, preserves the `escalated` status on repeat escalation, updates `escalated_at`, logs the reason, may flag a conflict of interest, and queues emails for the acting admin, target recipient, and student.
 - A student may ask SDS to consider escalation while the ticket is Assigned, In Progress, or Escalated, with a 10–1,000 character reason. This request is advisory only: escalation remains a manual SDS administrator decision. It does not change the ticket or handler, is not shown to or emailed to the current handler, and stays pending until SDS escalates/reassigns, resolves/closes, or replies in the conversation. The student's reason is visible to SDS only in the audit and pending-request panel.
+- A returned ticket remains marked “Returned by office” in Needs attention until an SDS admin performs a ticket action. Return, reassignment, escalation, and closure are manual decisions; the return does not itself trigger any further action or notify the student.
 
 ### Needs attention
 
 - The SDS admin dashboard shows the count and up to ten tickets that may need attention; `GET /admin/tickets/needs-attention` provides the full, searchable, filterable, paginated list. The page is display-only: opening or filtering it does not change tickets, statuses, handlers, or reminders.
-- A ticket appears when it has a pending `update_requested` or `escalation_requested` event according to `TicketWorkflow`'s pending-request helpers; when its current status has reached the existing reminder system's working-day threshold without a non-email action; or when its current handler or assignee is inactive. Resolved and Closed tickets are excluded.
+- A ticket appears when it has a pending `update_requested` or `escalation_requested` event, or a `returned_to_sds` event not yet followed by an SDS-admin ticket action, according to `TicketWorkflow`'s pending-request helpers; when its current status has reached the existing reminder system's working-day threshold without a non-email action; or when its current handler or assignee is inactive. Resolved and Closed tickets are excluded.
 - No-action thresholds use the existing `TicketReminderService` status thresholds, `SystemSetting` values, working-day counter, and `Ticket::lastActionAt()` behavior, including the sensitive Submitted threshold and the configured referral rule. The thresholds are applied even if reminder emails are disabled; no additional thresholds or settings are introduced.
 - Rows are ordered with pending student requests first, then oldest tickets first. They show the public-safe subject, filer name as `Anonymous` when identity is hidden, handler/office, reason badges, status, and age. Sensitive subjects use `Confidential concern`. No-action wording is informational, not a deadline or handbook requirement; system-default thresholds remain adjustable under System Settings → Reminders. SDS decides manually what to do.
 
@@ -437,7 +439,7 @@ Authenticated routes: `GET /verify-email`, throttled `POST /email/verification-n
 | `GET /recipient/profile`, `POST /recipient/profile/photo` | Recipient profile view and photo update. |
 | `GET /recipient/tickets`, `GET /recipient/tickets/{complaint}` | Legacy aliases for the recipient complaint list/detail. |
 | `GET /recipient/complaints`, `GET /recipient/complaints/{complaint}` | Assigned/forwarded ticket list/detail; list supports search/status/sort and pagination. |
-| `POST /recipient/complaints/{complaint}/reply`, `/acknowledge` | Reply and acknowledge an assigned ticket. |
+| `POST /recipient/complaints/{complaint}/reply`, `/acknowledge`, `/return-to-sds` | Reply, acknowledge, or return an assigned ticket to SDS with a staff-only reason. |
 | `PATCH /recipient/complaints/{complaint}/status` | Resolve an assigned ticket only. |
 
 ### Local/testing prototype routes

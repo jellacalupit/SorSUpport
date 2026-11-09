@@ -43,9 +43,14 @@ class TicketAttentionService
                 $reasons = [];
                 $pendingEscalation = $this->workflow->pendingEscalationRequest($ticket);
                 $pendingUpdate = $this->workflow->pendingUpdateRequest($ticket);
+                $pendingReturn = $this->workflow->pendingReturnToSds($ticket);
 
                 if ($pendingEscalation) {
                     $reasons[] = 'Student requested escalation';
+                }
+
+                if ($pendingReturn) {
+                    $reasons[] = 'Returned by office';
                 }
 
                 if ($pendingUpdate) {
@@ -83,7 +88,7 @@ class TicketAttentionService
                 return [
                     'ticket' => $ticket,
                     'reasons' => $reasons,
-                    'pending' => $pendingEscalation !== null || $pendingUpdate !== null,
+                    'pending' => $pendingEscalation !== null || $pendingUpdate !== null || $pendingReturn !== null,
                     'age' => (int) floor(TicketReminderService::workingDaysBetween($createdAt, now())),
                 ];
             })

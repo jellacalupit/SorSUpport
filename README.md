@@ -11,7 +11,7 @@ For the detailed implementation guide—including role permissions, status rules
 | Role | What they do |
 |---|---|
 | **Student** | Submits a ticket, with attachments, optionally hiding their identity. Follows its progress, talks with the handler, accepts the resolution or asks for further action, and rates how the concern was handled. Can request an update while Submitted or Needs Clarification, ask SDS to consider escalation while Assigned, In Progress or Escalated, and request withdrawal once per referral period after referral. These requests do not change the ticket or its handler. |
-| **Recipient** (college or office staff) | Acknowledges tickets assigned to them, talks with the student and records the resolution. |
+| **Recipient** (college or office staff) | Acknowledges tickets assigned to them, talks with the student, records the resolution, or returns a misrouted ticket to SDS with a staff-only reason. |
 | **SDS Administrator** | Reviews new tickets, classifies, assigns, escalates or refers them, closes them, checks the read-only Needs attention list for pending requests, tickets with no recent action under the configured system defaults, and inactive handlers, manages accounts and settings, and reads the analytics and audit trail. |
 
 When SDS closes a ticket as invalid, duplicate, out of scope, or no response, it must provide the student a written explanation of 10–1,000 characters. Explanations are optional for SDS-confirmed resolved, informational, and student-withdrawn closures.
@@ -24,8 +24,9 @@ When SDS closes a ticket as invalid, duplicate, out of scope, or no response, it
 - **Confidentiality**: a student can hide their identity where the category allows it. Their name is then hidden from everyone in the system, including the SDS admin. Sensitive tickets are visible only to the SDS Office and the assigned handler; emails use “Confidential concern” and never include the real subject, description or personnel-involved text. The system flags when a ticket goes to someone named in the complaint.
 - **Conversation**: each ticket has a message thread with file attachments, kept in private storage.
 - **Notifications**: in-app notifications and unread badges, plus email requests to SDS when students ask for an update or for SDS to consider escalation. These requests do not notify the assigned handler.
+- **Returned tickets**: a recipient may manually return an Assigned, In Progress or Escalated ticket to SDS with a 10–500 character reason. The reason is visible to SDS only; the SDS admins are notified in-app and by email, and the student is not separately emailed about the return.
 - **Reminders for waiting tickets**: a daily high-priority email when a ticket has waited too long (see below).
-- **Needs attention**: an SDS-only dashboard and paginated ticket list highlights pending student requests, tickets with no recent action under existing adjustable reminder settings, and inactive handler accounts. It is informational only; SDS makes any ticket decision manually.
+- **Needs attention**: an SDS-only dashboard and paginated ticket list highlights pending student requests, tickets returned by an office until SDS acts, tickets with no recent action under existing adjustable reminder settings, and inactive handler accounts. It is informational only; SDS makes any ticket decision manually.
 - **Accounts**: created one by one or in bulk from an Excel file. New users must set their own password on first login.
 - **Analytics**: ticket volume, resolution rate and time, escalations, performance per office, and satisfaction ratings, exportable to PDF and Excel.
 - **Audit trail**: every action and every email sent, searchable by person, ticket and date.

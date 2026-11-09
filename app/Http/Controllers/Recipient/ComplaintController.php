@@ -240,6 +240,19 @@ class ComplaintController extends Controller
             ->with('success', 'Ticket acknowledged.');
     }
 
+    public function returnToSds(Request $request, Complaint $complaint, TicketWorkflow $workflow): RedirectResponse
+    {
+        $ticket = $this->assignedTicket($complaint);
+        $validated = $request->validate([
+            'return_reason' => 'required|string|min:10|max:500',
+        ]);
+
+        $workflow->returnToSds($ticket, Auth::user(), $validated['return_reason']);
+
+        return redirect()->route('recipient.tickets.index')
+            ->with('success', 'Ticket returned to the SDS Office.');
+    }
+
     /**
      * Mark the ticket resolved. A recipient cannot close or reject a ticket: the student accepts
      * the resolution, or the SDS Office closes it.

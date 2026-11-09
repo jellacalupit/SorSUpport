@@ -20,6 +20,7 @@ class EmailNotificationConstantsTest extends TestCase
         $this->assertSame('status_update', EmailNotification::TYPE_STATUS_UPDATE);
         $this->assertSame('student_status_update', EmailNotification::TYPE_STUDENT_STATUS_UPDATE);
         $this->assertSame('recipient_resolved', EmailNotification::TYPE_RECIPIENT_RESOLVED);
+        $this->assertSame('returned_to_sds', EmailNotification::TYPE_RETURNED_TO_SDS);
         $this->assertSame('complaint_closed', EmailNotification::TYPE_COMPLAINT_CLOSED);
         $this->assertSame('pending', EmailNotification::STATUS_PENDING);
         $this->assertSame('sent', EmailNotification::STATUS_SENT);

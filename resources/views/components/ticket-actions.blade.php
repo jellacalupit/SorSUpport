@@ -34,6 +34,7 @@
         'clarify' => $role === 'admin' && $can(TicketWorkflow::REQUEST_CLARIFICATION),
         'acknowledge' => $role !== 'student' && $can(TicketWorkflow::ACKNOWLEDGE),
         'resolve' => $role !== 'student' && $can(TicketWorkflow::RESOLVE),
+        'return_to_sds' => $role === 'recipient' && $can(TicketWorkflow::RETURN_TO_SDS),
         'escalate' => $canEscalate,
         'refer' => $role === 'admin' && $can(TicketWorkflow::REFER),
         'outcome' => $role === 'admin' && $can(TicketWorkflow::RECORD_OUTCOME),
@@ -47,10 +48,11 @@
         'request_escalation' => $role === 'student' && $can(TicketWorkflow::REQUEST_ESCALATION),
     ])->filter();
 
-    $fields = ['clarification_message', 'resolution_type', 'resolution_message', 'referred_to', 'referred_to_other', 'referral_note', 'dean_endorsed', 'outcome', 'closure_type', 'closure_reason', 'further_action_reason', 'withdraw_reason', 'withdrawal_request_reason', 'update_request_note', 'escalation_request_reason', 'status'];
+    $fields = ['clarification_message', 'resolution_type', 'resolution_message', 'return_reason', 'referred_to', 'referred_to_other', 'referral_note', 'dean_endorsed', 'outcome', 'closure_type', 'closure_reason', 'further_action_reason', 'withdraw_reason', 'withdrawal_request_reason', 'update_request_note', 'escalation_request_reason', 'status'];
     $openPanel = match (true) {
         $errors->hasAny(['clarification_message']) => 'clarify',
         $errors->hasAny(['resolution_type', 'resolution_message']) => 'resolve',
+        $errors->has('return_reason') => 'return_to_sds',
         $errors->hasAny(['referred_to', 'referred_to_other', 'referral_note', 'dean_endorsed']) => 'refer',
         $errors->has('outcome') => 'outcome',
         $errors->hasAny(['closure_type', 'closure_reason']) => 'close',
@@ -155,6 +157,9 @@
         @if ($buttons->has('resolve'))
             <button type="button" x-on:click="action = 'resolve'" class="h-10 w-full rounded-full border border-green-800 bg-green-800 px-3 text-center text-sm font-semibold text-white transition-colors hover:bg-green-900">Mark as Resolved</button>
         @endif
+        @if ($buttons->has('return_to_sds'))
+            <button type="button" x-on:click="action = 'return_to_sds'" class="{{ $outlineButton }}">Return to SDS</button>
+        @endif
         @if ($buttons->has('escalate'))
             <button type="button" x-on:click="action = 'escalate'" class="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full border border-red-800 bg-white px-3 text-sm font-semibold text-red-800 transition-colors hover:bg-red-50">
                 <x-icons.alert-triangle class="h-4 w-4" />
@@ -224,6 +229,20 @@
             <div class="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" x-on:click="action = null" class="{{ $smallCancel }}">Cancel</button>
                 <button type="submit" class="h-9 w-full rounded-full bg-green-800 px-3 text-xs font-semibold text-white transition-colors hover:bg-green-900">Mark as Resolved</button>
+            </div>
+        </form>
+    @endif
+
+    @if ($buttons->has('return_to_sds'))
+        <form x-show="action === 'return_to_sds'" x-cloak method="POST" action="{{ route('recipient.complaints.return-to-sds', $complaint) }}" class="surface p-4">
+            @csrf
+            <p class="{{ $panelTitle }}">Return this ticket to SDS</p>
+            <p class="{{ $panelHint }}">Explain why this ticket was routed to the wrong office. This reason is visible to SDS only.</p>
+            <textarea name="return_reason" rows="3" required minlength="10" maxlength="500" class="{{ $input }}" placeholder="Why should SDS review this ticket?">{{ old('return_reason') }}</textarea>
+            @error('return_reason')<p class="mt-1 text-xs text-destructive">{{ $message }}</p>@enderror
+            <div class="mt-3 grid grid-cols-2 gap-2">
+                <button type="button" x-on:click="action = null" class="{{ $smallCancel }}">Cancel</button>
+                <button type="submit" class="{{ $smallPrimary }}">Return to SDS</button>
             </div>
         </form>
     @endif

@@ -28,6 +28,8 @@ class TicketWorkflow
 
     public const ACKNOWLEDGE = 'acknowledge';
 
+    public const RETURN_TO_SDS = 'return_to_sds';
+
     public const ESCALATE = 'escalate';
 
     public const REFER = 'refer';
@@ -88,6 +90,11 @@ class TicketWorkflow
             'by' => self::BY_HANDLER,
             'from' => [Ticket::STATUS_ASSIGNED],
             'to' => Ticket::STATUS_IN_PROGRESS,
+        ],
+        self::RETURN_TO_SDS => [
+            'by' => self::BY_HANDLER,
+            'from' => [Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED],
+            'to' => Ticket::STATUS_ASSIGNED,
         ],
         self::ESCALATE => [
             'by' => self::BY_ADMIN,
@@ -199,6 +206,11 @@ class TicketWorkflow
         };
 
         if (! $allowed) {
+            return false;
+        }
+
+        if ($action === self::RETURN_TO_SDS
+            && (! $user->isRecipient() || (int) $ticket->assigned_to !== (int) $user->id)) {
             return false;
         }
 
@@ -333,22 +345,7 @@ class TicketWorkflow
         $this->authorize($admin, $ticket, self::ASSIGN);
 
         DB::transaction(function () use ($ticket, $admin, $recipient): void {
-            $handlerId = $recipient ? $recipient->user_id : $admin->id;
-
-            // Reassigning a ticket already waiting on someone keeps the Assigned status.
-            $ticket->fill([
-                'classification' => $ticket->classification ?? Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
-                'jurisdiction' => $ticket->jurisdiction ?? ($recipient ? Ticket::JURISDICTION_RECIPIENT : Ticket::JURISDICTION_SDS),
-                'assigned_to' => $recipient ? $handlerId : null,
-                'current_handler_id' => $handlerId,
-                'acknowledged_at' => null,
-            ]);
-
-            if ($ticket->status !== Ticket::STATUS_ASSIGNED) {
-                $ticket->status = Ticket::STATUS_ASSIGNED;
-            }
-
-            $ticket->save();
+            $this->applyAssignment($ticket, $admin, $recipient);
 
             AuditLog::log(
                 $ticket->id,
@@ -369,6 +366,52 @@ class TicketWorkflow
 
             $this->notify($ticket, [$this->student($ticket)], EmailNotification::TYPE_STUDENT_STATUS_UPDATE);
         });
+    }
+
+    /**
+     * A recipient returns a misrouted ticket to an active SDS administrator for manual review.
+     */
+    public function returnToSds(Ticket $ticket, User $handler, string $reason): void
+    {
+        $this->authorize($handler, $ticket, self::RETURN_TO_SDS);
+
+        $admins = $this->admins();
+        $admin = $admins[0] ?? null;
+
+        if (! $admin) {
+            throw ValidationException::withMessages([
+                'return_reason' => 'No active SDS administrator is available to receive this ticket.',
+            ]);
+        }
+
+        DB::transaction(function () use ($ticket, $handler, $reason, $admin, $admins): void {
+            $this->applyAssignment($ticket, $admin);
+            AuditLog::log($ticket->id, 'returned_to_sds', $handler->id, $reason);
+            $this->notify($ticket, $admins, EmailNotification::TYPE_RETURNED_TO_SDS);
+        });
+    }
+
+    /**
+     * The assignment-state update shared by SDS reassignment and recipient returns.
+     */
+    protected function applyAssignment(Ticket $ticket, User $admin, ?Recipient $recipient = null): void
+    {
+        $handlerId = $recipient ? $recipient->user_id : $admin->id;
+
+        // Reassigning a ticket already waiting on someone keeps the Assigned status.
+        $ticket->fill([
+            'classification' => $ticket->classification ?? Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+            'jurisdiction' => $ticket->jurisdiction ?? ($recipient ? Ticket::JURISDICTION_RECIPIENT : Ticket::JURISDICTION_SDS),
+            'assigned_to' => $recipient ? $handlerId : null,
+            'current_handler_id' => $handlerId,
+            'acknowledged_at' => null,
+        ]);
+
+        if ($ticket->status !== Ticket::STATUS_ASSIGNED) {
+            $ticket->status = Ticket::STATUS_ASSIGNED;
+        }
+
+        $ticket->save();
     }
 
     /**
@@ -718,6 +761,27 @@ class TicketWorkflow
         }
 
         return $wasActedOn ? null : $request;
+    }
+
+    public function pendingReturnToSds(Ticket $ticket): ?AuditLog
+    {
+        $auditLogs = $ticket->relationLoaded('auditLogs')
+            ? $ticket->auditLogs
+            : $ticket->auditLogs()->with('performer')->get();
+        $latestReturn = $auditLogs
+            ->where('action', 'returned_to_sds')
+            ->sortByDesc('id')
+            ->first();
+
+        if (! $latestReturn) {
+            return null;
+        }
+
+        $wasActedOn = $auditLogs->contains(
+            fn (AuditLog $log): bool => $log->id > $latestReturn->id && $log->performer?->isSdsAdmin()
+        );
+
+        return $wasActedOn ? null : $latestReturn;
     }
 
     public function hasWithdrawalRequestInCurrentReferralPeriod(Ticket $ticket): bool
