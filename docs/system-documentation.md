@@ -248,8 +248,10 @@ Additional constraints:
 
 - The SDS admin dashboard shows the count and up to ten tickets that may need attention; `GET /admin/tickets/needs-attention` provides the full, searchable, filterable, paginated list. The page is display-only: opening or filtering it does not change tickets, statuses, handlers, or reminders.
 - A ticket appears when it has a pending `update_requested` or `escalation_requested` event, or a `returned_to_sds` event not yet followed by an SDS-admin ticket action, according to `TicketWorkflow`'s pending-request helpers; when its current status has reached the existing reminder system's working-day threshold without a non-email action; or when its current handler or assignee is inactive. Resolved and Closed tickets are excluded.
-- No-action thresholds use the existing `TicketReminderService` status thresholds, `SystemSetting` values, working-day counter, and `Ticket::lastActionAt()` behavior, including the sensitive Submitted threshold and the configured referral rule. The thresholds are applied even if reminder emails are disabled; no additional thresholds or settings are introduced.
+- No-action thresholds use the existing `TicketReminderService` status thresholds, `SystemSetting` values, the shared calendar-aware working-day counter, and `Ticket::lastActionAt()` behavior, including the sensitive Submitted threshold and the configured referral rule. The thresholds are applied even if reminder emails are disabled; no additional thresholds or settings are introduced.
 - Rows are ordered with pending student requests first, then oldest tickets first. They show the public-safe subject, filer name as `Anonymous` when identity is hidden, handler/office, reason badges, status, and age. Sensitive subjects use `Confidential concern`. No-action wording is informational, not a deadline or handbook requirement; system-default thresholds remain adjustable under System Settings → Reminders. SDS decides manually what to do.
+
+The SDS-only Working Calendar is available at `GET /admin/working-calendar`. It supports single-date overrides and inclusive ranges of up to 60 calendar days. Each create, update, and removal is recorded as a standalone audit event with affected dates and descriptions. Reminders count Monday-to-Friday working days, adjusted by the SDS-managed calendar: a non-working override excludes a date and a working override includes it regardless of weekday. No holiday list is shipped because holidays are set by proclamation; SDS must keep the calendar up to date. Changing a past date changes how past waiting time is counted.
 
 ## 6. Conversation, unread state, and notifications
 
@@ -423,6 +425,7 @@ Authenticated routes: `GET /verify-email`, throttled `POST /email/verification-n
 | `GET /admin/analytics`, `GET /admin/analytics/export/pdf`, `GET /admin/analytics/export/excel` | Analytics dashboard and report exports. |
 | `GET /admin/audit` | Searchable audit trail. |
 | `GET /admin/settings`, `PUT /admin/settings/reminders` | Configuration page and reminder settings update. |
+| `GET /admin/working-calendar`, `POST /admin/working-calendar/overrides`, `POST /admin/working-calendar/ranges`, `DELETE /admin/working-calendar/overrides/{calendarOverride}` | SDS-only Working Calendar page and override management. |
 
 ### Student (`/student`, role `student`)
 
@@ -507,7 +510,7 @@ Supporting controllers include authentication/password/verification, student and
 | Command | Behavior | Schedule |
 |---|---|---|
 | `php artisan notifications:send` | Sends all pending email notification rows that are due for first send/retry. | Every minute; without overlap. |
-| `php artisan tickets:send-reminders` | Creates pending reminder emails for tickets past their configured wait threshold. | Every hour, weekdays, 08:00–17:00; without overlap. |
+| `php artisan tickets:send-reminders` | Creates pending reminder emails for tickets past their configured wait threshold. | Every hour, 08:00–17:00 on dates marked working in the Working Calendar; without overlap. |
 | `php artisan mail:check` | Checks Brevo API credentials when the mailer is Brevo; otherwise starts/stops the configured mail transport to test connection. | Manual/deployment health check. |
 
 The deployed startup script runs database migrations and starts a queue worker and scheduler. The app's ticket email workflow itself uses persisted `EmailNotification` records and the scheduled sender command. For local reminders/email, run the scheduler (for example `php artisan schedule:work`) and configure mail credentials. See the [README local setup](../README.md#running-it-locally) for required runtime setup and environment variables.
@@ -517,6 +520,7 @@ Important configuration:
 - `TICKET_SUBMISSIONS_PER_HOUR`: student submission rate limit (default 5).
 - `config/tickets.php`: reminder defaults and enable flag.
 - Reminder settings saved in `SystemSetting` take precedence over config.
+- Working-day counting uses one calendar-aware counter for reminder thresholds, clarification reminders, Needs attention ages, and ticket open age. The 15-calendar-day window for a student to respond after resolution remains calendar days.
 - Laravel mail configuration and `BREVO_API_KEY` determine delivery; `MAIL_MAILER=log` is available for local inspection.
 - Database and app deployment details are described in the README and Docker files.
 

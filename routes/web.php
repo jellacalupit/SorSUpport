@@ -342,6 +342,15 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
         Route::put('/settings/reminders', [\App\Http\Controllers\Admin\ReminderSettingsController::class, 'update'])
             ->name('settings.reminders.update');
 
+        Route::get('/working-calendar', [\App\Http\Controllers\Admin\WorkingCalendarController::class, 'index'])
+            ->name('working-calendar');
+        Route::post('/working-calendar/overrides', [\App\Http\Controllers\Admin\WorkingCalendarController::class, 'store'])
+            ->name('working-calendar.overrides.store');
+        Route::post('/working-calendar/ranges', [\App\Http\Controllers\Admin\WorkingCalendarController::class, 'storeRange'])
+            ->name('working-calendar.ranges.store');
+        Route::delete('/working-calendar/overrides/{calendarOverride}', [\App\Http\Controllers\Admin\WorkingCalendarController::class, 'destroy'])
+            ->name('working-calendar.overrides.destroy');
+
         Route::get('/analytics/export/pdf', [AnalyticsController::class, 'exportPdf'])
             ->name('analytics.export.pdf');
 

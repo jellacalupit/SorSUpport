@@ -22,6 +22,7 @@
             'items' => [
                 ['route' => 'admin.accounts.index', 'label' => 'Manage Accounts', 'icon' => 'users'],
                 ['route' => 'admin.settings', 'label' => 'System Settings', 'icon' => 'settings'],
+                ['route' => 'admin.working-calendar', 'label' => 'Working Calendar', 'icon' => 'calendar-clock'],
             ],
         ],
         [

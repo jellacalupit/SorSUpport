@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\EmailNotification;
+use App\Models\CalendarOverride;
 use App\Models\SystemSetting;
 use App\Models\Ticket;
 use App\Models\User;
@@ -310,6 +311,20 @@ class TicketReminderService
      */
     public static function workingDaysBetween(Carbon $from, Carbon $to): float
     {
+        $timezone = config('app.timezone');
+        $from = $from->copy()->setTimezone($timezone);
+        $to = $to->copy()->setTimezone($timezone);
+
+        if (! $from->lessThan($to)) {
+            return 0;
+        }
+
+        $overrides = CalendarOverride::query()
+            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->get(['date', 'type'])
+            ->mapWithKeys(fn (CalendarOverride $override) => [
+                $override->date->toDateString() => $override->type,
+            ]);
         $seconds = 0;
         $cursor = $from->copy();
 
@@ -317,7 +332,7 @@ class TicketReminderService
             $nextDay = $cursor->copy()->startOfDay()->addDay();
             $segmentEnd = $nextDay->lessThan($to) ? $nextDay : $to;
 
-            if (! $cursor->isWeekend()) {
+            if (self::dateIsWorking($cursor, $overrides->get($cursor->toDateString()))) {
                 $seconds += $cursor->diffInSeconds($segmentEnd);
             }
 
@@ -325,6 +340,23 @@ class TicketReminderService
         }
 
         return $seconds / 86400;
+    }
+
+    public static function isWorkingDate(Carbon $date): bool
+    {
+        $day = $date->copy()->setTimezone(config('app.timezone'));
+        $override = CalendarOverride::query()->whereDate('date', $day->toDateString())->value('type');
+
+        return self::dateIsWorking($day, $override);
+    }
+
+    private static function dateIsWorking(Carbon $date, ?string $override): bool
+    {
+        return match ($override) {
+            CalendarOverride::TYPE_WORKING => true,
+            CalendarOverride::TYPE_NON_WORKING => false,
+            default => ! $date->isWeekend(),
+        };
     }
 
     protected function lastReminderAt(Ticket $ticket): ?Carbon

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Services\TicketReminderService;
 
 class Ticket extends Model
 {
@@ -283,7 +284,7 @@ class Ticket extends Model
     }
 
     /**
-     * Whole weekdays from submission until now, or until the ticket was closed.
+     * Whole working days from submission until now, or until the ticket was closed.
      */
     public function daysOpen(): int
     {
@@ -294,19 +295,7 @@ class Ticket extends Model
             return 0;
         }
 
-        $wholeDays = (int) floor($from->diffInSeconds($until) / 86400);
-        $end = $from->copy()->addDays($wholeDays)->startOfDay();
-        $day = $from->copy()->startOfDay();
-        $calendarDays = (int) $day->diffInDays($end);
-        $workingDays = intdiv($calendarDays, 7) * 5;
-
-        for ($offset = 0, $remainingDays = $calendarDays % 7; $offset < $remainingDays; $offset++) {
-            if (! $day->copy()->addDays($offset)->isWeekend()) {
-                $workingDays++;
-            }
-        }
-
-        return $workingDays;
+        return (int) floor(TicketReminderService::workingDaysBetween($from, $until));
     }
 
     /**

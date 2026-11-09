@@ -38,7 +38,9 @@ The handbook path for a complaint about a student's misconduct starts with the S
 
 ### Reminders for waiting tickets
 
-The system emails whoever has to act next on a ticket that has waited too long with nothing recorded on it. Waiting is counted in **working days** (Monday to Friday), and reminders are checked every hour of the working day.
+The system emails whoever has to act next on a ticket that has waited too long with nothing recorded on it. Waiting is counted in **working days** (Monday to Friday), adjusted by the SDS-managed Working Calendar, and reminders are checked every hour of the working day.
+
+No holiday dates are shipped because holidays are set by proclamation. SDS must keep the Working Calendar up to date; changing a past date also changes how past waiting time is counted. Override dates and descriptions are managed under **Working Calendar**.
 
 | Ticket is… | Who is reminded | After | Basis |
 |---|---|---|---|
@@ -49,7 +51,7 @@ The system emails whoever has to act next on a ticket that has waited too long w
 | In progress or escalated, no action recorded | Assigned handler | 5 working days | System default |
 | Referred to CODI, no outcome recorded | SDS Office | 10 working days | CODI's decision period (Handbook pp. 57–58) |
 | Referred to another committee, no outcome recorded | SDS Office | Off by default | System default, not a handbook deadline; the SDS admin can enable and adjust it |
-| Resolved, student did not respond | SDS Office, once | 15 days | System default |
+| Resolved, student did not respond | SDS Office, once | 15 calendar days | System default |
 
 A reminder repeats every that many working days until someone acts, and any action on the ticket restarts the count. Reminders never change a ticket; escalating, reassigning and closing stay the SDS admin's decision. The SDS admin can change the waiting days, or turn reminders off, under **System Settings → Reminders**. The starting values are in [config/tickets.php](config/tickets.php).
 
