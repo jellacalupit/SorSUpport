@@ -48,7 +48,7 @@
                             <span class="truncate" data-volume-category-label>All categories</span>
                             <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                         </summary>
-                        <div class="absolute top-full right-0 z-50 mt-1 max-h-72 w-full min-w-56 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                        <div class="volume-category-options absolute top-full right-0 z-50 mt-1 max-h-72 w-full min-w-56 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                             <button type="button" class="relative flex w-full items-center rounded-sm py-1 px-2 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-category-option="" data-selected="true">
                                 All categories
                             </button>
@@ -66,7 +66,7 @@
                             <span class="truncate" data-volume-month-label>All months</span>
                             <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                         </summary>
-                        <div class="absolute top-full right-0 z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                        <div class="absolute top-full right-0 z-50 mt-1 w-full overflow-visible rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                             <button type="button" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1 px-2 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-month-option="" data-selected="true">
                                 All months
                             </button>
@@ -434,7 +434,7 @@
                                 <span class="truncate" data-volume-category-label>All categories</span>
                                 <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                             </summary>
-                            <div class="absolute top-full right-0 z-50 mt-1 max-h-72 w-full min-w-56 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                            <div class="volume-category-options absolute top-full right-0 z-50 mt-1 max-h-72 w-full min-w-56 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                                 <button type="button" class="relative flex w-full items-center rounded-sm py-1 px-2 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-category-option="" data-selected="true">
                                     All categories
                                 </button>
@@ -453,7 +453,7 @@
                                 <span class="truncate" data-volume-month-label>All months</span>
                                 <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                             </summary>
-                            <div class="absolute top-full right-0 z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                            <div class="absolute top-full right-0 z-50 mt-1 w-full overflow-visible rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                                 <button type="button" class="relative flex w-full items-center whitespace-nowrap rounded-sm py-1 px-2 text-xs hover:bg-accent hover:text-accent-foreground bg-primary-soft text-primary" data-month-option="" data-selected="true">
                                     All months
                                 </button>

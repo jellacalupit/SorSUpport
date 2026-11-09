@@ -326,6 +326,35 @@
     --tab-bar-height: calc(3.5rem + max(0.5rem, env(safe-area-inset-bottom, 0px)));
 }
 
+.volume-category-options {
+    scrollbar-color: oklch(0.72 0 0) transparent;
+    scrollbar-width: thin;
+}
+
+.volume-category-options::-webkit-scrollbar {
+    width: 8px;
+}
+
+.volume-category-options::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.volume-category-options::-webkit-scrollbar-thumb {
+    background-color: oklch(0.72 0 0);
+    border-radius: 999px;
+}
+
+.volume-category-options::-webkit-scrollbar-thumb:hover,
+.volume-category-options::-webkit-scrollbar-thumb:active {
+    background-color: oklch(0.56 0 0);
+}
+
+.volume-category-options::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
 @media (max-width: 1023px) {
     [data-mobile-tab-bar] {
         position: fixed;
