@@ -51,9 +51,7 @@
         : (\App\Models\Ticket::DISPLAY_STATUS_LABELS[$status] ?? null);
     $classification = $ticket?->classification;
     $outcomeDisplay = $ticket?->outcomeLabel();
-    $subjectDisplay = $role === 'student'
-        ? ($complaint?->subject_title ?? 'Untitled')
-        : ($complaint?->public_subject ?? 'Untitled');
+    $subjectDisplay = $complaint?->subject_title ?? 'Untitled';
     $showForwardedInformational = $role !== 'admin' && $ticket?->isForwardedInformational();
     $showOutcome = $role !== 'admin' && $statusDisplay === null && $outcomeDisplay !== null;
     $statusDisplay = $showOutcome ? $outcomeDisplay : $statusDisplay;

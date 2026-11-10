@@ -119,7 +119,8 @@ class Complaint extends Model
     }
 
     /**
-     * Subject safe to show on dashboards, reports and exports.
+     * Redacted subject for content that leaves the protected ticket views,
+     * such as email messages, analytics summaries, and exports.
      */
     public function getPublicSubjectAttribute(): string
     {

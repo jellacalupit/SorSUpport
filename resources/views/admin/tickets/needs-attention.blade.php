@@ -91,7 +91,7 @@
                                         <a href="{{ route('admin.complaints.show', $complaint) }}" data-follow-up-ticket-link="follow-up-ticket-{{ $ticket->id }}" class="hover:underline">{{ $complaint?->reference_number ?? $ticket->id }}</a>
                                     </td>
                                     <td class="px-2 py-2 sm:px-3">
-                                        <a href="{{ route('admin.complaints.show', $complaint) }}" data-follow-up-ticket-link="follow-up-ticket-{{ $ticket->id }}" class="block truncate font-medium text-foreground hover:text-primary hover:underline">{{ $complaint?->public_subject ?? 'Untitled' }}</a>
+                                        <a href="{{ route('admin.complaints.show', $complaint) }}" data-follow-up-ticket-link="follow-up-ticket-{{ $ticket->id }}" class="block truncate font-medium text-foreground hover:text-primary hover:underline">{{ $complaint?->subject_title ?? 'Untitled' }}</a>
                                     </td>
                                     <td class="hidden px-2 py-2 text-muted-foreground sm:px-3 lg:table-cell">{{ $complaint?->category?->name ?? 'Uncategorized' }}</td>
                                     <td class="px-2 py-2 sm:px-3">@if ($ticket->displayStatus())<x-status-badge :status="$ticket->displayStatus()" :show-icon="false" class="px-2 py-0.5 text-[11px]" />@else<span class="text-muted-foreground">—</span>@endif</td>

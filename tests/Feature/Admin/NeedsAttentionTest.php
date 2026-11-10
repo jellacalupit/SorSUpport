@@ -235,8 +235,7 @@ class NeedsAttentionTest extends TestCase
             ->get(route('admin.tickets.needs-attention'))
             ->assertOk()
             ->assertSee('Anonymous')
-            ->assertSee('Confidential concern')
-            ->assertDontSee('Identity revealing subject line')
+            ->assertSee('Identity revealing subject line')
             ->assertDontSee($this->student->name);
 
         $otherRecipient = $this->user(User::ROLE_RECIPIENT, 'Dora Dean');

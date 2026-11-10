@@ -15,14 +15,13 @@ class TicketDetailsEditTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_correct_the_category_and_suggested_recipient_of_a_pending_ticket(): void
+    public function test_admin_can_correct_the_category_of_a_pending_ticket(): void
     {
-        [$admin, $ticket, $otherCategory, $recipient] = $this->createPendingTicket();
+        [$admin, $ticket, $otherCategory] = $this->createPendingTicket();
 
         $this->actingAs($admin)
             ->patch(route('admin.tickets.update-details', $ticket), [
                 'category_id' => $otherCategory->id,
-                'suggested_recipient_id' => $recipient->id,
             ])
             ->assertRedirect(route('admin.tickets.review.index'))
             ->assertSessionHasNoErrors();
@@ -30,22 +29,18 @@ class TicketDetailsEditTest extends TestCase
         $complaint = $ticket->complaint->refresh();
 
         $this->assertSame($otherCategory->id, $complaint->category_id);
-        $this->assertSame($recipient->id, $complaint->suggested_recipient_id);
+        $this->assertNull($complaint->suggested_recipient_id);
         $this->assertDatabaseHas('audit_logs', [
             'ticket_id' => $ticket->id,
             'action' => 'ticket_details_updated',
             'performed_by' => $admin->id,
         ]);
 
-        // The corrected suggestion can be assigned even though the category does not list it.
         $this->actingAs($admin)
-            ->post(route('admin.tickets.assign', $ticket), [
-                'assignment_mode' => 'recipient',
-                'recipient_id' => $recipient->id,
-            ])
-            ->assertRedirect(route('admin.tickets.review.index'));
-
-        $this->assertSame($recipient->user_id, $ticket->refresh()->assigned_to);
+            ->get(route('admin.tickets.review.index'))
+            ->assertOk()
+            ->assertSee('aria-label="Edit category"', false)
+            ->assertDontSee('aria-label="Edit ticket details"', false);
     }
 
     public function test_details_are_locked_once_the_ticket_is_classified(): void

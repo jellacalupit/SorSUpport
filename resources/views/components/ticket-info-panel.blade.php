@@ -3,7 +3,7 @@
     'showFiledBy' => false,
     'studentView' => false,
     'showClosedAt' => false,
-    // Admin review only: lets the category and suggested recipient be corrected before classifying.
+    // Admin review only: lets the category be corrected before classifying.
     'editable' => false,
     'categories' => [],
     'recipients' => [],
@@ -107,18 +107,12 @@
                     {{ $forwardedOffice ?: 'Receiving office' }} · {{ $forwardedDate }}
                 </p>
             @endif
-            @if ($canEditDetails)
-                <button type="button" x-show="!editingDetails" x-on:click="editingDetails = true" aria-label="Edit ticket details" class="inline-flex shrink-0 items-center gap-1 rounded-full border border-primary px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary-soft">
-                    <x-icons.pencil class="h-3 w-3" />
-                    Edit
-                </button>
-            @endif
         </div>
     </div>
 
     <div class="mt-2">
-        <h2 class="min-w-0 truncate font-display text-[15px] font-bold leading-tight sm:text-base" title="{{ $studentView ? ($complaint?->subject_title ?? 'Untitled') : ($complaint?->public_subject ?? 'Untitled') }}">
-            {{ $studentView ? ($complaint?->subject_title ?? 'Untitled') : ($complaint?->public_subject ?? 'Untitled') }}
+        <h2 class="min-w-0 truncate font-display text-[15px] font-bold leading-tight sm:text-base" title="{{ $complaint?->subject_title ?? 'Untitled' }}">
+            {{ $complaint?->subject_title ?? 'Untitled' }}
         </h2>
     </div>
     <div class="mt-1">
@@ -129,7 +123,14 @@
     <div class="grid gap-y-2">
         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
             <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Category</p>
-            <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $complaint?->category?->name ?? 'Uncategorized' }}</p>
+            <p class="flex min-w-0 items-center gap-1.5 text-sm font-medium leading-tight wrap-break-word">
+                <span>{{ $complaint?->category?->name ?? 'Uncategorized' }}</span>
+                @if ($canEditDetails)
+                    <button type="button" x-show="!editingDetails" x-on:click="editingDetails = true" aria-label="Edit category" title="Edit category" class="inline-grid h-6 w-6 shrink-0 place-items-center rounded-full text-primary transition-colors hover:bg-primary-soft">
+                        <x-icons.pencil class="h-3.5 w-3.5" />
+                    </button>
+                @endif
+            </p>
         </div>
         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
             <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">{{ $assignedRecipient ? 'Assigned Recipient' : ($assignedUser ? 'Assigned To' : 'Suggested Recipient') }}</p>
@@ -273,14 +274,10 @@
         <form x-show="editingDetails" x-cloak method="POST" action="{{ route('admin.tickets.update-details', $ticket) }}" class="mt-3 grid gap-2 rounded-lg border border-border bg-muted/50 p-3">
             @csrf
             @method('PATCH')
-            <p class="text-xs text-muted-foreground">Correct these if the student picked the wrong category or recipient.</p>
+            <p class="text-xs text-muted-foreground">Correct the category if the student selected the wrong one.</p>
             <div class="text-xs font-semibold leading-tight text-muted-foreground">
                 Category
                 <x-picker name="category_id" required label="Category" class="mt-1" :selected="$complaint->category_id" :options="$categories->map(fn ($categoryOption) => ['value' => $categoryOption->id, 'label' => $categoryOption->name])->all()" />
-            </div>
-            <div class="text-xs font-semibold leading-tight text-muted-foreground">
-                Suggested recipient
-                <x-picker name="suggested_recipient_id" label="Suggested recipient" class="mt-1" placeholder="None" :selected="$complaint->suggested_recipient_id ?? ''" :options="collect([['value' => '', 'label' => 'None']])->merge($recipients->map(fn ($recipientOption) => ['value' => $recipientOption->id, 'label' => $recipientOption->user?->table_name ?? 'Recipient', 'detail' => trim($recipientOption->designation . ', ' . $recipientOption->unit, ', ')]))->all()" />
             </div>
             <div class="mt-1 grid grid-cols-2 gap-2">
                 <button type="button" x-on:click="editingDetails = false" class="w-full rounded-full border border-primary bg-white px-2.5 py-1.5 text-center text-xs font-semibold text-primary transition-colors hover:bg-primary-soft">Cancel</button>

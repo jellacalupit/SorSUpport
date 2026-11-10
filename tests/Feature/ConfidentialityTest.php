@@ -295,20 +295,25 @@ class ConfidentialityTest extends TestCase
         $this->actingAs($this->otherRecipient)->get(route('recipient.complaints.show', $ticket->complaint))->assertOk();
     }
 
-    public function test_sensitive_subjects_stay_out_of_the_dashboard_and_reports(): void
+    public function test_authorized_admin_views_show_sensitive_subjects_but_analytics_stays_redacted(): void
     {
         $this->assign($this->submit(['category_id' => $this->sensitive->id, 'subject_title' => 'Groped in the corridor']));
+        $this->submit(['category_id' => $this->sensitive->id, 'subject_title' => 'Private review-table subject']);
         $this->submit(['subject_title' => 'Ordinary library concern']);
 
         $this->actingAs($this->admin)->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertDontSee('Groped in the corridor')
-            ->assertSee('Confidential concern')
+            ->assertSee('Groped in the corridor')
             ->assertSee('Ordinary library concern');
+
+        $this->actingAs($this->admin)->get(route('admin.tickets.review.index'))
+            ->assertOk()
+            ->assertSee('Private review-table subject');
 
         $this->actingAs($this->admin)->get('/admin/analytics')
             ->assertOk()
-            ->assertDontSee('Groped in the corridor');
+            ->assertDontSee('Groped in the corridor')
+            ->assertDontSee('Private review-table subject');
     }
 
     // ------------------------------------------------------------------ attachments

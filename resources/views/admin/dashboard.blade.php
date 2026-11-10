@@ -138,7 +138,7 @@
                                 {{ $ticket->complaint?->reference_number ?? $ticket->id }}
                             </td>
                             <td class="truncate px-3 py-2 text-xs text-foreground">
-                                {{ $ticket->complaint?->public_subject ?? 'No subject' }}
+                                {{ $ticket->complaint?->subject_title ?? 'No subject' }}
                             </td>
                             <td class="px-3 py-2 text-center">
                                 @php
@@ -430,7 +430,7 @@
                                         {{ $ticket->complaint?->reference_number ?? $ticket->id }}
                                     </td>
                                     <td class="max-w-[220px] truncate px-3 py-[7px] text-xs text-foreground">
-                                        {{ $ticket->complaint?->public_subject ?? 'No subject' }}
+                                        {{ $ticket->complaint?->subject_title ?? 'No subject' }}
                                     </td>
                                     <td class="px-3 py-[7px] text-center">
                                         @php

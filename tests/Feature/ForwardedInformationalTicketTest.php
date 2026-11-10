@@ -247,7 +247,7 @@ class ForwardedInformationalTicketTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_forwarded_display_preserves_hidden_identity_and_sensitive_subject_privacy(): void
+    public function test_forwarded_display_preserves_hidden_identity_while_showing_the_subject_to_authorized_users(): void
     {
         $sensitiveCategory = ComplaintCategory::create([
             'name' => 'Sensitive concern',
@@ -272,8 +272,7 @@ class ForwardedInformationalTicketTest extends TestCase
             ->get(route('recipient.complaints.show', $ticket->complaint))
             ->assertOk()
             ->assertSee('Forwarded for information')
-            ->assertSee('Confidential concern')
-            ->assertDontSee('PRIVATE-SENSITIVE-SUBJECT')
+            ->assertSee('PRIVATE-SENSITIVE-SUBJECT')
             ->assertDontSee($this->student->name)
             ->assertDontSee('STUDENT-2026-1');
 
@@ -281,8 +280,7 @@ class ForwardedInformationalTicketTest extends TestCase
             ->get(route('admin.complaints.show', $ticket->complaint))
             ->assertOk()
             ->assertSee('Anonymous')
-            ->assertSee('Confidential concern')
-            ->assertDontSee('PRIVATE-SENSITIVE-SUBJECT')
+            ->assertSee('PRIVATE-SENSITIVE-SUBJECT')
             ->assertDontSee($this->student->name)
             ->assertDontSee('STUDENT-2026-1');
     }
