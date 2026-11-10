@@ -96,11 +96,24 @@
             @endforeach
             {{-- Rounded tips go on top of every arc so they overlap the colour that follows. --}}
             @foreach ($arcs as $arc)
-                @unless ($arc['full'])
+                @if (! $arc['full'] && ! $loop->last)
                     <circle class="pointer-events-none" cx="{{ $arc['to'][0] }}" cy="{{ $arc['to'][1] }}" r="{{ $strokeWidth / 2 }}" fill="{{ $arc['color'] }}" />
-                @endunless
+                @endif
             @endforeach
         </g>
+
+        {{-- The final cap closes the seam above the first segment. Keeping it outside the mask
+             prevents the circular reveal from clipping the intentional overlap at 12 o'clock. --}}
+        @if (count($arcs) > 0 && ! $arcs[array_key_last($arcs)]['full'])
+            @php($finalArc = $arcs[array_key_last($arcs)])
+            <circle
+                class="dashboard-donut-final-cap pointer-events-none"
+                cx="{{ $finalArc['to'][0] }}"
+                cy="{{ $finalArc['to'][1] }}"
+                r="{{ $strokeWidth / 2 }}"
+                fill="{{ $finalArc['color'] }}"
+            />
+        @endif
     </svg>
 
 </span>

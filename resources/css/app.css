@@ -292,6 +292,17 @@
     }
 }
 
+@keyframes dashboard-donut-final-cap {
+    0%,
+    82% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
 .dashboard-donut-reveal {
     stroke-dasharray: 100 0;
     animation: dashboard-donut-reveal 500ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -301,8 +312,13 @@
     animation: dashboard-progress-grow 500ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.dashboard-donut-final-cap {
+    animation: dashboard-donut-final-cap 500ms ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .dashboard-donut-reveal,
+    .dashboard-donut-final-cap,
     .dashboard-progress-fill {
         animation: none;
     }
