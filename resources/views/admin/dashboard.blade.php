@@ -313,14 +313,19 @@
                         $statusOffset = 0;
                     @endphp
 
-                    <div class="mt-0 h-full min-h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:min-h-[134px] lg:min-h-[152px]">
+                    <div
+                        x-data="{ activeSegment: null }"
+                        x-on:donut-segment-enter="activeSegment = $event.detail"
+                        x-on:donut-segment-leave="activeSegment = null"
+                        class="mt-0 h-full min-h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:min-h-[134px] lg:min-h-[152px]"
+                    >
                         <div class="flex items-start gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
                             <div class="shrink-0">
                                 <div class="relative h-28 w-28 sm:h-30 sm:w-30">
                                     <x-donut-ring :segments="$statusSegments" :stroke-width="15" class="h-full w-full drop-shadow-sm" />
                                     <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                                        <span class="text-lg font-bold text-foreground sm:text-xl">{{ $statusTotal }}</span>
-                                        <span class="text-[8px] text-muted-foreground">Tickets</span>
+                                            <span class="text-lg font-bold text-foreground sm:text-xl" x-text="activeSegment?.count ?? {{ $statusTotal }}">{{ $statusTotal }}</span>
+                                            <span x-show="!activeSegment" class="text-[8px] text-muted-foreground">Tickets</span>
                                     </div>
                                 </div>
                             </div>
@@ -329,8 +334,16 @@
                                 <div class="text-left text-xs font-semibold text-black sm:text-sm">Status</div>
                                 <div class="mt-1.5 flex flex-col gap-0.5 text-[9px] leading-tight text-foreground sm:text-[10px]">
                                     @foreach ($statusSegments as $segment)
-                                        <div class="flex min-w-0 items-center gap-1.5">
-                                            <span class="h-2.5 w-2.5 shrink-0 rounded-sm" style="background-color: {{ $segment['color'] }};"></span>
+                                        <div
+                                            data-segment-label="{{ $segment['label'] }}"
+                                            class="flex min-w-0 items-center gap-1.5 transition-[font-size,line-height,font-weight] duration-150"
+                                            x-bind:class="activeSegment?.label === $el.dataset.segmentLabel ? 'text-[11px] font-semibold leading-4' : ''"
+                                        >
+                                            <span
+                                                class="shrink-0 rounded-sm transition-[width,height] duration-150"
+                                                x-bind:class="activeSegment?.label === $el.parentElement.dataset.segmentLabel ? 'h-3 w-3' : 'h-2.5 w-2.5'"
+                                                style="background-color: {{ $segment['color'] }};"
+                                            ></span>
                                             <span class="min-w-0 break-words">{{ $segment['label'] }}</span>
                                         </div>
                                     @endforeach
@@ -354,14 +367,19 @@
                         $classificationOffset = 0;
                     @endphp
 
-                    <div class="mt-0 h-full min-h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:min-h-[134px] lg:min-h-[152px]">
+                    <div
+                        x-data="{ activeSegment: null }"
+                        x-on:donut-segment-enter="activeSegment = $event.detail"
+                        x-on:donut-segment-leave="activeSegment = null"
+                        class="mt-0 h-full min-h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:min-h-[134px] lg:min-h-[152px]"
+                    >
                         <div class="flex items-start gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
                             <div class="shrink-0">
                                 <div class="relative h-28 w-28 sm:h-30 sm:w-30">
                                     <x-donut-ring :segments="$classificationSegments" :stroke-width="15" class="h-full w-full drop-shadow-sm" />
                                     <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                                        <span class="text-lg font-bold text-foreground sm:text-xl">{{ $classificationTotal }}</span>
-                                        <span class="text-[8px] text-muted-foreground">Tickets</span>
+                                            <span class="text-lg font-bold text-foreground sm:text-xl" x-text="activeSegment?.count ?? {{ $classificationTotal }}">{{ $classificationTotal }}</span>
+                                            <span x-show="!activeSegment" class="text-[8px] text-muted-foreground">Tickets</span>
                                     </div>
                                 </div>
                             </div>
@@ -370,8 +388,16 @@
                                 <div class="text-left text-xs font-semibold text-black sm:text-sm">Classification</div>
                                 <div class="mt-1.5 flex flex-col gap-0.5 text-[9px] text-foreground sm:text-[10px]">
                                     @foreach ($classificationSegments as $segment)
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="h-2.5 w-2.5 rounded-sm" style="background-color: {{ $segment['color'] }};"></span>
+                                        <div
+                                            data-segment-label="{{ $segment['label'] }}"
+                                            class="flex items-center gap-1.5 transition-[font-size,line-height,font-weight] duration-150"
+                                            x-bind:class="activeSegment?.label === $el.dataset.segmentLabel ? 'text-[11px] font-semibold leading-4' : ''"
+                                        >
+                                            <span
+                                                class="rounded-sm transition-[width,height] duration-150"
+                                                x-bind:class="activeSegment?.label === $el.parentElement.dataset.segmentLabel ? 'h-3 w-3' : 'h-2.5 w-2.5'"
+                                                style="background-color: {{ $segment['color'] }};"
+                                            ></span>
                                             <span>{{ $segment['label'] }}</span>
                                         </div>
                                     @endforeach

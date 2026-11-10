@@ -39,8 +39,6 @@
 @endphp
 
 <span
-    x-data="{ tooltip: null, tooltipX: 0, tooltipY: 0 }"
-    x-on:mousemove="const bounds = $root.getBoundingClientRect(); tooltipX = $event.clientX - bounds.left; tooltipY = $event.clientY - bounds.top"
     {{ $attributes->class(['relative block h-full w-full']) }}
 >
     <svg viewBox="0 0 100 100" class="h-full w-full" aria-hidden="true">
@@ -59,8 +57,8 @@
                     fill="none"
                     stroke="{{ $arc['color'] }}"
                     stroke-width="{{ $strokeWidth }}"
-                    x-on:mouseenter="tooltip = { label: $event.currentTarget.dataset.label, count: Number($event.currentTarget.dataset.count), percentage: Number($event.currentTarget.dataset.percentage) }"
-                    x-on:mouseleave="tooltip = null"
+                    x-on:mouseenter="$dispatch('donut-segment-enter', { label: $event.currentTarget.dataset.label, count: Number($event.currentTarget.dataset.count), percentage: Number($event.currentTarget.dataset.percentage) })"
+                    x-on:mouseleave="$dispatch('donut-segment-leave')"
                 />
             @else
                 <path
@@ -73,8 +71,8 @@
                     fill="none"
                     stroke="{{ $arc['color'] }}"
                     stroke-width="{{ $strokeWidth }}"
-                    x-on:mouseenter="tooltip = { label: $event.currentTarget.dataset.label, count: Number($event.currentTarget.dataset.count), percentage: Number($event.currentTarget.dataset.percentage) }"
-                    x-on:mouseleave="tooltip = null"
+                    x-on:mouseenter="$dispatch('donut-segment-enter', { label: $event.currentTarget.dataset.label, count: Number($event.currentTarget.dataset.count), percentage: Number($event.currentTarget.dataset.percentage) })"
+                    x-on:mouseleave="$dispatch('donut-segment-leave')"
                 />
             @endif
         @endforeach
@@ -86,16 +84,4 @@
         @endforeach
     </svg>
 
-    <span
-        x-cloak
-        x-show="tooltip"
-        class="pointer-events-none absolute z-30 min-w-max rounded-lg border border-border bg-white px-2.5 py-1.5 text-left shadow-lg"
-        x-bind:style="`left: ${tooltipX}px; top: ${tooltipY}px; transform: translate(-50%, calc(-100% - 8px));`"
-    >
-        <span class="block text-[11px] font-medium leading-tight text-muted-foreground" x-text="tooltip?.label"></span>
-        <span class="mt-0.5 block text-xs font-semibold leading-tight text-primary">
-            <span x-text="tooltip?.count"></span>
-            <span x-text="` ticket${tooltip?.count === 1 ? '' : 's'} · ${tooltip?.percentage}%`"></span>
-        </span>
-    </span>
 </span>
