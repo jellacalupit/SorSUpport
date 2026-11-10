@@ -319,7 +319,7 @@
                         x-on:donut-segment-leave="activeSegment = null"
                         class="mt-0 h-full min-h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:min-h-[134px] lg:h-[166px] lg:min-h-[166px]"
                     >
-                        <div class="flex items-start gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
+                        <div class="flex items-center gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
                             <div class="shrink-0">
                                 <div class="relative h-28 w-28 sm:h-30 sm:w-30">
                                     <x-donut-ring :segments="$statusSegments" :stroke-width="15" class="h-full w-full drop-shadow-sm" />
@@ -337,7 +337,7 @@
                                         <div
                                             data-segment-label="{{ $segment['label'] }}"
                                             class="flex min-w-0 items-center gap-1.5 transition-[font-size,line-height,font-weight] duration-150"
-                                            x-bind:class="activeSegment?.label === $el.dataset.segmentLabel ? 'text-[11px] font-semibold leading-4' : ''"
+                                            x-bind:class="activeSegment?.label === $el.dataset.segmentLabel ? 'text-[11px] leading-4' : ''"
                                         >
                                             <span
                                                 class="shrink-0 rounded-sm transition-[width,height] duration-150"
@@ -373,7 +373,7 @@
                         x-on:donut-segment-leave="activeSegment = null"
                         class="mt-0 h-full min-h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:min-h-[134px] lg:min-h-[152px]"
                     >
-                        <div class="flex items-start gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
+                        <div class="flex items-center gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
                             <div class="shrink-0">
                                 <div class="relative h-28 w-28 sm:h-30 sm:w-30">
                                     <x-donut-ring :segments="$classificationSegments" :stroke-width="15" class="h-full w-full drop-shadow-sm" />
@@ -391,7 +391,7 @@
                                         <div
                                             data-segment-label="{{ $segment['label'] }}"
                                             class="flex items-center gap-1.5 transition-[font-size,line-height,font-weight] duration-150"
-                                            x-bind:class="activeSegment?.label === $el.dataset.segmentLabel ? 'text-[11px] font-semibold leading-4' : ''"
+                                            x-bind:class="activeSegment?.label === $el.dataset.segmentLabel ? 'text-[11px] leading-4' : ''"
                                         >
                                             <span
                                                 class="rounded-sm transition-[width,height] duration-150"
@@ -426,13 +426,13 @@
                         <tbody>
                             @forelse ($recentTickets as $ticket)
                                 <tr class="border-t border-border transition-colors hover:bg-muted/30">
-                                    <td class="whitespace-nowrap px-3 py-2 font-mono text-[11px] font-semibold text-primary">
+                                    <td class="whitespace-nowrap px-3 py-[7px] font-mono text-[11px] font-semibold text-primary">
                                         {{ $ticket->complaint?->reference_number ?? $ticket->id }}
                                     </td>
-                                    <td class="max-w-[220px] truncate px-3 py-2 text-xs text-foreground">
+                                    <td class="max-w-[220px] truncate px-3 py-[7px] text-xs text-foreground">
                                         {{ $ticket->complaint?->public_subject ?? 'No subject' }}
                                     </td>
-                                    <td class="px-3 py-2 text-center">
+                                    <td class="px-3 py-[7px] text-center">
                                         @php
                                             $recentStatusLabel = $ticket->displayStatus();
                                         @endphp
@@ -530,13 +530,13 @@
                 <ul data-volume-legend class="hidden" aria-label="Categories"></ul>
             </div>
             <div class="grid grid-cols-2 gap-2">
-                <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-[20px] border border-border bg-white p-2 shadow-sm">
+                <div class="flex h-full min-h-0 flex-col overflow-visible rounded-[20px] border border-border bg-white p-2 shadow-sm">
                     <div class="flex items-center justify-between gap-2 px-1">
                         <h3 class="font-display text-sm font-semibold leading-tight text-foreground">Recipient Performance</h3>
                         <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
-                    <div class="mt-1.5 grid content-start gap-4 overflow-hidden">
+                    <div class="mt-1.5 grid content-start gap-4 overflow-visible">
                         @forelse ($topPerformingRecipients as $recipient)
                             <div class="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-muted/50">
                                 <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-sidebar-primary text-[9px] font-bold text-sidebar-primary-foreground">
@@ -553,7 +553,7 @@
                                         </p>
                                         
                                         <!-- Profile Tooltip -->
-                                        <span x-show="recipientProfileOpen" x-cloak data-keep-in-view class="brand-gradient absolute top-8 left-0 z-50 w-56 max-w-[calc(100vw-2rem)] rounded-xl p-3 text-left text-primary-foreground shadow-lg">
+                                        <span x-show="recipientProfileOpen" x-cloak data-keep-in-view class="brand-gradient absolute left-0 z-50 w-56 max-w-[calc(100vw-2rem)] rounded-xl p-3 text-left text-primary-foreground shadow-lg {{ $loop->iteration >= 4 ? 'bottom-6' : 'top-8' }}">
                                             <span class="flex items-center gap-2">
                                                 <span class="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-foreground/15 text-xs font-bold ring-2 ring-primary-foreground/30">
                                                     @if ($recipient->user?->avatar_path)
