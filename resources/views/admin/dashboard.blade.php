@@ -531,8 +531,11 @@
             </div>
             <div class="grid grid-cols-2 gap-2">
                 <div class="flex h-full min-h-0 flex-col overflow-visible rounded-[20px] border border-border bg-white p-2 shadow-sm">
-                    <div class="flex items-center justify-between gap-2 px-1">
-                        <h3 class="font-display text-sm font-semibold leading-tight text-foreground">Recipient Performance</h3>
+                    <div class="flex items-start justify-between gap-2 px-1">
+                        <div class="min-w-0">
+                            <h3 class="font-display text-sm font-semibold leading-tight text-foreground">Recipient Performance</h3>
+                            <p class="mt-0.5 text-[10px] leading-tight text-muted-foreground">Resolution rate for assigned tickets</p>
+                        </div>
                         <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
@@ -587,13 +590,16 @@
                     </div>
                 </div>
                 <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-[20px] border border-border bg-white p-2 shadow-sm">
-                    <div class="flex items-center justify-between gap-2 px-1">
-                        <h3 class="font-display text-sm font-semibold leading-tight text-foreground">Recent audit activity</h3>
+                    <div class="flex items-start justify-between gap-2 px-1">
+                        <div class="min-w-0">
+                            <h3 class="font-display text-sm font-semibold leading-tight text-foreground">Recent audit activity</h3>
+                            <p class="mt-0.5 text-[10px] leading-tight text-muted-foreground">Latest recorded system actions</p>
+                        </div>
                         <a data-admin-page-nav href="{{ route('admin.audit') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
                     <ol class="relative mt-1.5 grid content-start gap-4 overflow-hidden">
-                        <span class="absolute top-5 bottom-5 left-[calc(25%+1.75rem)] w-px bg-[#7a1d2a]/20" aria-hidden="true"></span>
+                        <span class="absolute top-5 bottom-5 left-[5.875rem] w-px bg-[#7a1d2a]/20" aria-hidden="true"></span>
                         @forelse ($recentActivity as $log)
                             @php
                                 $activityLabel = match ($log->action) {
@@ -609,9 +615,17 @@
                                     'ticket_resolved', 'ticket_closed' => 'check',
                                     default => 'activity',
                                 };
+                                $relativeTime = $log->created_at?->diffForHumans() ?? 'Recently';
+                                $relativeTimeHasAgo = str_ends_with($relativeTime, ' ago');
+                                $relativeTimeValue = $relativeTimeHasAgo ? substr($relativeTime, 0, -4) : $relativeTime;
                             @endphp
-                            <li class="relative z-10 grid min-h-12 min-w-0 grid-cols-[25%_2.25rem_minmax(0,1fr)] items-center gap-2 p-1">
-                                <span class="flex h-9 items-center text-[11px] text-black">{{ $log->created_at?->diffForHumans() ?? 'Recently' }}</span>
+                            <li class="relative z-10 grid min-h-12 min-w-0 grid-cols-[4rem_2.25rem_minmax(0,1fr)] items-center gap-2 p-1">
+                                <span class="flex min-h-9 flex-wrap content-center items-center gap-x-1 text-[11px] leading-tight text-black">
+                                    <span class="whitespace-nowrap">{{ $relativeTimeValue }}</span>
+                                    @if ($relativeTimeHasAgo)
+                                        <span class="whitespace-nowrap">ago</span>
+                                    @endif
+                                </span>
                                 <span class="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-[#7a1d2a] text-white shadow-sm ring-2 ring-[#7a1d2a]/10">
                                     @if ($log->display_performer?->avatar_path)
                                         <img src="{{ asset('storage/' . $log->display_performer->avatar_path) }}" alt="{{ $log->display_performer->name }}" class="h-full w-full object-cover">
@@ -632,7 +646,7 @@
                                     @endif
                                 </span>
                                 <div class="min-w-0 space-y-px">
-                                    <p class="truncate text-[12px] font-semibold leading-[1.1] text-foreground">{{ $activityLabel }}</p>
+                                    <p class="break-words text-[12px] font-semibold leading-[1.1] text-foreground">{{ $activityLabel }}</p>
                                     <p class="truncate text-[11px] leading-[1.1] text-muted-foreground">
                                         <span>{{ $log->display_performer?->given_name ?: 'System' }} updated activity</span>
                                         @if ($referenceNumber)
