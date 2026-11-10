@@ -41,7 +41,7 @@
 <span
     {{ $attributes->class(['relative block h-full w-full']) }}
 >
-    <svg viewBox="0 0 100 100" class="h-full w-full" aria-hidden="true">
+    <svg viewBox="0 0 100 100" class="dashboard-donut-enter h-full w-full" aria-hidden="true">
         <circle cx="50" cy="50" r="{{ $radius }}" fill="none" stroke="#eef2f7" stroke-width="{{ $strokeWidth }}" />
         @foreach ($arcs as $arc)
             @if ($arc['full'])

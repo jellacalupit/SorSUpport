@@ -204,7 +204,7 @@
 
                             <div class="mt-0.5 flex items-center gap-2">
                                 <div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-200">
-                                    <div class="h-full rounded-full bg-green-500" style="width: {{ $recipient->performance_percentage ?? 0 }}%"></div>
+                                    <div class="dashboard-progress-fill h-full rounded-full bg-green-500" style="width: {{ $recipient->performance_percentage ?? 0 }}%"></div>
                                 </div>
                                 <span class="w-8 shrink-0 text-right text-[10px] font-semibold text-green-700">{{ $recipient->performance_percentage ?? 0 }}%</span>
                             </div>
@@ -576,7 +576,7 @@
                                     
                                     <div class="flex items-center gap-1.5">
                                         <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-200">
-                                            <div class="h-full bg-green-500 rounded-full" style="width: {{ $recipient->performance_percentage ?? 0 }}%"></div>
+                                            <div class="dashboard-progress-fill h-full rounded-full bg-green-500" style="width: {{ $recipient->performance_percentage ?? 0 }}%"></div>
                                         </div>
                                         <span class="w-7 shrink-0 text-right text-[8px] font-semibold text-green-700">{{ $recipient->performance_percentage ?? 0 }}%</span>
                                     </div>
@@ -599,7 +599,7 @@
                     </div>
 
                     <ol class="relative mt-1.5 grid content-start gap-4 overflow-hidden">
-                        <span class="absolute top-5 bottom-5 left-[5.875rem] w-px bg-[#7a1d2a]/20" aria-hidden="true"></span>
+                        <span class="absolute top-5 bottom-5 left-[calc(clamp(4rem,20%,6rem)+1.875rem)] w-px bg-[#7a1d2a]/20" aria-hidden="true"></span>
                         @forelse ($recentActivity as $log)
                             @php
                                 $activityLabel = match ($log->action) {
@@ -619,7 +619,7 @@
                                 $relativeTimeHasAgo = str_ends_with($relativeTime, ' ago');
                                 $relativeTimeValue = $relativeTimeHasAgo ? substr($relativeTime, 0, -4) : $relativeTime;
                             @endphp
-                            <li class="relative z-10 grid min-h-12 min-w-0 grid-cols-[4rem_2.25rem_minmax(0,1fr)] items-center gap-2 p-1">
+                            <li class="relative z-10 grid min-h-12 min-w-0 grid-cols-[clamp(4rem,20%,6rem)_2.25rem_minmax(0,1fr)] items-center gap-2 p-1">
                                 <span class="flex min-h-9 flex-wrap content-center items-center gap-x-1 text-[11px] leading-tight text-black">
                                     <span class="whitespace-nowrap">{{ $relativeTimeValue }}</span>
                                     @if ($relativeTimeHasAgo)
@@ -674,6 +674,25 @@
         // The phone layout and the desktop layout each have their own volume card.
         document.querySelectorAll('[data-volume-chart]').forEach((root) => {
             if (typeof Chart === 'undefined') return;
+
+            if (!Chart.Tooltip.positioners.dashboardVolume) {
+                Chart.Tooltip.positioners.dashboardVolume = function (items, eventPosition) {
+                    const nearest = Chart.Tooltip.positioners.nearest.call(this, items, eventPosition);
+                    if (!items.length) return nearest;
+
+                    const item = items[0];
+                    const label = this.chart.data.labels[item.index];
+                    if (label !== 'Other categories') return nearest;
+
+                    const bar = item.element;
+                    return {
+                        x: (bar.base + bar.x) / 2,
+                        y: bar.y - (bar.height / 2) - 8,
+                        xAlign: 'center',
+                        yAlign: 'bottom',
+                    };
+                };
+            }
 
             const payload = @json($volumeChart);
             const categories = payload.categories || [];
@@ -996,10 +1015,11 @@
                         plugins: {
                             legend: { display: false },
                             tooltip: {
+                                position: 'dashboardVolume',
                                 backgroundColor: '#ffffff',
-                                titleColor: muted,
+                                titleColor: '#111111',
                                 bodyColor: lineColor,
-                                titleFont: { family: fontSans, size: 11, weight: '500' },
+                                titleFont: { family: fontSans, size: 12, weight: '600' },
                                 bodyFont: { family: fontSans, size: 11, weight: '600' },
                                 borderColor: '#e5e7eb',
                                 borderWidth: 1,

@@ -276,6 +276,41 @@
     background-image: linear-gradient(140deg, var(--color-primary-dark), var(--color-primary) 55%, oklch(0.45 0.13 30));
 }
 
+@keyframes dashboard-donut-enter {
+    from {
+        opacity: 0.45;
+        transform: scale(0.88) rotate(-8deg);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+@keyframes dashboard-progress-grow {
+    from {
+        width: 0;
+    }
+}
+
+.dashboard-donut-enter {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: dashboard-donut-enter 800ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dashboard-progress-fill {
+    animation: dashboard-progress-grow 800ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-donut-enter,
+    .dashboard-progress-fill {
+        animation: none;
+    }
+}
+
 /* Full-height app frame: the header stays put and only the page content scrolls.
    dvh follows the visible area on phones, where the browser bars change height. */
 .app-viewport {
