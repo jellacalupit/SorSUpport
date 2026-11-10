@@ -60,7 +60,6 @@
                 ];
             }
         }
-        $statusDonutTotal = array_sum(array_column($statusSegments, 'count'));
         $classificationSegments = [
             ['label' => 'Needs resolution', 'color' => $classificationColors['needs_resolution'], 'count' => (int) ($data['classification']['Needs Resolution'] ?? 0)],
             ['label' => 'Informational', 'color' => $classificationColors['informational'], 'count' => (int) ($data['classification']['Informational'] ?? 0)],
@@ -78,7 +77,13 @@
         ];
         $categoryRows = $data['categoryVolumes']['rows'];
         $categoryEmptyCount = $data['categoryVolumes']['empty_category_count'];
-        $categoryVolumeMax = max(1, max(array_column($categoryRows ?: [['total' => 1]], 'total')));
+        $categoryChartSegments = [
+            ['key' => 'submitted', 'label' => 'Submitted (not resolved)', 'color' => $classificationColors['needs_resolution']],
+            ['key' => 'resolved', 'label' => 'Resolved', 'color' => $classificationColors['resolved']],
+            ['key' => 'informational', 'label' => 'Informational', 'color' => $classificationColors['informational']],
+            ['key' => 'invalid', 'label' => 'Invalid', 'color' => $classificationColors['invalid']],
+            ['key' => 'unclassified', 'label' => 'Unclassified', 'color' => $classificationColors['unclassified']],
+        ];
 
         $resolutionTime = $data['resolutionTime'];
         $performance = $data['performanceMetrics'];
@@ -246,14 +251,17 @@
                         <input type="hidden" name="{{ $dropdown['name'] }}" value="{{ $current }}" data-analytics-filter-input="{{ $dropdown['name'] }}">
                     </div>
                 @endforeach
-                <div class="col-span-2 flex items-end gap-2 lg:col-span-4 xl:col-span-1">
-                    <button class="inline-flex h-9 flex-1 items-center justify-center rounded-md bg-primary px-4 text-xs font-semibold text-primary-foreground hover:bg-primary/90 xl:flex-none">Apply</button>
-                    <a href="{{ route('admin.analytics.index') }}" class="inline-flex h-9 flex-1 items-center justify-center rounded-md border border-primary/40 px-4 text-xs font-semibold text-primary hover:bg-primary-soft xl:flex-none">Reset</a>
+                <div class="col-span-2 lg:col-span-4 xl:col-span-1">
+                    <span aria-hidden="true" class="invisible mb-1 hidden text-[11px] font-semibold xl:block">Actions</span>
+                    <div class="flex gap-2">
+                        <button class="inline-flex h-9 flex-1 items-center justify-center rounded-md bg-primary px-4 text-xs font-semibold text-primary-foreground hover:bg-primary/90 xl:flex-none">Apply</button>
+                        <a href="{{ route('admin.analytics.index') }}" class="inline-flex h-9 flex-1 items-center justify-center rounded-md border border-primary/40 px-4 text-xs font-semibold text-primary hover:bg-primary-soft xl:flex-none">Reset</a>
+                    </div>
                 </div>
             </div>
         </form>
 
-        <section class="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6" aria-label="Analytics summary">
+        <section class="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5" aria-label="Analytics summary">
             <article class="{{ $cardClass }} p-3">
                 <h2 class="text-[11px] font-semibold text-muted-foreground">Total tickets</h2>
                 <p class="mt-1 font-display text-2xl font-bold leading-none text-primary">{{ number_format($total) }}</p>
@@ -271,11 +279,6 @@
                 <h2 class="text-[11px] font-semibold text-muted-foreground">Active handling time</h2>
                 <p class="mt-1 font-display text-2xl font-bold leading-none text-primary">{{ $days($resolutionTime['median_days']) }}</p>
                 <p class="mt-1 text-xs text-muted-foreground">average {{ $days($resolutionTime['average_days']) }}</p>
-            </article>
-            <article class="{{ $cardClass }} p-3">
-                <h2 class="text-[11px] font-semibold text-muted-foreground">First staff reply (SDS or recipient)</h2>
-                <p class="mt-1 font-display text-2xl font-bold leading-none text-primary">{{ $days($performance['first_response_time']['median_days']) }}</p>
-                <p class="mt-1 text-xs text-muted-foreground">Median calendar time</p>
             </article>
             <article class="{{ $cardClass }} p-3">
                 <h2 class="text-[11px] font-semibold text-muted-foreground">Escalation rate</h2>
@@ -321,8 +324,8 @@
                 <h2 class="sr-only">Overview</h2>
                 <div class="grid min-w-0 gap-4 lg:grid-cols-2">
                     @foreach ([
-                        ['title' => 'Needs-resolution tickets', 'key' => 'needs-resolution', 'color1' => $classificationColors['needs_resolution'], 'color2' => $classificationColors['resolved'], 'label1' => 'Submitted', 'label2' => 'Resolved', 'key1' => 'submitted', 'key2' => 'resolved', 'totals' => $monthlyGraphOneTotals],
-                        ['title' => 'Informational and invalid tickets', 'key' => 'informational-invalid', 'color1' => $classificationColors['informational'], 'color2' => $classificationColors['invalid'], 'label1' => 'Informational', 'label2' => 'Invalid', 'key1' => 'informational', 'key2' => 'invalid', 'totals' => $monthlyGraphTwoTotals],
+                        ['title' => 'Volume of Needs Resolution Tickets', 'key' => 'needs-resolution', 'color1' => $classificationColors['needs_resolution'], 'color2' => $classificationColors['resolved'], 'label1' => 'Submitted', 'label2' => 'Resolved', 'key1' => 'submitted', 'key2' => 'resolved', 'totals' => $monthlyGraphOneTotals],
+                        ['title' => 'Volume of Informational and Invalid Tickets', 'key' => 'informational-invalid', 'color1' => $classificationColors['informational'], 'color2' => $classificationColors['invalid'], 'label1' => 'Informational', 'label2' => 'Invalid', 'key1' => 'informational', 'key2' => 'invalid', 'totals' => $monthlyGraphTwoTotals],
                     ] as $graph)
                         <article class="{{ $cardClass }}">
                             <h3 class="{{ $titleClass }}">{{ $graph['title'] }}</h3>
@@ -344,54 +347,28 @@
                     @endforeach
                 </div>
 
-                <div class="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(19rem,0.9fr)_minmax(0,1.4fr)]">
-                    <div class="grid min-w-0 gap-4">
-                        <x-donut-chart title="Status" description="Needs-resolution and unclassified tickets" :segments="$statusSegments" total-label="Tickets" large />
-                        @if ($statusDonutTotal === 0)
-                            <p class="-mt-2 text-xs text-muted-foreground">No tickets in this period.</p>
-                        @endif
-                        <x-donut-chart title="Classification" :segments="$classificationSegments" total-label="Tickets" large />
-                    </div>
+                <div class="grid min-w-0 items-stretch gap-4 xl:grid-cols-[minmax(14rem,0.8fr)_minmax(14rem,0.8fr)_minmax(28rem,1.8fr)]">
+                    <x-donut-chart class="h-full" title="Status" description="Needs-resolution and unclassified tickets" empty-message="No tickets in this period." :segments="$statusSegments" total-label="Tickets" :legend-columns="2" large />
+                    <x-donut-chart class="h-full" title="Classification" :segments="$classificationSegments" total-label="Tickets" :legend-columns="1" large />
 
-                    <article class="{{ $cardClass }} min-w-0">
+                    <article class="{{ $cardClass }} flex min-w-0 flex-col">
                         <h3 class="{{ $titleClass }}">Volume by category</h3>
                         <p class="mt-0.5 {{ $mutedClass }}">Each ticket appears in exactly one classification segment.</p>
-                        @forelse ($categoryRows as $row)
-                            <div class="mt-4 grid grid-cols-[minmax(5rem,8rem)_minmax(0,1fr)_2rem] items-center gap-2" data-category-total="{{ $row['total'] }}">
-                                <span class="truncate text-xs" title="{{ $row['name'] }}">{{ $row['name'] }}</span>
-                                <div class="flex h-6 min-w-0 overflow-hidden rounded bg-muted" role="img" aria-label="{{ $row['name'] }}: {{ $row['total'] }} tickets">
-                                    @foreach ([
-                                        ['key' => 'submitted', 'label' => 'Submitted (not resolved)', 'color' => $classificationColors['needs_resolution']],
-                                        ['key' => 'resolved', 'label' => 'Resolved', 'color' => $classificationColors['resolved']],
-                                        ['key' => 'informational', 'label' => 'Informational', 'color' => $classificationColors['informational']],
-                                        ['key' => 'invalid', 'label' => 'Invalid', 'color' => $classificationColors['invalid']],
-                                        ['key' => 'unclassified', 'label' => 'Unclassified', 'color' => $classificationColors['unclassified']],
-                                    ] as $segment)
-                                        @php
-                                            $count = $row['segments'][$segment['key']];
-                                            $width = $row['total'] ? $count / $row['total'] * 100 : 0;
-                                        @endphp
-                                        @if ($count > 0)
-                                            <span class="flex h-full min-w-0 items-center justify-center overflow-hidden text-[10px] font-semibold text-white" style="width: {{ $width }}%; background-color: {{ $segment['color'] }}" title="{{ $segment['label'] }}: {{ $count }}" aria-label="{{ $segment['label'] }}: {{ $count }}">
-                                                @if ($width >= 12){{ number_format($count) }}@endif
-                                            </span>
-                                        @endif
-                                    @endforeach
-                                </div>
-                                <strong class="text-right text-xs tabular-nums">{{ number_format($row['total']) }}</strong>
+                        @if (count($categoryRows))
+                            <div class="relative mt-3 min-h-80 w-full flex-1" style="height: {{ max(320, min(460, count($categoryRows) * 30 + 70)) }}px">
+                                <canvas class="absolute inset-0" data-analytics-category-volume-chart role="img" aria-label="Ticket volume by category and classification"></canvas>
                             </div>
-                        @empty
+                        @else
                             <p class="mt-4 text-xs text-muted-foreground">No category totals in this period.</p>
-                        @endforelse
-                        <ul class="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-border pt-3 text-[11px]">
-                            @foreach ([
-                                ['label' => 'Submitted (not resolved)', 'color' => $classificationColors['needs_resolution']],
-                                ['label' => 'Resolved', 'color' => $classificationColors['resolved']],
-                                ['label' => 'Informational', 'color' => $classificationColors['informational']],
-                                ['label' => 'Invalid', 'color' => $classificationColors['invalid']],
-                                ['label' => 'Unclassified', 'color' => $classificationColors['unclassified']],
-                            ] as $segment)
-                                <li class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm" style="background-color: {{ $segment['color'] }}"></span>{{ $segment['label'] }}</li>
+                        @endif
+                        <ul class="mt-3 grid grid-cols-1 gap-x-4 gap-y-1.5 border-t border-border pt-3 text-[11px] sm:grid-cols-2">
+                            @foreach ($categoryChartSegments as $segment)
+                                @php $segmentTotal = array_sum(array_map(fn ($row) => $row['segments'][$segment['key']], $categoryRows)); @endphp
+                                <li class="flex min-w-0 items-center gap-1.5">
+                                    <span class="h-2.5 w-2.5 shrink-0 rounded-sm" style="background-color: {{ $segment['color'] }}"></span>
+                                    <span class="min-w-0 flex-1 truncate">{{ $segment['label'] }}</span>
+                                    <strong class="shrink-0 tabular-nums">{{ number_format($segmentTotal) }}</strong>
+                                </li>
                             @endforeach
                         </ul>
                         <p class="mt-2 text-[10px] text-muted-foreground">{{ number_format($categoryEmptyCount) }} categories have no tickets.</p>
@@ -404,7 +381,6 @@
                 <p class="text-[11px] text-muted-foreground">
                     Review time {{ $days($performance['review_time']['average_days']) }},
                     time to acknowledge {{ $days($performance['acknowledgment_time']['average_days']) }},
-                    first staff reply {{ $days($performance['first_response_time']['average_days']) }},
                     active handling time {{ $days($resolutionTime['average_days']) }}.
                 </p>
                 <article class="{{ $cardClass }} min-w-0 overflow-x-auto">
@@ -557,16 +533,63 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         const monthlyTicketVolumes = @js($monthlyTicketVolumes);
+        const analyticsCategoryRows = @js($categoryRows);
+        const analyticsCategorySegments = @js($categoryChartSegments);
         const volumeChartInstances = new Map();
         const volumeChartDefinitions = {
             'needs-resolution': [
-                { label: 'Submitted', key: 'submitted', color: '#7a1d2a', pointStyle: 'circle', borderDash: [] },
-                { label: 'Resolved', key: 'resolved', color: '#15803d', pointStyle: 'rectRounded', borderDash: [] },
+                { label: 'Submitted', key: 'submitted', color: '#7a1d2a', pointStyle: 'circle' },
+                { label: 'Resolved', key: 'resolved', color: '#15803d', pointStyle: 'rectRounded' },
             ],
             'informational-invalid': [
-                { label: 'Informational', key: 'informational', color: '#14283f', pointStyle: 'circle', borderDash: [] },
-                { label: 'Invalid', key: 'invalid', color: '#dc2626', pointStyle: 'triangle', borderDash: [6, 4] },
+                { label: 'Informational', key: 'informational', color: '#14283f', pointStyle: 'circle' },
+                { label: 'Invalid', key: 'invalid', color: '#dc2626', pointStyle: 'triangle' },
             ],
+        };
+        const analyticsVolumeFont = "'Source Sans 3', ui-sans-serif, system-ui, sans-serif";
+        const analyticsVolumeHoverLine = {
+            id: 'analyticsVolumeHoverLine',
+            beforeDatasetsDraw(chart) {
+                const active = chart.getActiveElements()[0];
+                if (!active) return;
+
+                const point = chart.getDatasetMeta(active.datasetIndex).data[active.index];
+                if (!point) return;
+
+                const { ctx, chartArea } = chart;
+                ctx.save();
+                ctx.strokeStyle = 'rgba(156, 163, 175, 0.7)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(point.x, chartArea.top);
+                ctx.lineTo(point.x, chartArea.bottom);
+                ctx.stroke();
+                ctx.restore();
+            },
+        };
+        const analyticsCategoryTotalLabels = {
+            id: 'analyticsCategoryTotalLabels',
+            afterDatasetsDraw(chart) {
+                const { ctx, chartArea, scales } = chart;
+                ctx.save();
+                ctx.font = `600 11px ${analyticsVolumeFont}`;
+                ctx.textBaseline = 'middle';
+
+                analyticsCategoryRows.forEach((row, index) => {
+                    const total = Number(row.total || 0);
+                    const y = scales.y.getPixelForValue(index);
+                    const barEnd = scales.x.getPixelForValue(total);
+                    const label = String(total);
+                    const labelWidth = ctx.measureText(label).width;
+                    const fitsAfterBar = barEnd + 7 + labelWidth <= chartArea.right;
+
+                    ctx.fillStyle = fitsAfterBar ? '#7a1d2a' : '#ffffff';
+                    ctx.textAlign = fitsAfterBar ? 'left' : 'right';
+                    ctx.fillText(label, fitsAfterBar ? barEnd + 7 : Math.max(chartArea.left + labelWidth, barEnd - 6), y);
+                });
+
+                ctx.restore();
+            },
         };
 
         window.renderAnalyticsVolumeCharts = () => {
@@ -590,47 +613,57 @@
                         backgroundColor: series.color,
                         pointBackgroundColor: '#ffffff',
                         pointBorderColor: series.color,
-                        pointRadius: 3,
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
                         pointHoverRadius: 5,
                         pointStyle: series.pointStyle,
-                        borderDash: series.borderDash,
                         borderWidth: 2,
-                        tension: 0,
+                        tension: 0.35,
                         fill: false,
                     }));
+                    const maximumValue = Math.max(0, ...datasets.flatMap((dataset) => dataset.data));
+                    const suggestedMaximum = maximumValue <= 4 ? 4 : undefined;
 
                     volumeChartInstances.set(canvas, new Chart(canvas, {
                         type: 'line',
                         data: { labels: monthlyTicketVolumes.labels, datasets },
+                        plugins: [analyticsVolumeHoverLine],
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
+                            devicePixelRatio: Math.max(2, window.devicePixelRatio || 1),
+                            animation: { duration: 500, easing: 'easeOutQuart' },
                             interaction: { mode: 'index', intersect: false },
+                            layout: { padding: { top: 8, right: 8, bottom: 8, left: 4 } },
                             plugins: {
                                 legend: { display: false },
                                 tooltip: {
                                     backgroundColor: '#ffffff',
-                                    titleColor: '#6b7280',
+                                    titleColor: '#111111',
                                     bodyColor: '#111827',
+                                    titleFont: { family: analyticsVolumeFont, size: 12, weight: '600' },
+                                    bodyFont: { family: analyticsVolumeFont, size: 11, weight: '600' },
                                     borderColor: '#e5e7eb',
                                     borderWidth: 1,
                                     cornerRadius: 8,
                                     padding: 8,
+                                    usePointStyle: true,
                                     callbacks: {
                                         title: (items) => items[0]?.label ?? '',
-                                        label: (item) => `${item.dataset.label}: ${item.parsed.y}`,
+                                        label: (item) => `${item.dataset.label}: ${item.parsed.y} ticket${item.parsed.y === 1 ? '' : 's'}`,
                                     },
                                 },
                             },
                             scales: {
                                 x: {
                                     grid: { display: false },
-                                    ticks: { color: '#6b7280', maxRotation: 0, autoSkip: false, font: { size: 9 } },
+                                    ticks: { color: '#6b7280', maxRotation: 0, autoSkip: false, font: { family: analyticsVolumeFont, size: 10, weight: '400' } },
                                     border: { display: false },
                                 },
                                 y: {
                                     beginAtZero: true,
-                                    ticks: { color: '#6b7280', precision: 0, font: { size: 10 } },
+                                    suggestedMax: suggestedMaximum,
+                                    ticks: { color: '#6b7280', precision: 0, font: { family: analyticsVolumeFont, size: 10 } },
                                     grid: { color: '#e5e7eb', borderDash: [4, 4], drawTicks: false },
                                     border: { display: false },
                                 },
@@ -638,9 +671,99 @@
                         },
                     }));
                 });
+
+                const categoryCanvas = document.querySelector('[data-analytics-category-volume-chart]');
+                if (!categoryCanvas || categoryCanvas.offsetParent === null) return;
+
+                const existingCategoryChart = volumeChartInstances.get(categoryCanvas);
+                if (existingCategoryChart) {
+                    existingCategoryChart.resize();
+                    return;
+                }
+
+                const categoryDatasets = analyticsCategorySegments.map((segment, segmentIndex) => ({
+                    label: segment.label,
+                    data: analyticsCategoryRows.map((row) => Number(row.segments?.[segment.key] || 0)),
+                    backgroundColor: segment.color,
+                    borderColor: segment.color,
+                    borderWidth: 0,
+                    borderSkipped: false,
+                    borderRadius: (context) => {
+                        const row = analyticsCategoryRows[context.dataIndex];
+                        const lastVisibleIndex = analyticsCategorySegments.reduce(
+                            (last, candidate, index) => Number(row?.segments?.[candidate.key] || 0) > 0 ? index : last,
+                            -1,
+                        );
+
+                        return segmentIndex === lastVisibleIndex
+                            ? { topLeft: 0, bottomLeft: 0, topRight: 5, bottomRight: 5 }
+                            : 0;
+                    },
+                    maxBarThickness: 24,
+                    categoryPercentage: 0.72,
+                    barPercentage: 0.8,
+                }));
+                const categoryMaximum = Math.max(0, ...analyticsCategoryRows.map((row) => Number(row.total || 0)));
+
+                volumeChartInstances.set(categoryCanvas, new Chart(categoryCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: analyticsCategoryRows.map((row) => row.name),
+                        datasets: categoryDatasets,
+                    },
+                    plugins: [analyticsCategoryTotalLabels],
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        devicePixelRatio: Math.max(2, window.devicePixelRatio || 1),
+                        indexAxis: 'y',
+                        animation: { duration: 500, easing: 'easeOutQuart' },
+                        interaction: { mode: 'index', intersect: false, axis: 'y' },
+                        layout: { padding: { top: 4, right: 28, bottom: 4, left: 4 } },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#ffffff',
+                                titleColor: '#111111',
+                                bodyColor: '#111827',
+                                titleFont: { family: analyticsVolumeFont, size: 12, weight: '600' },
+                                bodyFont: { family: analyticsVolumeFont, size: 11, weight: '600' },
+                                borderColor: '#e5e7eb',
+                                borderWidth: 1,
+                                cornerRadius: 8,
+                                padding: 8,
+                                usePointStyle: true,
+                                filter: (item) => Number(item.raw) > 0,
+                                callbacks: {
+                                    label: (item) => `${item.dataset.label}: ${item.raw}`,
+                                    footer: (items) => `Total: ${items.reduce((sum, item) => sum + Number(item.raw || 0), 0)}`,
+                                },
+                            },
+                        },
+                        scales: {
+                            x: {
+                                stacked: true,
+                                beginAtZero: true,
+                                suggestedMax: categoryMaximum <= 4 ? 4 : undefined,
+                                ticks: { color: '#6b7280', precision: 0, font: { family: analyticsVolumeFont, size: 10 } },
+                                grid: { color: '#e5e7eb', borderDash: [4, 4], drawTicks: false },
+                                border: { display: false },
+                            },
+                            y: {
+                                stacked: true,
+                                grid: { display: false },
+                                ticks: { color: '#111111', autoSkip: false, font: { family: analyticsVolumeFont, size: 11, weight: '400' } },
+                                border: { display: false },
+                            },
+                        },
+                    },
+                }));
             });
         };
 
+        // On in-app navigation the window load event has already fired, so render immediately.
+        // On a full page load Alpine reveals the Overview later and the load listener retries then.
+        window.renderAnalyticsVolumeCharts();
         window.addEventListener('load', () => window.renderAnalyticsVolumeCharts());
 
         document.querySelectorAll('[data-staff-sort]').forEach((button) => {

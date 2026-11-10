@@ -9,7 +9,6 @@ use App\Exports\AnalyticsReportExport;
 use App\Models\Recipient;
 use App\Models\Student;
 use App\Models\Ticket;
-use App\Models\ThreadMessage;
 use App\Models\User;
 use App\Services\AnalyticsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -214,13 +213,6 @@ class AnalyticsDefinitionsTest extends TestCase
             $this->audit($ticket, 'ticket_acknowledged', $acknowledgedAt, $this->recipientUser->id);
             $acknowledgmentTickets[] = $ticket->fresh();
         }
-        $message = ThreadMessage::create([
-            'thread_id' => $acknowledgmentTickets[0]->thread->id,
-            'sender_id' => $this->recipientUser->id,
-            'content' => 'Staff response',
-        ]);
-        ThreadMessage::query()->whereKey($message->id)->update(['created_at' => Carbon::parse('2026-01-02 12:00:00')]);
-
         $classified = $this->ticket(Ticket::STATUS_SUBMITTED);
         Complaint::query()->whereKey($classified->complaint_id)->update(['created_at' => Carbon::parse('2026-01-01')]);
         $this->audit($classified, 'ticket_classified', '2026-01-04');
@@ -269,7 +261,7 @@ class AnalyticsDefinitionsTest extends TestCase
         $this->assertSame(1.0, $metrics['review_time']['median_days']);
         $this->assertSame(2.0, $metrics['acknowledgment_time']['average_days']);
         $this->assertSame(2.0, $metrics['acknowledgment_time']['median_days']);
-        $this->assertSame(1.5, $metrics['first_response_time']['average_days']);
+        $this->assertArrayNotHasKey('first_response_time', $metrics);
         $this->assertSame(20.0, $metrics['further_action_rate']);
         $this->assertSame(5, $metrics['resolved_ticket_count']);
         $this->assertSame(1, $metrics['further_action_ticket_count']);
@@ -301,7 +293,7 @@ class AnalyticsDefinitionsTest extends TestCase
             'sections' => ['performance'],
         ])->render();
         $this->assertStringContainsString('Staff and Office Performance', $performanceReport);
-        $this->assertStringContainsString('First staff reply (SDS or recipient)', $performanceReport);
+        $this->assertStringNotContainsString('First staff reply', $performanceReport);
         $this->assertStringContainsString('Not tracked per handler', $performanceReport);
         $this->assertStringContainsString('Not enough data', $performanceReport);
         $this->assertStringNotContainsString('Analytics test ticket', $performanceReport);
@@ -309,7 +301,7 @@ class AnalyticsDefinitionsTest extends TestCase
             ->map(fn ($row) => implode(' | ', $row));
         $this->assertTrue($excelRows->contains('Performance by Handler'));
         $this->assertTrue($excelRows->contains('Performance by Office'));
-        $this->assertTrue($excelRows->contains(fn ($row) => str_contains($row, 'First staff reply (SDS or recipient)')));
+        $this->assertFalse($excelRows->contains(fn ($row) => str_contains($row, 'First staff reply')));
         $this->assertTrue($excelRows->contains(fn ($row) => str_contains($row, 'Not tracked per handler')));
         $this->assertTrue($excelRows->contains(fn ($row) => str_contains($row, 'Not enough data')));
 
@@ -325,7 +317,7 @@ class AnalyticsDefinitionsTest extends TestCase
             ->get(route('admin.analytics.index'))
             ->assertOk()
             ->assertSee('Staff performance')
-            ->assertSee('First staff reply (SDS or recipient)')
+            ->assertDontSee('First staff reply')
             ->assertSee('Escalations are counted by category and level, not per handler.')
             ->assertSee('Averages from very few tickets are not reliable; see the count in brackets.')
             ->assertDontSee('n/a means fewer than 3 tickets');

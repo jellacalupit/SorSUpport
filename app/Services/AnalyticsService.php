@@ -135,7 +135,7 @@ class AnalyticsService
     public function getDashboardData(array $filters = []): array
     {
         $tickets = $this->filterTickets(Ticket::query(), $filters)
-            ->with(['complaint.category', 'assignee.recipient', 'currentHandler.recipient', 'auditLogs.performer', 'thread.messages.sender'])
+            ->with(['complaint.category', 'assignee.recipient', 'currentHandler.recipient', 'auditLogs.performer'])
             ->get();
         $categories = ComplaintCategory::query()->orderBy('name')->get();
         $categoryNames = $categories->pluck('name')->values();
@@ -656,7 +656,6 @@ class AnalyticsService
         $staffActions = ['ticket_classified', 'ticket_assigned', 'ticket_acknowledged', 'clarification_requested'];
         $reviewDurations = [];
         $acknowledgmentDurations = [];
-        $firstResponseDurations = [];
         $acknowledgmentsByHandler = [];
         $resolvedByHandler = [];
         $handlingByHandlerAndCategory = [];
@@ -709,14 +708,6 @@ class AnalyticsService
                     }
                     $pendingAssignment = null;
                 }
-            }
-
-            $firstStaffMessage = $ticket->thread?->messages
-                ->filter(fn ($message) => $message->sender && in_array($message->sender->role, [User::ROLE_RECIPIENT, User::ROLE_SDS_ADMIN], true))
-                ->sortBy(fn ($message) => [$message->created_at?->getTimestamp() ?? 0, $message->id])
-                ->first(fn ($message) => $submittedAt && $message->created_at && $message->created_at->greaterThanOrEqualTo($submittedAt));
-            if ($firstStaffMessage && $submittedAt) {
-                $firstResponseDurations[] = ($firstStaffMessage->created_at->getTimestamp() - $submittedAt->getTimestamp()) / 86400;
             }
 
             $resolutionEvents = $logs->where('action', 'complaint_resolved');
@@ -835,7 +826,6 @@ class AnalyticsService
         return [
             'review_time' => $this->durationSummary($reviewDurations),
             'acknowledgment_time' => $this->durationSummary($acknowledgmentDurations),
-            'first_response_time' => $this->durationSummary($firstResponseDurations),
             'further_action_rate' => count($resolvedTicketIds)
                 ? round(count(array_intersect_key($furtherActionTicketIds, $resolvedTicketIds)) / count($resolvedTicketIds) * 100, 1)
                 : 0,
@@ -1060,7 +1050,7 @@ class AnalyticsService
     {
         $resolutionRate = $this->getResolutionRate($filters);
         $tickets = $this->filterTickets(Ticket::query(), $filters)
-            ->with(['complaint.category', 'assignee.recipient', 'currentHandler.recipient', 'auditLogs.performer', 'thread.messages.sender'])
+            ->with(['complaint.category', 'assignee.recipient', 'currentHandler.recipient', 'auditLogs.performer'])
             ->get();
         $resolutionTimes = $this->resolutionTimeStats($tickets);
 

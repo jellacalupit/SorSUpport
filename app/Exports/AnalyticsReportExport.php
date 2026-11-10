@@ -79,7 +79,6 @@ class AnalyticsReportExport implements FromArray, WithHeadings, ShouldAutoSize
         foreach ([
             'Review time' => 'review_time',
             'Time to acknowledge' => 'acknowledgment_time',
-            'First staff reply (SDS or recipient)' => 'first_response_time',
         ] as $label => $key) {
             $timing = $performance[$key] ?? [];
             $rows[] = [$label, $timing['average_days'] ?? 'Not available', $timing['median_days'] ?? 'Not available', $timing['sample_count'] ?? 0];

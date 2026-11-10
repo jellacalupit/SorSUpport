@@ -42,7 +42,10 @@ class AnalyticsDashboardTest extends TestCase
             $response->assertSee($heading);
         }
         $response->assertSee('Sensitive categories (not broken down): 1')
-            ->assertSee('First staff reply (SDS or recipient)')
+            ->assertDontSee('First staff reply')
+            ->assertSee('Volume of Needs Resolution Tickets')
+            ->assertSee('Volume of Informational and Invalid Tickets')
+            ->assertSee('window.renderAnalyticsVolumeCharts();', false)
             ->assertDontSee('Common subjects')
             ->assertDontSee('Top 5 categories')
             ->assertDontSee('Handled by office')

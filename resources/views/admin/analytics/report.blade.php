@@ -369,7 +369,7 @@
                 <table class="data">
                     <thead><tr><th>Measure</th><th class="wide number">Average (days)</th><th class="wide number">Median (days)</th><th class="wide number">Tickets</th></tr></thead>
                     <tbody>
-                        @foreach (['Review time' => 'review_time', 'Time to acknowledge' => 'acknowledgment_time', 'First staff reply (SDS or recipient)' => 'first_response_time'] as $label => $key)
+                        @foreach (['Review time' => 'review_time', 'Time to acknowledge' => 'acknowledgment_time'] as $label => $key)
                             @php $timing = $performance[$key]; @endphp
                             <tr><td>{{ $label }}</td><td class="wide number">{{ $duration($timing['average_days']) }}</td><td class="wide number">{{ $duration($timing['median_days']) }}</td><td class="wide number">{{ $timing['sample_count'] }}</td></tr>
                         @endforeach
