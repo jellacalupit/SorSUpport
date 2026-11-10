@@ -337,6 +337,7 @@
                                         <div
                                             data-segment-label="{{ $segment['label'] }}"
                                             class="flex min-w-0 items-center gap-1.5"
+                                            x-bind:class="activeSegment?.label === $el.dataset.segmentLabel ? 'font-semibold' : ''"
                                         >
                                             <span
                                                 class="shrink-0 rounded-sm transition-[width,height] duration-150"
@@ -390,6 +391,7 @@
                                         <div
                                             data-segment-label="{{ $segment['label'] }}"
                                             class="flex items-center gap-1.5"
+                                            x-bind:class="activeSegment?.label === $el.dataset.segmentLabel ? 'font-semibold' : ''"
                                         >
                                             <span
                                                 class="rounded-sm transition-[width,height] duration-150"
@@ -536,7 +538,7 @@
 
                     <div class="mt-1.5 grid content-start gap-4 overflow-visible">
                         @forelse ($topPerformingRecipients as $recipient)
-                            <div class="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-muted/50">
+                            <div class="flex min-h-12 items-center gap-2 rounded-lg p-1 transition-colors hover:bg-muted/50">
                                 <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-sidebar-primary text-[9px] font-bold text-sidebar-primary-foreground">
                                     @if ($recipient->user?->avatar_path)
                                         <img src="{{ asset('storage/' . $recipient->user->avatar_path) }}" alt="{{ $recipient->display_name }}" class="h-full w-full object-cover">
@@ -608,8 +610,8 @@
                                     default => 'activity',
                                 };
                             @endphp
-                            <li class="relative z-10 grid min-h-11 min-w-0 grid-cols-[25%_2.25rem_minmax(0,1fr)] items-center gap-2 p-1">
-                                <span class="flex h-9 items-center text-[10px] text-black">{{ $log->created_at?->diffForHumans() ?? 'Recently' }}</span>
+                            <li class="relative z-10 grid min-h-12 min-w-0 grid-cols-[25%_2.25rem_minmax(0,1fr)] items-center gap-2 p-1">
+                                <span class="flex h-9 items-center text-[11px] text-black">{{ $log->created_at?->diffForHumans() ?? 'Recently' }}</span>
                                 <span class="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-[#7a1d2a] text-white shadow-sm ring-2 ring-[#7a1d2a]/10">
                                     @if ($log->display_performer?->avatar_path)
                                         <img src="{{ asset('storage/' . $log->display_performer->avatar_path) }}" alt="{{ $log->display_performer->name }}" class="h-full w-full object-cover">
@@ -630,15 +632,15 @@
                                     @endif
                                 </span>
                                 <div class="min-w-0 space-y-px">
-                                    <p class="truncate text-[11px] font-semibold leading-[1.1] text-foreground">{{ $activityLabel }}</p>
-                                    <p class="truncate text-[10px] leading-[1.1] text-muted-foreground">
+                                    <p class="truncate text-[12px] font-semibold leading-[1.1] text-foreground">{{ $activityLabel }}</p>
+                                    <p class="truncate text-[11px] leading-[1.1] text-muted-foreground">
                                         <span>{{ $log->display_performer?->given_name ?: 'System' }} updated activity</span>
                                         @if ($referenceNumber)
                                             <span class="text-border"> · </span>
                                             <span class="font-mono font-semibold text-[#7a1d2a]">{{ $referenceNumber }}</span>
                                         @endif
                                     </p>
-                                    <p class="truncate text-[9px] leading-[1.1] text-muted-foreground">
+                                    <p class="truncate text-[10px] leading-[1.1] text-muted-foreground">
                                         {{ $log->created_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y g:i A') }}
                                     </p>
                                 </div>
@@ -729,7 +731,7 @@
                         labels: visibleCategories.map((item) => item.name),
                         tooltipLabels: visibleCategories.map((item) => item.name),
                         values: visibleCategories.map((item) => item.value),
-                        colors: visibleCategories.map((_, index) => `rgba(122, 29, 42, ${Math.max(0.45, 1 - (index * 0.07))})`),
+                        colors: visibleCategories.map(() => '#7a1d2a'),
                     };
                 }
 
