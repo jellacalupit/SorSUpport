@@ -9,30 +9,30 @@
 @endphp
 
 <div x-data="{ editingDetails: false }" class="grid gap-2">
-    <div class="min-w-0">
+    <div x-show="!editingDetails" class="min-w-0">
         <p class="{{ $labelClass }}">Category</p>
         <span x-show="!editingDetails" class="inline-flex max-w-full items-center gap-1 {{ $valueClass }}">
             <span>{{ $complaint->category?->name ?? 'Uncategorized' }}</span>
             @if ($detailsEditable)
-                <button type="button" x-show="!editingDetails" x-on:click="editingDetails = true; $nextTick(() => $refs.detailsEditor?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))" aria-label="Edit category and recipient" title="Edit category and recipient" class="inline-grid h-6 w-6 shrink-0 place-items-center rounded-full text-primary transition-colors hover:bg-primary-soft">
+                <button type="button" x-on:click="editingDetails = true" aria-label="Edit category and recipient" title="Edit category and recipient" class="inline-grid h-6 w-6 shrink-0 place-items-center rounded-full text-primary transition-colors hover:bg-primary-soft">
                     <x-icons.pencil class="h-3.5 w-3.5" />
                 </button>
             @endif
         </span>
     </div>
-    <div>
+    <div x-show="!editingDetails">
         <p class="{{ $labelClass }}">{{ $assignedRecipient ? 'Assigned Recipient' : ($assignedUser ? 'Assigned To' : 'Suggested Recipient') }}</p>
         <p class="{{ $valueClass }}">{{ $assignedUser?->table_name ?? $suggestedRecipientName ?? 'None' }}</p>
     </div>
     @if ($detailsEditable)
-        <form x-ref="detailsEditor" x-show="editingDetails" x-cloak method="POST" action="{{ route('admin.tickets.update-details', $ticket) }}" class="mt-2 grid gap-3 rounded-lg border border-border bg-muted/50 p-3" data-ticket-details-editor>
+        <form x-show="editingDetails" x-cloak method="POST" action="{{ route('admin.tickets.update-details', $ticket) }}" class="grid gap-3 rounded-lg border border-border bg-muted/50 p-3" data-ticket-details-editor>
             @csrf
             @method('PATCH')
             <div>
                 <h3 class="text-sm font-semibold text-foreground">Edit ticket details</h3>
                 <p class="mt-0.5 text-xs text-muted-foreground">Correct the category and choose the recipient to use during classification and routing.</p>
             </div>
-            <div class="grid gap-3 sm:grid-cols-2">
+            <div class="grid gap-3">
                 <div class="min-w-0">
                     <p class="mb-1 text-xs font-semibold text-muted-foreground">Category</p>
                     <x-picker name="category_id" required label="Category" :selected="$complaint->category_id" :options="$categories->map(fn ($categoryOption) => ['value' => $categoryOption->id, 'label' => $categoryOption->name])->all()" />

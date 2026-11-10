@@ -42,6 +42,8 @@ class TicketDetailsEditTest extends TestCase
             ->assertOk()
             ->assertSee('aria-label="Edit category and recipient"', false)
             ->assertSee('data-ticket-details-editor', false)
+            ->assertSeeInOrder(['Wrong category', 'data-ticket-details-editor', 'Classification'], false)
+            ->assertSeeInOrder(['Category', 'Suggested recipient'])
             ->assertSee('Suggested recipient');
     }
 
