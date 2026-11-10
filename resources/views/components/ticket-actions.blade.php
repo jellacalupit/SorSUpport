@@ -152,7 +152,7 @@
             </form>
         @endif
         @if ($buttons->has('clarify'))
-            <button type="button" x-on:click="action = 'clarify'" class="{{ $outlineButton }}">Ask for Details</button>
+            <button type="button" x-on:click="action = 'clarify'" class="{{ $outlineButton }}">Ask Student for Details</button>
         @endif
         @if ($buttons->has('resolve'))
             <button type="button" x-on:click="action = 'resolve'" class="h-10 w-full rounded-full border border-green-800 bg-green-800 px-3 text-center text-sm font-semibold text-white transition-colors hover:bg-green-900">Mark as Resolved</button>

@@ -9,39 +9,30 @@
 @endphp
 
 <div x-data="{ editingDetails: false }" class="grid gap-2">
-    <div x-show="!editingDetails" class="grid gap-2">
-        <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-                <p class="{{ $labelClass }}">Category</p>
-                <p class="flex items-center gap-1.5 {{ $valueClass }}">
-                    <span>{{ $complaint->category?->name ?? 'Uncategorized' }}</span>
-                    @if ($detailsEditable)
-                        <button type="button" x-show="!editingDetails" x-on:click="editingDetails = true" aria-label="Edit category" title="Edit category" class="inline-grid h-6 w-6 shrink-0 place-items-center rounded-full text-primary transition-colors hover:bg-primary-soft">
-                            <x-icons.pencil class="h-3.5 w-3.5" />
-                        </button>
-                    @endif
-                </p>
-            </div>
+    <div class="min-w-0">
+        <p class="{{ $labelClass }}">Category</p>
+        <div x-show="!editingDetails" class="flex items-center gap-1.5 {{ $valueClass }}">
+            <span>{{ $complaint->category?->name ?? 'Uncategorized' }}</span>
+            @if ($detailsEditable)
+                <button type="button" x-on:click="editingDetails = true" aria-label="Edit category" title="Edit category" class="inline-grid h-6 w-6 shrink-0 place-items-center rounded-full text-primary transition-colors hover:bg-primary-soft">
+                    <x-icons.pencil class="h-3.5 w-3.5" />
+                </button>
+            @endif
         </div>
-        <div>
-            <p class="{{ $labelClass }}">{{ $assignedRecipient ? 'Assigned Recipient' : ($assignedUser ? 'Assigned To' : 'Suggested Recipient') }}</p>
-            <p class="{{ $valueClass }}">{{ $assignedUser?->table_name ?? $suggestedRecipientName ?? 'None' }}</p>
-        </div>
+        @if ($detailsEditable)
+            <form x-show="editingDetails" x-cloak method="POST" action="{{ route('admin.tickets.update-details', $ticket) }}" class="mt-1 grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                @csrf
+                @method('PATCH')
+                <x-picker name="category_id" required label="Category" :selected="$complaint->category_id" :options="$categories->map(fn ($categoryOption) => ['value' => $categoryOption->id, 'label' => $categoryOption->name])->all()" />
+                <div class="flex items-center gap-1.5">
+                    <button type="button" x-on:click="editingDetails = false" class="h-9 rounded-full border border-primary bg-white px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary-soft">Cancel</button>
+                    <button type="submit" class="h-9 rounded-full border border-primary bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Save</button>
+                </div>
+            </form>
+        @endif
     </div>
-
-    @if ($detailsEditable)
-        <form x-show="editingDetails" x-cloak method="POST" action="{{ route('admin.tickets.update-details', $ticket) }}" class="grid gap-2 rounded-lg border border-border bg-muted/50 p-3">
-            @csrf
-            @method('PATCH')
-            <p class="text-xs text-muted-foreground">Correct the category if the student selected the wrong one.</p>
-            <div class="{{ $labelClass }}">
-                Category
-                <x-picker name="category_id" required label="Category" class="mt-1" :selected="$complaint->category_id" :options="$categories->map(fn ($categoryOption) => ['value' => $categoryOption->id, 'label' => $categoryOption->name])->all()" />
-            </div>
-            <div class="mt-1 grid grid-cols-2 gap-2">
-                <button type="button" x-on:click="editingDetails = false" class="w-full rounded-full border border-primary bg-white px-2.5 py-1.5 text-center text-xs font-semibold text-primary transition-colors hover:bg-primary-soft">Cancel</button>
-                <button type="submit" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Save Changes</button>
-            </div>
-        </form>
-    @endif
+    <div>
+        <p class="{{ $labelClass }}">{{ $assignedRecipient ? 'Assigned Recipient' : ($assignedUser ? 'Assigned To' : 'Suggested Recipient') }}</p>
+        <p class="{{ $valueClass }}">{{ $assignedUser?->table_name ?? $suggestedRecipientName ?? 'None' }}</p>
+    </div>
 </div>

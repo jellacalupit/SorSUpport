@@ -1333,7 +1333,7 @@ class TicketWorkflowTest extends TestCase
         $this->actingAs($this->student)->get(route('student.dashboard'))->assertOk();
         $this->actingAs($this->handler)->get(route('recipient.tickets.index'))->assertOk()->assertSee('Referred');
         $this->actingAs($this->handler)->get(route('recipient.dashboard'))->assertOk();
-        $this->actingAs($this->admin)->get(route('admin.tickets.review.index'))->assertOk()->assertSee('Ask for Details');
+        $this->actingAs($this->admin)->get(route('admin.tickets.review.index'))->assertOk()->assertSee('Ask Student for Details');
         $this->actingAs($this->admin)->get(route('admin.complaints.index'))->assertOk()->assertSee('In review');
         $this->actingAs($this->admin)->get(route('admin.dashboard'))->assertOk()->assertDontSee('Rejected');
         $this->actingAs($this->admin)->get('/admin/analytics')->assertOk();
