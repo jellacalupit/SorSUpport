@@ -336,8 +336,7 @@
                                     @foreach ($statusSegments as $segment)
                                         <div
                                             data-segment-label="{{ $segment['label'] }}"
-                                            class="flex min-w-0 items-center gap-1.5 transition-[font-size,line-height,font-weight] duration-150"
-                                            x-bind:class="activeSegment?.label === $el.dataset.segmentLabel ? 'text-[11px] leading-4' : ''"
+                                            class="flex min-w-0 items-center gap-1.5"
                                         >
                                             <span
                                                 class="shrink-0 rounded-sm transition-[width,height] duration-150"
@@ -390,8 +389,7 @@
                                     @foreach ($classificationSegments as $segment)
                                         <div
                                             data-segment-label="{{ $segment['label'] }}"
-                                            class="flex items-center gap-1.5 transition-[font-size,line-height,font-weight] duration-150"
-                                            x-bind:class="activeSegment?.label === $el.dataset.segmentLabel ? 'text-[11px] leading-4' : ''"
+                                            class="flex items-center gap-1.5"
                                         >
                                             <span
                                                 class="rounded-sm transition-[width,height] duration-150"
