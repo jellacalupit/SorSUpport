@@ -5,10 +5,13 @@ namespace Tests\Feature;
 use App\Models\AuditLog;
 use App\Models\Complaint;
 use App\Models\ComplaintCategory;
+use App\Models\Recipient;
 use App\Models\Student;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\AnalyticsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class AnalyticsDashboardTest extends TestCase
@@ -35,12 +38,16 @@ class AnalyticsDashboardTest extends TestCase
 
         $response = $this->actingAs($admin)->get(route('admin.analytics.index'))->assertOk();
 
-        foreach (['Overview', 'Response and resolution', 'Staff and offices', 'Students and feedback'] as $heading) {
+        foreach (['Overview', 'Staff performance', 'Students and feedback'] as $heading) {
             $response->assertSee($heading);
         }
         $response->assertSee('Sensitive categories (not broken down): 1')
             ->assertSee('First staff reply (SDS or recipient)')
             ->assertDontSee('Common subjects')
+            ->assertDontSee('Top 5 categories')
+            ->assertDontSee('Handled by office')
+            ->assertDontSee('Response and handling times')
+            ->assertDontSee('Active handling time by category')
             ->assertDontSee('PRIVATE_DASHBOARD_SUBJECT')
             ->assertDontSee('PRIVATE_DASHBOARD_DESCRIPTION')
             ->assertDontSee('PRIVATE_DASHBOARD_PERSONNEL')
@@ -66,16 +73,12 @@ class AnalyticsDashboardTest extends TestCase
         $response = $this->actingAs($admin)->get(route('admin.analytics.index'))->assertOk();
         foreach ([
             'Overview',
-            'Response and resolution',
-            'Staff and offices',
+            'Staff performance',
             'Students and feedback',
             'No ticket volume data in this period.',
-            'No tickets in this period.',
             'No category totals in this period.',
-            'No office assignments in this period.',
-            'No handling-time data in this period.',
             'No outcome data in this period.',
-            'No office performance data in this period.',
+            'No tickets in this period.',
             'No staff performance data in this period.',
             'No college breakdown data in this period.',
             'No ticket origin data in this period.',
@@ -103,7 +106,162 @@ class AnalyticsDashboardTest extends TestCase
         $response = $this->actingAs($admin)->get(route('admin.analytics.index'))->assertOk();
         $response->assertSee('50.0%')
             ->assertSee('2 of 4 needs-resolution')
-            ->assertSee('Escalation rate: 2 of 4 needs-resolution tickets (50.0%).');
+            ->assertSee('2 of 4 (50.0%)');
+    }
+
+    public function test_overview_series_cover_twelve_months_and_category_segments_are_exclusive(): void
+    {
+        $student = $this->student('MONTHLY-ANALYTICS-ID');
+        $category = ComplaintCategory::create(['name' => 'Monthly totals', 'is_active' => true]);
+        $fixtures = [
+            [$this->ticket($student, $category, Ticket::STATUS_SUBMITTED, Ticket::CLASSIFICATION_NEEDS_RESOLUTION), '2026-01-15', null],
+            [$this->ticket($student, $category, Ticket::STATUS_RESOLVED, Ticket::CLASSIFICATION_NEEDS_RESOLUTION, [
+                'resolved_at' => Carbon::parse('2026-09-10'),
+            ]), '2026-02-15', '2026-09-10'],
+            [$this->ticket($student, $category, Ticket::STATUS_SUBMITTED, Ticket::CLASSIFICATION_INFORMATIONAL), '2026-03-15', null],
+            [$this->ticket($student, $category, Ticket::STATUS_CLOSED, Ticket::CLASSIFICATION_INVALID, [
+                'closure_type' => Ticket::CLOSURE_INVALID,
+            ]), '2026-04-15', null],
+            [$this->ticket($student, $category, Ticket::STATUS_SUBMITTED, null), '2026-05-15', null],
+            [$this->ticket($student, $category, Ticket::STATUS_SUBMITTED, Ticket::CLASSIFICATION_NEEDS_RESOLUTION), '2026-10-15', null],
+            [$this->ticket($student, $category, Ticket::STATUS_CLOSED, Ticket::CLASSIFICATION_NEEDS_RESOLUTION, [
+                'closure_type' => Ticket::CLOSURE_WITHDRAWN,
+                'resolved_at' => Carbon::parse('2026-08-10'),
+            ]), '2026-06-15', '2026-08-10'],
+        ];
+
+        foreach ($fixtures as [$ticket, $submittedAt, $resolvedAt]) {
+            Complaint::query()->whereKey($ticket->complaint_id)->update([
+                'created_at' => Carbon::parse($submittedAt),
+            ]);
+            if ($resolvedAt) {
+                Ticket::query()->whereKey($ticket->id)->update(['resolved_at' => Carbon::parse($resolvedAt)]);
+            }
+        }
+
+        $dashboard = app(AnalyticsService::class)->getDashboardData([
+            'start_date' => '2025-11-01',
+            'end_date' => '2026-10-31',
+        ]);
+        $volumes = $dashboard['monthlyTicketVolumes'];
+
+        $this->assertCount(12, $volumes['labels']);
+        $this->assertSame('Nov 25', $volumes['labels'][0]);
+        $this->assertSame('Oct 26', $volumes['labels'][11]);
+        $this->assertSame(1, $volumes['values'][2]['submitted']);
+        $this->assertSame(1, $volumes['values'][3]['submitted']);
+        $this->assertSame(1, $volumes['values'][10]['resolved']);
+        $this->assertSame(1, $volumes['values'][4]['informational']);
+        $this->assertSame(1, $volumes['values'][5]['invalid']);
+        $this->assertSame(0, $volumes['values'][0]['submitted']);
+
+        $category = $dashboard['categoryVolumes']['rows'][0];
+        $this->assertSame(7, $category['total']);
+        $this->assertSame($category['total'], array_sum($category['segments']));
+        $this->assertSame(3, $category['segments']['submitted']);
+        $this->assertSame(1, $category['segments']['resolved']);
+        $this->assertSame(1, $category['segments']['informational']);
+        $this->assertSame(1, $category['segments']['invalid']);
+        $this->assertSame(1, $category['segments']['unclassified']);
+        $this->assertCount(10, $dashboard['statusClassificationCounts']);
+        $this->assertSame(2, $dashboard['statusClassificationCounts']['submitted:needs_resolution']);
+        $this->assertSame(1, $dashboard['statusClassificationCounts']['submitted:unclassified']);
+        $this->assertSame(1, $dashboard['statusClassificationCounts']['resolved:needs_resolution']);
+        $this->assertSame(1, $dashboard['statusClassificationCounts']['closed:needs_resolution']);
+        $this->assertStringNotContainsString('informational', implode('|', array_keys($dashboard['statusClassificationCounts'])));
+        $this->assertStringNotContainsString('invalid', implode('|', array_keys($dashboard['statusClassificationCounts'])));
+        $this->assertSame(5, array_sum($dashboard['statusClassificationCounts']));
+
+        $response = $this->actingAs(User::factory()->create(['role' => User::ROLE_SDS_ADMIN]))
+            ->get(route('admin.analytics.index', ['start_date' => '2025-11-01', 'end_date' => '2026-10-31']))
+            ->assertOk()
+            ->assertSee('Submitted (Unclassified)')
+            ->assertSee('Needs-resolution and unclassified tickets');
+    }
+
+    public function test_staff_table_uses_final_resolver_assignment_handling_fallbacks_and_rating_counts(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_SDS_ADMIN]);
+        $student = $this->student('STAFF-ANALYTICS-ID');
+        $category = ComplaintCategory::create(['name' => 'Staff metrics', 'is_active' => true]);
+        $firstHandler = $this->recipientUser('First Handler');
+        $lastHandler = $this->recipientUser('Last Handler');
+        $ticket = $this->ticket($student, $category, Ticket::STATUS_RESOLVED, Ticket::CLASSIFICATION_NEEDS_RESOLUTION, [
+            'assigned_to' => $lastHandler->id,
+            'current_handler_id' => $lastHandler->id,
+            'satisfaction_rating' => 4,
+            'resolved_at' => Carbon::parse('2026-01-07'),
+            'subject_title' => 'PRIVATE_STAFF_TABLE_SUBJECT',
+            'description' => 'PRIVATE_STAFF_TABLE_DESCRIPTION',
+            'personnel_involved' => 'PRIVATE_STAFF_TABLE_PERSONNEL',
+        ]);
+        Complaint::query()->whereKey($ticket->complaint_id)->update(['created_at' => Carbon::parse('2026-01-01')]);
+        Ticket::query()->whereKey($ticket->id)->update(['resolved_at' => Carbon::parse('2026-01-07')]);
+        $this->auditAt($ticket, 'ticket_assigned', $admin->id, '2026-01-01', "SDS Admin assigned the ticket {$ticket->complaint->reference_number} to {$firstHandler->display_name} for handling.");
+        $this->auditAt($ticket, 'ticket_acknowledged', $firstHandler->id, '2026-01-02');
+        $this->auditAt($ticket, 'complaint_resolved', $firstHandler->id, '2026-01-03');
+        $this->auditAt($ticket, 'ticket_reopened_from_resolved', $admin->id, '2026-01-04');
+        $this->auditAt($ticket, 'ticket_assigned', $admin->id, '2026-01-05', "SDS Admin assigned the ticket {$ticket->complaint->reference_number} to {$lastHandler->display_name} for handling.");
+        $this->auditAt($ticket, 'ticket_acknowledged', $lastHandler->id, '2026-01-05 06:00:00');
+        $this->auditAt($ticket, 'clarification_requested', $admin->id, '2026-01-05 12:00:00');
+        $this->auditAt($ticket, 'clarification_provided', $student->id, '2026-01-06 12:00:00');
+        $this->auditAt($ticket, 'complaint_resolved', $lastHandler->id, '2026-01-07');
+
+        $fallbackTicket = $this->ticket($student, $category, Ticket::STATUS_RESOLVED, Ticket::CLASSIFICATION_NEEDS_RESOLUTION, [
+            'assigned_to' => $lastHandler->id,
+            'current_handler_id' => $lastHandler->id,
+            'satisfaction_rating' => 5,
+            'resolved_at' => Carbon::parse('2026-02-11'),
+            'subject_title' => 'PRIVATE_FALLBACK_SUBJECT',
+        ]);
+        Complaint::query()->whereKey($fallbackTicket->complaint_id)->update(['created_at' => Carbon::parse('2026-02-01')]);
+        Ticket::query()->whereKey($fallbackTicket->id)->update(['resolved_at' => Carbon::parse('2026-02-11')]);
+        $this->auditAt($fallbackTicket, 'complaint_resolved', $lastHandler->id, '2026-02-11');
+
+        $dashboard = app(AnalyticsService::class)->getDashboardData();
+        $rows = collect($dashboard['performanceMetrics']['handler_rows']);
+        $lastRow = $rows->firstWhere('user_id', $lastHandler->id);
+        $firstRow = $rows->firstWhere('user_id', $firstHandler->id);
+
+        $this->assertSame(2, $lastRow['assigned_tickets']);
+        $this->assertSame(2, $lastRow['resolved_tickets']);
+        $this->assertSame(100.0, $lastRow['resolved_percentage']);
+        $this->assertSame(0, $firstRow['resolved_tickets']);
+        $this->assertSame(0.3, $lastRow['acknowledgment_average_days']);
+        $this->assertSame(1, $lastRow['acknowledgment_count']);
+        $this->assertSame(5.5, $lastRow['handling_average_days']);
+        $this->assertSame(2, $lastRow['handling_count']);
+        $this->assertSame(1, $lastRow['handling_fallback_count']);
+        $this->assertSame(4.5, $lastRow['rating_average']);
+        $this->assertSame(2, $lastRow['rating_count']);
+
+        $response = $this->actingAs($admin)->get(route('admin.analytics.index'))->assertOk();
+        foreach ([
+            'Name',
+            'Tickets',
+            'Open',
+            'Oldest open',
+            'Resolved',
+            'Avg time to acknowledge',
+            'Avg handling time (from assignment)',
+            'Avg rating',
+            '0.3 days (1)',
+            '5.5 days (2)',
+            '1 fallback(s)',
+            '4.5 (2)',
+        ] as $expected) {
+            $response->assertSee($expected);
+        }
+        $response->assertDontSee('PRIVATE_STAFF_TABLE_SUBJECT')
+            ->assertDontSee('PRIVATE_STAFF_TABLE_DESCRIPTION')
+            ->assertDontSee('PRIVATE_STAFF_TABLE_PERSONNEL')
+            ->assertDontSee('PRIVATE_FALLBACK_SUBJECT');
+
+        preg_match_all('/data-sort-name="([^"]+)"/', $response->getContent(), $sortNames);
+        $this->assertSame([
+            $lastHandler->table_name,
+            $firstHandler->table_name,
+        ], $sortNames[1]);
     }
 
     private function student(string $studentId): User
@@ -121,7 +279,7 @@ class AnalyticsDashboardTest extends TestCase
         return $user;
     }
 
-    private function ticket(User $student, ComplaintCategory $category, string $status, string $classification, array $attributes = []): Ticket
+    private function ticket(User $student, ComplaintCategory $category, string $status, ?string $classification, array $attributes = []): Ticket
     {
         $complaint = Complaint::create([
             'reference_number' => Complaint::generateReferenceNumber(),
@@ -141,5 +299,36 @@ class AnalyticsDashboardTest extends TestCase
             'resolved_at' => $status === Ticket::STATUS_RESOLVED ? now() : null,
             'satisfaction_rating' => $attributes['satisfaction_rating'] ?? null,
         ] + collect($attributes)->except(['subject_title', 'description', 'personnel_involved', 'is_anonymous', 'satisfaction_rating'])->all());
+    }
+
+    private function recipientUser(string $name): User
+    {
+        [$firstName, $lastName] = explode(' ', $name, 2);
+        $user = User::factory()->create([
+            'role' => User::ROLE_RECIPIENT,
+            'first_name' => $firstName,
+            'middle_name' => null,
+            'last_name' => $lastName,
+        ]);
+        Recipient::create([
+            'user_id' => $user->id,
+            'staff_id' => strtoupper(str_replace(' ', '-', $name)),
+            'unit' => $name . ' Office',
+            'designation' => 'Officer',
+        ]);
+
+        return $user;
+    }
+
+    private function auditAt(Ticket $ticket, string $action, int $userId, string $createdAt, ?string $details = null): void
+    {
+        $audit = AuditLog::create([
+            'ticket_id' => $ticket->id,
+            'performed_by' => $userId,
+            'action' => $action,
+            'details' => $details,
+        ]);
+        $timestamp = Carbon::parse($createdAt);
+        $audit->forceFill(['created_at' => $timestamp, 'updated_at' => $timestamp])->save();
     }
 }

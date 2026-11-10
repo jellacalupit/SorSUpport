@@ -353,8 +353,7 @@ class VisibilityAndFeedbackTest extends TestCase
         $this->actingAs($this->admin)->get('/admin/analytics')
             ->assertOk()
             ->assertSee('Overview')
-            ->assertSee('Response and resolution')
-            ->assertSee('Staff and offices')
+            ->assertSee('Staff performance')
             ->assertSee('Students and feedback')
             ->assertSee('Who raises tickets')
             ->assertSee('How tickets were resolved')
@@ -410,8 +409,9 @@ class VisibilityAndFeedbackTest extends TestCase
 
         $page = $this->actingAs($this->admin)->get('/admin/analytics')->assertOk()->getContent();
 
-        $this->assertStringContainsString('3 (75.0%)', $page);
-        $this->assertStringContainsString('1 (25.0%)', $page);
+        $this->assertSame(2, substr_count($page, 'style="width: 100%; background-color:'));
+        $this->assertStringContainsString('title="Submitted (not resolved): 3"', $page);
+        $this->assertStringContainsString('title="Submitted (not resolved): 1"', $page);
         $this->assertStringNotContainsString('Common subjects', $page);
     }
 
@@ -471,6 +471,6 @@ class VisibilityAndFeedbackTest extends TestCase
         $this->actingAs($this->admin)->get('/admin/analytics')
             ->assertOk()
             ->assertSee('No satisfaction ratings in this period.')
-            ->assertSee('No handling-time data in this period.');
+            ->assertSee('No staff performance data in this period.');
     }
 }

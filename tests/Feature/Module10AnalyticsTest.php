@@ -42,12 +42,20 @@ class Module10AnalyticsTest extends TestCase
 
         $response = $this->actingAs($admin)->get(route('admin.analytics.index'));
         $response->assertStatus(200);
-        $response->assertViewHas('totalComplaints');
-        $response->assertViewHas('totalTickets');
-        $response->assertViewHas('categoryDistribution');
-        $response->assertViewHas('resolutionRate');
-        $response->assertViewHas('averageResolutionTime');
-        $response->assertViewHas('escalationFrequency');
+        $dashboard = $response->viewData('dashboard');
+        foreach ([
+            'total',
+            'openCount',
+            'resolutionRate',
+            'resolutionTime',
+            'performanceMetrics',
+            'escalations',
+            'monthlyTicketVolumes',
+            'categoryVolumes',
+            'breakdowns',
+        ] as $key) {
+            $this->assertArrayHasKey($key, $dashboard);
+        }
     }
 
     public function test_date_filtering_works_on_dashboard()
@@ -68,7 +76,10 @@ class Module10AnalyticsTest extends TestCase
         ]));
 
         $response->assertStatus(200);
-        $response->assertViewHas('totalComplaints');
+        $response->assertViewHas('dashboard');
+        $this->assertSame($startDate, $response->viewData('filters')['start_date']);
+        $this->assertSame($endDate, $response->viewData('filters')['end_date']);
+        $this->assertSame((string) $category->id, $response->viewData('filters')['category_id']);
     }
 
     public function test_pdf_export_returns_successful_response()

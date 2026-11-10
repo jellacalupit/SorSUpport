@@ -35,55 +35,50 @@
             ['label' => 'Escalated more than once', 'count' => $escalationCounts->filter(fn ($count) => $count > 1)->count(), 'color' => '#7a1d2a'],
         ];
         $escalationMax = max(1, $escalationTotal);
-        $statusCounts = $data['statusCounts'];
-        $statusColors = [
-            'submitted' => '#7a1d2a',
-            'needs_clarification' => '#b45309',
-            'assigned' => '#64748b',
-            'in_progress' => '#2563eb',
-            'escalated' => '#b91c1c',
-            'referred' => '#7c3aed',
+        $classificationColors = [
+            'needs_resolution' => '#7a1d2a',
+            'informational' => '#14283f',
+            'invalid' => '#dc2626',
+            'unclassified' => '#9ca3af',
             'resolved' => '#15803d',
-            'closed' => '#9ca3af',
         ];
-        $statusSegments = collect(\App\Models\Ticket::DISPLAY_STATUS_LABELS)
-            ->map(fn ($label, $status) => [
-                'label' => $label,
-                'count' => (int) ($statusCounts[$label] ?? 0),
-                'color' => $statusColors[$status],
-            ])
-            ->values()
-            ->all();
-        $statusMax = max(1, array_sum(array_column($statusSegments, 'count')));
-
-        $categoryCounts = collect($data['categoryCounts'])->filter(fn ($count) => $count > 0)->sortDesc();
-        $topCategories = $categoryCounts->take(5);
-        $otherCategoryCount = max(0, $categoryCounts->count() - $topCategories->count());
-        $otherTicketCount = $categoryCounts->slice(5)->sum();
-        $officeRows = collect($data['units'])->sortByDesc('total')->take(5);
-
-        $volumeByMonth = [];
-        foreach ($data['tickets'] as $ticket) {
-            $submittedAt = $ticket->complaint?->created_at;
-            if ($submittedAt) {
-                $month = $submittedAt->format('Y-m');
-                $volumeByMonth[$month] ??= ['submitted' => 0, 'resolved' => 0];
-                $volumeByMonth[$month]['submitted']++;
-            }
-
-            if (
-                $ticket->classification === \App\Models\Ticket::CLASSIFICATION_NEEDS_RESOLUTION
-                && in_array($ticket->status, [\App\Models\Ticket::STATUS_RESOLVED, \App\Models\Ticket::STATUS_CLOSED], true)
-                && $ticket->resolved_at
-            ) {
-                $month = $ticket->resolved_at->format('Y-m');
-                $volumeByMonth[$month] ??= ['submitted' => 0, 'resolved' => 0];
-                $volumeByMonth[$month]['resolved']++;
+        $statusClassificationCounts = $data['statusClassificationCounts'];
+        $statusSegments = [];
+        foreach (\App\Models\Ticket::DISPLAY_STATUS_LABELS as $status => $label) {
+            $statusSegments[] = [
+                'label' => $label . ' (Needs Resolution)',
+                'count' => (int) ($statusClassificationCounts[$status . ':needs_resolution'] ?? 0),
+                'color' => $status === \App\Models\Ticket::STATUS_RESOLVED
+                    ? $classificationColors['resolved']
+                    : $classificationColors['needs_resolution'],
+            ];
+            if (in_array($status, \App\Models\Ticket::UNCLASSIFIED_DISPLAY_STATUSES, true)) {
+                $statusSegments[] = [
+                    'label' => $label . ' (Unclassified)',
+                    'count' => (int) ($statusClassificationCounts[$status . ':unclassified'] ?? 0),
+                    'color' => $classificationColors['unclassified'],
+                ];
             }
         }
-        ksort($volumeByMonth);
-        $volumeMonths = collect($volumeByMonth)->take(-12);
-        $volumeMax = max(1, $volumeMonths->max(fn ($counts) => max($counts['submitted'], $counts['resolved'])) ?? 0);
+        $statusDonutTotal = array_sum(array_column($statusSegments, 'count'));
+        $classificationSegments = [
+            ['label' => 'Needs resolution', 'color' => $classificationColors['needs_resolution'], 'count' => (int) ($data['classification']['Needs Resolution'] ?? 0)],
+            ['label' => 'Informational', 'color' => $classificationColors['informational'], 'count' => (int) ($data['classification']['Informational'] ?? 0)],
+            ['label' => 'Invalid', 'color' => $classificationColors['invalid'], 'count' => (int) ($data['classification']['Invalid'] ?? 0)],
+            ['label' => 'Unclassified', 'color' => $classificationColors['unclassified'], 'count' => (int) ($data['classification']['Unclassified'] ?? 0)],
+        ];
+        $monthlyTicketVolumes = $data['monthlyTicketVolumes'];
+        $monthlyGraphOneTotals = [
+            'submitted' => array_sum(array_column($monthlyTicketVolumes['values'], 'submitted')),
+            'resolved' => array_sum(array_column($monthlyTicketVolumes['values'], 'resolved')),
+        ];
+        $monthlyGraphTwoTotals = [
+            'informational' => array_sum(array_column($monthlyTicketVolumes['values'], 'informational')),
+            'invalid' => array_sum(array_column($monthlyTicketVolumes['values'], 'invalid')),
+        ];
+        $categoryRows = $data['categoryVolumes']['rows'];
+        $categoryEmptyCount = $data['categoryVolumes']['empty_category_count'];
+        $categoryVolumeMax = max(1, max(array_column($categoryRows ?: [['total' => 1]], 'total')));
 
         $resolutionTime = $data['resolutionTime'];
         $performance = $data['performanceMetrics'];
@@ -99,12 +94,9 @@
         $ratingDistribution = $satisfaction['distribution'];
 
         $staffRows = collect($performance['handler_rows'])
-            ->sort(fn ($left, $right) => $right['open_tickets'] <=> $left['open_tickets']
-                ?: ($right['oldest_open_ticket_age_days'] ?? -1) <=> ($left['oldest_open_ticket_age_days'] ?? -1))
-            ->values();
-        $officePerformanceRows = collect($performance['office_rows'])
-            ->sort(fn ($left, $right) => $right['open_tickets'] <=> $left['open_tickets']
-                ?: ($right['oldest_open_ticket_age_days'] ?? -1) <=> ($left['oldest_open_ticket_age_days'] ?? -1))
+            ->sort(fn ($left, $right) => $right['assigned_tickets'] <=> $left['assigned_tickets']
+                ?: $right['open_tickets'] <=> $left['open_tickets']
+                ?: strcmp($left['name'], $right['name']))
             ->values();
 
         $filterDropdowns = [
@@ -303,17 +295,16 @@
 
         <div x-data="{
             tab: 'overview',
-            staffMode: 'offices',
-            categoryRow: null,
             studentDimension: 'colleges',
             init() {
-                const valid = ['overview', 'response', 'staff', 'students'];
+                const valid = ['overview', 'staff', 'students'];
                 const fromHash = window.location.hash.slice(1);
                 this.tab = valid.includes(fromHash) ? fromHash : 'overview';
                 window.addEventListener('hashchange', () => {
                     const next = window.location.hash.slice(1);
                     if (valid.includes(next)) this.tab = next;
                 });
+                this.$watch('tab', () => this.$nextTick(() => window.renderAnalyticsVolumeCharts?.()));
             },
             selectTab(name) {
                 this.tab = name;
@@ -321,7 +312,7 @@
             }
         }" class="grid min-w-0 gap-4">
             <nav aria-label="Analytics sections" class="-mx-1 flex gap-1 overflow-x-auto border-b border-border px-1">
-                @foreach (['overview' => 'Overview', 'response' => 'Response and resolution', 'staff' => 'Staff and offices', 'students' => 'Students and feedback'] as $tabKey => $tabLabel)
+                @foreach (['overview' => 'Overview', 'staff' => 'Staff performance', 'students' => 'Students and feedback'] as $tabKey => $tabLabel)
                     <a href="#{{ $tabKey }}" x-on:click.prevent="selectTab('{{ $tabKey }}')" x-bind:aria-current="tab === '{{ $tabKey }}' ? 'page' : null" x-bind:class="tab === '{{ $tabKey }}' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'" class="shrink-0 border-b-2 px-3 py-2.5 text-sm font-semibold">{{ $tabLabel }}</a>
                 @endforeach
             </nav>
@@ -329,138 +320,158 @@
             <section id="overview" x-show="tab === 'overview'" x-cloak data-tab-panel="overview" class="grid min-w-0 gap-4">
                 <h2 class="sr-only">Overview</h2>
                 <div class="grid min-w-0 gap-4 lg:grid-cols-2">
-                    <article class="{{ $cardClass }}">
-                        <h3 class="{{ $titleClass }}">Ticket volume</h3>
-                        <p class="mt-0.5 {{ $mutedClass }}">Submitted and resolved by month; only months with activity, up to 12.</p>
-                        @if ($volumeMonths->isEmpty())
-                            <p class="mt-4 text-xs text-muted-foreground">No ticket volume data in this period.</p>
-                        @else
-                            <div class="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground" aria-label="Chart legend">
-                                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-primary"></span>Submitted</span>
-                                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-emerald-700"></span>Resolved</span>
+                    @foreach ([
+                        ['title' => 'Needs-resolution tickets', 'key' => 'needs-resolution', 'color1' => $classificationColors['needs_resolution'], 'color2' => $classificationColors['resolved'], 'label1' => 'Submitted', 'label2' => 'Resolved', 'key1' => 'submitted', 'key2' => 'resolved', 'totals' => $monthlyGraphOneTotals],
+                        ['title' => 'Informational and invalid tickets', 'key' => 'informational-invalid', 'color1' => $classificationColors['informational'], 'color2' => $classificationColors['invalid'], 'label1' => 'Informational', 'label2' => 'Invalid', 'key1' => 'informational', 'key2' => 'invalid', 'totals' => $monthlyGraphTwoTotals],
+                    ] as $graph)
+                        <article class="{{ $cardClass }}">
+                            <h3 class="{{ $titleClass }}">{{ $graph['title'] }}</h3>
+                            <p class="mt-0.5 {{ $mutedClass }}">Monthly ticket volume over the latest 12 months in the selected range.</p>
+                            <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground" aria-label="{{ $graph['title'] }} chart labels">
+                                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background-color: {{ $graph['color1'] }}"></span>{{ $graph['label1'] }}</span>
+                                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm" style="background-color: {{ $graph['color2'] }}"></span>{{ $graph['label2'] }}</span>
                             </div>
-                            <div class="mt-2 grid h-[220px] grid-flow-col auto-cols-fr items-end gap-2 border-b border-border px-1" role="img" aria-label="Monthly submitted and resolved ticket counts">
-                                @foreach ($volumeMonths as $month => $counts)
-                                    @php
-                                        $submittedHeight = $counts['submitted'] ? max(4, round($counts['submitted'] / $volumeMax * 174)) : 0;
-                                        $resolvedHeight = $counts['resolved'] ? max(4, round($counts['resolved'] / $volumeMax * 174)) : 0;
-                                    @endphp
-                                    <div class="flex h-full min-w-0 flex-col items-center justify-end">
-                                        <div class="flex h-[184px] w-full items-end justify-center gap-1">
-                                            <div class="w-1/3 rounded-t bg-primary" style="height: {{ $submittedHeight }}px" aria-label="{{ $counts['submitted'] }} submitted"></div>
-                                            <div class="w-1/3 rounded-t bg-emerald-700" style="height: {{ $resolvedHeight }}px" aria-label="{{ $counts['resolved'] }} resolved"></div>
-                                        </div>
-                                        <span class="mt-1 truncate text-[10px] text-muted-foreground">{{ \Illuminate\Support\Carbon::createFromFormat('Y-m', $month)->format('M y') }}</span>
-                                    </div>
-                                @endforeach
+                            <div class="mt-2 h-[220px] min-w-0">
+                                <canvas data-analytics-volume-chart="{{ $graph['key'] }}" role="img" aria-label="{{ $graph['title'] }} by month"></canvas>
                             </div>
-                            <div class="mt-1 flex flex-wrap justify-end gap-x-3 text-[10px] text-muted-foreground">
-                                @foreach ($volumeMonths as $month => $counts)
-                                    <span>{{ \Illuminate\Support\Carbon::createFromFormat('Y-m', $month)->format('M y') }}: {{ $counts['submitted'] }} submitted, {{ $counts['resolved'] }} resolved</span>
-                                @endforeach
-                            </div>
-                        @endif
-                    </article>
-
-                    <article class="{{ $cardClass }}">
-                        <h3 class="{{ $titleClass }}">Status</h3>
-                        <p class="mt-0.5 {{ $mutedClass }}">Ticket counts by current status.</p>
-                        @if ($total)
-                            <div class="mt-4 flex h-1.5 overflow-hidden rounded-full bg-muted" role="img" aria-label="Stacked ticket status totals">
-                                @foreach ($statusSegments as $segment)
-                                    @if ($segment['count'] > 0)
-                                        <span style="width: {{ $segment['count'] / $statusMax * 100 }}%; background-color: {{ $segment['color'] }}" aria-label="{{ $segment['label'] }}: {{ $segment['count'] }}"></span>
-                                    @endif
-                                @endforeach
-                            </div>
-                            <ul class="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs sm:grid-cols-3">
-                                @foreach ($statusSegments as $segment)
-                                    <li class="flex min-w-0 items-center gap-1.5">
-                                        <span class="h-2 w-2 shrink-0 rounded-sm" style="background-color: {{ $segment['color'] }}"></span>
-                                        <span class="min-w-0 flex-1 truncate">{{ $segment['label'] }}</span>
-                                        <strong class="tabular-nums">{{ number_format($segment['count']) }}</strong>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        @else
-                            <p class="mt-4 text-xs text-muted-foreground">No tickets in this period.</p>
-                        @endif
-                    </article>
+                            @if (array_sum($graph['totals']) === 0)
+                                <p class="mt-1 text-[11px] text-muted-foreground">No ticket volume data in this period.</p>
+                            @endif
+                            <p class="mt-2 text-[10px] text-muted-foreground">
+                                12-month totals: {{ $graph['label1'] }} {{ number_format($graph['totals'][$graph['key1']]) }} · {{ $graph['label2'] }} {{ number_format($graph['totals'][$graph['key2']]) }}
+                            </p>
+                        </article>
+                    @endforeach
                 </div>
 
-                <div class="grid min-w-0 gap-4 lg:grid-cols-2">
-                    <article class="{{ $cardClass }}">
-                        <h3 class="{{ $titleClass }}">Top 5 categories</h3>
-                        <p class="mt-0.5 {{ $mutedClass }}">Counts and share of selected tickets.</p>
-                        @forelse ($topCategories as $category => $count)
-                            <div class="mt-3">
-                                <div class="flex justify-between gap-2 text-xs"><span class="truncate">{{ $category }}</span><strong class="shrink-0">{{ number_format($count) }} ({{ number_format($percent($count), 1) }}%)</strong></div>
-                                <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full bg-primary" style="width: {{ min(100, $percent($count)) }}%"></div></div>
+                <div class="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(19rem,0.9fr)_minmax(0,1.4fr)]">
+                    <div class="grid min-w-0 gap-4">
+                        <x-donut-chart title="Status" description="Needs-resolution and unclassified tickets" :segments="$statusSegments" total-label="Tickets" large />
+                        @if ($statusDonutTotal === 0)
+                            <p class="-mt-2 text-xs text-muted-foreground">No tickets in this period.</p>
+                        @endif
+                        <x-donut-chart title="Classification" :segments="$classificationSegments" total-label="Tickets" large />
+                    </div>
+
+                    <article class="{{ $cardClass }} min-w-0">
+                        <h3 class="{{ $titleClass }}">Volume by category</h3>
+                        <p class="mt-0.5 {{ $mutedClass }}">Each ticket appears in exactly one classification segment.</p>
+                        @forelse ($categoryRows as $row)
+                            <div class="mt-4 grid grid-cols-[minmax(5rem,8rem)_minmax(0,1fr)_2rem] items-center gap-2" data-category-total="{{ $row['total'] }}">
+                                <span class="truncate text-xs" title="{{ $row['name'] }}">{{ $row['name'] }}</span>
+                                <div class="flex h-6 min-w-0 overflow-hidden rounded bg-muted" role="img" aria-label="{{ $row['name'] }}: {{ $row['total'] }} tickets">
+                                    @foreach ([
+                                        ['key' => 'submitted', 'label' => 'Submitted (not resolved)', 'color' => $classificationColors['needs_resolution']],
+                                        ['key' => 'resolved', 'label' => 'Resolved', 'color' => $classificationColors['resolved']],
+                                        ['key' => 'informational', 'label' => 'Informational', 'color' => $classificationColors['informational']],
+                                        ['key' => 'invalid', 'label' => 'Invalid', 'color' => $classificationColors['invalid']],
+                                        ['key' => 'unclassified', 'label' => 'Unclassified', 'color' => $classificationColors['unclassified']],
+                                    ] as $segment)
+                                        @php
+                                            $count = $row['segments'][$segment['key']];
+                                            $width = $row['total'] ? $count / $row['total'] * 100 : 0;
+                                        @endphp
+                                        @if ($count > 0)
+                                            <span class="flex h-full min-w-0 items-center justify-center overflow-hidden text-[10px] font-semibold text-white" style="width: {{ $width }}%; background-color: {{ $segment['color'] }}" title="{{ $segment['label'] }}: {{ $count }}" aria-label="{{ $segment['label'] }}: {{ $count }}">
+                                                @if ($width >= 12){{ number_format($count) }}@endif
+                                            </span>
+                                        @endif
+                                    @endforeach
+                                </div>
+                                <strong class="text-right text-xs tabular-nums">{{ number_format($row['total']) }}</strong>
                             </div>
                         @empty
                             <p class="mt-4 text-xs text-muted-foreground">No category totals in this period.</p>
                         @endforelse
-                        @if ($otherCategoryCount)
-                            <p class="mt-3 border-t border-border pt-2 text-xs text-muted-foreground">{{ $otherCategoryCount }} other categories · {{ number_format($otherTicketCount) }} tickets</p>
-                        @endif
-                    </article>
-                    <article class="{{ $cardClass }}">
-                        <h3 class="{{ $titleClass }}">Handled by office</h3>
-                        <p class="mt-0.5 {{ $mutedClass }}">Top offices by ticket count.</p>
-                        @forelse ($officeRows as $office)
-                            <div class="mt-3">
-                                <div class="flex justify-between gap-2 text-xs"><span class="truncate">{{ $office['name'] }}</span><strong class="shrink-0">{{ number_format($office['total']) }}</strong></div>
-                                <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full bg-[#c4785a]" style="width: {{ min(100, $percent($office['total'])) }}%"></div></div>
-                            </div>
-                        @empty
-                            <p class="mt-4 text-xs text-muted-foreground">No office assignments in this period.</p>
-                        @endforelse
+                        <ul class="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-border pt-3 text-[11px]">
+                            @foreach ([
+                                ['label' => 'Submitted (not resolved)', 'color' => $classificationColors['needs_resolution']],
+                                ['label' => 'Resolved', 'color' => $classificationColors['resolved']],
+                                ['label' => 'Informational', 'color' => $classificationColors['informational']],
+                                ['label' => 'Invalid', 'color' => $classificationColors['invalid']],
+                                ['label' => 'Unclassified', 'color' => $classificationColors['unclassified']],
+                            ] as $segment)
+                                <li class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm" style="background-color: {{ $segment['color'] }}"></span>{{ $segment['label'] }}</li>
+                            @endforeach
+                        </ul>
+                        <p class="mt-2 text-[10px] text-muted-foreground">{{ number_format($categoryEmptyCount) }} categories have no tickets.</p>
                     </article>
                 </div>
             </section>
 
-            <section id="response" x-show="tab === 'response'" x-cloak data-tab-panel="response" class="grid min-w-0 gap-4">
-                <h2 class="sr-only">Response and resolution</h2>
-                <article class="{{ $cardClass }} overflow-x-auto">
-                    <h3 class="{{ $titleClass }}">Response and handling times</h3>
-                    <p class="mt-0.5 {{ $mutedClass }}">Calendar days from the selected start point.</p>
-                    <table class="mt-3 w-full min-w-[560px] text-left text-xs">
-                        <thead class="border-b border-border text-muted-foreground"><tr><th class="py-2 pr-3 font-semibold">Measure</th><th class="px-2 py-2 font-semibold">Median</th><th class="px-2 py-2 font-semibold">Average</th><th class="px-2 py-2 text-right font-semibold">Tickets counted</th></tr></thead>
+            <section id="staff" x-show="tab === 'staff'" x-cloak data-tab-panel="staff" class="grid min-w-0 gap-3">
+                <h2 class="sr-only">Staff performance</h2>
+                <p class="text-[11px] text-muted-foreground">
+                    Review time {{ $days($performance['review_time']['average_days']) }},
+                    time to acknowledge {{ $days($performance['acknowledgment_time']['average_days']) }},
+                    first staff reply {{ $days($performance['first_response_time']['average_days']) }},
+                    active handling time {{ $days($resolutionTime['average_days']) }}.
+                </p>
+                <article class="{{ $cardClass }} min-w-0 overflow-x-auto">
+                    <h3 class="{{ $titleClass }}">Staff performance</h3>
+                    <p class="mt-0.5 {{ $mutedClass }}">Assigned counts use the current assignee, or current handler when no assignee is set.</p>
+                    <table data-staff-sort-table class="mt-2 w-full min-w-[1080px] text-left text-xs">
+                        <thead class="border-b border-border text-muted-foreground">
+                            <tr>
+                                @foreach ([
+                                    'name' => 'Name',
+                                    'assigned_tickets' => 'Tickets',
+                                    'open_tickets' => 'Open',
+                                    'oldest_open_ticket_age_days' => 'Oldest open',
+                                    'resolved_tickets' => 'Resolved',
+                                    'acknowledgment_average_days' => 'Avg time to acknowledge',
+                                    'handling_average_days' => 'Avg handling time (from assignment)',
+                                    'rating_average' => 'Avg rating',
+                                ] as $sortKey => $label)
+                                    <th class="px-2 py-2 first:pl-0">
+                                        <button type="button" data-staff-sort="{{ $sortKey }}" class="font-semibold hover:text-foreground">{{ $label }}</button>
+                                    </th>
+                                @endforeach
+                            </tr>
+                        </thead>
                         <tbody>
-                            @foreach ([
-                                ['Review time', $performance['review_time']],
-                                ['Time to acknowledge', $performance['acknowledgment_time']],
-                                ['First staff reply (SDS or recipient)', $performance['first_response_time']],
-                            ] as [$label, $timing])
-                                <tr class="border-b border-border last:border-0"><th class="py-2 pr-3 font-medium">{{ $label }}</th><td class="px-2 py-2">{{ $days($timing['median_days']) }}</td><td class="px-2 py-2">{{ $days($timing['average_days']) }}</td><td class="px-2 py-2 text-right tabular-nums">{{ number_format($timing['sample_count']) }}</td></tr>
-                            @endforeach
-                            <tr class="border-b border-border last:border-0"><th class="py-2 pr-3 font-medium">Active handling time</th><td class="px-2 py-2">{{ $days($resolutionTime['median_days']) }}</td><td class="px-2 py-2">{{ $days($resolutionTime['average_days']) }}</td><td class="px-2 py-2 text-right tabular-nums">{{ number_format($resolutionTime['ticket_count']) }}</td></tr>
-                        </tbody>
-                    </table>
-                    @if ($resolutionTime['fallback_count'] > 0)
-                        <p class="mt-2 text-[11px] text-muted-foreground">{{ number_format($resolutionTime['fallback_count']) }} ticket(s) used full time because a wait interval could not be determined.</p>
-                    @endif
-                </article>
-
-                <article class="{{ $cardClass }} overflow-x-auto">
-                    <h3 class="{{ $titleClass }}">Active handling time by category</h3>
-                    <p class="mt-0.5 {{ $mutedClass }}">Calendar days, less clarification and referral waits where recorded.</p>
-                    <table class="mt-3 w-full min-w-[460px] text-left text-xs">
-                        <thead class="border-b border-border text-muted-foreground"><tr><th class="py-2 pr-3 font-semibold">Category / outcome</th><th class="px-2 py-2 font-semibold">Median</th><th class="px-2 py-2 font-semibold">Average</th><th class="px-2 py-2 text-right font-semibold">Tickets</th></tr></thead>
-                        <tbody>
-                            @forelse ($resolutionTime['categories'] as $category => $timing)
-                                <tr class="border-b border-border last:border-0"><th class="py-2 pr-3 font-medium">{{ $category }}</th><td class="px-2 py-2">{{ $days($timing['median_days']) }}</td><td class="px-2 py-2">{{ $days($timing['average_days']) }}</td><td class="px-2 py-2 text-right tabular-nums">{{ number_format($timing['ticket_count']) }}</td></tr>
+                            @forelse ($staffRows as $row)
+                                <tr data-staff-row
+                                    data-sort-name="{{ $row['name'] }}"
+                                    data-sort-assigned_tickets="{{ $row['assigned_tickets'] }}"
+                                    data-sort-open_tickets="{{ $row['open_tickets'] }}"
+                                    data-sort-oldest_open_ticket_age_days="{{ $row['oldest_open_ticket_age_days'] ?? -1 }}"
+                                    data-sort-resolved_tickets="{{ $row['resolved_tickets'] }}"
+                                    data-sort-acknowledgment_average_days="{{ $row['acknowledgment_average_days'] ?? -1 }}"
+                                    data-sort-handling_average_days="{{ $row['handling_average_days'] ?? -1 }}"
+                                    data-sort-rating_average="{{ $row['rating_average'] ?? -1 }}"
+                                    class="border-b border-border last:border-0">
+                                    <th class="py-2 pr-3 font-medium">{{ $row['name'] }}<span class="block text-[10px] font-normal text-muted-foreground">{{ $row['unit'] }}</span></th>
+                                    <td class="px-2 py-2 text-right tabular-nums">{{ number_format($row['assigned_tickets']) }}</td>
+                                    <td class="px-2 py-2 text-right tabular-nums">{{ number_format($row['open_tickets']) }}</td>
+                                    <td class="px-2 py-2">{{ $row['oldest_open_ticket_age_days'] === null ? 'No data' : $days($row['oldest_open_ticket_age_days']) }}</td>
+                                    <td class="px-2 py-2">{{ number_format($row['resolved_tickets']) }} ({{ number_format($row['resolved_percentage'], 1) }}%)</td>
+                                    <td class="px-2 py-2">
+                                        {{ $row['acknowledgment_average_days'] === null ? 'No data' : $days($row['acknowledgment_average_days']) . ' (' . number_format($row['acknowledgment_count']) . ')' }}
+                                    </td>
+                                    <td class="px-2 py-2">
+                                        @if ($row['handling_average_days'] === null)
+                                            No data
+                                        @else
+                                            {{ $days($row['handling_average_days']) }} ({{ number_format($row['handling_count']) }})
+                                        @endif
+                                        <span class="block text-[10px] text-muted-foreground">{{ number_format($row['handling_fallback_count']) }} fallback(s)</span>
+                                    </td>
+                                    <td class="px-2 py-2">{{ $row['rating_average'] === null ? 'No ratings' : number_format($row['rating_average'], 1) . ' (' . number_format($row['rating_count']) . ')' }}</td>
+                                </tr>
                             @empty
-                                <tr><td colspan="4" class="py-3 text-xs text-muted-foreground">No handling-time data in this period.</td></tr>
+                                <tr><td colspan="8" class="py-4 text-center text-muted-foreground">No staff performance data in this period.</td></tr>
                             @endforelse
-                            @if (($resolutionTime['committee_outcomes']['ticket_count'] ?? 0) > 0)
-                                <tr class="border-t border-border"><th class="py-2 pr-3 font-medium">Committee outcomes</th><td class="px-2 py-2">{{ $days($resolutionTime['committee_outcomes']['median_days']) }}</td><td class="px-2 py-2">{{ $days($resolutionTime['committee_outcomes']['average_days']) }}</td><td class="px-2 py-2 text-right tabular-nums">{{ number_format($resolutionTime['committee_outcomes']['ticket_count']) }}</td></tr>
-                            @endif
                         </tbody>
                     </table>
                 </article>
+                <div class="grid min-w-0 gap-3 text-[11px] text-muted-foreground">
+                    <p>Averages from very few tickets are not reliable; see the count in brackets.</p>
+                    <p>Escalations are counted by category and level, not per handler.</p>
+                    <p>Committee outcomes: average {{ $days($resolutionTime['committee_outcomes']['average_days'] ?? null) }} ({{ number_format($resolutionTime['committee_outcomes']['ticket_count'] ?? 0) }} tickets).</p>
+                </div>
 
-                <div class="grid min-w-0 gap-4 lg:grid-cols-2">
+                <div class="grid min-w-0 gap-3 lg:grid-cols-3">
                     @foreach ([['title' => 'How tickets were resolved', 'rows' => $breakdowns['resolution_types']], ['title' => 'Why tickets were closed', 'rows' => $breakdowns['closure_reasons']]] as $outcome)
                         <article class="{{ $cardClass }}">
                             <h3 class="{{ $titleClass }}">{{ $outcome['title'] }}</h3>
@@ -473,101 +484,20 @@
                             </ul>
                         </article>
                     @endforeach
+                    <article class="{{ $cardClass }}">
+                        <h3 class="{{ $titleClass }}">Escalation and follow-up</h3>
+                        <ul class="mt-2 divide-y divide-border text-xs">
+                            <li class="flex justify-between gap-2 py-2"><span>Escalation rate</span><strong>{{ number_format($escalatedTickets) }} of {{ number_format($escalationTotal) }} ({{ number_format($escalationRate, 1) }}%)</strong></li>
+                            @foreach ($escalationSegments as $segment)
+                                <li class="flex justify-between gap-2 py-2"><span>{{ $segment['label'] }}</span><strong class="tabular-nums">{{ number_format($segment['count']) }}</strong></li>
+                            @endforeach
+                            <li class="flex justify-between gap-2 py-2"><span>Student escalation requests (followed by SDS)</span><strong>{{ number_format($performance['student_requests']['escalation']['count']) }} ({{ number_format($performance['student_requests']['escalation']['followed_by_sds_action']) }})</strong></li>
+                            <li class="flex justify-between gap-2 py-2"><span>Student update requests (followed by SDS)</span><strong>{{ number_format($performance['student_requests']['update']['count']) }} ({{ number_format($performance['student_requests']['update']['followed_by_sds_action']) }})</strong></li>
+                            <li class="flex justify-between gap-2 py-2"><span>Further-action rate</span><strong>{{ number_format($performance['further_action_rate'], 1) }}%</strong></li>
+                            <li class="flex justify-between gap-2 py-2"><span>Reopened</span><strong class="tabular-nums">{{ number_format($performance['reopen_count']) }}</strong></li>
+                        </ul>
+                    </article>
                 </div>
-
-                <article class="{{ $cardClass }}">
-                    <h3 class="{{ $titleClass }}">Escalation and follow-up</h3>
-                    <p class="mt-0.5 {{ $mutedClass }}">Escalation rate: {{ number_format($escalatedTickets) }} of {{ number_format($escalationTotal) }} needs-resolution tickets ({{ number_format($escalationRate, 1) }}%).</p>
-                    <div class="mt-3 flex h-1.5 overflow-hidden rounded-full bg-muted" role="img" aria-label="Needs-resolution tickets by escalation count">
-                        @foreach ($escalationSegments as $segment)
-                            @if ($segment['count'] > 0)
-                                <span style="width: {{ $segment['count'] / $escalationMax * 100 }}%; background-color: {{ $segment['color'] }}" aria-label="{{ $segment['label'] }}: {{ $segment['count'] }}"></span>
-                            @endif
-                        @endforeach
-                    </div>
-                    <ul class="mt-2 grid gap-x-4 gap-y-1 text-xs sm:grid-cols-3">
-                        @foreach ($escalationSegments as $segment)
-                            <li class="flex items-center gap-1.5"><span class="h-2 w-2 shrink-0 rounded-sm" style="background-color: {{ $segment['color'] }}"></span>{{ $segment['label'] }} <strong class="ml-auto tabular-nums">{{ number_format($segment['count']) }}</strong></li>
-                        @endforeach
-                    </ul>
-                    <div class="mt-3 grid gap-x-4 gap-y-2 border-t border-border pt-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
-                        <p>Student escalation requests: <strong>{{ number_format($performance['student_requests']['escalation']['count']) }}</strong> · {{ number_format($performance['student_requests']['escalation']['followed_by_sds_action']) }} followed by SDS</p>
-                        <p>Student update requests: <strong>{{ number_format($performance['student_requests']['update']['count']) }}</strong> · {{ number_format($performance['student_requests']['update']['followed_by_sds_action']) }} followed by SDS</p>
-                        <p>Further-action rate: <strong>{{ number_format($performance['further_action_rate'], 1) }}%</strong></p>
-                        <p>Reopened: <strong>{{ number_format($performance['reopen_count']) }}</strong></p>
-                    </div>
-                </article>
-            </section>
-
-            <section id="staff" x-show="tab === 'staff'" x-cloak data-tab-panel="staff" class="grid min-w-0 gap-3">
-                <h2 class="sr-only">Staff and offices</h2>
-                <div class="flex items-center gap-1" role="group" aria-label="Performance table">
-                    <button type="button" x-on:click="staffMode = 'offices'" x-bind:aria-pressed="staffMode === 'offices'" x-bind:class="staffMode === 'offices' ? 'bg-primary text-white' : 'bg-white text-foreground'" class="rounded-md border border-border px-3 py-1.5 text-xs font-semibold">Offices</button>
-                    <button type="button" x-on:click="staffMode = 'staff'" x-bind:aria-pressed="staffMode === 'staff'" x-bind:class="staffMode === 'staff' ? 'bg-primary text-white' : 'bg-white text-foreground'" class="rounded-md border border-border px-3 py-1.5 text-xs font-semibold">Staff</button>
-                </div>
-                <article x-show="staffMode === 'offices'" class="{{ $cardClass }} overflow-x-auto">
-                    <h3 class="{{ $titleClass }}">Performance by office</h3>
-                    <table class="mt-2 w-full min-w-[760px] text-left text-xs">
-                        <thead class="border-b border-border text-muted-foreground"><tr><th class="py-2 pr-3">Office</th><th class="px-2 text-right">Open</th><th class="px-2">Oldest open</th><th class="px-2">Median to acknowledge</th><th class="px-2 text-right">Resolved</th><th class="px-2">Handling time</th></tr></thead>
-                        <tbody>
-                            @forelse ($officePerformanceRows as $row)
-                                <tr class="border-b border-border last:border-0"><th class="py-2 pr-3 font-medium">{{ $row['name'] }}</th><td class="px-2 text-right tabular-nums">{{ number_format($row['open_tickets']) }}</td><td class="px-2">{{ $days($row['oldest_open_ticket_age_days']) }}</td><td class="px-2">{{ $row['median_acknowledgment_days'] === null ? 'n/a' : $days($row['median_acknowledgment_days']) }}</td><td class="px-2 text-right tabular-nums">{{ number_format($row['resolved_tickets']) }}</td><td class="px-2">
-                                    @if ($row['handling_by_category'])
-                                        <button type="button" class="text-primary underline-offset-2 hover:underline" x-on:click="categoryRow = categoryRow === 'office-{{ $loop->index }}' ? null : 'office-{{ $loop->index }}'">Show categories</button>
-                                    @else
-                                        n/a
-                                    @endif
-                                </td></tr>
-                                @if ($row['handling_by_category'])
-                                    <tr x-show="categoryRow === 'office-{{ $loop->index }}'" x-cloak class="border-b border-border bg-muted/30">
-                                        <td colspan="6" class="px-3 py-2 text-xs">
-                                            <span class="font-semibold">Median handling time by category:</span>
-                                            <ul class="mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                                                @foreach ($row['handling_by_category'] as $category => $timing)
-                                                    <li>{{ $category }}: {{ $timing['median_days'] === null ? 'n/a' : $days($timing['median_days']) }}</li>
-                                                @endforeach
-                                            </ul>
-                                        </td>
-                                    </tr>
-                                @endif
-                            @empty
-                                <tr><td colspan="6" class="py-4 text-center text-muted-foreground">No office performance data in this period.</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </article>
-                <article x-show="staffMode === 'staff'" class="{{ $cardClass }} overflow-x-auto">
-                    <h3 class="{{ $titleClass }}">Performance by staff</h3>
-                    <table class="mt-2 w-full min-w-[760px] text-left text-xs">
-                        <thead class="border-b border-border text-muted-foreground"><tr><th class="py-2 pr-3">Name and office</th><th class="px-2 text-right">Open</th><th class="px-2">Oldest open</th><th class="px-2">Median to acknowledge</th><th class="px-2 text-right">Resolved</th><th class="px-2">Handling time</th></tr></thead>
-                        <tbody>
-                            @forelse ($staffRows as $row)
-                                <tr class="border-b border-border last:border-0"><th class="py-2 pr-3 font-medium">{{ $row['name'] }}<span class="block text-[10px] font-normal text-muted-foreground">{{ $row['unit'] }}</span></th><td class="px-2 text-right tabular-nums">{{ number_format($row['open_tickets']) }}</td><td class="px-2">{{ $days($row['oldest_open_ticket_age_days']) }}</td><td class="px-2">{{ $row['median_acknowledgment_days'] === null ? 'n/a' : $days($row['median_acknowledgment_days']) }}</td><td class="px-2 text-right tabular-nums">{{ number_format($row['resolved_tickets']) }}</td><td class="px-2">
-                                    @if ($row['handling_by_category'])
-                                        <button type="button" class="text-primary underline-offset-2 hover:underline" x-on:click="categoryRow = categoryRow === 'staff-{{ $loop->index }}' ? null : 'staff-{{ $loop->index }}'">Show categories</button>
-                                    @else
-                                        n/a
-                                    @endif
-                                </td></tr>
-                                @if ($row['handling_by_category'])
-                                    <tr x-show="categoryRow === 'staff-{{ $loop->index }}'" x-cloak class="border-b border-border bg-muted/30">
-                                        <td colspan="6" class="px-3 py-2 text-xs">
-                                            <span class="font-semibold">Median handling time by category:</span>
-                                            <ul class="mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                                                @foreach ($row['handling_by_category'] as $category => $timing)
-                                                    <li>{{ $category }}: {{ $timing['median_days'] === null ? 'n/a' : $days($timing['median_days']) }}</li>
-                                                @endforeach
-                                            </ul>
-                                        </td>
-                                    </tr>
-                                @endif
-                            @empty
-                                <tr><td colspan="6" class="py-4 text-center text-muted-foreground">No staff performance data in this period.</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </article>
-                <p class="text-[11px] text-muted-foreground">n/a means fewer than 3 tickets. Escalations are counted by category and level, not per handler.</p>
             </section>
 
             <section id="students" x-show="tab === 'students'" x-cloak data-tab-panel="students" class="grid min-w-0 gap-4 lg:grid-cols-2">
@@ -624,6 +554,123 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const monthlyTicketVolumes = @js($monthlyTicketVolumes);
+        const volumeChartInstances = new Map();
+        const volumeChartDefinitions = {
+            'needs-resolution': [
+                { label: 'Submitted', key: 'submitted', color: '#7a1d2a', pointStyle: 'circle', borderDash: [] },
+                { label: 'Resolved', key: 'resolved', color: '#15803d', pointStyle: 'rectRounded', borderDash: [] },
+            ],
+            'informational-invalid': [
+                { label: 'Informational', key: 'informational', color: '#14283f', pointStyle: 'circle', borderDash: [] },
+                { label: 'Invalid', key: 'invalid', color: '#dc2626', pointStyle: 'triangle', borderDash: [6, 4] },
+            ],
+        };
+
+        window.renderAnalyticsVolumeCharts = () => {
+            requestAnimationFrame(() => {
+                document.querySelectorAll('[data-analytics-volume-chart]').forEach((canvas) => {
+                    if (canvas.offsetParent === null) return;
+
+                    const existing = volumeChartInstances.get(canvas);
+                    if (existing) {
+                        existing.resize();
+                        return;
+                    }
+
+                    const definition = volumeChartDefinitions[canvas.dataset.analyticsVolumeChart];
+                    if (!definition) return;
+
+                    const datasets = definition.map((series) => ({
+                        label: series.label,
+                        data: monthlyTicketVolumes.values.map((month) => month[series.key]),
+                        borderColor: series.color,
+                        backgroundColor: series.color,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: series.color,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        pointStyle: series.pointStyle,
+                        borderDash: series.borderDash,
+                        borderWidth: 2,
+                        tension: 0,
+                        fill: false,
+                    }));
+
+                    volumeChartInstances.set(canvas, new Chart(canvas, {
+                        type: 'line',
+                        data: { labels: monthlyTicketVolumes.labels, datasets },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: '#ffffff',
+                                    titleColor: '#6b7280',
+                                    bodyColor: '#111827',
+                                    borderColor: '#e5e7eb',
+                                    borderWidth: 1,
+                                    cornerRadius: 8,
+                                    padding: 8,
+                                    callbacks: {
+                                        title: (items) => items[0]?.label ?? '',
+                                        label: (item) => `${item.dataset.label}: ${item.parsed.y}`,
+                                    },
+                                },
+                            },
+                            scales: {
+                                x: {
+                                    grid: { display: false },
+                                    ticks: { color: '#6b7280', maxRotation: 0, autoSkip: false, font: { size: 9 } },
+                                    border: { display: false },
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { color: '#6b7280', precision: 0, font: { size: 10 } },
+                                    grid: { color: '#e5e7eb', borderDash: [4, 4], drawTicks: false },
+                                    border: { display: false },
+                                },
+                            },
+                        },
+                    }));
+                });
+            });
+        };
+
+        window.addEventListener('load', () => window.renderAnalyticsVolumeCharts());
+
+        document.querySelectorAll('[data-staff-sort]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const table = button.closest('[data-staff-sort-table]');
+                const body = table?.querySelector('tbody');
+                if (!table || !body) return;
+
+                const key = button.dataset.staffSort;
+                const previousKey = table.dataset.sortKey;
+                const direction = previousKey === key && table.dataset.sortDirection === 'asc'
+                    ? 'desc'
+                    : key === 'name' ? 'asc' : 'desc';
+                table.dataset.sortKey = key;
+                table.dataset.sortDirection = direction;
+
+                const rows = [...body.querySelectorAll('[data-staff-row]')];
+                rows.sort((left, right) => {
+                    const leftValue = left.getAttribute(`data-sort-${key}`) ?? '';
+                    const rightValue = right.getAttribute(`data-sort-${key}`) ?? '';
+                    const comparison = key === 'name'
+                        ? leftValue.localeCompare(rightValue)
+                        : Number(leftValue) - Number(rightValue);
+
+                    return direction === 'asc' ? comparison : -comparison;
+                });
+                rows.forEach((row) => body.append(row));
+            });
+        });
+    </script>
     <script>
         const analyticsFilterForm = document.querySelector('[data-analytics-filter-form]');
         const statusDropdown = analyticsFilterForm?.querySelector('[data-analytics-status-dropdown]');

@@ -94,57 +94,12 @@ class AnalyticsController extends Controller
             ->orderBy('name')
             ->get();
 
-        $volumeChartCategories = ComplaintCategory::query()
-            ->where(fn ($query) => $query->where('is_active', true)->orWhereHas('complaints'))
-            ->orderBy('name')
-            ->get(['id', 'name'])
-            ->map(fn ($category) => ['id' => (int) $category->id, 'name' => $category->name])
-            ->values();
-        $activeTickets = Ticket::query()
-            ->with(['complaint', 'currentHandler', 'assignee'])
-            ->whereIn('status', \App\Models\Ticket::ACTIVE_STATUSES)
-            ->when(! empty($filters['category_id']), fn ($query) => $query->whereHas('complaint', fn ($complaint) => $complaint->where('category_id', $filters['category_id'])))
-            ->when(! empty($filters['start_date']), fn ($query) => $query->whereHas('complaint', fn ($complaint) => $complaint->whereDate('created_at', '>=', $filters['start_date'])))
-            ->when(! empty($filters['end_date']), fn ($query) => $query->whereHas('complaint', fn ($complaint) => $complaint->whereDate('created_at', '<=', $filters['end_date'])))
-            ->orderByDesc('updated_at')
-            ->paginate(10)
-            ->withQueryString();
-
         $dashboard = $analytics->getDashboardData($filters);
-        $volumeChartPoints = $dashboard['tickets']
-            ->filter(fn ($ticket) => $ticket->complaint?->created_at && $ticket->complaint?->category_id)
-            ->map(fn ($ticket) => [
-                'category_id' => (int) $ticket->complaint->category_id,
-                'year' => (int) $ticket->complaint->created_at->year,
-                'month' => (int) $ticket->complaint->created_at->month,
-                'week' => min(4, (int) floor(($ticket->complaint->created_at->day - 1) / 7) + 1),
-            ])->values();
-        $currentYear = (int) ($filters['filter_year'] ?? now()->year);
-        $volumeChartYears = $volumeChartPoints->pluck('year')->push($currentYear)->unique()->sort()->values();
 
         return view('admin.analytics.dashboard', [
             'filters' => $filters,
             'categoryOptions' => $categoryOptions,
-            'totalComplaints' => $analytics->getTotalComplaints($filters),
-            'totalTickets' => $analytics->getTotalTickets($filters),
-            'statusCounts' => $analytics->getTotalTicketsByStatus($filters),
-            'complaintVolumeDaily' => $analytics->getComplaintVolumeDaily($filters),
-            'complaintVolumeWeekly' => $analytics->getComplaintVolumeWeekly($filters),
-            'complaintVolumeMonthly' => $analytics->getComplaintVolumeMonthly($filters),
-            'categoryDistribution' => $analytics->getComplaintDistributionByCategory($filters),
-            'resolutionRate' => $analytics->getResolutionRate($filters),
-            'averageResolutionTime' => $analytics->getAverageResolutionTimePerCategory($filters),
-            'escalationFrequency' => $analytics->getEscalationFrequency($filters),
-            'activeTicketStatuses' => $analytics->getActiveTicketStatuses($filters),
-            'activeTickets' => $activeTickets,
             'dashboard' => $dashboard,
-            'volumeChart' => ['categories' => $volumeChartCategories, 'points' => $volumeChartPoints, 'years' => $volumeChartYears, 'currentYear' => $currentYear],
-            'recipientOptions' => \App\Models\User::query()
-                ->whereIn('role', [\App\Models\User::ROLE_RECIPIENT, \App\Models\User::ROLE_SDS_ADMIN])
-                ->where('is_active', true)
-                ->with('recipient')
-                ->orderBy('first_name')
-                ->get(),
             'unitOptions' => \App\Models\Recipient::query()
                 ->whereNotNull('unit')
                 ->where('unit', '<>', '')
