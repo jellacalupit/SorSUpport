@@ -22,6 +22,7 @@
             ['label' => 'Needs Resolution', 'color' => '#7a1d2a', 'count' => (int) ($classificationBreakdown['needs_resolution'] ?? 0)],
             ['label' => 'Informational', 'color' => '#111111', 'count' => (int) ($classificationBreakdown['informational'] ?? 0)],
             ['label' => 'Invalid', 'color' => '#dc2626', 'count' => (int) ($classificationBreakdown['invalid'] ?? 0)],
+            ['label' => 'Unclassified', 'color' => '#9ca3af', 'count' => (int) ($classificationBreakdown['unclassified'] ?? 0)],
         ];
         $monthOptions = [
             1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'May', 6 => 'Jun',
@@ -291,16 +292,16 @@
         <div class="self-start flex flex-col gap-2">
             <div class="grid w-[526px] grid-cols-4 items-stretch gap-2">
                 <div>
-                    <x-stat-card compact label="Tickets" :value="$totalTickets" tone="primary" />
+                    <x-stat-card compact label="Tickets" :value="$totalTickets" tone="primary" class="!py-2.5" />
                 </div>
                 <div>
-                    <x-stat-card compact label="Students" :value="$totalStudents" />
+                    <x-stat-card compact label="Students" :value="$totalStudents" class="!py-2.5" />
                 </div>
                 <div>
-                    <x-stat-card compact label="Recipients" :value="$totalRecipients" tone="danger" />
+                    <x-stat-card compact label="Recipients" :value="$totalRecipients" tone="danger" class="!py-2.5" />
                 </div>
                 <div>
-                    <x-stat-card compact label="Categories" :value="$totalCategories" />
+                    <x-stat-card compact label="Categories" :value="$totalCategories" class="!py-2.5" />
                 </div>
             </div>
 
@@ -326,7 +327,7 @@
 
                             <div class="min-w-0 flex-1 pt-0.5">
                                 <div class="text-left text-xs font-semibold text-black sm:text-sm">Status</div>
-                                <div class="mt-1.5 flex flex-col gap-0.5 text-[9px] leading-tight text-foreground sm:text-[10px]">
+                                <div class="mt-1.5 flex flex-col gap-0.5 text-[9px] leading-none text-foreground sm:text-[10px]">
                                     @foreach ($statusSegments as $segment)
                                         <div class="flex min-w-0 items-center gap-1.5">
                                             <span class="h-2.5 w-2.5 shrink-0 rounded-sm" style="background-color: {{ $segment['color'] }};"></span>
@@ -345,6 +346,7 @@
                             'needs_resolution' => ['label' => 'Needs Resolution', 'color' => '#7a1d2a', 'count' => (int) ($classificationBreakdown['needs_resolution'] ?? 0)],
                             'informational' => ['label' => 'Informational', 'color' => '#111111', 'count' => (int) ($classificationBreakdown['informational'] ?? 0)],
                             'invalid' => ['label' => 'Invalid', 'color' => '#dc2626', 'count' => (int) ($classificationBreakdown['invalid'] ?? 0)],
+                            'unclassified' => ['label' => 'Unclassified', 'color' => '#9ca3af', 'count' => (int) ($classificationBreakdown['unclassified'] ?? 0)],
                         ];
                         $classificationSegments = collect($classificationLegend)->values()->all();
                         $classificationTotal = array_sum(array_column($classificationSegments, 'count')) ?: 0;
@@ -435,7 +437,7 @@
             @endphp
             <div
                 data-volume-chart
-                class="flex min-h-0 flex-col overflow-visible rounded-[20px] border border-border bg-white p-3 shadow-sm"
+                class="flex min-h-0 flex-col overflow-visible rounded-[20px] border border-border bg-white p-2.5 shadow-sm"
             >
                 <div class="relative z-40 flex items-center justify-between gap-2">
                     <h3 data-volume-title class="shrink-0 whitespace-nowrap font-display text-sm font-semibold leading-tight text-foreground">Volume by category</h3>
@@ -496,7 +498,7 @@
                         <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="shrink-0 whitespace-nowrap text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
                 </div>
-                <div class="relative z-0 mt-2 min-h-64 w-full flex-1">
+                <div class="relative z-0 mt-1.5 min-h-64 w-full flex-1">
                     <canvas class="absolute inset-0" data-volume-canvas aria-label="Complaint volume chart"></canvas>
                 </div>
                 <ul data-volume-legend class="hidden" aria-label="Categories"></ul>
@@ -873,8 +875,8 @@
                     grid: { display: false, drawBorder: false },
                     offset: true,
                     ticks: {
-                        color: muted,
-                        font: { family: fontSans, size: horizontal ? 12 : 10 },
+                        color: horizontal ? '#111111' : muted,
+                        font: { family: fontSans, size: horizontal ? 12 : 10, weight: horizontal ? '600' : '400' },
                         maxRotation: 0,
                         minRotation: 0,
                         autoSkip: model.type !== 'bar',
@@ -887,7 +889,7 @@
                 };
                 if (model.type === 'bar') {
                     categoryAxis.ticks.display = true;
-                    categoryAxis.ticks.color = '#374151';
+                    categoryAxis.ticks.color = '#111111';
                 }
                 const valueAxis = {
                     beginAtZero: true,
@@ -945,6 +947,7 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        devicePixelRatio: Math.max(2, window.devicePixelRatio || 1),
                         indexAxis: horizontal ? 'y' : 'x',
                         interaction: { mode: 'index', intersect: false, axis: horizontal ? 'y' : 'x' },
                         layout: {

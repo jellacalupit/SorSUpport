@@ -47,6 +47,7 @@ class AdminDashboardController extends Controller
             'needs_resolution' => Ticket::query()->where('classification', 'needs_resolution')->count(),
             'informational' => Ticket::query()->whereIn('classification', ['informational', 'anonymous'])->count(),
             'invalid' => Ticket::query()->where('classification', 'invalid')->count(),
+            'unclassified' => Ticket::query()->whereNull('classification')->count(),
         ];
 
         $volumeChartCategories = ComplaintCategory::query()

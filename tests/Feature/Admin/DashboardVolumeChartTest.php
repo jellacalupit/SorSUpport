@@ -43,7 +43,7 @@ class DashboardVolumeChartTest extends TestCase
             'is_active' => true,
         ]);
 
-        Complaint::create([
+        $complaint = Complaint::create([
             'reference_number' => Complaint::generateReferenceNumber(),
             'student_id' => $studentProfile->id,
             'category_id' => $category->id,
@@ -53,15 +53,24 @@ class DashboardVolumeChartTest extends TestCase
             'status' => Complaint::STATUS_SUBMITTED,
         ]);
 
-        $this->actingAs($admin)
+        Ticket::create([
+            'complaint_id' => $complaint->id,
+            'status' => Ticket::STATUS_SUBMITTED,
+            'classification' => null,
+        ]);
+
+        $response = $this->actingAs($admin)
             ->get(route('admin.dashboard'))
             ->assertOk()
             ->assertSee('Volume by category')
             ->assertSee('All categories')
             ->assertSee('All months')
             ->assertSee('Academic Concerns')
+            ->assertSee('Unclassified')
             ->assertSee((string) now()->year)
             ->assertSee(route('admin.analytics.index'), false);
+
+        $this->assertSame(1, $response->viewData('classificationBreakdown')['unclassified']);
     }
 
     public function test_admin_dashboard_shows_ten_most_recent_tickets_regardless_of_age(): void

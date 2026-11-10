@@ -15,14 +15,14 @@
     $inlineWhenNarrow = $compact && $inline === 'narrow';
 @endphp
 
-<div @class([
+<div {{ $attributes->class([
     'surface border border-border bg-white shadow-md',
     'px-2 py-2.5 text-center sm:px-3 sm:py-4' => $compact && ! $inline,
     'flex items-center justify-between gap-2 px-3 py-2.5 sm:block sm:py-4 sm:text-center' => $inlineOnPhones,
     // Stacked cards keep the number at the bottom so it lines up even when a label wraps.
     'flex items-center justify-between gap-2 px-3 py-2.5 min-[360px]:flex-col min-[360px]:gap-0.5 min-[360px]:px-1.5 min-[360px]:text-center sm:px-3 sm:py-4' => $inlineWhenNarrow,
     'p-4' => !$compact,
-])>
+]) }}>
     <p @class([
         'font-semibold tracking-wide uppercase',
         'text-black' => $valueTone === 'default',
