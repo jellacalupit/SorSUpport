@@ -175,9 +175,6 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
         Route::patch('/accounts/{user}/reactivate', [AccountManagementController::class, 'reactivate'])
             ->name('accounts.reactivate');
 
-        Route::delete('/accounts/{user}', [AccountManagementController::class, 'destroy'])
-            ->name('accounts.destroy');
-
         Route::get('/accounts/upload', [AccountManagementController::class, 'showUploadForm'])
             ->name('accounts.upload');
 

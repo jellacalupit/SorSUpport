@@ -11,7 +11,6 @@ use App\Models\AuditLog;
 use App\Models\User as AppUser;
 use App\Notifications\AccountUpdateNotification;
 use App\Services\TicketAssignmentService;
-use App\Services\AccountRetentionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -364,23 +363,6 @@ class AccountManagementController extends Controller
 
         return redirect()
             ->route('admin.accounts.index', ['category_filter' => $category]);
-    }
-
-    /**
-     * Remove an account, retaining ticket history through anonymization when needed.
-     */
-    public function destroy(AppUser $user, AccountRetentionService $retention)
-    {
-        abort_unless(in_array($user->role, [AppUser::ROLE_STUDENT, AppUser::ROLE_RECIPIENT], true), 404);
-
-        $category = $user->role === AppUser::ROLE_RECIPIENT ? 'recipients' : 'students';
-        $anonymized = $retention->remove($user, request()->user());
-
-        return redirect()
-            ->route('admin.accounts.index', ['category_filter' => $category])
-            ->with('success', $anonymized
-                ? 'Account anonymized. Related ticket records were retained.'
-                : 'Account removed.');
     }
 
     /**

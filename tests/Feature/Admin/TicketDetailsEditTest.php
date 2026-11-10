@@ -49,6 +49,7 @@ class TicketDetailsEditTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.complaints.index'))
             ->assertOk()
+            ->assertSee('sm:max-w-[50vw]', false)
             ->assertSee('aria-label="Edit category and recipient"', false)
             ->assertSee('data-ticket-details-editor', false)
             ->assertSee('Validity')

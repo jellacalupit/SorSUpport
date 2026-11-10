@@ -203,7 +203,7 @@
 
         <div id="admin-ticket-drawer" class="pointer-events-none invisible fixed inset-0 z-50" aria-hidden="true">
             <div data-admin-ticket-backdrop class="absolute inset-0 bg-black/35 opacity-0 transition-opacity"></div>
-            <aside data-admin-ticket-panel class="absolute top-0 right-0 flex h-full w-full max-w-full translate-x-full flex-col overflow-y-auto bg-background shadow-2xl transition-transform duration-200 sm:max-w-[60vw]" role="dialog" aria-modal="true" aria-label="Ticket details">
+            <aside data-admin-ticket-panel class="absolute top-0 right-0 flex h-full w-full max-w-full translate-x-full flex-col overflow-y-auto bg-background shadow-2xl transition-transform duration-200 sm:max-w-[50vw]" role="dialog" aria-modal="true" aria-label="Ticket details">
                 <div class="sticky top-0 z-10 flex items-start justify-between border-b border-border bg-card px-4 py-3">
                     <div>
                         <h2 class="font-display text-lg font-bold text-primary">Ticket Details</h2>

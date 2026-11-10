@@ -421,7 +421,6 @@
                                         Edit
                                     </button>
                                     @include('admin.accounts.partials.status-action', ['user' => $user])
-                                    @include('admin.accounts.partials.remove-action', ['user' => $user])
                                 </div>
                             </td>
                         </tr>
@@ -968,7 +967,6 @@
                                             Edit
                                         </button>
                                         @include('admin.accounts.partials.status-action', ['user' => $user])
-                                        @include('admin.accounts.partials.remove-action', ['user' => $user])
                                     @endif
                                 </div>
                             </td>

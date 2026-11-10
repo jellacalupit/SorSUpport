@@ -227,36 +227,31 @@ class AccountsPageTest extends TestCase
         }
     }
 
-    public function test_admin_removal_anonymizes_accounts_with_ticket_records(): void
+    public function test_manage_accounts_only_allows_account_status_changes_not_removal(): void
     {
-        $recipientUser = User::factory()->create(['role' => User::ROLE_RECIPIENT]);
-        $recipient = Recipient::create([
+        $recipientUser = User::factory()->create([
+            'role' => User::ROLE_RECIPIENT,
+            'is_active' => true,
+        ]);
+        Recipient::create([
             'user_id' => $recipientUser->id,
             'staff_id' => 'STAFF-RETAIN',
             'unit' => 'Registrar',
             'designation' => 'Staff',
         ]);
-        $ticket = $this->makeAssignedTicket($recipientUser);
-        $oldId = $recipientUser->id;
 
         $this->actingAs($this->admin)
-            ->delete(route('admin.accounts.destroy', $recipientUser))
-            ->assertRedirect(route('admin.accounts.index', ['category_filter' => 'recipients']));
+            ->get(route('admin.accounts.index', ['category_filter' => 'recipients']))
+            ->assertOk()
+            ->assertSee('Deactivate account')
+            ->assertDontSee('Remove account')
+            ->assertDontSee('>Remove<', false);
 
+        $this->assertNull(app('router')->getRoutes()->getByName('admin.accounts.destroy'));
         $this->assertDatabaseHas('users', [
-            'id' => $oldId,
-            'name' => 'Deleted user',
-            'username' => "deleted-{$oldId}",
-            'email' => "deleted-{$oldId}@deleted.invalid",
-            'is_active' => false,
+            'id' => $recipientUser->id,
+            'is_active' => true,
         ]);
-        $this->assertDatabaseHas('tickets', ['id' => $ticket->id]);
-        $this->assertDatabaseHas('audit_logs', [
-            'ticket_id' => null,
-            'action' => 'account_anonymized',
-            'performed_by' => $this->admin->id,
-        ]);
-        $this->assertNotNull($recipient);
     }
 
     private function makeAssignedTicket(User $handler): Ticket

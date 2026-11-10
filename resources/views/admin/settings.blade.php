@@ -522,7 +522,7 @@
             ];
         @endphp
         <div x-cloak x-data="{ remindersOn: @js((bool) old('enabled', $reminderSettings['enabled'])) }" x-bind:class="settingsTab === 'reminders' ? 'opacity-100' : 'pointer-events-none opacity-0'" class="col-start-1 row-start-1 transition-opacity duration-150 ease-out">
-            <form method="POST" action="{{ route('admin.settings.reminders.update') }}" class="grid max-w-3xl gap-4 rounded-xl border border-border bg-card p-4 sm:p-5">
+            <form method="POST" action="{{ route('admin.settings.reminders.update') }}" class="grid w-full gap-4 rounded-xl border border-border bg-card p-4 sm:p-5">
                 @csrf
                 @method('PUT')
                 <div class="flex items-start gap-3">
