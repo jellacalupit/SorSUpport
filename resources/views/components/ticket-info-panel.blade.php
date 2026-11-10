@@ -146,22 +146,25 @@
     </div>
     <div class="mt-2">
     <div class="grid gap-y-2" data-ticket-metadata>
-        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-start gap-2">
+        <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
             <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Category</p>
             <div class="min-w-0">
-                <div x-show="!editingDetails" class="flex min-w-0 items-center gap-1.5 text-sm font-medium leading-tight wrap-break-word">
+                <span x-show="!editingDetails" class="inline-flex max-w-full items-center gap-1 text-sm font-medium leading-tight wrap-break-word">
                     <span>{{ $complaint?->category?->name ?? 'Uncategorized' }}</span>
                     @if ($canEditDetails)
                         <button type="button" x-on:click="editingDetails = true" aria-label="Edit category" title="Edit category" class="inline-grid h-6 w-6 shrink-0 place-items-center rounded-full text-primary transition-colors hover:bg-primary-soft">
                             <x-icons.pencil class="h-3.5 w-3.5" />
                         </button>
                     @endif
-                </div>
+                </span>
                 @if ($canEditDetails)
-                    <form x-show="editingDetails" x-cloak method="POST" action="{{ route('admin.tickets.update-details', $ticket) }}" class="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                    <form x-show="editingDetails" x-cloak method="POST" action="{{ route('admin.tickets.update-details', $ticket) }}" class="grid min-w-0 gap-2 rounded-lg border border-border bg-muted/50 p-3 sm:grid-cols-[minmax(0,1fr)_auto]">
                         @csrf
                         @method('PATCH')
-                        <x-picker name="category_id" required label="Category" :selected="$complaint->category_id" :options="$categories->map(fn ($categoryOption) => ['value' => $categoryOption->id, 'label' => $categoryOption->name])->all()" />
+                        <div class="min-w-0">
+                            <p class="mb-1 text-xs font-semibold leading-tight text-muted-foreground">Edit category</p>
+                            <x-picker name="category_id" required label="Category" :selected="$complaint->category_id" :options="$categories->map(fn ($categoryOption) => ['value' => $categoryOption->id, 'label' => $categoryOption->name])->all()" />
+                        </div>
                         <div class="flex items-center gap-1.5">
                             <button type="button" x-on:click="editingDetails = false" class="h-9 rounded-full border border-primary bg-white px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary-soft">Cancel</button>
                             <button type="submit" class="h-9 rounded-full border border-primary bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Save</button>
