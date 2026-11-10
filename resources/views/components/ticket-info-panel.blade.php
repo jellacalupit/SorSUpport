@@ -346,8 +346,8 @@
         </div>
     </div>
 
-    <section class="mt-4 border-t border-border pt-4" aria-labelledby="complaint-details-heading-{{ $ticket->id }}">
-        <h3 id="complaint-details-heading-{{ $ticket->id }}" class="text-sm font-semibold text-foreground">Complaint details</h3>
+    <section class="mt-4 border-t border-border pt-4" aria-labelledby="ticket-description-heading-{{ $ticket->id }}">
+        <h3 id="ticket-description-heading-{{ $ticket->id }}" class="text-sm font-semibold text-foreground">Description</h3>
         <div class="relative mt-2">
             <p
                 x-ref="descriptionText"

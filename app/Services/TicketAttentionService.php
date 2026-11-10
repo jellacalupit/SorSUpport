@@ -16,7 +16,7 @@ class TicketAttentionService
     /**
      * Tickets that may need SDS attention, with the reasons and display age for each row.
      *
-     * @return Collection<int, array{ticket: Ticket, reasons: list<string>, pending: bool, age: int}>
+     * @return Collection<int, array{ticket: Ticket, reasons: list<string>, pending: bool, days_open: int}>
      */
     public function tickets(): Collection
     {
@@ -83,13 +83,11 @@ class TicketAttentionService
                     return null;
                 }
 
-                $createdAt = $ticket->complaint?->created_at ?? $ticket->created_at;
-
                 return [
                     'ticket' => $ticket,
                     'reasons' => $reasons,
                     'pending' => $pendingEscalation !== null || $pendingUpdate !== null || $pendingReturn !== null,
-                    'age' => (int) floor(TicketReminderService::workingDaysBetween($createdAt, now())),
+                    'days_open' => $ticket->daysOpen(),
                 ];
             })
             ->filter()

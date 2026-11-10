@@ -1350,7 +1350,7 @@ class TicketWorkflowTest extends TestCase
             'Created At',
             'Created By',
             'Days Open',
-            'Complaint details',
+            'Description',
             'My transcript has not been released.',
         ];
 
@@ -1367,7 +1367,7 @@ class TicketWorkflowTest extends TestCase
                 'Created At',
                 'Created By',
                 'Days Open',
-                'Complaint details',
+                'Description',
                 'My transcript has not been released.',
             ]);
 
@@ -1398,7 +1398,7 @@ class TicketWorkflowTest extends TestCase
                 'Created At',
                 'Created By',
                 'Days Open',
-                'Complaint details',
+                'Description',
                 'My transcript has not been released.',
             ]);
 
@@ -1414,7 +1414,7 @@ class TicketWorkflowTest extends TestCase
                 'Created At',
                 'Created By',
                 'Days Open',
-                'Complaint details',
+                'Description',
                 'My transcript has not been released.',
             ]);
     }

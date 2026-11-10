@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Complaint;
 use App\Models\ComplaintCategory;
+use App\Models\Recipient;
 use App\Models\ThreadMessage;
 use App\Models\Ticket;
 use App\Models\User;
@@ -28,6 +29,9 @@ class AdminComplaintController extends Controller
         $query = Complaint::query()
             ->with([
                 'category.recipient.user',
+                'category.suggestedRecipients.user',
+                'category.escalationHierarchies.recipient.user',
+                'suggestedRecipient.user',
                 'student.user',
                 'ticket',
                 'ticket.assignee',
@@ -126,14 +130,19 @@ class AdminComplaintController extends Controller
 
         $complaints = $query->paginate(15)->appends($request->query());
 
-        $categories = ComplaintCategory::query()->where('is_active', true)->orderBy('name')->get();
+        $categories = ComplaintCategory::query()
+            ->with('suggestedRecipients.user')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+        $recipients = Recipient::query()->active()->with('user')->orderBy('unit')->get();
         $holders = User::query()
             ->whereIn('role', [User::ROLE_RECIPIENT, User::ROLE_SDS_ADMIN])
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['name']);
 
-        return view('admin.complaints.index', compact('complaints', 'categories', 'holders'));
+        return view('admin.complaints.index', compact('complaints', 'categories', 'recipients', 'holders'));
     }
 
     /**

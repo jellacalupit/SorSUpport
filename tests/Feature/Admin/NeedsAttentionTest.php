@@ -132,7 +132,9 @@ class NeedsAttentionTest extends TestCase
         $this->recordActionAt($closed, 'update_requested', now());
 
         $response = $this->actingAs($this->admin)->get(route('admin.tickets.needs-attention'))->assertOk();
-        $response->assertSee('Student requested an update')
+        $response->assertSee('Days Open')
+            ->assertDontSee('>Age<', false)
+            ->assertSee('Student requested an update')
             ->assertSee('Student requested escalation')
             ->assertSee('Handler account inactive')
             ->assertDontSee($resolved->complaint->reference_number)

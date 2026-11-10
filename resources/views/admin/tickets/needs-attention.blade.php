@@ -74,7 +74,7 @@
                                 <th class="px-2 py-2 font-semibold sm:px-3">Status</th>
                                 <th class="hidden px-2 py-2 font-semibold sm:px-3 md:table-cell">Filed by</th>
                                 <th class="hidden px-2 py-2 font-semibold sm:px-3 xl:table-cell">Handler</th>
-                                <th class="hidden whitespace-nowrap px-2 py-2 font-semibold sm:px-3 xl:table-cell">Age</th>
+                                <th class="hidden whitespace-nowrap px-2 py-2 font-semibold sm:px-3 xl:table-cell">Days Open</th>
                                 <th class="hidden whitespace-nowrap rounded-tr-lg px-2 py-2 font-semibold sm:px-3 lg:table-cell">Reason</th>
                             </tr>
                         </thead>
@@ -97,7 +97,7 @@
                                     <td class="px-2 py-2 sm:px-3">@if ($ticket->displayStatus())<x-status-badge :status="$ticket->displayStatus()" :show-icon="false" class="px-2 py-0.5 text-[11px]" />@else<span class="text-muted-foreground">—</span>@endif</td>
                                     <td class="hidden px-2 py-2 text-muted-foreground sm:px-3 md:table-cell">{{ $complaint?->filerNameFor(Auth::user()) ?? 'Unknown' }}</td>
                                     <td class="hidden px-2 py-2 text-muted-foreground sm:px-3 xl:table-cell">{{ $handlerName }}</td>
-                                    <td class="hidden whitespace-nowrap px-2 py-2 text-muted-foreground sm:px-3 xl:table-cell">{{ $row['age'] }} working {{ \Illuminate\Support\Str::plural('day', $row['age']) }}</td>
+                                    <td class="hidden whitespace-nowrap px-2 py-2 text-muted-foreground sm:px-3 xl:table-cell">{{ $row['days_open'] }} working {{ \Illuminate\Support\Str::plural('day', $row['days_open']) }}</td>
                                     <td class="hidden px-2 py-2 sm:px-3 lg:table-cell">
                                         <div class="flex flex-wrap gap-1">
                                             @foreach ($row['reasons'] as $reason)

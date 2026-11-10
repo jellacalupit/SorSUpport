@@ -45,6 +45,14 @@ class TicketDetailsEditTest extends TestCase
             ->assertSeeInOrder(['Wrong category', 'data-ticket-details-editor', 'Classification'], false)
             ->assertSeeInOrder(['Category', 'Suggested recipient'])
             ->assertSee('Suggested recipient');
+
+        $this->actingAs($admin)
+            ->get(route('admin.complaints.index'))
+            ->assertOk()
+            ->assertSee('aria-label="Edit category and recipient"', false)
+            ->assertSee('data-ticket-details-editor', false)
+            ->assertSee('Validity')
+            ->assertSee('Ask Student for Details');
     }
 
     public function test_details_are_locked_once_the_ticket_is_classified(): void

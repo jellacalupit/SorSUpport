@@ -217,6 +217,9 @@
         @foreach ($complaints as $complaint)
             @php
                 $ticket = $complaint->ticket;
+                $usesReviewFormat = $ticket
+                    && $ticket->status === \App\Models\Ticket::STATUS_SUBMITTED
+                    && $ticket->classification === null;
                 $student = $complaint->student;
                 $studentUser = $student?->user;
                 $studentDisplayName = $complaint->is_anonymous ? 'Anonymous' : ($studentUser?->table_name ?? 'Anonymous');
@@ -237,8 +240,10 @@
                 <div class="grid items-start gap-4 sm:grid-cols-[1.35fr_1fr]">
                     <div class="min-w-0">
                         @if ($ticket)
-                            <x-ticket-info-panel :ticket="$ticket" :show-closed-at="true" />
-                            <x-ticket-actions :ticket="$ticket" role="admin" class="mt-3" />
+                            <x-ticket-info-panel :ticket="$ticket" :show-closed-at="true" :editable="$usesReviewFormat" :categories="$categories" :recipients="$recipients" />
+                            @unless ($usesReviewFormat)
+                                <x-ticket-actions :ticket="$ticket" role="admin" class="mt-3" />
+                            @endunless
                         @else
                     <div class="rounded-lg border border-border bg-card p-4 sm:min-h-[calc(100vh-6rem)]">
                         <div class="mb-1 flex items-center justify-between gap-3">
@@ -320,6 +325,11 @@
                         @endif
                     </div>
 
+                    @if ($usesReviewFormat)
+                        <div class="min-w-0">
+                            @include('admin.tickets.partials.review-steps', ['ticket' => $ticket])
+                        </div>
+                    @else
                     <div class="flex flex-col gap-4 overflow-hidden sm:h-[calc(100vh-6rem)]">
                         <div class="admin-ticket-thread flex-1 flex flex-col min-h-0">
                             @if ($ticket)
@@ -367,6 +377,7 @@
                             </ol>
                         </div>
                     </div>
+                    @endif
                 </div>
             </template>
         @endforeach
