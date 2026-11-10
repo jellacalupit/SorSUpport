@@ -360,6 +360,7 @@ class ConfidentialityTest extends TestCase
         // The ticket pages link to the protected route, never to the storage folder.
         $this->actingAs($this->handler)->get(route('recipient.complaints.show', $complaint))
             ->assertOk()
+            ->assertSeeInOrder(['data-ticket-metadata', 'data-ticket-description', 'data-ticket-attachments'], false)
             ->assertSee($url, false)
             ->assertSee('attachmentPreview')
             ->assertDontSee('storage/complaints', false);

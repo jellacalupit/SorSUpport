@@ -90,7 +90,36 @@
     };
 @endphp
 
-<div class="surface p-4 sm:p-6" x-data="{ showAllAttachments: false, editingDetails: false, attachmentPreview: null }">
+<div
+    class="surface p-4 sm:p-6"
+    x-data="{
+        showAllAttachments: false,
+        editingDetails: false,
+        attachmentPreview: null,
+        descriptionExpanded: false,
+        descriptionTruncated: false,
+        checkDescription() {
+            const description = this.$refs.descriptionText;
+            if (!description || description.clientWidth === 0) return;
+
+            const measurement = description.cloneNode(true);
+            measurement.removeAttribute('x-ref');
+            Object.assign(measurement.style, {
+                position: 'absolute',
+                visibility: 'hidden',
+                pointerEvents: 'none',
+                width: `${description.clientWidth}px`,
+                maxHeight: '10rem',
+                overflow: 'hidden',
+            });
+            description.parentElement.appendChild(measurement);
+            this.descriptionTruncated = measurement.scrollHeight > measurement.clientHeight + 1;
+            measurement.remove();
+        },
+    }"
+    x-init="$nextTick(() => checkDescription())"
+    x-on:resize.window.debounce.150ms="checkDescription()"
+>
     <div class="flex items-center justify-between gap-3">
         <p class="inline-flex min-w-0 items-center gap-1.5 font-mono text-xs font-semibold leading-tight text-primary">
             <x-icons.ticket class="h-4 w-4 shrink-0 text-primary" />
@@ -115,12 +144,8 @@
             {{ $complaint?->subject_title ?? 'Untitled' }}
         </h2>
     </div>
-    <div class="mt-1">
-        <p class="text-sm leading-relaxed whitespace-pre-line text-foreground">{{ trim($complaint?->description ?? 'No description provided') }}</p>
-    </div>
-
     <div class="mt-2">
-    <div class="grid gap-y-2">
+    <div class="grid gap-y-2" data-ticket-metadata>
         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
             <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Category</p>
             <p class="flex min-w-0 items-center gap-1.5 text-sm font-medium leading-tight wrap-break-word">
@@ -232,6 +257,76 @@
         </div>
     </div>
 
+    <section class="mt-4 border-t border-border pt-4" aria-labelledby="complaint-details-heading-{{ $ticket->id }}">
+        <h3 id="complaint-details-heading-{{ $ticket->id }}" class="text-sm font-semibold text-foreground">Complaint details</h3>
+        <div class="relative mt-2">
+            <p
+                x-ref="descriptionText"
+                x-bind:class="{ 'max-h-40 overflow-hidden': !descriptionExpanded }"
+                id="ticket-description-{{ $ticket->id }}"
+                class="whitespace-pre-line text-sm leading-relaxed text-foreground"
+                data-ticket-description
+            >{{ trim($complaint?->description ?? 'No description provided') }}</p>
+            <div x-show="descriptionTruncated && !descriptionExpanded" x-cloak class="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-card to-transparent" aria-hidden="true"></div>
+        </div>
+        <button
+            x-show="descriptionTruncated"
+            x-cloak
+            type="button"
+            x-on:click="descriptionExpanded = !descriptionExpanded"
+            x-bind:aria-expanded="descriptionExpanded"
+            aria-controls="ticket-description-{{ $ticket->id }}"
+            x-text="descriptionExpanded ? 'Show less' : 'Read more'"
+            class="mt-2 text-xs font-semibold text-primary underline-offset-2 hover:underline"
+            data-ticket-description-toggle
+        ></button>
+    </section>
+
+    @if (count($attachments))
+        <section class="mt-4" aria-label="Ticket attachments" data-ticket-attachments>
+            <div class="flex items-center justify-between gap-3">
+                <p class="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <x-icons.paperclip class="h-4 w-4 shrink-0 text-muted-foreground" />
+                    Attachments ({{ count($attachments) }})
+                </p>
+                @if (count($attachments) > 2)
+                    <button type="button" x-on:click="showAllAttachments = !showAllAttachments" x-text="showAllAttachments ? 'Hide' : 'Show all'" class="shrink-0 text-xs font-medium text-muted-foreground underline-offset-2 hover:text-primary hover:underline"></button>
+                @endif
+            </div>
+            <div class="mt-2 grid gap-2">
+                @foreach ($attachments as $index => $attachment)
+                    @php
+                        $attachmentName = $attachment['name'] ?? basename($attachment['path'] ?? '');
+                        $attachmentExtension = strtoupper(pathinfo($attachmentName, PATHINFO_EXTENSION));
+                        $isImageAttachment = in_array(strtolower($attachmentExtension), ['jpg', 'jpeg', 'png', 'heic']);
+                        $attachmentSize = $complaint->attachmentFileSize($attachment);
+                    @endphp
+                    <div @if ($index >= 2) x-show="showAllAttachments" x-cloak @endif class="flex min-w-0 items-center justify-between gap-3 py-1">
+                        <button type="button" x-on:click="attachmentPreview = { name: @js($attachmentName), url: @js($attachment['url']), type: @js(strtolower($attachmentExtension)) }" class="flex min-w-0 items-center gap-3 text-left hover:text-primary">
+                            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-muted text-primary">
+                                @if ($isImageAttachment)
+                                    <x-icons.image class="h-5 w-5" />
+                                @else
+                                    <x-icons.file-text class="h-5 w-5" />
+                                @endif
+                            </span>
+                            <span class="min-w-0">
+                                <span class="block truncate text-sm font-medium text-foreground">{{ $attachmentName }}</span>
+                                <span class="block text-xs text-muted-foreground">
+                                    {{ $attachmentSize !== null ? number_format($attachmentSize / 1048576, 2) . ' MB' : 'Size unavailable' }}
+                                </span>
+                            </span>
+                        </button>
+                        <a href="{{ $attachment['url'] }}" download class="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary hover:underline">
+                            <x-icons.download class="h-3.5 w-3.5" />
+                            Download
+                        </a>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     @if ($studentView && $studentTimeline->isNotEmpty())
         <section class="mt-4 border-t border-border pt-4" aria-label="Ticket timeline">
             <h3 class="text-sm font-semibold text-foreground">Timeline</h3>
@@ -284,51 +379,6 @@
                 <button type="submit" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Save Changes</button>
             </div>
         </form>
-    @endif
-
-    @if (count($attachments))
-        <div class="mt-4">
-                <div class="flex items-center justify-between gap-3">
-                    <p class="flex items-center gap-2 text-sm font-semibold text-foreground">
-                        <x-icons.paperclip class="h-4 w-4 shrink-0 text-muted-foreground" />
-                        Attachments ({{ count($attachments) }})
-                    </p>
-                    @if (count($attachments) > 2)
-                        <button type="button" x-on:click="showAllAttachments = !showAllAttachments" x-text="showAllAttachments ? 'Hide' : 'Show all'" class="shrink-0 text-xs font-medium text-muted-foreground underline-offset-2 hover:text-primary hover:underline"></button>
-                    @endif
-                </div>
-                <div class="mt-2 grid gap-2">
-                    @foreach ($attachments as $index => $attachment)
-                        @php
-                            $attachmentName = $attachment['name'] ?? basename($attachment['path'] ?? '');
-                            $attachmentExtension = strtoupper(pathinfo($attachmentName, PATHINFO_EXTENSION));
-                            $isImageAttachment = in_array(strtolower($attachmentExtension), ['jpg', 'jpeg', 'png', 'heic']);
-                            $attachmentSize = $complaint->attachmentFileSize($attachment);
-                        @endphp
-                        <div @if ($index >= 2) x-show="showAllAttachments" x-cloak @endif class="flex min-w-0 items-center justify-between gap-3 py-1">
-                            <button type="button" x-on:click="attachmentPreview = { name: @js($attachmentName), url: @js($attachment['url']), type: @js(strtolower($attachmentExtension)) }" class="flex min-w-0 items-center gap-3 text-left hover:text-primary">
-                                <span class="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-muted text-primary">
-                                    @if ($isImageAttachment)
-                                        <x-icons.image class="h-5 w-5" />
-                                    @else
-                                        <x-icons.file-text class="h-5 w-5" />
-                                    @endif
-                                </span>
-                                <span class="min-w-0">
-                                    <span class="block truncate text-sm font-medium text-foreground">{{ $attachmentName }}</span>
-                                    <span class="block text-xs text-muted-foreground">
-                                        {{ $attachmentSize !== null ? number_format($attachmentSize / 1048576, 2) . ' MB' : 'Size unavailable' }}
-                                    </span>
-                                </span>
-                            </button>
-                            <a href="{{ $attachment['url'] }}" download class="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary hover:underline">
-                                <x-icons.download class="h-3.5 w-3.5" />
-                                Download
-                            </a>
-                        </div>
-                    @endforeach
-                </div>
-        </div>
     @endif
 
     <x-ticket-resolution-panel :ticket="$ticket" :show-closed-at="$showClosedAt" />

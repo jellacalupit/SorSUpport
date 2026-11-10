@@ -1339,11 +1339,10 @@ class TicketWorkflowTest extends TestCase
         $this->actingAs($this->admin)->get('/admin/analytics')->assertOk();
     }
 
-    public function test_ticket_details_show_last_updated_in_the_student_order_and_keep_staff_order(): void
+    public function test_ticket_details_show_review_metadata_before_the_complaint_narrative(): void
     {
         $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
         $staffDetailsOrder = [
-            'My transcript has not been released.',
             'Category',
             'Assigned Recipient',
             'Classification',
@@ -1351,13 +1350,14 @@ class TicketWorkflowTest extends TestCase
             'Created At',
             'Created By',
             'Days Open',
+            'Complaint details',
+            'My transcript has not been released.',
         ];
 
         $this->actingAs($this->student)
             ->get(route('student.complaints.show', $ticket->complaint))
             ->assertOk()
             ->assertSeeInOrder([
-                'My transcript has not been released.',
                 'Category',
                 'Assigned Recipient',
                 'Classification',
@@ -1367,6 +1367,8 @@ class TicketWorkflowTest extends TestCase
                 'Created At',
                 'Created By',
                 'Days Open',
+                'Complaint details',
+                'My transcript has not been released.',
             ]);
 
         foreach ([
@@ -1389,7 +1391,6 @@ class TicketWorkflowTest extends TestCase
             ->get(route('admin.tickets.my'))
             ->assertOk()
             ->assertSeeInOrder([
-                'My transcript has not been released.',
                 'Category',
                 'Assigned To',
                 'Classification',
@@ -1397,6 +1398,8 @@ class TicketWorkflowTest extends TestCase
                 'Created At',
                 'Created By',
                 'Days Open',
+                'Complaint details',
+                'My transcript has not been released.',
             ]);
 
         $this->ticket(Ticket::STATUS_SUBMITTED);
@@ -1404,7 +1407,6 @@ class TicketWorkflowTest extends TestCase
             ->get(route('admin.tickets.review.index'))
             ->assertOk()
             ->assertSeeInOrder([
-                'My transcript has not been released.',
                 'Category',
                 'Suggested Recipient',
                 'Classification',
@@ -1412,6 +1414,8 @@ class TicketWorkflowTest extends TestCase
                 'Created At',
                 'Created By',
                 'Days Open',
+                'Complaint details',
+                'My transcript has not been released.',
             ]);
     }
 
