@@ -317,7 +317,7 @@
                         x-data="{ activeSegment: null }"
                         x-on:donut-segment-enter="activeSegment = $event.detail"
                         x-on:donut-segment-leave="activeSegment = null"
-                        class="mt-0 h-full min-h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:min-h-[134px] lg:min-h-[152px]"
+                        class="mt-0 h-full min-h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:min-h-[134px] lg:h-[166px] lg:min-h-[166px]"
                     >
                         <div class="flex items-start gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
                             <div class="shrink-0">
@@ -325,7 +325,7 @@
                                     <x-donut-ring :segments="$statusSegments" :stroke-width="15" class="h-full w-full drop-shadow-sm" />
                                     <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                                             <span class="text-lg font-bold text-foreground sm:text-xl" x-text="activeSegment?.count ?? {{ $statusTotal }}">{{ $statusTotal }}</span>
-                                            <span x-show="!activeSegment" class="text-[8px] text-muted-foreground">Tickets</span>
+                                            <span class="text-[8px] text-muted-foreground">Tickets</span>
                                     </div>
                                 </div>
                             </div>
@@ -379,7 +379,7 @@
                                     <x-donut-ring :segments="$classificationSegments" :stroke-width="15" class="h-full w-full drop-shadow-sm" />
                                     <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                                             <span class="text-lg font-bold text-foreground sm:text-xl" x-text="activeSegment?.count ?? {{ $classificationTotal }}">{{ $classificationTotal }}</span>
-                                            <span x-show="!activeSegment" class="text-[8px] text-muted-foreground">Tickets</span>
+                                            <span class="text-[8px] text-muted-foreground">Tickets</span>
                                     </div>
                                 </div>
                             </div>
