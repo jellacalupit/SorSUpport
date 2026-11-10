@@ -426,7 +426,7 @@
             </section>
         </div>
 
-        <div class="grid w-[360px] flex-1 content-start grid-rows-[auto_auto] gap-2 self-stretch overflow-visible pt-0">
+        <div class="grid h-full w-[360px] flex-1 grid-rows-[minmax(0,1fr)_auto] gap-2 self-stretch overflow-visible pt-0">
             @php
                 $monthOptions = [
                     1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'May', 6 => 'Jun',
@@ -496,7 +496,7 @@
                         <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="shrink-0 whitespace-nowrap text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
                 </div>
-                <div class="relative z-0 mt-2 h-64 w-full">
+                <div class="relative z-0 mt-2 min-h-64 w-full flex-1">
                     <canvas class="absolute inset-0" data-volume-canvas aria-label="Complaint volume chart"></canvas>
                 </div>
                 <ul data-volume-legend class="hidden" aria-label="Categories"></ul>
@@ -518,9 +518,9 @@
                                         {{ collect(explode(' ', $recipient->display_name ?? 'U'))->filter()->map(fn ($part) => substr($part, 0, 1))->take(2)->join('') }}
                                     @endif
                                 </div>
-                                <div class="min-w-0 flex-1">
+                                <div class="flex min-h-9 min-w-0 flex-1 flex-col justify-center gap-1">
                                     <span class="relative inline-block" x-data="{ recipientProfileOpen: false }" x-on:mouseenter="recipientProfileOpen = true" x-on:mouseleave="recipientProfileOpen = false">
-                                        <p class="truncate text-[12px] font-semibold text-foreground cursor-pointer hover:text-primary hover:underline">
+                                        <p class="cursor-pointer truncate text-[12px] font-semibold leading-tight text-foreground hover:text-primary hover:underline">
                                             {{ $recipient->display_name ?? 'Unknown' }}
                                         </p>
                                         
@@ -543,7 +543,7 @@
                                         </span>
                                     </span>
                                     
-                                    <div class="mt-0.5 flex items-center gap-1.5">
+                                    <div class="flex items-center gap-1.5">
                                         <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-200">
                                             <div class="h-full bg-green-500 rounded-full" style="width: {{ $recipient->performance_percentage ?? 0 }}%"></div>
                                         </div>
@@ -565,7 +565,7 @@
                     </div>
 
                     <ol class="relative mt-1.5 grid content-start gap-1 overflow-hidden">
-                        <span class="absolute top-3.5 bottom-3.5 left-[calc(25%+1.375rem)] w-px bg-[#7a1d2a]/20" aria-hidden="true"></span>
+                        <span class="absolute top-5 bottom-5 left-[calc(25%+1.75rem)] w-px bg-[#7a1d2a]/20" aria-hidden="true"></span>
                         @forelse ($recentActivity as $log)
                             @php
                                 $activityLabel = match ($log->action) {
@@ -582,13 +582,13 @@
                                     default => 'activity',
                                 };
                             @endphp
-                            <li class="relative z-10 grid min-w-0 grid-cols-[25%_1.75rem_minmax(0,1fr)] items-center gap-2">
-                                <span class="flex h-7 items-center text-[10px] text-black">{{ $log->created_at?->diffForHumans() ?? 'Recently' }}</span>
-                                <span class="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-full bg-[#7a1d2a] text-white shadow-sm ring-2 ring-[#7a1d2a]/10">
+                            <li class="relative z-10 grid min-h-11 min-w-0 grid-cols-[25%_2.25rem_minmax(0,1fr)] items-center gap-2 p-1">
+                                <span class="flex h-9 items-center text-[10px] text-black">{{ $log->created_at?->diffForHumans() ?? 'Recently' }}</span>
+                                <span class="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-[#7a1d2a] text-white shadow-sm ring-2 ring-[#7a1d2a]/10">
                                     @if ($log->display_performer?->avatar_path)
                                         <img src="{{ asset('storage/' . $log->display_performer->avatar_path) }}" alt="{{ $log->display_performer->name }}" class="h-full w-full object-cover">
                                     @else
-                                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                             @if ($activityIcon === 'plus')
                                                 <path d="M12 5v14M5 12h14" />
                                             @elseif ($activityIcon === 'message')
@@ -603,7 +603,7 @@
                                         </svg>
                                     @endif
                                 </span>
-                                <div class="min-w-0 space-y-px">
+                                <div class="min-w-0 space-y-0.5">
                                     <p class="truncate text-[11px] font-semibold leading-[1.1] text-foreground">{{ $activityLabel }}</p>
                                     <p class="truncate text-[10px] leading-[1.1] text-muted-foreground">
                                         <span>{{ $log->display_performer?->given_name ?: 'System' }} updated activity</span>
@@ -719,8 +719,8 @@
                             value: filtered.filter((point) => point.category_id === item.id).length,
                         }))
                         .sort((left, right) => right.value - left.value || left.name.localeCompare(right.name));
-                    const visibleCategories = rankedCategories.slice(0, 7);
-                    const remainingCategories = rankedCategories.slice(7);
+                    const visibleCategories = rankedCategories.slice(0, 9);
+                    const remainingCategories = rankedCategories.slice(9);
                     const remainingTotal = remainingCategories.reduce((total, item) => total + item.value, 0);
 
                     if (remainingCategories.length) {
