@@ -20,7 +20,7 @@
     @if ($stack)<h3 class="text-sm font-semibold text-black sm:hidden">{{ $title }}</h3>@endif
     <div class="relative shrink-0 {{ $large ? 'h-56 w-56' : ($stack ? 'h-24 w-24' : 'h-28 w-28') }} {{ $large ? '' : 'sm:h-32 sm:w-32' }}">
         <x-donut-ring :segments="$segments" class="drop-shadow-sm" />
-        <div class="absolute inset-0 flex flex-col items-center justify-center">
+        <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
             <span class="text-xl font-bold leading-none text-foreground">{{ $total }}</span>
             <span class="mt-0.5 text-[9px] text-muted-foreground">{{ $totalLabel }}</span>
         </div>

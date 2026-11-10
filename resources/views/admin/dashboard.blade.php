@@ -317,8 +317,8 @@
                         <div class="flex items-start gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
                             <div class="shrink-0">
                                 <div class="relative h-28 w-28 sm:h-30 sm:w-30">
-                                    <x-donut-ring :segments="$statusSegments" class="h-full w-full drop-shadow-sm" />
-                                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                    <x-donut-ring :segments="$statusSegments" :stroke-width="15" class="h-full w-full drop-shadow-sm" />
+                                    <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                                         <span class="text-lg font-bold text-foreground sm:text-xl">{{ $statusTotal }}</span>
                                         <span class="text-[8px] text-muted-foreground">Tickets</span>
                                     </div>
@@ -358,8 +358,8 @@
                         <div class="flex items-start gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
                             <div class="shrink-0">
                                 <div class="relative h-28 w-28 sm:h-30 sm:w-30">
-                                    <x-donut-ring :segments="$classificationSegments" class="h-full w-full drop-shadow-sm" />
-                                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                    <x-donut-ring :segments="$classificationSegments" :stroke-width="15" class="h-full w-full drop-shadow-sm" />
+                                    <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                                         <span class="text-lg font-bold text-foreground sm:text-xl">{{ $classificationTotal }}</span>
                                         <span class="text-[8px] text-muted-foreground">Tickets</span>
                                     </div>
