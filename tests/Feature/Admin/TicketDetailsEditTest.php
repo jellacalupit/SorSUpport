@@ -15,13 +15,14 @@ class TicketDetailsEditTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_correct_the_category_of_a_pending_ticket(): void
+    public function test_admin_can_correct_the_category_and_recipient_of_a_pending_ticket(): void
     {
-        [$admin, $ticket, $otherCategory] = $this->createPendingTicket();
+        [$admin, $ticket, $otherCategory, $recipient] = $this->createPendingTicket();
 
         $this->actingAs($admin)
             ->patch(route('admin.tickets.update-details', $ticket), [
                 'category_id' => $otherCategory->id,
+                'suggested_recipient_id' => $recipient->id,
             ])
             ->assertRedirect(route('admin.tickets.review.index'))
             ->assertSessionHasNoErrors();
@@ -29,7 +30,7 @@ class TicketDetailsEditTest extends TestCase
         $complaint = $ticket->complaint->refresh();
 
         $this->assertSame($otherCategory->id, $complaint->category_id);
-        $this->assertNull($complaint->suggested_recipient_id);
+        $this->assertSame($recipient->id, $complaint->suggested_recipient_id);
         $this->assertDatabaseHas('audit_logs', [
             'ticket_id' => $ticket->id,
             'action' => 'ticket_details_updated',
@@ -39,8 +40,9 @@ class TicketDetailsEditTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.tickets.review.index'))
             ->assertOk()
-            ->assertSee('aria-label="Edit category"', false)
-            ->assertDontSee('aria-label="Edit ticket details"', false);
+            ->assertSee('aria-label="Edit category and recipient"', false)
+            ->assertSee('data-ticket-details-editor', false)
+            ->assertSee('Suggested recipient');
     }
 
     public function test_details_are_locked_once_the_ticket_is_classified(): void

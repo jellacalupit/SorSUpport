@@ -614,7 +614,7 @@ class AdminTicketReviewController extends Controller
     }
 
     /**
-     * Correct the category a student picked before the ticket is classified.
+     * Correct the category or suggested recipient before the ticket is classified.
      */
     public function updateDetails(Request $request, Ticket $ticket): RedirectResponse
     {
@@ -622,15 +622,36 @@ class AdminTicketReviewController extends Controller
 
         $validated = $request->validate([
             'category_id' => ['required', Rule::exists('complaint_categories', 'id')->where('is_active', true)],
+            'suggested_recipient_id' => ['nullable', 'integer'],
         ]);
 
         $complaint = $ticket->complaint;
         $category = ComplaintCategory::findOrFail($validated['category_id']);
+        $suggestedRecipient = null;
+
+        if (filled($validated['suggested_recipient_id'] ?? null)) {
+            $suggestedRecipient = Recipient::query()
+                ->active()
+                ->with('user')
+                ->find($validated['suggested_recipient_id']);
+
+            if (! $suggestedRecipient) {
+                return back()->withErrors(['suggested_recipient_id' => 'The selected recipient is not available.']);
+            }
+        }
 
         $changes = [];
 
         if ((int) $complaint->category_id !== (int) $category->id) {
             $changes[] = sprintf('Category changed from "%s" to "%s".', $complaint->category?->name ?? 'Uncategorized', $category->name);
+        }
+
+        if ((int) $complaint->suggested_recipient_id !== (int) $suggestedRecipient?->id) {
+            $changes[] = sprintf(
+                'Suggested recipient changed from %s to %s.',
+                $complaint->suggestedRecipient?->user?->display_name ?? 'none',
+                $suggestedRecipient?->user?->display_name ?? 'none'
+            );
         }
 
         $fromTicketPage = str_contains((string) url()->previous(), '/admin/complaints/');
@@ -642,9 +663,10 @@ class AdminTicketReviewController extends Controller
             return $destination;
         }
 
-        DB::transaction(function () use ($ticket, $complaint, $category, $changes): void {
+        DB::transaction(function () use ($ticket, $complaint, $category, $suggestedRecipient, $changes): void {
             $complaint->update([
                 'category_id' => $category->id,
+                'suggested_recipient_id' => $suggestedRecipient?->id,
             ]);
 
             $ticket->touch();
@@ -652,7 +674,7 @@ class AdminTicketReviewController extends Controller
             AuditLog::log($ticket->id, 'ticket_details_updated', Auth::id(), implode(' ', $changes));
         });
 
-        return $destination->with('success', 'Ticket category updated.');
+        return $destination->with('success', 'Ticket details updated.');
     }
 
     /**
