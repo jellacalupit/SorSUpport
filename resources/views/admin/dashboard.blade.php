@@ -313,7 +313,7 @@
                         $statusOffset = 0;
                     @endphp
 
-                    <div class="mt-0 h-full min-h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:min-h-[134px]">
+                    <div class="mt-0 h-full min-h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:min-h-[134px] lg:min-h-[152px]">
                         <div class="flex items-start gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
                             <div class="shrink-0">
                                 <div class="relative h-28 w-28 sm:h-30 sm:w-30">
@@ -327,7 +327,7 @@
 
                             <div class="min-w-0 flex-1 pt-0.5">
                                 <div class="text-left text-xs font-semibold text-black sm:text-sm">Status</div>
-                                <div class="mt-1.5 flex flex-col gap-0.5 text-[9px] leading-none text-foreground sm:text-[10px]">
+                                <div class="mt-1.5 flex flex-col gap-0.5 text-[9px] leading-tight text-foreground sm:text-[10px]">
                                     @foreach ($statusSegments as $segment)
                                         <div class="flex min-w-0 items-center gap-1.5">
                                             <span class="h-2.5 w-2.5 shrink-0 rounded-sm" style="background-color: {{ $segment['color'] }};"></span>
@@ -354,7 +354,7 @@
                         $classificationOffset = 0;
                     @endphp
 
-                    <div class="mt-0 h-full min-h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:min-h-[134px]">
+                    <div class="mt-0 h-full min-h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:min-h-[134px] lg:min-h-[152px]">
                         <div class="flex items-start gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
                             <div class="shrink-0">
                                 <div class="relative h-28 w-28 sm:h-30 sm:w-30">
@@ -510,7 +510,7 @@
                         <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
-                    <div class="mt-1.5 grid content-start gap-2.5 overflow-hidden">
+                    <div class="mt-1.5 grid content-start gap-4 overflow-hidden">
                         @forelse ($topPerformingRecipients as $recipient)
                             <div class="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-muted/50">
                                 <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-sidebar-primary text-[9px] font-bold text-sidebar-primary-foreground">
@@ -566,7 +566,7 @@
                         <a data-admin-page-nav href="{{ route('admin.audit') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
-                    <ol class="relative mt-1.5 grid content-start gap-2.5 overflow-hidden">
+                    <ol class="relative mt-1.5 grid content-start gap-4 overflow-hidden">
                         <span class="absolute top-5 bottom-5 left-[calc(25%+1.75rem)] w-px bg-[#7a1d2a]/20" aria-hidden="true"></span>
                         @forelse ($recentActivity as $log)
                             @php
@@ -876,7 +876,7 @@
                     offset: true,
                     ticks: {
                         color: horizontal ? '#111111' : muted,
-                        font: { family: fontSans, size: horizontal ? 12 : 10, weight: horizontal ? '600' : '400' },
+                        font: { family: fontSans, size: horizontal ? 12 : 10, weight: '400' },
                         maxRotation: 0,
                         minRotation: 0,
                         autoSkip: model.type !== 'bar',
