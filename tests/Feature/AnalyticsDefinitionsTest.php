@@ -318,8 +318,11 @@ class AnalyticsDefinitionsTest extends TestCase
             ->assertOk()
             ->assertSee('Staff performance')
             ->assertDontSee('First staff reply')
-            ->assertSee('Escalations are counted by category and level, not per handler.')
-            ->assertSee('Averages from very few tickets are not reliable; see the count in brackets.')
+            ->assertDontSee('Escalations are counted by category and level, not per handler.')
+            ->assertDontSee('Averages from very few tickets are not reliable; see the count in brackets.')
+            ->assertDontSee('Committee outcomes: average')
+            ->assertSee('Avg time to acknowledge (tickets)')
+            ->assertSee('Avg handling time from assignment (tickets)')
             ->assertDontSee('n/a means fewer than 3 tickets');
         $this->assertArrayHasKey('office_rows', $report['performance_metrics']);
     }
@@ -397,8 +400,10 @@ class AnalyticsDefinitionsTest extends TestCase
         $this->assertSame(1, $report['category_breakdown']['data'][$categoryIndex]);
         $this->assertSame(1, $breakdowns['sensitive_not_broken_down']);
         $this->assertSame(1, $reportBreakdowns['sensitive_not_broken_down']);
+        $this->assertArrayNotHasKey('blocks', $breakdowns);
+        $this->assertArrayNotHasKey('blocks', $reportBreakdowns);
 
-        foreach (['colleges' => 'CICT', 'programs' => 'BSIT', 'year_levels' => '1', 'blocks' => 'A', 'origin' => 'Identified'] as $key => $regularLabel) {
+        foreach (['colleges' => 'CICT', 'programs' => 'BSIT', 'year_levels' => '1', 'origin' => 'Identified'] as $key => $regularLabel) {
             $this->assertSame([$regularLabel => 1], $breakdowns[$key]);
             $this->assertSame([$regularLabel => 1], $reportBreakdowns[$key]);
             $this->assertArrayNotHasKey('PRIVATE_COLLEGE', $breakdowns[$key]);
@@ -435,7 +440,7 @@ class AnalyticsDefinitionsTest extends TestCase
         $sensitiveExcelRows = collect($excelRows)
             ->filter(fn ($row) => ($row[0] ?? null) === 'Sensitive categories (not broken down)')
             ->values();
-        $this->assertCount(5, $sensitiveExcelRows);
+        $this->assertCount(4, $sensitiveExcelRows);
         $this->assertSame(1, $sensitiveExcelRows->first()[1]);
 
         $pdfHtml = view('admin.analytics.report', [
@@ -446,10 +451,11 @@ class AnalyticsDefinitionsTest extends TestCase
         foreach ($privateValues as $privateValue) {
             $this->assertStringNotContainsString($privateValue, $pdfHtml);
         }
-        foreach (['Sensitive categories (not broken down)', 'Tickets by Year Level', 'Tickets by Block', 'Identified and Anonymous Origin'] as $expectedText) {
+        foreach (['Sensitive categories (not broken down)', 'Tickets by Year Level', 'Identified and Anonymous Origin'] as $expectedText) {
             $this->assertStringContainsString($expectedText, $pdfHtml);
         }
-        $this->assertSame(5, substr_count($pdfHtml, 'Sensitive categories (not broken down)'));
+        $this->assertStringNotContainsString('Tickets by Block', $pdfHtml);
+        $this->assertSame(4, substr_count($pdfHtml, 'Sensitive categories (not broken down)'));
 
         $admin = User::factory()->create(['role' => User::ROLE_SDS_ADMIN]);
         $this->actingAs($admin)

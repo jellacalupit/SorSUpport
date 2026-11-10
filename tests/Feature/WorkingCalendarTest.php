@@ -166,6 +166,29 @@ class WorkingCalendarTest extends TestCase
         ])->count());
     }
 
+    public function test_audit_trail_displays_legacy_per_day_range_entries_as_one_record(): void
+    {
+        $recordedAt = Carbon::parse('2026-10-01 09:30:00');
+
+        foreach (['2026-10-11', '2026-10-12', '2026-10-13'] as $date) {
+            $log = AuditLog::activity(
+                'calendar_override_created',
+                details: "Set non_working override for {$date}. Description: Campus suspension",
+            );
+            $log->timestamps = false;
+            $log->forceFill(['created_at' => $recordedAt, 'updated_at' => $recordedAt])->save();
+        }
+
+        $response = $this->actingAs($this->admin)
+            ->get(route('admin.audit'))
+            ->assertOk()
+            ->assertSee('Calendar override range saved')
+            ->assertSee('Set non_working overrides for 2026-10-11 through 2026-10-13 (3 dates changed). Description: Campus suspension');
+
+        $this->assertSame(1, substr_count($response->getContent(), 'Calendar override range saved'));
+        $this->assertSame(3, AuditLog::query()->where('action', 'calendar_override_created')->count());
+    }
+
     public function test_working_calendar_routes_are_forbidden_to_students_and_recipients(): void
     {
         $override = CalendarOverride::create([

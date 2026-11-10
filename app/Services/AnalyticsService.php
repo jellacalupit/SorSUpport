@@ -320,7 +320,6 @@ class AnalyticsService
             'colleges' => $origin('college'),
             'programs' => $origin('program'),
             'year_levels' => $origin('year_level'),
-            'blocks' => $origin('block'),
             'origin' => $identityOrigin,
             'sensitive_not_broken_down' => $sensitiveNotBrokenDown,
             'resolution_types' => $labelled('resolution_type', Ticket::RESOLUTION_LABELS),

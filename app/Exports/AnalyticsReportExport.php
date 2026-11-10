@@ -148,7 +148,6 @@ class AnalyticsReportExport implements FromArray, WithHeadings, ShouldAutoSize
             'colleges' => ['Tickets by College', 'College'],
             'programs' => ['Tickets by Program', 'Program'],
             'year_levels' => ['Tickets by Year Level', 'Year Level'],
-            'blocks' => ['Tickets by Block', 'Block'],
             'origin' => ['Identified and Anonymous Origin', 'Origin'],
             'resolution_types' => ['How Tickets Were Resolved', 'Resolution'],
             'closure_reasons' => ['Why Tickets Were Closed', 'Reason'],
@@ -160,7 +159,7 @@ class AnalyticsReportExport implements FromArray, WithHeadings, ShouldAutoSize
             foreach ($breakdowns[$key] ?? [] as $label => $count) {
                 $rows[] = [$label, $count];
             }
-            if (in_array($key, ['colleges', 'programs', 'year_levels', 'blocks', 'origin'], true)) {
+            if (in_array($key, ['colleges', 'programs', 'year_levels', 'origin'], true)) {
                 $rows[] = ['Sensitive categories (not broken down)', $breakdowns['sensitive_not_broken_down'] ?? 0];
             }
         }

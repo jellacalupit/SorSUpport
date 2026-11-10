@@ -7,7 +7,7 @@
         $formatDate = fn ($date) => $date ? \Illuminate\Support\Carbon::parse($date)->format('M j, Y') : null;
         $periodLabel = ($filters['start_date'] ?? null) || ($filters['end_date'] ?? null)
             ? ($formatDate($filters['start_date'] ?? null) ?? 'Start') . ' – ' . ($formatDate($filters['end_date'] ?? null) ?? 'Today')
-            : 'All time';
+            : null;
         $statusFilterClassification = $filters['classification'] ?? '';
         $statusFilterEnabled = in_array($statusFilterClassification, [
             \App\Models\Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
@@ -42,24 +42,24 @@
             'unclassified' => '#9ca3af',
             'resolved' => '#15803d',
         ];
-        $statusClassificationCounts = $data['statusClassificationCounts'];
-        $statusSegments = [];
-        foreach (\App\Models\Ticket::DISPLAY_STATUS_LABELS as $status => $label) {
-            $statusSegments[] = [
-                'label' => $label . ' (Needs Resolution)',
-                'count' => (int) ($statusClassificationCounts[$status . ':needs_resolution'] ?? 0),
-                'color' => $status === \App\Models\Ticket::STATUS_RESOLVED
-                    ? $classificationColors['resolved']
-                    : $classificationColors['needs_resolution'],
-            ];
-            if (in_array($status, \App\Models\Ticket::UNCLASSIFIED_DISPLAY_STATUSES, true)) {
-                $statusSegments[] = [
-                    'label' => $label . ' (Unclassified)',
-                    'count' => (int) ($statusClassificationCounts[$status . ':unclassified'] ?? 0),
-                    'color' => $classificationColors['unclassified'],
-                ];
-            }
-        }
+        $statusColors = [
+            'submitted' => '#facc15',
+            'needs_clarification' => '#f59e0b',
+            'assigned' => '#2563eb',
+            'in_progress' => '#1d4ed8',
+            'escalated' => '#dc2626',
+            'referred' => '#7c3aed',
+            'resolved' => '#16a34a',
+            'closed' => '#9ca3af',
+        ];
+        $statusSegments = collect(\App\Models\Ticket::DISPLAY_STATUS_LABELS)
+            ->map(fn ($label, $status) => [
+                'label' => $label,
+                'count' => $data['tickets']->where('status', $status)->count(),
+                'color' => $statusColors[$status],
+            ])
+            ->values()
+            ->all();
         $classificationSegments = [
             ['label' => 'Needs resolution', 'color' => $classificationColors['needs_resolution'], 'count' => (int) ($data['classification']['Needs Resolution'] ?? 0)],
             ['label' => 'Informational', 'color' => $classificationColors['informational'], 'count' => (int) ($data['classification']['Informational'] ?? 0)],
@@ -93,7 +93,6 @@
             'colleges' => ['label' => 'College', 'rows' => $breakdowns['colleges']],
             'programs' => ['label' => 'Program', 'rows' => $breakdowns['programs']],
             'year_levels' => ['label' => 'Year level', 'rows' => $breakdowns['year_levels']],
-            'blocks' => ['label' => 'Block', 'rows' => $breakdowns['blocks']],
         ];
         $originRows = $breakdowns['origin'];
         $ratingDistribution = $satisfaction['distribution'];
@@ -120,7 +119,9 @@
         <header class="flex flex-wrap items-center justify-between gap-2">
             <div class="min-w-0">
                 <h1 class="font-display text-xl font-bold text-foreground">Analytics</h1>
-                <p class="text-sm font-semibold text-foreground">{{ $periodLabel }}</p>
+                @if ($periodLabel)
+                    <p class="text-sm font-semibold text-foreground">{{ $periodLabel }}</p>
+                @endif
                 <p class="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
                     <span>{{ number_format($total) }} ticket(s)</span>
                     @forelse ($activeFilters as $label)
@@ -263,12 +264,12 @@
 
         <section class="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5" aria-label="Analytics summary">
             <article class="{{ $cardClass }} p-3">
-                <h2 class="text-[11px] font-semibold text-muted-foreground">Total tickets</h2>
+                <h2 class="text-[11px] font-semibold text-black">Total tickets</h2>
                 <p class="mt-1 font-display text-2xl font-bold leading-none text-primary">{{ number_format($total) }}</p>
                 <p class="mt-1 text-xs text-muted-foreground">{{ number_format($data['openCount']) }} open now</p>
             </article>
             <article class="{{ $cardClass }} p-3">
-                <h2 class="text-[11px] font-semibold text-muted-foreground">Resolution rate</h2>
+                <h2 class="text-[11px] font-semibold text-black">Resolution rate</h2>
                 <p class="mt-1 font-display text-2xl font-bold leading-none text-primary">{{ number_format($data['resolutionRate'], 1) }}%</p>
                 <p class="mt-1 text-xs text-muted-foreground">{{ number_format($data['resolved']) }} of {{ number_format($data['resolutionTickets']) }} counted</p>
                 @if ($notCounted)
@@ -276,17 +277,17 @@
                 @endif
             </article>
             <article class="{{ $cardClass }} p-3">
-                <h2 class="text-[11px] font-semibold text-muted-foreground">Active handling time</h2>
+                <h2 class="text-[11px] font-semibold text-black">Active handling time</h2>
                 <p class="mt-1 font-display text-2xl font-bold leading-none text-primary">{{ $days($resolutionTime['median_days']) }}</p>
                 <p class="mt-1 text-xs text-muted-foreground">average {{ $days($resolutionTime['average_days']) }}</p>
             </article>
             <article class="{{ $cardClass }} p-3">
-                <h2 class="text-[11px] font-semibold text-muted-foreground">Escalation rate</h2>
+                <h2 class="text-[11px] font-semibold text-black">Escalation rate</h2>
                 <p class="mt-1 font-display text-2xl font-bold leading-none text-primary">{{ number_format($escalationRate, 1) }}%</p>
                 <p class="mt-1 text-xs text-muted-foreground">{{ number_format($escalatedTickets) }} of {{ number_format($escalationTotal) }} needs-resolution</p>
             </article>
             <article class="{{ $cardClass }} p-3">
-                <h2 class="text-[11px] font-semibold text-muted-foreground">Satisfaction</h2>
+                <h2 class="text-[11px] font-semibold text-black">Satisfaction</h2>
                 @if ($satisfaction['count'])
                     <p class="mt-1 font-display text-2xl font-bold leading-none text-primary">{{ number_format($satisfaction['average'], 1) }} / 5</p>
                     <p class="mt-1 text-xs text-muted-foreground">{{ number_format($satisfaction['count']) }} rating(s)</p>
@@ -331,8 +332,8 @@
                             <h3 class="{{ $titleClass }}">{{ $graph['title'] }}</h3>
                             <p class="mt-0.5 {{ $mutedClass }}">Monthly ticket volume over the latest 12 months in the selected range.</p>
                             <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground" aria-label="{{ $graph['title'] }} chart labels">
-                                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background-color: {{ $graph['color1'] }}"></span>{{ $graph['label1'] }}</span>
-                                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm" style="background-color: {{ $graph['color2'] }}"></span>{{ $graph['label2'] }}</span>
+                                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background-color: {{ $graph['color1'] }}"></span>{{ $graph['label1'] }} = {{ number_format($graph['totals'][$graph['key1']]) }}</span>
+                                <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm" style="background-color: {{ $graph['color2'] }}"></span>{{ $graph['label2'] }} = {{ number_format($graph['totals'][$graph['key2']]) }}</span>
                             </div>
                             <div class="mt-2 h-[220px] min-w-0">
                                 <canvas data-analytics-volume-chart="{{ $graph['key'] }}" role="img" aria-label="{{ $graph['title'] }} by month"></canvas>
@@ -340,20 +341,16 @@
                             @if (array_sum($graph['totals']) === 0)
                                 <p class="mt-1 text-[11px] text-muted-foreground">No ticket volume data in this period.</p>
                             @endif
-                            <p class="mt-2 text-[10px] text-muted-foreground">
-                                12-month totals: {{ $graph['label1'] }} {{ number_format($graph['totals'][$graph['key1']]) }} · {{ $graph['label2'] }} {{ number_format($graph['totals'][$graph['key2']]) }}
-                            </p>
                         </article>
                     @endforeach
                 </div>
 
-                <div class="grid min-w-0 items-stretch gap-4 xl:grid-cols-[minmax(14rem,0.8fr)_minmax(14rem,0.8fr)_minmax(28rem,1.8fr)]">
-                    <x-donut-chart class="h-full" title="Status" description="Needs-resolution and unclassified tickets" empty-message="No tickets in this period." :segments="$statusSegments" total-label="Tickets" :legend-columns="2" large />
-                    <x-donut-chart class="h-full" title="Classification" :segments="$classificationSegments" total-label="Tickets" :legend-columns="1" large />
+                <div class="grid min-w-0 items-stretch gap-4 xl:grid-cols-[16rem_16rem_minmax(0,1fr)]">
+                    <x-donut-chart class="h-full" title="Status" empty-message="No tickets in this period." :segments="$statusSegments" total-label="Tickets" :legend-columns="1" large compact />
+                    <x-donut-chart class="h-full" title="Classification" :segments="$classificationSegments" total-label="Tickets" :legend-columns="1" large compact />
 
                     <article class="{{ $cardClass }} flex min-w-0 flex-col">
                         <h3 class="{{ $titleClass }}">Volume by category</h3>
-                        <p class="mt-0.5 {{ $mutedClass }}">Each ticket appears in exactly one classification segment.</p>
                         @if (count($categoryRows))
                             <div class="relative mt-3 min-h-80 w-full flex-1" style="height: {{ max(320, min(460, count($categoryRows) * 30 + 70)) }}px">
                                 <canvas class="absolute inset-0" data-analytics-category-volume-chart role="img" aria-label="Ticket volume by category and classification"></canvas>
@@ -378,11 +375,6 @@
 
             <section id="staff" x-show="tab === 'staff'" x-cloak data-tab-panel="staff" class="grid min-w-0 gap-3">
                 <h2 class="sr-only">Staff performance</h2>
-                <p class="text-[11px] text-muted-foreground">
-                    Review time {{ $days($performance['review_time']['average_days']) }},
-                    time to acknowledge {{ $days($performance['acknowledgment_time']['average_days']) }},
-                    active handling time {{ $days($resolutionTime['average_days']) }}.
-                </p>
                 <article class="{{ $cardClass }} min-w-0 overflow-x-auto">
                     <h3 class="{{ $titleClass }}">Staff performance</h3>
                     <p class="mt-0.5 {{ $mutedClass }}">Assigned counts use the current assignee, or current handler when no assignee is set.</p>
@@ -395,8 +387,8 @@
                                     'open_tickets' => 'Open',
                                     'oldest_open_ticket_age_days' => 'Oldest open',
                                     'resolved_tickets' => 'Resolved',
-                                    'acknowledgment_average_days' => 'Avg time to acknowledge',
-                                    'handling_average_days' => 'Avg handling time (from assignment)',
+                                    'acknowledgment_average_days' => 'Avg time to acknowledge (tickets)',
+                                    'handling_average_days' => 'Avg handling time from assignment (tickets)',
                                     'rating_average' => 'Avg rating',
                                 ] as $sortKey => $label)
                                     <th class="px-2 py-2 first:pl-0">
@@ -441,11 +433,6 @@
                         </tbody>
                     </table>
                 </article>
-                <div class="grid min-w-0 gap-3 text-[11px] text-muted-foreground">
-                    <p>Averages from very few tickets are not reliable; see the count in brackets.</p>
-                    <p>Escalations are counted by category and level, not per handler.</p>
-                    <p>Committee outcomes: average {{ $days($resolutionTime['committee_outcomes']['average_days'] ?? null) }} ({{ number_format($resolutionTime['committee_outcomes']['ticket_count'] ?? 0) }} tickets).</p>
-                </div>
 
                 <div class="grid min-w-0 gap-3 lg:grid-cols-3">
                     @foreach ([['title' => 'How tickets were resolved', 'rows' => $breakdowns['resolution_types']], ['title' => 'Why tickets were closed', 'rows' => $breakdowns['closure_reasons']]] as $outcome)
@@ -480,12 +467,31 @@
                 <h2 class="sr-only">Students and feedback</h2>
                 <article class="{{ $cardClass }}">
                     <h3 class="{{ $titleClass }}">Who raises tickets</h3>
-                    <label class="mt-2 block text-[11px] font-semibold text-muted-foreground" for="student-dimension">Student attribute</label>
-                    <select id="student-dimension" x-model="studentDimension" class="mt-1 h-9 w-full rounded-md border border-input bg-white px-2 text-xs sm:max-w-xs">
-                        @foreach ($studentDimensions as $key => $dimension)
-                            <option value="{{ $key }}">{{ $dimension['label'] }}</option>
-                        @endforeach
-                    </select>
+                    <div class="mt-2 w-full max-w-xs text-left" data-student-attribute-dropdown>
+                        <label class="mb-1 block text-[11px] font-semibold text-muted-foreground">Student attribute</label>
+                        <details x-data="{}" class="group relative w-full" x-on:click.outside="$el.removeAttribute('open')">
+                            <summary aria-label="Student attribute" class="flex h-9 w-full cursor-pointer list-none items-center justify-between gap-1 rounded-md border border-input bg-white px-2.5 text-xs shadow-sm outline-none transition-colors hover:bg-muted focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
+                                <span class="min-w-0 truncate">
+                                    @foreach ($studentDimensions as $key => $dimension)
+                                        <span x-show="studentDimension === '{{ $key }}'" @if ($key !== 'colleges') x-cloak @endif>{{ $dimension['label'] }}</span>
+                                    @endforeach
+                                </span>
+                                <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                            </summary>
+                            <div class="absolute top-full left-0 z-50 mt-1 max-h-72 w-full min-w-44 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                                @foreach ($studentDimensions as $key => $dimension)
+                                    <button
+                                        type="button"
+                                        x-on:click="studentDimension = '{{ $key }}'; $el.closest('details').removeAttribute('open')"
+                                        x-bind:class="studentDimension === '{{ $key }}' ? 'bg-primary-soft text-primary' : 'hover:bg-accent'"
+                                        class="flex w-full rounded-sm px-2 py-1.5 text-left text-xs"
+                                    >
+                                        {{ $dimension['label'] }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        </details>
+                    </div>
                     @foreach ($studentDimensions as $key => $dimension)
                         <ul x-show="studentDimension === '{{ $key }}'" x-cloak class="mt-2 divide-y divide-border text-xs">
                             @forelse ($dimension['rows'] as $label => $count)
@@ -543,7 +549,7 @@
             ],
             'informational-invalid': [
                 { label: 'Informational', key: 'informational', color: '#14283f', pointStyle: 'circle' },
-                { label: 'Invalid', key: 'invalid', color: '#dc2626', pointStyle: 'triangle' },
+                { label: 'Invalid', key: 'invalid', color: '#dc2626', pointStyle: 'rectRounded' },
             ],
         };
         const analyticsVolumeFont = "'Source Sans 3', ui-sans-serif, system-ui, sans-serif";

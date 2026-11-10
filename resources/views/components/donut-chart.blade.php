@@ -8,6 +8,7 @@
     'large' => false,
     'legendColumns' => null,
     'emptyMessage' => null,
+    'compact' => false,
 ])
 
 @php
@@ -20,7 +21,7 @@
     };
 @endphp
 
-<div {{ $attributes->merge(['class' => 'flex min-w-0 rounded-[20px] border border-border bg-white shadow-sm ' . ($large ? 'flex-col items-center gap-3 p-4' : 'items-center ' . ($stack ? 'flex-col gap-2 p-2.5 sm:flex-row sm:gap-3 sm:p-3' : 'gap-3 p-3'))]) }}>
+<div {{ $attributes->merge(['class' => 'flex min-w-0 rounded-[20px] border border-border bg-white shadow-sm ' . ($large ? 'flex-col items-center ' . ($compact ? 'gap-2 p-3' : 'gap-3 p-4') : 'items-center ' . ($stack ? 'flex-col gap-2 p-2.5 sm:flex-row sm:gap-3 sm:p-3' : 'gap-3 p-3'))]) }}>
     @if ($large)
         <div class="w-full">
             <h3 class="font-display text-base font-bold text-foreground">{{ $title }}</h3>
@@ -29,8 +30,8 @@
         </div>
     @endif
     @if ($stack)<h3 class="text-sm font-semibold text-black sm:hidden">{{ $title }}</h3>@endif
-    <div class="relative shrink-0 {{ $large ? 'h-56 w-56' : ($stack ? 'h-24 w-24' : 'h-28 w-28') }} {{ $large ? '' : 'sm:h-32 sm:w-32' }}">
-        <x-donut-ring :segments="$segments" class="drop-shadow-sm" />
+    <div class="relative shrink-0 {{ $large ? ($compact ? 'h-30 w-30' : 'h-56 w-56') : ($stack ? 'h-24 w-24' : 'h-28 w-28') }} {{ $large ? '' : 'sm:h-32 sm:w-32' }}">
+        <x-donut-ring :segments="$segments" :stroke-width="$compact ? 15 : 12" class="drop-shadow-sm" />
         <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
             <span class="text-xl font-bold leading-none text-foreground">{{ $total }}</span>
             <span class="mt-0.5 text-[9px] text-muted-foreground">{{ $totalLabel }}</span>

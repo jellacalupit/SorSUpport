@@ -41,10 +41,23 @@ class AnalyticsDashboardTest extends TestCase
         foreach (['Overview', 'Staff performance', 'Students and feedback'] as $heading) {
             $response->assertSee($heading);
         }
+        foreach (['Total tickets', 'Resolution rate', 'Active handling time', 'Escalation rate', 'Satisfaction'] as $cardLabel) {
+            $response->assertSee('font-semibold text-black">' . $cardLabel, false);
+        }
         $response->assertSee('Sensitive categories (not broken down): 1')
+            ->assertDontSee('All time')
+            ->assertSee('data-student-attribute-dropdown', false)
+            ->assertSee('aria-label="Student attribute"', false)
+            ->assertDontSee('id="student-dimension"', false)
+            ->assertDontSee("studentDimension === 'blocks'", false)
             ->assertDontSee('First staff reply')
             ->assertSee('Volume of Needs Resolution Tickets')
             ->assertSee('Volume of Informational and Invalid Tickets')
+            ->assertSee('Submitted =')
+            ->assertSee('Resolved =')
+            ->assertSee('Informational =')
+            ->assertSee('Invalid =')
+            ->assertDontSee('12-month totals:')
             ->assertSee('window.renderAnalyticsVolumeCharts();', false)
             ->assertDontSee('Common subjects')
             ->assertDontSee('Top 5 categories')
@@ -178,8 +191,10 @@ class AnalyticsDashboardTest extends TestCase
         $response = $this->actingAs(User::factory()->create(['role' => User::ROLE_SDS_ADMIN]))
             ->get(route('admin.analytics.index', ['start_date' => '2025-11-01', 'end_date' => '2026-10-31']))
             ->assertOk()
-            ->assertSee('Submitted (Unclassified)')
-            ->assertSee('Needs-resolution and unclassified tickets');
+            ->assertSee('Submitted')
+            ->assertDontSee('Submitted (Unclassified)')
+            ->assertDontSee('Needs-resolution and unclassified tickets')
+            ->assertDontSee('Each ticket appears in exactly one classification segment.');
     }
 
     public function test_staff_table_uses_final_resolver_assignment_handling_fallbacks_and_rating_counts(): void
@@ -245,8 +260,8 @@ class AnalyticsDashboardTest extends TestCase
             'Open',
             'Oldest open',
             'Resolved',
-            'Avg time to acknowledge',
-            'Avg handling time (from assignment)',
+            'Avg time to acknowledge (tickets)',
+            'Avg handling time from assignment (tickets)',
             'Avg rating',
             '0.3 days (1)',
             '5.5 days (2)',

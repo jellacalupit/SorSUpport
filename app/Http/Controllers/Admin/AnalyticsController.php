@@ -28,7 +28,6 @@ class AnalyticsController extends Controller
         'colleges' => 'Tickets by college',
         'programs' => 'Tickets by program',
         'year_levels' => 'Tickets by year level',
-        'blocks' => 'Tickets by block',
         'origin' => 'Identified and anonymous origin',
         'resolution_types' => 'How tickets were resolved',
         'closure_reasons' => 'Why tickets were closed',

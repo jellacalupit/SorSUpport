@@ -57,7 +57,7 @@
         ->implode(', ');
     $committeeOutcomes = $overview['committee_outcomes'] ?? [];
     $escalatedTickets = $overview['escalated_tickets'] ?? 0;
-    $studentAttributeBreakdownKeys = ['colleges', 'programs', 'year_levels', 'blocks', 'origin'];
+    $studentAttributeBreakdownKeys = ['colleges', 'programs', 'year_levels', 'origin'];
     $sensitiveNotBrokenDown = $breakdowns['sensitive_not_broken_down'] ?? 0;
 
     $categories = collect($rows($reportData['category_breakdown'] ?? null))->sortDesc();
@@ -111,13 +111,6 @@
             'Tickets by Year Level',
             'Year level of the student who filed each ticket. Sensitive-category tickets are counted separately and not broken down by student attributes.',
             'Year level', 'Tickets', $breakdowns['year_levels'] ?? [],
-            'No tickets were received in this period.',
-            null,
-        ],
-        'blocks' => [
-            'Tickets by Block',
-            'Block of the student who filed each ticket. Sensitive-category tickets are counted separately and not broken down by student attributes.',
-            'Block', 'Tickets', $breakdowns['blocks'] ?? [],
             'No tickets were received in this period.',
             null,
         ],

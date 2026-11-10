@@ -312,6 +312,7 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
             }
 
             $auditLogs = $query->paginate(15)->appends($request->query());
+            $auditLogs->setCollection(\App\Models\AuditLog::groupLegacyCalendarRanges($auditLogs->getCollection()));
             $actions = \App\Models\AuditLog::query()->select('action')->distinct()->orderBy('action')->pluck('action');
 
             return view('admin.audit', compact('auditLogs', 'actions'));
