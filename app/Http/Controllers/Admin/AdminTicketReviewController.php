@@ -140,7 +140,11 @@ class AdminTicketReviewController extends Controller
             ->paginate(15)
             ->appends($request->query());
 
-        $categories = ComplaintCategory::query()->where('is_active', true)->orderBy('name')->get();
+        $categories = ComplaintCategory::query()
+            ->with('suggestedRecipients.user')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
         $recipients = Recipient::query()
             ->with('user')
             ->whereHas('user', fn ($query) => $query->where('is_active', true))
@@ -626,17 +630,16 @@ class AdminTicketReviewController extends Controller
         ]);
 
         $complaint = $ticket->complaint;
-        $category = ComplaintCategory::findOrFail($validated['category_id']);
+        $category = ComplaintCategory::with('suggestedRecipients.user')->findOrFail($validated['category_id']);
         $suggestedRecipient = null;
 
         if (filled($validated['suggested_recipient_id'] ?? null)) {
-            $suggestedRecipient = Recipient::query()
-                ->active()
-                ->with('user')
-                ->find($validated['suggested_recipient_id']);
+            $suggestedRecipient = $category->suggestedRecipients
+                ->first(fn (Recipient $recipient): bool => $recipient->id === (int) $validated['suggested_recipient_id']
+                    && (bool) $recipient->user?->is_active);
 
             if (! $suggestedRecipient) {
-                return back()->withErrors(['suggested_recipient_id' => 'The selected recipient is not available.']);
+                return back()->withErrors(['suggested_recipient_id' => 'Select a recipient configured for the chosen category.']);
             }
         }
 

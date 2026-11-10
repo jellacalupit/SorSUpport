@@ -63,6 +63,29 @@ class TicketDetailsEditTest extends TestCase
         $this->assertNotSame($otherCategory->id, $ticket->complaint->refresh()->category_id);
     }
 
+    public function test_recipient_must_be_configured_for_the_selected_category(): void
+    {
+        [$admin, $ticket, $otherCategory] = $this->createPendingTicket();
+        $originalCategoryId = $ticket->complaint->category_id;
+        $unconfiguredRecipient = Recipient::create([
+            'user_id' => User::factory()->create(['role' => User::ROLE_RECIPIENT])->id,
+            'staff_id' => 'R3302',
+            'unit' => 'Library',
+            'designation' => 'Librarian',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.tickets.update-details', $ticket), [
+                'category_id' => $otherCategory->id,
+                'suggested_recipient_id' => $unconfiguredRecipient->id,
+            ])
+            ->assertSessionHasErrors('suggested_recipient_id');
+
+        $complaint = $ticket->complaint->refresh();
+        $this->assertSame($originalCategoryId, $complaint->category_id);
+        $this->assertNull($complaint->suggested_recipient_id);
+    }
+
     /**
      * @return array{0: User, 1: Ticket, 2: ComplaintCategory, 3: Recipient}
      */
@@ -88,6 +111,7 @@ class TicketDetailsEditTest extends TestCase
 
         $category = ComplaintCategory::create(['name' => 'Facilities', 'is_active' => true]);
         $otherCategory = ComplaintCategory::create(['name' => 'Records', 'is_active' => true]);
+        $otherCategory->suggestedRecipients()->attach($recipient->id);
 
         $complaint = Complaint::create([
             'reference_number' => Complaint::generateReferenceNumber(),

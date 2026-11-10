@@ -25,6 +25,22 @@
         : $complaint?->student?->user;
     $creatorStudent = $creator?->student;
     $suggestedRecipientName = $complaint?->suggestedRecipient?->user?->table_name;
+    $editableRecipientOptions = collect($recipients)
+        ->filter(fn ($recipientOption) => $recipientOption?->user?->is_active)
+        ->map(fn ($recipientOption) => [
+            'id' => (string) $recipientOption->id,
+            'name' => $recipientOption->user?->table_name ?? 'Recipient',
+            'detail' => implode(' · ', array_filter([$recipientOption->designation, $recipientOption->unit])),
+        ])
+        ->values();
+    $editableRecipientIds = $editableRecipientOptions->pluck('id');
+    $editableCategoryRecipients = collect($categories)->mapWithKeys(fn ($categoryOption) => [
+        (string) $categoryOption->id => $categoryOption->suggestedRecipients
+            ->pluck('id')
+            ->map(fn ($id) => (string) $id)
+            ->intersect($editableRecipientIds)
+            ->values(),
+    ]);
     $createdBy = $complaint?->filerNameFor(\Illuminate\Support\Facades\Auth::user()) ?? 'Unknown';
     $attachments = $complaint?->attachment_files ?? [];
     $holder = $ticket->isAwaitingReview()
@@ -192,7 +208,38 @@
             </p>
         </div>
         @if ($canEditDetails)
-            <form x-show="editingDetails" x-cloak method="POST" action="{{ route('admin.tickets.update-details', $ticket) }}" class="grid gap-3 rounded-lg border border-border bg-muted/50 p-3" data-ticket-details-editor>
+            <form
+                x-show="editingDetails"
+                x-cloak
+                x-data="{
+                    categoryId: @js((string) $complaint->category_id),
+                    recipientId: @js((string) ($complaint->suggested_recipient_id ?? '')),
+                    recipients: @js($editableRecipientOptions),
+                    categoryRecipients: @js($editableCategoryRecipients),
+                    get recipientChoices() {
+                        const configured = this.categoryRecipients[this.categoryId] ?? [];
+                        return this.recipients.filter((recipient) => configured.includes(recipient.id));
+                    },
+                    get recipientLabel() {
+                        return this.recipientChoices.find((recipient) => recipient.id === this.recipientId)?.name ?? 'None';
+                    },
+                    ensureConfiguredRecipient() {
+                        if (this.recipientId && !this.recipientChoices.some((recipient) => recipient.id === this.recipientId)) this.recipientId = '';
+                    },
+                    selectCategory(value) {
+                        this.categoryId = String(value);
+                        this.ensureConfiguredRecipient();
+                    },
+                    init() {
+                        this.ensureConfiguredRecipient();
+                    },
+                }"
+                x-on:picked="selectCategory($event.detail)"
+                method="POST"
+                action="{{ route('admin.tickets.update-details', $ticket) }}"
+                class="grid gap-3 rounded-lg border border-border bg-muted/50 p-3"
+                data-ticket-details-editor
+            >
                 @csrf
                 @method('PATCH')
                 <div>
@@ -205,7 +252,25 @@
                 </div>
                 <div class="min-w-0">
                     <p class="mb-1 text-xs font-semibold leading-tight text-muted-foreground">Suggested recipient</p>
-                    <x-picker name="suggested_recipient_id" label="Suggested recipient" placeholder="None" :selected="$complaint->suggested_recipient_id ?? ''" :options="collect([['value' => '', 'label' => 'None']])->merge($recipients->map(fn ($recipientOption) => ['value' => $recipientOption->id, 'label' => $recipientOption->user?->table_name ?? 'Recipient', 'detail' => trim($recipientOption->designation . ', ' . $recipientOption->unit, ', ')]))->all()" />
+                    <details class="group relative" x-on:click.outside="$el.removeAttribute('open')">
+                        <summary aria-label="Suggested recipient" class="flex min-h-9 w-full cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-input bg-muted px-3 py-1.5 text-left text-xs outline-none transition-colors hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                            <span class="min-w-0 truncate" x-text="recipientLabel" x-bind:class="recipientId ? 'text-foreground' : 'text-muted-foreground'"></span>
+                            <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                        </summary>
+                        <div class="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg">
+                            <button type="button" class="flex w-full items-center rounded-md px-3 py-2 text-left text-xs hover:bg-accent" x-bind:class="recipientId === '' ? 'bg-primary-soft text-primary' : 'text-foreground'" x-on:click="recipientId = ''; $el.closest('details').removeAttribute('open')">None</button>
+                            <template x-for="recipient in recipientChoices" :key="recipient.id">
+                                <button type="button" class="flex w-full items-center rounded-md px-3 py-2 text-left text-xs hover:bg-accent" x-bind:class="recipientId === recipient.id ? 'bg-primary-soft text-primary' : 'text-foreground'" x-on:click="recipientId = recipient.id; $el.closest('details').removeAttribute('open')">
+                                    <span class="min-w-0">
+                                        <span class="block wrap-break-word font-medium" x-text="recipient.name"></span>
+                                        <span class="block wrap-break-word text-[11px] text-muted-foreground" x-show="recipient.detail" x-text="recipient.detail"></span>
+                                    </span>
+                                </button>
+                            </template>
+                            <p x-show="recipientChoices.length === 0" class="px-3 py-2 text-xs text-muted-foreground">No suggested recipients are configured for this category.</p>
+                        </div>
+                    </details>
+                    <input type="hidden" name="suggested_recipient_id" x-bind:value="recipientId">
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <button type="button" x-on:click="editingDetails = false" class="w-full rounded-full border border-primary bg-white px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary-soft">Cancel</button>
