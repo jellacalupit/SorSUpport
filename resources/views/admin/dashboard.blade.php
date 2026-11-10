@@ -426,7 +426,7 @@
             </section>
         </div>
 
-        <div class="grid w-[360px] flex-1 grid-rows-[auto_340px] gap-2 self-stretch overflow-visible pt-0">
+        <div class="grid w-[360px] flex-1 content-start grid-rows-[auto_auto] gap-2 self-stretch overflow-visible pt-0">
             @php
                 $monthOptions = [
                     1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'May', 6 => 'Jun',
@@ -496,10 +496,10 @@
                         <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="shrink-0 whitespace-nowrap text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
                 </div>
-                <div class="relative z-0 mt-2 h-40 w-full">
+                <div class="relative z-0 mt-2 h-64 w-full">
                     <canvas class="absolute inset-0" data-volume-canvas aria-label="Complaint volume chart"></canvas>
                 </div>
-                <ul data-volume-legend class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-foreground" aria-label="Categories"></ul>
+                <ul data-volume-legend class="hidden" aria-label="Categories"></ul>
             </div>
             <div class="grid min-h-95 grid-cols-2 gap-2">
                 <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-[20px] border border-border bg-white p-2 shadow-sm">
@@ -508,7 +508,7 @@
                         <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
-                    <div class="mt-1.5 grid min-h-0 flex-1 grid-rows-5 gap-1 overflow-hidden">
+                    <div class="mt-1.5 grid content-start gap-1 overflow-hidden">
                         @forelse ($topPerformingRecipients as $recipient)
                             <div class="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-muted/50">
                                 <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-sidebar-primary text-[9px] font-bold text-sidebar-primary-foreground">
@@ -564,7 +564,7 @@
                         <a data-admin-page-nav href="{{ route('admin.audit') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
-                    <ol class="relative mt-1.5 grid min-h-0 flex-1 grid-rows-5 gap-1 overflow-hidden">
+                    <ol class="relative mt-1.5 grid content-start gap-1 overflow-hidden">
                         <span class="absolute top-3.5 bottom-3.5 left-[calc(25%+1.375rem)] w-px bg-[#7a1d2a]/20" aria-hidden="true"></span>
                         @forelse ($recentActivity as $log)
                             @php
@@ -649,9 +649,6 @@
             const yearHiddenSelect = root.querySelector('[data-volume-year]');
             
             const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const barColors = ['#7a1d2a', '#c4785a', '#2d7a74', '#6b7a3a', '#6b5a8a', '#b8862b', '#3a5f8a', '#9a3a42', '#4f8a5b', '#8a4f7d', '#5a6470', '#c25b3f', '#2f6f8f', '#7d6b2a', '#a0526b', '#3d7d6a'];
-            // Past the palette, spread further colours evenly round the colour wheel.
-            const colorFor = (index) => barColors[index] ?? `hsl(${Math.round((index * 137.5) % 360)} 45% 42%)`;
             const legendEl = root.querySelector('[data-volume-legend]');
             const lineColor = '#7a1d2a';
             const muted = '#9ca3af';
@@ -716,14 +713,27 @@
                 const category = getSelectedCategory();
 
                 if (!category) {
-                    const values = categories.map((item) => filtered.filter((point) => point.category_id === item.id).length);
+                    const rankedCategories = categories
+                        .map((item) => ({
+                            name: item.name,
+                            value: filtered.filter((point) => point.category_id === item.id).length,
+                        }))
+                        .sort((left, right) => right.value - left.value || left.name.localeCompare(right.name));
+                    const visibleCategories = rankedCategories.slice(0, 7);
+                    const remainingCategories = rankedCategories.slice(7);
+                    const remainingTotal = remainingCategories.reduce((total, item) => total + item.value, 0);
+
+                    if (remainingCategories.length) {
+                        visibleCategories.push({ name: 'Other categories', value: remainingTotal });
+                    }
+
                     return {
                         type: 'bar',
                         title: 'Volume by category',
-                        labels: categories.map((item) => item.name),
-                        tooltipLabels: categories.map((item) => item.name),
-                        values,
-                        colors: categories.map((_, index) => colorFor(index)),
+                        labels: visibleCategories.map((item) => item.name),
+                        tooltipLabels: visibleCategories.map((item) => item.name),
+                        values: visibleCategories.map((item) => item.value),
+                        colors: visibleCategories.map((_, index) => `rgba(122, 29, 42, ${Math.max(0.45, 1 - (index * 0.07))})`),
                     };
                 }
 
@@ -857,27 +867,10 @@
                 const model = buildChartModel();
                 titleEl.textContent = model.title;
                 const yMax = niceMax(model.values);
-                // Category names would collide under the bars once there are many, so each bar gets
-                // a colour and the names are listed below the chart with a matching square.
-                const horizontal = false;
+                const horizontal = model.type === 'bar';
                 if (legendEl) {
-                    legendEl.hidden = model.type !== 'bar';
-                    legendEl.replaceChildren(...(model.type === 'bar' ? model.labels.map((name, index) => {
-                        const item = document.createElement('li');
-                        item.className = 'flex min-w-0 items-center gap-1.5';
-                        item.title = name;
-                        const swatch = document.createElement('span');
-                        swatch.className = 'h-2.5 w-2.5 shrink-0 rounded-sm';
-                        swatch.style.backgroundColor = model.colors[index];
-                        const label = document.createElement('span');
-                        label.className = 'min-w-0 flex-1 truncate';
-                        label.textContent = name;
-                        const count = document.createElement('span');
-                        count.className = 'shrink-0 font-semibold tabular-nums';
-                        count.textContent = model.values[index];
-                        item.append(swatch, label, count);
-                        return item;
-                    }) : []));
+                    legendEl.hidden = true;
+                    legendEl.replaceChildren();
                 }
 
                 const dataset = model.type === 'bar'
@@ -918,18 +911,17 @@
                         callback: (value, index) => {
                             if (model.type !== 'bar') return model.labels[index];
 
-                            const maxLineLength = model.labels.length <= 2
-                                ? 28
-                                : model.labels.length <= 4
-                                    ? 22
-                                    : 14;
+                            const maxLineLength = horizontal ? 28 : 14;
 
                             return wrapChartLabel(model.labels[index], maxLineLength);
                         },
                     },
                     border: { display: false },
                 };
-                if (model.type === 'bar') categoryAxis.ticks.display = false;
+                if (model.type === 'bar') {
+                    categoryAxis.ticks.display = true;
+                    categoryAxis.ticks.color = '#374151';
+                }
                 const valueAxis = {
                     beginAtZero: true,
                     suggestedMax: yMax,
@@ -946,20 +938,50 @@
                     border: { display: false },
                 };
 
+                const barValueLabels = {
+                    id: 'volumeBarValueLabels',
+                    afterDatasetsDraw(instance) {
+                        if (!horizontal) return;
+
+                        const { ctx, chartArea } = instance;
+                        const meta = instance.getDatasetMeta(0);
+                        const total = model.values.reduce((sum, value) => sum + value, 0);
+
+                        ctx.save();
+                        ctx.font = `600 10px ${fontSans}`;
+                        ctx.textBaseline = 'middle';
+
+                        meta.data.forEach((element, index) => {
+                            const value = model.values[index];
+                            const percentage = total ? Math.round((value / total) * 100) : 0;
+                            const label = `${value} (${percentage}%)`;
+                            const labelWidth = ctx.measureText(label).width;
+                            const preferredX = element.x + 6;
+                            const fitsAfterBar = preferredX + labelWidth <= chartArea.right;
+
+                            ctx.fillStyle = fitsAfterBar ? lineColor : '#ffffff';
+                            ctx.textAlign = fitsAfterBar ? 'left' : 'right';
+                            ctx.fillText(label, fitsAfterBar ? preferredX : element.x - 6, element.y);
+                        });
+
+                        ctx.restore();
+                    },
+                };
+
                 const config = {
                     type: model.type,
                     data: {
                         labels: model.labels,
                         datasets: [dataset],
                     },
-                    plugins: [columnHighlight],
+                    plugins: [columnHighlight, barValueLabels],
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         indexAxis: horizontal ? 'y' : 'x',
                         interaction: { mode: 'index', intersect: false, axis: horizontal ? 'y' : 'x' },
                         layout: {
-                            padding: { top: 12, bottom: 8, left: 8, right: 8 },
+                            padding: { top: 8, bottom: 8, left: 4, right: horizontal ? 58 : 8 },
                         },
                         plugins: {
                             legend: { display: false },
@@ -976,7 +998,12 @@
                                 displayColors: false,
                                 callbacks: {
                                     title: (items) => model.tooltipLabels[items[0]?.dataIndex] ?? '',
-                                    label: (item) => `value : ${model.values[item.dataIndex]}`,
+                                    label: (item) => {
+                                        const value = model.values[item.dataIndex];
+                                        const total = model.values.reduce((sum, current) => sum + current, 0);
+                                        const percentage = total ? Math.round((value / total) * 100) : 0;
+                                        return `${value} complaint${value === 1 ? '' : 's'} · ${percentage}%`;
+                                    },
                                 },
                             },
                         },
