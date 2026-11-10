@@ -353,7 +353,7 @@ class VisibilityAndFeedbackTest extends TestCase
         $this->actingAs($this->admin)->get('/admin/analytics')
             ->assertOk()
             ->assertSee('Overview')
-            ->assertSee('Staff performance')
+            ->assertSee('Recipient performance')
             ->assertSee('Students and feedback')
             ->assertSee('Who raises tickets')
             ->assertSee('How tickets were resolved')
@@ -398,7 +398,7 @@ class VisibilityAndFeedbackTest extends TestCase
         $this->assertNull($top->firstWhere('staff_id', $this->otherRecipient->recipient->staff_id));
     }
 
-    public function test_dashboard_category_bars_show_their_actual_percentages(): void
+    public function test_dashboard_category_chart_uses_the_actual_ticket_counts(): void
     {
         $other = ComplaintCategory::create(['name' => 'Library Services', 'is_active' => true]);
         foreach (range(1, 3) as $ignored) {
@@ -407,11 +407,13 @@ class VisibilityAndFeedbackTest extends TestCase
         $single = $this->ticket(Ticket::STATUS_IN_PROGRESS);
         $single->complaint->update(['category_id' => $other->id]);
 
+        $rows = collect(app(AnalyticsService::class)->getDashboardData()['categoryVolumes']['rows']);
         $page = $this->actingAs($this->admin)->get('/admin/analytics')->assertOk()->getContent();
 
-        $this->assertSame(2, substr_count($page, 'style="width: 100%; background-color:'));
-        $this->assertStringContainsString('title="Submitted (not resolved): 3"', $page);
-        $this->assertStringContainsString('title="Submitted (not resolved): 1"', $page);
+        $this->assertSame(3, $rows->firstWhere('name', $this->category->name)['segments']['submitted']);
+        $this->assertSame(1, $rows->firstWhere('name', 'Library Services')['segments']['submitted']);
+        $this->assertStringContainsString('data-analytics-category-volume-chart', $page);
+        $this->assertStringContainsString('const analyticsCategoryRows =', $page);
         $this->assertStringNotContainsString('Common subjects', $page);
     }
 
@@ -471,6 +473,6 @@ class VisibilityAndFeedbackTest extends TestCase
         $this->actingAs($this->admin)->get('/admin/analytics')
             ->assertOk()
             ->assertSee('No satisfaction ratings in this period.')
-            ->assertSee('No staff performance data in this period.');
+            ->assertSee('No recipient performance data in this period.');
     }
 }

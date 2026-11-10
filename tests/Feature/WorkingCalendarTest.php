@@ -189,6 +189,35 @@ class WorkingCalendarTest extends TestCase
         $this->assertSame(3, AuditLog::query()->where('action', 'calendar_override_created')->count());
     }
 
+    public function test_audit_trail_paginates_fifteen_visible_events_after_grouping_legacy_ranges(): void
+    {
+        $rangeRecordedAt = Carbon::parse('2026-10-15 09:30:00');
+
+        foreach (['2026-10-11', '2026-10-12', '2026-10-13'] as $date) {
+            $log = AuditLog::activity(
+                'calendar_override_created',
+                details: "Set non_working override for {$date}. Description: Campus suspension",
+            );
+            $log->timestamps = false;
+            $log->forceFill(['created_at' => $rangeRecordedAt, 'updated_at' => $rangeRecordedAt])->save();
+        }
+
+        foreach (range(1, 14) as $index) {
+            $log = AuditLog::activity('test_audit_event', details: "Visible audit {$index}");
+            $log->timestamps = false;
+            $recordedAt = $rangeRecordedAt->copy()->subMinutes($index);
+            $log->forceFill(['created_at' => $recordedAt, 'updated_at' => $recordedAt])->save();
+        }
+
+        $response = $this->actingAs($this->admin)->get(route('admin.audit'))->assertOk();
+        $auditLogs = $response->viewData('auditLogs');
+
+        $this->assertCount(15, $auditLogs);
+        $this->assertSame(15, $auditLogs->perPage());
+        $this->assertGreaterThan(15, $auditLogs->total());
+        $this->assertSame(1, $auditLogs->getCollection()->where('action', 'calendar_override_range_saved')->count());
+    }
+
     public function test_working_calendar_routes_are_forbidden_to_students_and_recipients(): void
     {
         $override = CalendarOverride::create([

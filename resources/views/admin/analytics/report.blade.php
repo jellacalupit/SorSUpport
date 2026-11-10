@@ -357,7 +357,7 @@
                     </table>
                 @endif
         @elseif ($key === 'performance')
-                <h2>Staff and Office Performance</h2>
+                <h2>Recipient and Office Performance</h2>
                 <p class="about">Calendar-time averages and medians use the selected filters. A student request is counted as followed by SDS action when an SDS administrator performs a later audited action before another request of the same type. Escalations are counted overall; existing audit records do not identify the handler being escalated away from.</p>
                 <table class="data">
                     <thead><tr><th>Measure</th><th class="wide number">Average (days)</th><th class="wide number">Median (days)</th><th class="wide number">Tickets</th></tr></thead>

@@ -316,7 +316,7 @@
             }
         }" class="grid min-w-0 gap-4">
             <nav aria-label="Analytics sections" class="-mx-1 flex gap-1 overflow-x-auto border-b border-border px-1">
-                @foreach (['overview' => 'Overview', 'staff' => 'Staff performance', 'students' => 'Students and feedback'] as $tabKey => $tabLabel)
+                @foreach (['overview' => 'Overview', 'staff' => 'Recipient performance', 'students' => 'Students and feedback'] as $tabKey => $tabLabel)
                     <a href="#{{ $tabKey }}" x-on:click.prevent="selectTab('{{ $tabKey }}')" x-bind:aria-current="tab === '{{ $tabKey }}' ? 'page' : null" x-bind:class="tab === '{{ $tabKey }}' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'" class="shrink-0 border-b-2 px-3 py-2.5 text-sm font-semibold">{{ $tabLabel }}</a>
                 @endforeach
             </nav>
@@ -345,11 +345,11 @@
                     @endforeach
                 </div>
 
-                <div class="grid min-w-0 items-stretch gap-4 xl:grid-cols-[16rem_16rem_minmax(0,1fr)]">
+                <div class="grid min-w-0 grid-cols-1 items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-[16rem_16rem_minmax(0,1fr)]" data-analytics-distribution-row>
                     <x-donut-chart class="h-full" title="Status" empty-message="No tickets in this period." :segments="$statusSegments" total-label="Tickets" :legend-columns="1" large compact />
                     <x-donut-chart class="h-full" title="Classification" :segments="$classificationSegments" total-label="Tickets" :legend-columns="1" large compact />
 
-                    <article class="{{ $cardClass }} flex min-w-0 flex-col">
+                    <article class="{{ $cardClass }} col-span-1 flex min-w-0 flex-col sm:col-span-2 xl:col-span-1">
                         <h3 class="{{ $titleClass }}">Volume by category</h3>
                         @if (count($categoryRows))
                             <div class="relative mt-3 min-h-80 w-full flex-1" style="height: {{ max(320, min(460, count($categoryRows) * 30 + 70)) }}px">
@@ -374,9 +374,9 @@
             </section>
 
             <section id="staff" x-show="tab === 'staff'" x-cloak data-tab-panel="staff" class="grid min-w-0 gap-3">
-                <h2 class="sr-only">Staff performance</h2>
+                <h2 class="sr-only">Recipient performance</h2>
                 <article class="{{ $cardClass }} min-w-0 overflow-x-auto">
-                    <h3 class="{{ $titleClass }}">Staff performance</h3>
+                    <h3 class="{{ $titleClass }}">Recipient performance</h3>
                     <p class="mt-0.5 {{ $mutedClass }}">Assigned counts use the current assignee, or current handler when no assignee is set.</p>
                     <table data-staff-sort-table class="mt-2 w-full min-w-[1080px] text-left text-xs">
                         <thead class="border-b border-border text-muted-foreground">
@@ -428,7 +428,7 @@
                                     <td class="px-2 py-2">{{ $row['rating_average'] === null ? 'No ratings' : number_format($row['rating_average'], 1) . ' (' . number_format($row['rating_count']) . ')' }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="8" class="py-4 text-center text-muted-foreground">No staff performance data in this period.</td></tr>
+                                <tr><td colspan="8" class="py-4 text-center text-muted-foreground">No recipient performance data in this period.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -467,9 +467,9 @@
                 <h2 class="sr-only">Students and feedback</h2>
                 <article class="{{ $cardClass }}">
                     <h3 class="{{ $titleClass }}">Who raises tickets</h3>
-                    <div class="mt-2 w-full max-w-xs text-left" data-student-attribute-dropdown>
-                        <label class="mb-1 block text-[11px] font-semibold text-muted-foreground">Student attribute</label>
-                        <details x-data="{}" class="group relative w-full" x-on:click.outside="$el.removeAttribute('open')">
+                    <div class="mt-2 flex w-full max-w-md items-center gap-2 text-left" data-student-attribute-dropdown>
+                        <label class="shrink-0 text-[11px] font-semibold text-foreground">Student attribute</label>
+                        <details x-data="{}" class="group relative min-w-0 flex-1" x-on:click.outside="$el.removeAttribute('open')">
                             <summary aria-label="Student attribute" class="flex h-9 w-full cursor-pointer list-none items-center justify-between gap-1 rounded-md border border-input bg-white px-2.5 text-xs shadow-sm outline-none transition-colors hover:bg-muted focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
                                 <span class="min-w-0 truncate">
                                     @foreach ($studentDimensions as $key => $dimension)
@@ -538,6 +538,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        (() => {
+        window.destroyAnalyticsVolumeCharts?.();
         const monthlyTicketVolumes = @js($monthlyTicketVolumes);
         const analyticsCategoryRows = @js($categoryRows);
         const analyticsCategorySegments = @js($categoryChartSegments);
@@ -767,10 +769,23 @@
             });
         };
 
-        // On in-app navigation the window load event has already fired, so render immediately.
-        // On a full page load Alpine reveals the Overview later and the load listener retries then.
-        window.renderAnalyticsVolumeCharts();
-        window.addEventListener('load', () => window.renderAnalyticsVolumeCharts());
+        const renderAnalyticsChartsWhenVisible = () => {
+            window.renderAnalyticsVolumeCharts();
+            requestAnimationFrame(() => window.renderAnalyticsVolumeCharts());
+            window.setTimeout(() => window.renderAnalyticsVolumeCharts(), 100);
+        };
+
+        // Alpine may still be revealing Overview after an in-app navigation, so retry after its
+        // DOM update instead of relying on the window load event, which has already fired.
+        renderAnalyticsChartsWhenVisible();
+        if (document.readyState === 'loading') {
+            window.addEventListener('load', renderAnalyticsChartsWhenVisible, { once: true });
+        }
+
+        window.destroyAnalyticsVolumeCharts = () => {
+            volumeChartInstances.forEach((chart) => chart.destroy());
+            volumeChartInstances.clear();
+        };
 
         document.querySelectorAll('[data-staff-sort]').forEach((button) => {
             button.addEventListener('click', () => {
@@ -799,8 +814,10 @@
                 rows.forEach((row) => body.append(row));
             });
         });
+        })();
     </script>
     <script>
+        (() => {
         const analyticsFilterForm = document.querySelector('[data-analytics-filter-form]');
         const statusDropdown = analyticsFilterForm?.querySelector('[data-analytics-status-dropdown]');
         const statusSummary = statusDropdown?.querySelector('[data-analytics-status-summary]');
@@ -852,5 +869,6 @@
             });
         });
         syncStatusFilter();
+        })();
     </script>
 </x-app-layout>

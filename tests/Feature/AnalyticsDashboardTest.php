@@ -38,7 +38,7 @@ class AnalyticsDashboardTest extends TestCase
 
         $response = $this->actingAs($admin)->get(route('admin.analytics.index'))->assertOk();
 
-        foreach (['Overview', 'Staff performance', 'Students and feedback'] as $heading) {
+        foreach (['Overview', 'Recipient performance', 'Students and feedback'] as $heading) {
             $response->assertSee($heading);
         }
         foreach (['Total tickets', 'Resolution rate', 'Active handling time', 'Escalation rate', 'Satisfaction'] as $cardLabel) {
@@ -48,6 +48,7 @@ class AnalyticsDashboardTest extends TestCase
             ->assertDontSee('All time')
             ->assertSee('data-student-attribute-dropdown', false)
             ->assertSee('aria-label="Student attribute"', false)
+            ->assertSee('items-center gap-2 text-left', false)
             ->assertDontSee('id="student-dimension"', false)
             ->assertDontSee("studentDimension === 'blocks'", false)
             ->assertDontSee('First staff reply')
@@ -58,6 +59,10 @@ class AnalyticsDashboardTest extends TestCase
             ->assertSee('Informational =')
             ->assertSee('Invalid =')
             ->assertDontSee('12-month totals:')
+            ->assertSee('renderAnalyticsChartsWhenVisible', false)
+            ->assertSee('window.destroyAnalyticsVolumeCharts?.();', false)
+            ->assertSee('data-analytics-distribution-row', false)
+            ->assertSee('sm:grid-cols-2 xl:grid-cols-[16rem_16rem_minmax(0,1fr)]', false)
             ->assertSee('window.renderAnalyticsVolumeCharts();', false)
             ->assertDontSee('Common subjects')
             ->assertDontSee('Top 5 categories')
@@ -89,13 +94,13 @@ class AnalyticsDashboardTest extends TestCase
         $response = $this->actingAs($admin)->get(route('admin.analytics.index'))->assertOk();
         foreach ([
             'Overview',
-            'Staff performance',
+            'Recipient performance',
             'Students and feedback',
             'No ticket volume data in this period.',
             'No category totals in this period.',
             'No outcome data in this period.',
             'No tickets in this period.',
-            'No staff performance data in this period.',
+            'No recipient performance data in this period.',
             'No college breakdown data in this period.',
             'No ticket origin data in this period.',
             'No satisfaction ratings in this period.',

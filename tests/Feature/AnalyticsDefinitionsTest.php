@@ -292,7 +292,7 @@ class AnalyticsDefinitionsTest extends TestCase
             'filters' => [],
             'sections' => ['performance'],
         ])->render();
-        $this->assertStringContainsString('Staff and Office Performance', $performanceReport);
+        $this->assertStringContainsString('Recipient and Office Performance', $performanceReport);
         $this->assertStringNotContainsString('First staff reply', $performanceReport);
         $this->assertStringContainsString('Not tracked per handler', $performanceReport);
         $this->assertStringContainsString('Not enough data', $performanceReport);
@@ -316,7 +316,7 @@ class AnalyticsDefinitionsTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.analytics.index'))
             ->assertOk()
-            ->assertSee('Staff performance')
+            ->assertSee('Recipient performance')
             ->assertDontSee('First staff reply')
             ->assertDontSee('Escalations are counted by category and level, not per handler.')
             ->assertDontSee('Averages from very few tickets are not reliable; see the count in brackets.')

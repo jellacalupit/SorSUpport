@@ -709,6 +709,12 @@
                                 nextMain
                             );
 
+                            // Page scripts can depend on Alpine having revealed newly inserted
+                            // content. Give those widgets one more frame after AJAX navigation.
+                            requestAnimationFrame(() => {
+                                window.renderAnalyticsVolumeCharts?.();
+                            });
+
                             if (
                                 currentNavigationRequest ===
                                 navigationRequest

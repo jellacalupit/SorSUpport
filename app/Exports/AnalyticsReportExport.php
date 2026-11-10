@@ -74,7 +74,7 @@ class AnalyticsReportExport implements FromArray, WithHeadings, ShouldAutoSize
 
         $performance = $this->reportData['performance_metrics'] ?? [];
         $rows[] = [];
-        $rows[] = ['Staff and Office Performance'];
+        $rows[] = ['Recipient and Office Performance'];
         $rows[] = ['Measure', 'Average days', 'Median days', 'Tickets'];
         foreach ([
             'Review time' => 'review_time',

@@ -311,8 +311,18 @@ Route::middleware(['auth', 'active.user', 'force.password', 'role:sds_admin'])
                 $query->whereDate('created_at', '<=', $request->input('to'));
             }
 
-            $auditLogs = $query->paginate(15)->appends($request->query());
-            $auditLogs->setCollection(\App\Models\AuditLog::groupLegacyCalendarRanges($auditLogs->getCollection()));
+            // Group old per-day calendar range rows before paginating so every full page still
+            // contains 15 visible audit events rather than 15 raw rows that later collapse.
+            $groupedAuditLogs = \App\Models\AuditLog::groupLegacyCalendarRanges($query->get());
+            $page = max(1, $request->integer('page', 1));
+            $perPage = 15;
+            $auditLogs = (new \Illuminate\Pagination\LengthAwarePaginator(
+                $groupedAuditLogs->forPage($page, $perPage)->values(),
+                $groupedAuditLogs->count(),
+                $perPage,
+                $page,
+                ['path' => $request->url(), 'pageName' => 'page'],
+            ))->appends($request->except('page'));
             $actions = \App\Models\AuditLog::query()->select('action')->distinct()->orderBy('action')->pluck('action');
 
             return view('admin.audit', compact('auditLogs', 'actions'));
