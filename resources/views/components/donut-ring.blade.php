@@ -53,7 +53,8 @@
                     pathLength="100"
                     fill="none"
                     stroke="white"
-                    stroke-width="{{ $strokeWidth + 4 }}"
+                    stroke-width="{{ $strokeWidth + 6 }}"
+                    stroke-linecap="round"
                     transform="translate(100 0) scale(-1 1) rotate(-90 50 50)"
                 />
             </mask>
