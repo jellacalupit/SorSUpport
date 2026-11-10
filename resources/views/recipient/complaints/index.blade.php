@@ -9,7 +9,7 @@
                 </div>
 
                 @php
-                    $statusLabels = ['' => 'All status'] + \Illuminate\Support\Arr::except(\App\Models\Ticket::STATUS_LABELS, ['submitted', 'needs_clarification']);
+                    $statusLabels = ['' => 'All status'] + \Illuminate\Support\Arr::except(\App\Models\Ticket::DISPLAY_STATUS_LABELS, ['submitted', 'needs_clarification']);
                     $sortLabels = ['newest' => 'Sort by newest date', 'oldest' => 'Sort by oldest date'];
                     $selectedStatus = request('status_filter', '');
                     $selectedSort = request('sort', 'newest');

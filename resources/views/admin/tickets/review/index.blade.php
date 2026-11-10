@@ -104,7 +104,11 @@
                                 </td>
                                 <td class="hidden break-words px-2 py-2 sm:px-3 lg:table-cell {{ $isUnread ? 'text-black' : 'text-muted-foreground' }}">{{ $ticket->complaint->category->name ?? 'Uncategorized' }}</td>
                                 <td class="hidden px-2 py-2 sm:px-3 lg:table-cell {{ $isUnread ? 'text-black' : 'text-muted-foreground' }}">
-                                    <x-status-badge :status="ucwords(str_replace(['_', '-'], ' ', $ticket->status))" :show-icon="false" class="px-2 py-0.5 text-[10px]" />
+                                    @if ($ticket->displayStatus())
+                                        <x-status-badge :status="$ticket->displayStatus()" :show-icon="false" class="px-2 py-0.5 text-[10px]" />
+                                    @else
+                                        -
+                                    @endif
                                 </td>
                                 @php
                                     $holderUser = $ticket->currentHandler ?? $ticket->assignee ?? Auth::user();

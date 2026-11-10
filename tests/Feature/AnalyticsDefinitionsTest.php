@@ -51,10 +51,13 @@ class AnalyticsDefinitionsTest extends TestCase
         $this->category = ComplaintCategory::create(['name' => 'Student Services', 'is_active' => true]);
     }
 
-    public function test_forwarded_informational_tickets_have_their_own_balanced_status_bucket_and_filter(): void
+    public function test_status_counts_and_exports_include_only_needs_resolution_and_unclassified_tickets(): void
     {
         $submitted = $this->ticket(Ticket::STATUS_SUBMITTED, [
             'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+        ]);
+        $unclassified = $this->ticket(Ticket::STATUS_NEEDS_CLARIFICATION, [
+            'classification' => null,
         ]);
         $forwarded = $this->ticket(Ticket::STATUS_SUBMITTED, [
             'classification' => Ticket::CLASSIFICATION_INFORMATIONAL,
@@ -67,29 +70,50 @@ class AnalyticsDefinitionsTest extends TestCase
         $counts = $analytics->getTotalTicketsByStatus();
 
         $this->assertSame(1, $counts[Ticket::STATUS_SUBMITTED]);
-        $this->assertSame(1, $counts[AnalyticsService::FORWARDED_INFORMATION_STATUS]);
-        $this->assertSame($analytics->getTotalTickets(), array_sum($counts));
+        $this->assertSame(1, $counts[Ticket::STATUS_NEEDS_CLARIFICATION]);
+        $this->assertArrayNotHasKey('forwarded_for_information', $counts);
+        $this->assertSame(2, array_sum($counts));
         $statusChart = $analytics->getActiveTicketStatuses();
-        $this->assertContains(AnalyticsService::FORWARDED_INFORMATION_LABEL, $statusChart['labels']);
-        $this->assertSame($analytics->getTotalTickets(), array_sum($statusChart['data']));
-        $this->assertSame(1, $analytics->getTotalTickets(['status' => Ticket::STATUS_SUBMITTED]));
-        $this->assertSame(1, $analytics->getTotalTickets(['status' => AnalyticsService::FORWARDED_INFORMATION_STATUS]));
+        $this->assertSame(array_values(Ticket::DISPLAY_STATUS_LABELS), $statusChart['labels']);
+        $this->assertSame(2, array_sum($statusChart['data']));
+        $this->assertSame(1, $analytics->getTotalTickets([
+            'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+            'status' => Ticket::STATUS_SUBMITTED,
+        ]));
+        $this->assertSame(1, $analytics->getTotalTickets([
+            'classification' => 'unclassified',
+            'status' => Ticket::STATUS_NEEDS_CLARIFICATION,
+        ]));
         $this->assertSame(1, $analytics->getTotalTickets(['recipient_id' => $this->recipientUser->id]));
         $this->assertSame(1, $analytics->getTotalTickets(['unit' => 'Registrar Office']));
 
         $dashboard = $analytics->getDashboardData();
         $this->assertSame(1, $dashboard['statusCounts']['Submitted']);
-        $this->assertSame(1, $dashboard['statusCounts'][AnalyticsService::FORWARDED_INFORMATION_LABEL]);
+        $this->assertSame(1, $dashboard['statusCounts']['In review']);
+        $this->assertArrayNotHasKey('Forwarded for information', $dashboard['statusCounts']);
+        $this->assertSame(2, $dashboard['openCount']);
+
+        $report = $analytics->getReportData();
+        $this->assertSame(array_values(Ticket::DISPLAY_STATUS_LABELS), $report['status_distribution']['labels']);
+        $this->assertSame(2, array_sum($report['status_distribution']['data']));
+        $excelRows = (new AnalyticsReportExport($report))->array();
+        $statusSectionIndex = array_search(['Active Ticket Status Counts'], $excelRows, true);
+        $this->assertNotFalse($statusSectionIndex);
+        $excelStatusRows = array_slice($excelRows, $statusSectionIndex + 1, count(Ticket::DISPLAY_STATUS_LABELS));
+        $this->assertSame('Submitted', $excelStatusRows[0][0]);
+        $this->assertSame(1, $excelStatusRows[0][1]);
+        $this->assertNotContains('Forwarded for information', array_column($excelStatusRows, 0));
 
         $admin = User::factory()->create(['role' => User::ROLE_SDS_ADMIN]);
-        $this->actingAs($admin)
+        $response = $this->actingAs($admin)
             ->get(route('admin.analytics.index'))
-            ->assertOk()
-            ->assertSee(AnalyticsService::FORWARDED_INFORMATION_LABEL)
-            ->assertSee('data-value="'.AnalyticsService::FORWARDED_INFORMATION_STATUS.'"', false);
+            ->assertOk();
+        $response->assertDontSee('Forwarded for information')
+            ->assertSee('In review');
 
         $this->assertSame(Ticket::STATUS_SUBMITTED, $forwarded->fresh()->status);
         $this->assertSame(Ticket::STATUS_SUBMITTED, $submitted->fresh()->status);
+        $this->assertSame(Ticket::STATUS_NEEDS_CLARIFICATION, $unclassified->fresh()->status);
     }
 
     public function test_resolution_rate_counts_only_recorded_resolutions_and_excludes_all_nonresolution_closures(): void
@@ -289,7 +313,10 @@ class AnalyticsDefinitionsTest extends TestCase
         $this->assertTrue($excelRows->contains(fn ($row) => str_contains($row, 'Not tracked per handler')));
         $this->assertTrue($excelRows->contains(fn ($row) => str_contains($row, 'Not enough data')));
 
-        $reviewOnly = $analytics->getReportData(['status' => Ticket::STATUS_SUBMITTED]);
+        $reviewOnly = $analytics->getReportData([
+            'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+            'status' => Ticket::STATUS_SUBMITTED,
+        ]);
         $this->assertSame(1, $reviewOnly['performance_metrics']['review_time']['sample_count']);
         $this->assertSame(0, $reviewOnly['performance_metrics']['resolved_ticket_count']);
 

@@ -132,7 +132,7 @@ Validation and system rules:
 - Referral notes are visible to SDS only. Notes are free text, so SDS should not copy identifying details from a complaint into them.
 - The audit search avoids matching performer names on anonymous complaints. Email audit messages refer to an anonymous submitter as “the student,” not by address.
 - The student ticket page shows a timeline using only the actions in the student notification action set and excludes the student's own `message_posted` events. It displays plain-language labels and timestamps, never audit details; email events and staff-only actions are excluded. “Last updated” is the latest timestamp from that same set, rather than the ticket's general `updated_at` value.
-- The student ticket page also shows the current office/unit and status guidance: waiting for SDS review, waiting for the student's reply, awaiting office acknowledgment, in handling, escalated, referred, resolved response window, or the closure result. A forwarded informational ticket uses the “Forwarded for information” label and receiving office/date. These are status descriptions, not staff deadlines. Display dates use `config('app.timezone')`.
+- The student ticket page also shows the current office/unit and status guidance: waiting for SDS review, waiting for the student's reply, awaiting office acknowledgment, in handling, escalated, referred, resolved response window, or the closure result. Informational and invalid tickets have no displayed status; their outcome labels are “Forwarded for information” (with receiving office/date where already shown), “Recorded for information,” and “Not accepted.” These are status descriptions, not staff deadlines. Display dates use `config('app.timezone')`.
 
 ### Attachments
 
@@ -155,7 +155,7 @@ During SDS review, a ticket may be classified as:
 
 Jurisdiction is `sds` or `recipient`. Classification does not itself assign a recipient. SDS may handle a ticket directly, assign it to a recipient, retain an informational item, or forward an informational item.
 
-When SDS forwards an informational ticket without closing it, it remains stored as `submitted`, with `classification=informational`, `jurisdiction=recipient`, the receiving recipient ID in `forwarded_to`, and the forwarding time in `forwarded_at`. Students and the receiving recipient see “Forwarded for information,” the receiving office, and the date; on the recipient page the notice says no reply or action is needed. This ticket is not in the SDS awaiting-review queue and does not receive a Submitted reminder. The stored status and ticket-workflow status filters remain Submitted; analytics status counts, charts, and the analytics status filter show a separate “Forwarded for information” bucket. Analytics recipient and unit filters include the receiving office. SDS retains the decision to close it. Retained and already-closed informational tickets keep their existing Closed display.
+When SDS forwards an informational ticket without closing it, it remains stored as `submitted`, with `classification=informational`, `jurisdiction=recipient`, the receiving recipient ID in `forwarded_to`, and the forwarding time in `forwarded_at`. Students and the receiving recipient see “Forwarded for information,” the receiving office, and the date; on the recipient page the notice says no reply or action is needed. Other informational tickets show “Recorded for information,” and invalid tickets show “Not accepted” to students and recipients. These are outcome labels, not statuses. This ticket is not in the SDS awaiting-review queue and does not receive a Submitted reminder. Student and recipient status filters continue to filter the stored status values and retain their existing options and behavior. Analytics recipient and unit filters include the receiving office. SDS retains the decision to close it.
 
 Before classification, an administrator can correct the category and suggested recipient. An initial recipient assignment must be configured for that category through its assigned recipient, suggested recipients, escalation hierarchy, or the student's suggested recipient.
 
@@ -167,16 +167,18 @@ Informal settlement, parent or guardian notification, hearings, and sanctions ha
 
 ### Status definitions
 
-| Status | Meaning |
-|---|---|
-| `submitted` | New complaint waiting for SDS review, or returned to the review queue after the student provides clarification. |
-| `needs_clarification` | SDS asked the student for more information. |
-| `assigned` | A handler has been chosen but has not acknowledged the assignment. |
-| `in_progress` | The SDS handler or recipient has acknowledged the ticket and is working on it. |
-| `escalated` | SDS moved the ticket to another configured handler level. |
-| `referred` | SDS sent the case to an external committee/board and is waiting to record the outcome. |
-| `resolved` | A resolution or committee outcome was recorded; the student may accept it or ask for further action. |
-| `closed` | Ticket is finished, withdrawn, informationally retained/forwarded, invalid, or closed for another recorded reason. |
+Stored status values, the transition map, and workflow actions are unchanged. Display status depends on classification: Needs Resolution tickets display any of the eight labels below; Unclassified tickets display only Submitted or In review; Informational and Invalid tickets have no displayed status. Informational and Invalid tickets use outcome labels where a student or recipient status badge would appear: “Forwarded for information” for a forwarded informational ticket, “Recorded for information” for other informational tickets, and “Not accepted” for invalid tickets. SDS All Tickets and analytics status dropdowns are disabled until classification is Needs Resolution or Unclassified. Needs Resolution offers all eight labels; Unclassified offers only Submitted and In review. Dropdown values remain stored statuses (`In review` filters `needs_clarification`), and changing classification clears the selected status.
+
+| Stored status | Display status | Meaning |
+|---|---|---|
+| `submitted` | Submitted | New complaint waiting for SDS review, or returned to the review queue after the student provides clarification. |
+| `needs_clarification` | In review | SDS asked the student for more information. |
+| `assigned` | Assigned | A handler has been chosen but has not acknowledged the assignment. |
+| `in_progress` | In progress | The SDS handler or recipient has acknowledged the ticket and is working on it. |
+| `escalated` | Escalated | SDS moved the ticket to another configured handler level. |
+| `referred` | Referred | SDS sent the case to an external committee/board and is waiting to record the outcome. |
+| `resolved` | Resolved | A resolution or committee outcome was recorded; the student may accept it or ask for further action. |
+| `closed` | Closed | Ticket is finished, withdrawn, informationally retained/forwarded, invalid, or closed for another recorded reason. |
 
 The complaint's `status` is synchronized with its ticket's status. Ticket status changes are also guarded by the model transition map; illegal transitions raise a domain exception.
 
@@ -371,7 +373,7 @@ The dashboard uses four tabs: Overview (monthly ticket volume, statuses, top cat
 
 Dashboard KPI definitions:
 
-- **Total tickets:** all tickets matching the selected filters; “open now” is the filtered active-ticket count.
+- **Total tickets:** all tickets matching the selected filters; “open now” retains the existing set of non-finished statuses (`submitted`, `needs_clarification`, `assigned`, `in_progress`, `escalated`, `referred`) but counts only Needs Resolution and Unclassified tickets.
 - **Resolution rate:** recorded resolutions divided by eligible needs-resolution tickets. A recorded resolution is status Resolved or Closed with `resolved` / `resolved_accepted`; closed withdrawn, duplicate, out-of-scope, invalid, and no-response tickets are excluded and itemized.
 - **Active handling time:** median and average calendar days from complaint submission to recorded resolution, subtracting clarification-request-to-student-reply and referral-to-recorded-outcome waits when the intervals can be determined. Missing or inconsistent intervals use full elapsed time and are included in the fallback count. Committee referral outcomes appear separately.
 - **First staff reply (SDS or recipient):** median calendar time from submission to the first thread message from any SDS admin or recipient.
@@ -384,9 +386,9 @@ The staff and office table shows open-ticket count, oldest open age, median ackn
 
 The dashboard also shows status counts, ticket volume by month, top categories/offices, resolution and closure outcomes, identified/anonymous origin, and college/program/year-level/block distributions. Hidden identities are labeled “Not disclosed” where applicable. Sensitive-category tickets remain in totals and category distribution but are excluded from student-attribute rows; one “Sensitive categories (not broken down)” count is shown. No ticket subjects, descriptions, or personnel-involved text appear on the dashboard.
 
-Complaint date/category filters apply through the complaint relation. Ticket filters additionally apply status, classification, handler user ID, and handler unit; the analytics recipient/unit filters also match the recipient recorded in `forwarded_to` for forwarded informational tickets. Performance metrics and tables use the same filtered ticket set. Resolution timing uses calendar time, not business days. Hidden-identity and sensitive-ticket handling is unchanged: analytics uses disclosed-origin labels and never lists ticket subjects.
+Complaint date/category filters apply through the complaint relation. Ticket filters additionally apply status, classification, handler user ID, and handler unit. Status filtering is available only with Needs Resolution or Unclassified classification; Unclassified is stored as a null classification and offers only `submitted` and `needs_clarification`. Informational and invalid tickets are excluded from dashboard and export status counts; there is no “Forwarded for information” status bucket. The recipient/unit filters also match the recipient recorded in `forwarded_to` for forwarded informational tickets. Performance metrics and tables use the same filtered ticket set. Resolution timing uses calendar time, not business days. Hidden-identity and sensitive-ticket handling is unchanged: analytics uses disclosed-origin labels and never lists ticket subjects.
 
-PDF export can include selected sections: summary, category, resolution rate/time, escalation by month, status, college, program, year level, block, identified/anonymous origin, resolution type, closure reason, escalation levels, and satisfaction. Student-attribute tables separate sensitive-category counts instead of exposing their attributes. PDF and Excel exports contain no ticket subjects, descriptions, or personnel-involved text. At least one PDF section must be selected. A direct export with no `sections` parameter includes all sections. Excel export uses the report data and exports the available report tables. Filenames include the current timestamp.
+PDF export can include selected sections: summary, category, resolution rate/time, escalation by month, status, college, program, year level, block, identified/anonymous origin, resolution type, closure reason, escalation levels, and satisfaction. Status sections in both PDF and Excel use the shared analytics status counts, include only Needs Resolution and Unclassified tickets, and contain no “Forwarded for information” status. Student-attribute tables separate sensitive-category counts instead of exposing their attributes. PDF and Excel exports contain no ticket subjects, descriptions, or personnel-involved text. At least one PDF section must be selected. A direct export with no `sections` parameter includes all sections. Excel export uses the report data and exports the available report tables. Filenames include the current timestamp.
 
 ## 10. Route and page map
 
@@ -487,7 +489,7 @@ The primary records and their responsibilities:
 | `SystemSetting` | Admin-overridable key/value settings, including reminders. |
 | `AnalyticsReport` | Report generator/metadata record. |
 
-Key `Ticket` computed behavior includes status/resolution/closure display labels, status-transition checks, awaiting-review/active/conversation state predicates, calendar-aware working days open, last non-email action time, further-action deadline, and rating eligibility. `Complaint` provides attachment metadata/URLs, sensitive public subject, anonymous display name, submitter ownership, conflict-name matching, and reference-number generation.
+Key `Ticket` computed behavior includes stored-status labels, classification-aware display status and outcome labels, status-transition checks, awaiting-review/active/conversation state predicates, calendar-aware working days open, last non-email action time, further-action deadline, and rating eligibility. `Complaint` provides attachment metadata/URLs, sensitive public subject, anonymous display name, submitter ownership, conflict-name matching, and reference-number generation.
 
 ## 12. Service and controller responsibilities
 

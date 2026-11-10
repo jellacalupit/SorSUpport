@@ -11,6 +11,22 @@
             'className' => 'bg-amber-100 text-amber-800',
             'icon' => 'alert-triangle',
         ],
+        'In Review' => [
+            'className' => 'bg-amber-100 text-amber-800',
+            'icon' => 'alert-triangle',
+        ],
+        'Forwarded For Information' => [
+            'className' => 'bg-orange-100 text-orange-800',
+            'icon' => 'arrow-right',
+        ],
+        'Recorded For Information' => [
+            'className' => 'bg-gray-100 text-gray-700',
+            'icon' => 'info',
+        ],
+        'Not Accepted' => [
+            'className' => 'bg-gray-200 text-gray-700',
+            'icon' => 'lock',
+        ],
         'Referred' => [
             'className' => 'bg-purple-100 text-purple-800',
             'icon' => 'loader2',

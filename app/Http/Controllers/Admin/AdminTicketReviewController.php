@@ -57,7 +57,7 @@ class AdminTicketReviewController extends Controller
                     $complaint?->filerNameFor(Auth::user()),
                     $handler?->display_name,
                     $handler?->recipient?->unit,
-                    $ticket->status_label,
+                    $ticket->displayStatus(),
                 ];
 
                 return collect($searchable)->contains(
@@ -84,7 +84,7 @@ class AdminTicketReviewController extends Controller
         return view('admin.tickets.needs-attention', [
             'tickets' => $tickets,
             'categories' => \App\Models\ComplaintCategory::query()->orderBy('name')->get(),
-            'statuses' => collect(Ticket::STATUS_LABELS)->except([Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED]),
+            'statuses' => collect(Ticket::DISPLAY_STATUS_LABELS)->except([Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED]),
         ]);
     }
 

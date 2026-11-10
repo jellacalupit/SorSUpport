@@ -81,12 +81,31 @@ class AdminComplaintController extends Controller
             $query->whereHas('ticket.currentHandler', fn ($handler) => $handler->where('name', 'like', '%' . $holder . '%'));
         }
 
-        if ($request->filled('classification_filter')) {
-            $query->whereHas('ticket', fn ($ticketQuery) => $ticketQuery->where('classification', $request->input('classification_filter')));
+        $classificationFilter = $request->input('classification_filter');
+        if (filled($classificationFilter)) {
+            $query->whereHas('ticket', function ($ticketQuery) use ($classificationFilter): void {
+                if ($classificationFilter === 'unclassified') {
+                    $ticketQuery->whereNull('classification');
+                } else {
+                    $ticketQuery->where('classification', $classificationFilter);
+                }
+            });
         }
 
-        if ($request->filled('status_filter')) {
-            $query->whereHas('ticket', fn ($ticketQuery) => $ticketQuery->where('status', $request->input('status_filter')));
+        $statusFilter = $request->input('status_filter');
+        if (filled($statusFilter) && in_array($classificationFilter, [
+            Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+            'unclassified',
+        ], true)) {
+            $allowedStatuses = $classificationFilter === 'unclassified'
+                ? Ticket::UNCLASSIFIED_DISPLAY_STATUSES
+                : array_keys(Ticket::DISPLAY_STATUS_LABELS);
+
+            if (in_array($statusFilter, $allowedStatuses, true)) {
+                $query->whereHas('ticket', fn ($ticketQuery) => $ticketQuery->where('status', $statusFilter));
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
 
         $sort = $request->input('sort', 'latest_update');

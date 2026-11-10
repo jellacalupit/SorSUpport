@@ -15,10 +15,6 @@ use Illuminate\Support\Collection;
 
 class AnalyticsService
 {
-    public const FORWARDED_INFORMATION_STATUS = 'forwarded_for_information';
-
-    public const FORWARDED_INFORMATION_LABEL = 'Forwarded for information';
-
     public function getTotalComplaints(array $filters = []): int
     {
         return $this->filterComplaints(Complaint::query(), $filters)->count();
@@ -131,9 +127,7 @@ class AnalyticsService
         $statusCounts = $this->getTotalTicketsByStatus($filters);
 
         return [
-            'labels' => array_map(fn ($status) => $status === self::FORWARDED_INFORMATION_STATUS
-                ? self::FORWARDED_INFORMATION_LABEL
-                : (Ticket::STATUS_LABELS[$status] ?? ucfirst(str_replace('_', ' ', $status))), array_keys($statusCounts)),
+            'labels' => array_values(Ticket::DISPLAY_STATUS_LABELS),
             'data' => array_values($statusCounts),
         ];
     }
@@ -206,7 +200,12 @@ class AnalyticsService
         $identified = $tickets->filter(fn ($ticket) => ! $ticket->complaint?->is_anonymous)->count();
         $subjects = $tickets->groupBy(fn ($ticket) => $ticket->complaint?->public_subject ?? 'Untitled')->map->count()->sortDesc()->take(10);
         $openStatuses = [Ticket::STATUS_SUBMITTED, Ticket::STATUS_NEEDS_CLARIFICATION, Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED, Ticket::STATUS_REFERRED];
-        $openTickets = $tickets->whereIn('status', $openStatuses);
+        $openTickets = $tickets
+            ->whereIn('status', $openStatuses)
+            ->filter(fn ($ticket) => in_array($ticket->classification, [
+                Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+                null,
+            ], true));
         $unitRows = $tickets
             ->groupBy(function ($ticket) {
                 $handler = $ticket->assignee ?? $ticket->currentHandler;
@@ -353,23 +352,21 @@ class AnalyticsService
 
     protected function statusCountsForTickets(Collection $tickets): array
     {
-        $counts = $tickets->groupBy('status')->map->count();
-        $forwarded = $tickets->filter(fn ($ticket) => $ticket->isForwardedInformational())->count();
+        $counts = $tickets
+            ->filter(fn ($ticket) => $ticket->displayStatus() !== null)
+            ->groupBy('status')
+            ->map
+            ->count();
 
-        $counts[Ticket::STATUS_SUBMITTED] = max(($counts[Ticket::STATUS_SUBMITTED] ?? 0) - $forwarded, 0);
-        $counts[self::FORWARDED_INFORMATION_STATUS] = $forwarded;
-
-        return collect(array_keys(Ticket::STATUS_LABELS))
+        return collect(array_keys(Ticket::DISPLAY_STATUS_LABELS))
             ->mapWithKeys(fn ($status) => [$status => $counts[$status] ?? 0])
-            ->put(self::FORWARDED_INFORMATION_STATUS, $forwarded)
             ->all();
     }
 
     protected function labelledStatusCounts(array $statusCounts): array
     {
-        return collect(Ticket::STATUS_LABELS)
+        return collect(Ticket::DISPLAY_STATUS_LABELS)
             ->mapWithKeys(fn ($label, $status) => [$label => $statusCounts[$status] ?? 0])
-            ->put(self::FORWARDED_INFORMATION_LABEL, $statusCounts[self::FORWARDED_INFORMATION_STATUS] ?? 0)
             ->all();
     }
 
@@ -945,19 +942,16 @@ class AnalyticsService
     {
         $query->whereHas('complaint', fn ($complaint) => $this->applyComplaintFilters($complaint, $filters));
 
-        if (filled($filters['status'] ?? null)) {
-            if ($filters['status'] === self::FORWARDED_INFORMATION_STATUS) {
-                $query->where('status', Ticket::STATUS_SUBMITTED)
-                    ->where('classification', Ticket::CLASSIFICATION_INFORMATIONAL)
-                    ->whereNotNull('forwarded_to')
-                    ->whereNotNull('forwarded_at');
-            } elseif ($filters['status'] === Ticket::STATUS_SUBMITTED) {
-                $query->where('status', Ticket::STATUS_SUBMITTED)
-                    ->where(fn ($tickets) => $tickets
-                        ->where('classification', '!=', Ticket::CLASSIFICATION_INFORMATIONAL)
-                        ->orWhereNull('classification')
-                        ->orWhereNull('forwarded_to')
-                        ->orWhereNull('forwarded_at'));
+        $classification = $filters['classification'] ?? null;
+        $statusFilterEnabled = in_array($classification, [
+            Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+            'unclassified',
+        ], true);
+
+        if ($statusFilterEnabled && filled($filters['status'] ?? null)) {
+            if ($classification === 'unclassified'
+                && ! in_array($filters['status'], Ticket::UNCLASSIFIED_DISPLAY_STATUSES, true)) {
+                $query->whereRaw('1 = 0');
             } else {
                 $query->where('status', $filters['status']);
             }
@@ -971,7 +965,11 @@ class AnalyticsService
         }
 
         if (filled($filters['classification'] ?? null)) {
-            $query->where('classification', $filters['classification']);
+            if ($filters['classification'] === 'unclassified') {
+                $query->whereNull('classification');
+            } else {
+                $query->where('classification', $filters['classification']);
+            }
         }
 
         if (filled($filters['unit'] ?? null)) {

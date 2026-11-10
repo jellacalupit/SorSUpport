@@ -47,14 +47,16 @@
     // Get status from ticket if available, otherwise from complaint
     $status = $ticket ? $ticket->status : $item->status;
     $statusDisplay = $ticket
-        ? $ticket->status_label
-        : (\App\Models\Ticket::STATUS_LABELS[$status] ?? 'Submitted');
+        ? $ticket->displayStatus()
+        : (\App\Models\Ticket::DISPLAY_STATUS_LABELS[$status] ?? null);
     $classification = $ticket?->classification;
+    $outcomeDisplay = $ticket?->outcomeLabel();
     $subjectDisplay = $role === 'student'
         ? ($complaint?->subject_title ?? 'Untitled')
         : ($complaint?->public_subject ?? 'Untitled');
     $showForwardedInformational = $role !== 'admin' && $ticket?->isForwardedInformational();
-    $statusDisplay = $showForwardedInformational ? 'Forwarded for information' : $statusDisplay;
+    $showOutcome = $role !== 'admin' && $statusDisplay === null && $outcomeDisplay !== null;
+    $statusDisplay = $showOutcome ? $outcomeDisplay : $statusDisplay;
     $radiusClass = match (true) {
         $first && $last => 'rounded-xl',
         $first => 'rounded-t-xl rounded-b-none',
@@ -99,7 +101,9 @@
                     @endif
                 </span>
             </p>
-            <x-status-badge :status="$statusDisplay" :classification="$classification" :show-icon="false" class="{{ $showForwardedInformational ? 'max-w-40' : 'max-w-28' }} truncate px-2 py-0 text-[10px]" />
+            @if ($statusDisplay !== null)
+                <x-status-badge :status="$statusDisplay" :classification="$classification" :show-icon="false" class="{{ $showForwardedInformational || $showOutcome ? 'max-w-40' : 'max-w-28' }} truncate px-2 py-0 text-[10px]" />
+            @endif
         </div>
         @if ($showForwardedInformational)
             <p class="text-[10px] text-muted-foreground">

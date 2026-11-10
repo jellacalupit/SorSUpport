@@ -33,9 +33,11 @@
             ?? $ticket->assignee
             ?? $complaint?->category?->recipient?->user));
     $holderDisplayName = $holder?->table_name ?? '—';
+    $viewer = \Illuminate\Support\Facades\Auth::user();
     $showForwardedInformational = $ticket->isForwardedInformational()
-        && (\Illuminate\Support\Facades\Auth::user()?->isStudent() || \Illuminate\Support\Facades\Auth::user()?->isRecipient());
-    $statusDisplay = $showForwardedInformational ? 'Forwarded for information' : $ticket->status_label;
+        && ($viewer?->isStudent() || $viewer?->isRecipient());
+    $statusDisplay = $ticket->displayStatus()
+        ?? (($viewer?->isStudent() || $viewer?->isRecipient()) ? $ticket->outcomeLabel() : null);
     $forwardedOffice = $showForwardedInformational ? $ticket->forwardedRecipient?->unit : null;
     $forwardedDate = $showForwardedInformational
         ? $ticket->forwarded_at?->copy()->setTimezone($displayTimezone)->format('M d, Y')
@@ -97,7 +99,9 @@
             </span>
         </p>
         <div class="flex shrink-0 flex-col items-end gap-1">
-            <x-status-badge :status="$statusDisplay" :classification="$ticket->classification" :show-icon="false" class="px-3 py-1 text-xs" />
+            @if ($statusDisplay !== null)
+                <x-status-badge :status="$statusDisplay" :classification="$ticket->classification" :show-icon="false" class="px-3 py-1 text-xs" />
+            @endif
             @if ($showForwardedInformational)
                 <p class="text-right text-[10px] text-muted-foreground">
                     {{ $forwardedOffice ?: 'Receiving office' }} · {{ $forwardedDate }}
@@ -174,10 +178,12 @@
                 <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Current office</p>
                 <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $currentOffice }}</p>
             </div>
-            <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Waiting for</p>
-                <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $waitingFor }}</p>
-            </div>
+            @if ($ticket->displayStatus() !== null)
+                <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+                    <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Waiting for</p>
+                    <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $waitingFor }}</p>
+                </div>
+            @endif
         @endif
         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
             <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Created At</p>

@@ -208,7 +208,7 @@ class TicketWorkflowTest extends TestCase
         $this->actingAs($this->student)
             ->get(route('student.complaints.show', $ticket->complaint))
             ->assertOk()
-            ->assertSee('Needs Clarification')
+            ->assertSee('In review')
             ->assertSee('The SDS Office needs more details')
             ->assertSee('Which semester is this about?');
 
@@ -1320,20 +1320,21 @@ class TicketWorkflowTest extends TestCase
             $ticket = $this->ticket($status, $status === Ticket::STATUS_CLOSED ? ['closure_type' => Ticket::CLOSURE_RESOLVED, 'closed_at' => now()] : []);
             $complaint = $ticket->complaint;
 
-            $this->actingAs($this->student)->get(route('student.complaints.show', $complaint))->assertOk()->assertSee($label);
-            $this->actingAs($this->admin)->get(route('admin.complaints.show', $complaint))->assertOk()->assertSee($label);
+            $displayLabel = $ticket->displayStatus();
+            $this->actingAs($this->student)->get(route('student.complaints.show', $complaint))->assertOk()->assertSee($displayLabel);
+            $this->actingAs($this->admin)->get(route('admin.complaints.show', $complaint))->assertOk()->assertSee($displayLabel);
 
             if (! $ticket->isAwaitingReview()) {
-                $this->actingAs($this->handler)->get(route('recipient.complaints.show', $complaint))->assertOk()->assertSee($label);
+                $this->actingAs($this->handler)->get(route('recipient.complaints.show', $complaint))->assertOk()->assertSee($displayLabel);
             }
         }
 
-        $this->actingAs($this->student)->get(route('student.complaints.index'))->assertOk()->assertSee('Needs Clarification')->assertSee('Referred');
+        $this->actingAs($this->student)->get(route('student.complaints.index'))->assertOk()->assertSee('In review')->assertSee('Referred');
         $this->actingAs($this->student)->get(route('student.dashboard'))->assertOk();
         $this->actingAs($this->handler)->get(route('recipient.tickets.index'))->assertOk()->assertSee('Referred');
         $this->actingAs($this->handler)->get(route('recipient.dashboard'))->assertOk();
         $this->actingAs($this->admin)->get(route('admin.tickets.review.index'))->assertOk()->assertSee('Ask for Details');
-        $this->actingAs($this->admin)->get(route('admin.complaints.index'))->assertOk()->assertSee('Needs Clarification');
+        $this->actingAs($this->admin)->get(route('admin.complaints.index'))->assertOk()->assertSee('In review');
         $this->actingAs($this->admin)->get(route('admin.dashboard'))->assertOk()->assertDontSee('Rejected');
         $this->actingAs($this->admin)->get('/admin/analytics')->assertOk();
     }

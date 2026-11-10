@@ -49,7 +49,7 @@ class AnalyticsController extends Controller
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'category_id' => ['nullable', 'exists:complaint_categories,id'],
             'classification' => ['nullable', 'in:needs_resolution,informational,invalid,unclassified'],
-            'status' => ['nullable', 'string'],
+            'status' => ['nullable', 'in:submitted,needs_clarification,assigned,in_progress,escalated,referred,resolved,closed'],
             'unit' => ['nullable', 'string', 'max:255'],
             'recipient_id' => ['nullable', 'exists:users,id'],
             'year' => ['nullable', 'integer', 'min:2020', 'max:2100'],
@@ -57,6 +57,7 @@ class AnalyticsController extends Controller
             'period' => ['nullable', 'in:all_time,this_month,last_month,last_3_months,this_year,custom_range'],
             'filter_month' => ['nullable', 'in:custom,1,2,3,4,5,6,7,8,9,10,11,12'],
         ]);
+        $filters = $this->keepEnabledStatusFilter($filters);
 
         $filters['period'] = $request->input('period', 'all_time');
         $filters['year'] = (int) ($request->input('year', $request->input('filter_year', now()->year)));
@@ -203,7 +204,7 @@ class AnalyticsController extends Controller
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'category_id' => ['nullable', 'exists:complaint_categories,id'],
             'classification' => ['nullable', 'in:needs_resolution,informational,invalid,unclassified'],
-            'status' => ['nullable', 'string'],
+            'status' => ['nullable', 'in:submitted,needs_clarification,assigned,in_progress,escalated,referred,resolved,closed'],
             'unit' => ['nullable', 'string', 'max:255'],
             'recipient_id' => ['nullable', 'exists:users,id'],
             'year' => ['nullable', 'integer', 'min:2020', 'max:2100'],
@@ -211,6 +212,7 @@ class AnalyticsController extends Controller
             'period' => ['nullable', 'in:all_time,this_month,last_month,last_3_months,this_year,custom_range'],
             'date_range' => ['nullable', 'string'],
         ]);
+        $filters = $this->keepEnabledStatusFilter($filters);
 
         $period = $request->input('period', $request->input('date_range', 'all_time'));
         $year = (int) $request->input('year', $request->input('filter_year', now()->year));
@@ -236,6 +238,22 @@ class AnalyticsController extends Controller
 
             $filters['start_date'] = $start->toDateString();
             $filters['end_date'] = $end->toDateString();
+        }
+
+        return $filters;
+    }
+
+    /**
+     * Status is a display filter only for Needs Resolution and Unclassified tickets.
+     */
+    protected function keepEnabledStatusFilter(array $filters): array
+    {
+        $classification = $filters['classification'] ?? null;
+        if (! in_array($classification, [\App\Models\Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'unclassified'], true)
+            || ($classification === 'unclassified'
+                && filled($filters['status'] ?? null)
+                && ! in_array($filters['status'], \App\Models\Ticket::UNCLASSIFIED_DISPLAY_STATUSES, true))) {
+            unset($filters['status']);
         }
 
         return $filters;

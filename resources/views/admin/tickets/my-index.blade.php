@@ -36,7 +36,7 @@
                     <div class="min-w-0 sm:flex sm:items-center sm:gap-2">
                         <label for="my-status" class="hidden shrink-0 text-sm font-medium sm:block">Filter by status</label>
                         @php
-                            $statusLabels = ['' => 'All'] + \Illuminate\Support\Arr::except(\App\Models\Ticket::STATUS_LABELS, ['submitted', 'needs_clarification']);
+                            $statusLabels = ['' => 'All'] + \Illuminate\Support\Arr::except(\App\Models\Ticket::DISPLAY_STATUS_LABELS, ['submitted', 'needs_clarification']);
                             $selectedStatus = $status ?? '';
                         @endphp
                         <details x-data="{}" class="group relative w-full sm:w-32 sm:shrink-0" x-on:click.outside="$el.removeAttribute('open')">
@@ -115,7 +115,7 @@
                                 $student = $ticket->complaint?->student;
                                 $studentUser = $student?->user;
                                 $studentTableName = $ticket->complaint?->is_anonymous ? 'Anonymous' : ($studentUser?->table_name ?? 'Anon');
-                                $statusDisplay = $ticket->status_label;
+                                $statusDisplay = $ticket->displayStatus();
                                 $classification = $ticket->classification ?? ($ticket->complaint?->is_anonymous ? 'anonymous' : null);
                                 $classificationLabel = $classification ? ucwords(str_replace('_', ' ', $classification)) : '—';
                                 $classificationColor = match ($classification) {
@@ -136,7 +136,7 @@
                                     <a href="{{ route('admin.complaints.show', $ticket->complaint) }}" data-my-ticket-link="ticket-{{ $ticket->id }}" class="block truncate hover:text-primary hover:underline">{{ $ticket->complaint?->subject_title ?? 'Untitled' }}</a>
                                 </td>
                                 <td class="hidden px-2 py-2 sm:px-3 lg:table-cell"><x-classification-badge :classification="$classification" class="text-[10px]" /></td>
-                                <td class="px-2 py-2 sm:px-3"><x-status-badge :status="$statusDisplay" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px]" /></td>
+                                <td class="px-2 py-2 sm:px-3">@if ($statusDisplay !== null)<x-status-badge :status="$statusDisplay" :classification="$ticket->classification" :show-icon="false" class="px-2 py-0.5 text-[11px]" />@else<span>-</span>@endif</td>
                                 <td class="hidden whitespace-nowrap px-2 py-2 sm:px-3 md:table-cell {{ $ticket->escalated_at ? 'font-semibold text-red-700' : 'text-muted-foreground' }}">{{ $ticket->escalated_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y') ?? '—' }}</td>
                                 <td class="hidden px-2 py-2 sm:px-3 xl:table-cell {{ $isUnread ? 'text-black' : 'text-muted-foreground' }}">
                                     <span class="relative inline-block" x-data="{ studentProfileOpen: false }" x-on:mouseenter="studentProfileOpen = true" x-on:mouseleave="studentProfileOpen = false">

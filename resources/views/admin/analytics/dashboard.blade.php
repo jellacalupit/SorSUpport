@@ -8,12 +8,15 @@
         $periodLabel = ($filters['start_date'] ?? null) || ($filters['end_date'] ?? null)
             ? ($formatDate($filters['start_date'] ?? null) ?? 'Start') . ' – ' . ($formatDate($filters['end_date'] ?? null) ?? 'Today')
             : 'All time';
+        $statusFilterClassification = $filters['classification'] ?? '';
+        $statusFilterEnabled = in_array($statusFilterClassification, [
+            \App\Models\Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+            'unclassified',
+        ], true);
         $activeFilters = collect([
             ($filters['category_id'] ?? null) ? $categoryOptions->firstWhere('id', $filters['category_id'])?->name : null,
             ($filters['classification'] ?? null) ? ucwords(str_replace('_', ' ', $filters['classification'])) : null,
-            ($filters['status'] ?? null) ? (($filters['status'] === \App\Services\AnalyticsService::FORWARDED_INFORMATION_STATUS)
-                ? \App\Services\AnalyticsService::FORWARDED_INFORMATION_LABEL
-                : ucwords(str_replace('_', ' ', $filters['status']))) : null,
+            ($filters['status'] ?? null) ? (\App\Models\Ticket::DISPLAY_STATUS_LABELS[$filters['status']] ?? ucfirst(str_replace('_', ' ', $filters['status']))) : null,
             $filters['unit'] ?? null,
         ])->filter()->values();
 
@@ -33,15 +36,25 @@
         ];
         $escalationMax = max(1, $escalationTotal);
         $statusCounts = $data['statusCounts'];
-        $statusSegments = [
-            ['label' => 'Submitted', 'count' => (int) ($statusCounts['Submitted'] ?? 0) + (int) ($statusCounts['Needs Clarification'] ?? 0), 'color' => '#7a1d2a'],
-            ['label' => 'Forwarded for information', 'count' => (int) ($statusCounts['Forwarded for information'] ?? 0), 'color' => '#c4785a'],
-            ['label' => 'In progress', 'count' => (int) ($statusCounts['Assigned'] ?? 0) + (int) ($statusCounts['In Progress'] ?? 0) + (int) ($statusCounts['Referred'] ?? 0), 'color' => '#64748b'],
-            ['label' => 'Escalated', 'count' => (int) ($statusCounts['Escalated'] ?? 0), 'color' => '#b45309'],
-            ['label' => 'Resolved', 'count' => (int) ($statusCounts['Resolved'] ?? 0), 'color' => '#15803d'],
-            ['label' => 'Closed', 'count' => (int) ($statusCounts['Closed'] ?? 0), 'color' => '#9ca3af'],
+        $statusColors = [
+            'submitted' => '#7a1d2a',
+            'needs_clarification' => '#b45309',
+            'assigned' => '#64748b',
+            'in_progress' => '#2563eb',
+            'escalated' => '#b91c1c',
+            'referred' => '#7c3aed',
+            'resolved' => '#15803d',
+            'closed' => '#9ca3af',
         ];
-        $statusMax = max(1, $total);
+        $statusSegments = collect(\App\Models\Ticket::DISPLAY_STATUS_LABELS)
+            ->map(fn ($label, $status) => [
+                'label' => $label,
+                'count' => (int) ($statusCounts[$label] ?? 0),
+                'color' => $statusColors[$status],
+            ])
+            ->values()
+            ->all();
+        $statusMax = max(1, array_sum(array_column($statusSegments, 'count')));
 
         $categoryCounts = collect($data['categoryCounts'])->filter(fn ($count) => $count > 0)->sortDesc();
         $topCategories = $categoryCounts->take(5);
@@ -97,7 +110,7 @@
         $filterDropdowns = [
             ['name' => 'category_id', 'label' => 'Category', 'all' => 'All categories', 'options' => $categoryOptions->mapWithKeys(fn ($category) => [(string) $category->id => $category->name])->all()],
             ['name' => 'classification', 'label' => 'Classification', 'all' => 'All classifications', 'options' => ['needs_resolution' => 'Needs Resolution', 'informational' => 'Informational', 'invalid' => 'Invalid', 'unclassified' => 'Unclassified']],
-            ['name' => 'status', 'label' => 'Status', 'all' => 'All statuses', 'options' => \App\Models\Ticket::STATUS_LABELS + [\App\Services\AnalyticsService::FORWARDED_INFORMATION_STATUS => \App\Services\AnalyticsService::FORWARDED_INFORMATION_LABEL]],
+            ['name' => 'status', 'label' => 'Status', 'all' => 'All statuses', 'options' => \App\Models\Ticket::DISPLAY_STATUS_LABELS],
             ['name' => 'unit', 'label' => 'College / Office', 'all' => 'All colleges and offices', 'options' => $unitOptions->mapWithKeys(fn ($unit) => [$unit => $unit])->all()],
         ];
         $reportSections = \App\Http\Controllers\Admin\AnalyticsController::REPORT_SECTIONS;
@@ -162,7 +175,7 @@
             </div>
         </header>
 
-        <form method="GET" x-data="{ open: window.innerWidth >= 768 }" class="{{ $cardClass }} relative z-20 p-3">
+        <form method="GET" data-analytics-filter-form x-data="{ open: window.innerWidth >= 768 }" class="{{ $cardClass }} relative z-20 p-3">
             <button type="button" x-on:click="open = !open" class="flex w-full items-center justify-between gap-2 text-left md:pointer-events-none">
                 <span class="flex items-center gap-2 text-sm font-bold text-primary">
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5h16l-6 7v5l-4 2v-7z" /></svg>
@@ -183,22 +196,61 @@
                     </div>
                 </div>
                 @foreach ($filterDropdowns as $dropdown)
-                    @php $current = (string) ($filters[$dropdown['name']] ?? ''); @endphp
+                    @php
+                        $isStatusFilter = $dropdown['name'] === 'status';
+                        $current = $isStatusFilter && ! $statusFilterEnabled
+                            ? ''
+                            : (string) ($filters[$dropdown['name']] ?? '');
+                    @endphp
                     <div class="min-w-0">
                         <label class="mb-1 block text-[11px] font-semibold text-muted-foreground">{{ $dropdown['label'] }}</label>
-                        <details class="group relative" x-on:click.outside="$el.removeAttribute('open')">
-                            <summary class="flex h-9 cursor-pointer list-none items-center justify-between gap-1 rounded-md border border-input bg-white px-2.5 text-xs shadow-sm hover:bg-muted [&::-webkit-details-marker]:hidden">
+                        <details
+                            class="group relative {{ $isStatusFilter && ! $statusFilterEnabled ? 'pointer-events-none opacity-70' : '' }}"
+                            @if ($isStatusFilter)
+                                data-analytics-status-dropdown
+                                data-disabled="{{ $statusFilterEnabled ? 'false' : 'true' }}"
+                            @endif
+                            x-on:click.outside="$el.removeAttribute('open')"
+                        >
+                            <summary
+                                class="flex h-9 cursor-pointer list-none items-center justify-between gap-1 rounded-md border border-input px-2.5 text-xs shadow-sm [&::-webkit-details-marker]:hidden {{ $isStatusFilter && ! $statusFilterEnabled ? 'bg-muted text-muted-foreground' : 'bg-white hover:bg-muted' }}"
+                                @if ($isStatusFilter)
+                                    data-analytics-status-summary
+                                    aria-disabled="{{ $statusFilterEnabled ? 'false' : 'true' }}"
+                                    tabindex="{{ $statusFilterEnabled ? '0' : '-1' }}"
+                                @endif
+                            >
                                 <span class="truncate">{{ $dropdown['options'][$current] ?? $dropdown['all'] }}</span>
                                 <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                             </summary>
                             <div class="absolute top-full z-50 mt-1 max-h-72 w-full min-w-44 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
                                 @foreach (['' => $dropdown['all']] + $dropdown['options'] as $value => $label)
-                                    <button type="button" data-analytics-filter="{{ $dropdown['name'] }}" data-value="{{ $value }}" data-label="{{ $label }}" class="flex w-full rounded-sm px-2 py-1.5 text-left text-xs {{ $current === (string) $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent' }}">
+                                    @php
+                                        $statusOptionVisible = ! $isStatusFilter
+                                            || ($statusFilterEnabled
+                                                && ($value === ''
+                                                    || $statusFilterClassification === \App\Models\Ticket::CLASSIFICATION_NEEDS_RESOLUTION
+                                                    || in_array($value, \App\Models\Ticket::UNCLASSIFIED_DISPLAY_STATUSES, true)));
+                                    @endphp
+                                    <button
+                                        type="button"
+                                        data-analytics-filter="{{ $dropdown['name'] }}"
+                                        data-value="{{ $value }}"
+                                        data-label="{{ $label }}"
+                                        @if ($isStatusFilter)
+                                            data-analytics-status-option
+                                            @if (! $statusOptionVisible) hidden @endif
+                                        @endif
+                                        class="flex w-full rounded-sm px-2 py-1.5 text-left text-xs {{ $current === (string) $value ? 'bg-primary-soft text-primary' : 'hover:bg-accent' }}"
+                                    >
                                         <span class="wrap-break-word">{{ $label }}</span>
                                     </button>
                                 @endforeach
                             </div>
                         </details>
+                        @if ($isStatusFilter)
+                            <p data-analytics-status-help @if ($statusFilterEnabled) hidden @endif class="mt-1 text-[10px] text-muted-foreground">Select Needs Resolution to filter by status</p>
+                        @endif
                         <input type="hidden" name="{{ $dropdown['name'] }}" value="{{ $current }}" data-analytics-filter-input="{{ $dropdown['name'] }}">
                     </div>
                 @endforeach
@@ -573,14 +625,56 @@
     </div>
 
     <script>
+        const analyticsFilterForm = document.querySelector('[data-analytics-filter-form]');
+        const statusDropdown = analyticsFilterForm?.querySelector('[data-analytics-status-dropdown]');
+        const statusSummary = statusDropdown?.querySelector('[data-analytics-status-summary]');
+        const statusInput = analyticsFilterForm?.querySelector('[data-analytics-filter-input="status"]');
+        const statusHelp = analyticsFilterForm?.querySelector('[data-analytics-status-help]');
+        const statusOptions = analyticsFilterForm?.querySelectorAll('[data-analytics-status-option]') ?? [];
+
+        const syncStatusFilter = () => {
+            if (!statusDropdown || !statusSummary || !statusInput) return;
+
+            const classification = analyticsFilterForm.querySelector('[data-analytics-filter-input="classification"]')?.value ?? '';
+            const enabled = classification === 'needs_resolution' || classification === 'unclassified';
+            statusDropdown.dataset.disabled = String(!enabled);
+            statusDropdown.classList.toggle('pointer-events-none', !enabled);
+            statusDropdown.classList.toggle('opacity-70', !enabled);
+            statusSummary.setAttribute('aria-disabled', String(!enabled));
+            statusSummary.tabIndex = enabled ? 0 : -1;
+            statusSummary.classList.toggle('bg-muted', !enabled);
+            statusSummary.classList.toggle('text-muted-foreground', !enabled);
+            statusSummary.classList.toggle('bg-white', enabled);
+            statusSummary.classList.toggle('hover:bg-muted', enabled);
+            if (statusHelp) statusHelp.hidden = enabled;
+
+            statusOptions.forEach((option) => {
+                const value = option.dataset.value ?? '';
+                const visible = enabled
+                    && (value === '' || classification === 'needs_resolution' || ['submitted', 'needs_clarification'].includes(value));
+                option.hidden = !visible;
+            });
+        };
+
         document.querySelectorAll('[data-analytics-filter]').forEach((option) => {
             option.addEventListener('click', () => {
                 const dropdown = option.closest('details');
+                if (option.dataset.analyticsFilter === 'status' && statusDropdown?.dataset.disabled === 'true') return;
                 const input = document.querySelector(`[data-analytics-filter-input="${option.dataset.analyticsFilter}"]`);
                 if (input) input.value = option.dataset.value ?? '';
                 dropdown.querySelector('summary span').textContent = option.dataset.label ?? '';
                 dropdown.removeAttribute('open');
+
+                if (option.dataset.analyticsFilter === 'classification' && statusInput && statusSummary) {
+                    statusInput.value = '';
+                    statusSummary.querySelector('span').textContent = 'All statuses';
+                    statusOptions.forEach((statusOption) => {
+                        statusOption.classList.remove('bg-primary-soft', 'text-primary');
+                    });
+                    syncStatusFilter();
+                }
             });
         });
+        syncStatusFilter();
     </script>
 </x-app-layout>

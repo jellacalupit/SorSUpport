@@ -26,9 +26,9 @@
             'unclassified' => 'Unclassified',
             default => null,
         },
-        'Status' => ($filters['status'] ?? null) === \App\Services\AnalyticsService::FORWARDED_INFORMATION_STATUS
-            ? \App\Services\AnalyticsService::FORWARDED_INFORMATION_LABEL
-            : (filled($filters['status'] ?? null) ? ucfirst(str_replace('_', ' ', $filters['status'])) : null),
+        'Status' => filled($filters['status'] ?? null)
+            ? (Ticket::DISPLAY_STATUS_LABELS[$filters['status']] ?? ucfirst(str_replace('_', ' ', $filters['status'])))
+            : null,
         'College / Office' => $filters['unit'] ?? null,
     ]);
 
@@ -162,16 +162,15 @@
 
     $statusMeanings = [
         'Submitted' => 'Received and waiting for the SDS Office to review',
-        'Needs Clarification' => 'Waiting for the student to give more details',
+        'In review' => 'SDS asked the student for more information',
         'Assigned' => 'Sent to an office that has not started on it yet',
-        'In Progress' => 'Being worked on by the assigned office',
+        'In progress' => 'Being worked on by the assigned office',
         'Escalated' => 'Passed to a higher office',
         'Referred' => 'Sent to another office or body to handle',
         'Resolved' => 'A resolution has been given',
         'Closed' => 'Finished, with nothing more to do',
-        \App\Services\AnalyticsService::FORWARDED_INFORMATION_LABEL => 'Forwarded for information; no action or reply is expected',
     ];
-    $openLabels = collect(Ticket::STATUS_LABELS)->except([Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED])->values();
+    $openLabels = collect(Ticket::DISPLAY_STATUS_LABELS)->except([Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED])->values();
 
     // The main points of the report in sentences.
     $findings = [];
@@ -438,7 +437,7 @@
         @elseif ($key === 'statuses')
             @php $statuses = $rows($reportData['status_distribution'] ?? null); @endphp
                 <h2>Tickets by Status</h2>
-                <p class="about">Where each ticket stands right now. Forwarded informational tickets are shown separately from Submitted; Resolved and Closed are finished.</p>
+                <p class="about">Where each Needs Resolution or Unclassified ticket stands right now. Informational and invalid tickets have no displayed status; Resolved and Closed are finished.</p>
                 <table class="data">
                     <thead>
                         <tr><th>Status</th><th class="meaning">What it means</th><th class="number">Tickets</th><th class="number">Share</th></tr>

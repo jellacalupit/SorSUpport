@@ -1,12 +1,23 @@
 <x-app-layout :role="'admin'" title="Dashboard">
     @php
-        $statusSegments = [
-            ['label' => 'Submitted', 'color' => '#facc15', 'count' => (int) (($statusBreakdown['submitted'] ?? 0) + ($statusBreakdown['needs_clarification'] ?? 0))],
-            ['label' => 'In Progress', 'color' => '#2563eb', 'count' => (int) (($statusBreakdown['assigned'] ?? 0) + ($statusBreakdown['in_progress'] ?? 0) + ($statusBreakdown['referred'] ?? 0))],
-            ['label' => 'Escalated', 'color' => '#dc2626', 'count' => (int) ($statusBreakdown['escalated'] ?? 0)],
-            ['label' => 'Resolved', 'color' => '#16a34a', 'count' => (int) ($statusBreakdown['resolved'] ?? 0)],
-            ['label' => 'Closed', 'color' => '#9ca3af', 'count' => (int) ($statusBreakdown['closed'] ?? 0)],
+        $statusColors = [
+            'submitted' => '#facc15',
+            'needs_clarification' => '#f59e0b',
+            'assigned' => '#2563eb',
+            'in_progress' => '#1d4ed8',
+            'escalated' => '#dc2626',
+            'referred' => '#7c3aed',
+            'resolved' => '#16a34a',
+            'closed' => '#9ca3af',
         ];
+        $statusSegments = collect(\App\Models\Ticket::DISPLAY_STATUS_LABELS)
+            ->map(fn ($label, $status) => [
+                'label' => $label,
+                'color' => $statusColors[$status],
+                'count' => (int) ($statusBreakdown[$status] ?? 0),
+            ])
+            ->values()
+            ->all();
         $classificationSegments = [
             ['label' => 'Needs Resolution', 'color' => '#7a1d2a', 'count' => (int) ($classificationBreakdown['needs_resolution'] ?? 0)],
             ['label' => 'Informational', 'color' => '#111111', 'count' => (int) ($classificationBreakdown['informational'] ?? 0)],
@@ -130,9 +141,11 @@
                             </td>
                             <td class="px-3 py-2 text-center">
                                 @php
-                                    $recentStatusLabel = $ticket->status_label;
+                                    $recentStatusLabel = $ticket->displayStatus();
                                 @endphp
-                                <x-status-badge :status="$recentStatusLabel" :show-icon="false" class="px-2 py-0 text-[11px]" />
+                                @if ($recentStatusLabel !== null)
+                                    <x-status-badge :status="$recentStatusLabel" :show-icon="false" class="px-2 py-0 text-[11px]" />
+                                @endif
                             </td>
                         </tr>
                     @empty
@@ -292,14 +305,6 @@
             <div class="flex w-[526px] items-stretch gap-2">
                 <div class="w-[257px] shrink-0">
                     @php
-                        $statusLegend = [
-                            'submitted' => ['label' => 'Submitted', 'color' => '#facc15', 'count' => (int) (($statusBreakdown['submitted'] ?? 0) + ($statusBreakdown['needs_clarification'] ?? 0))],
-                            'in_progress' => ['label' => 'In Progress', 'color' => '#2563eb', 'count' => (int) (($statusBreakdown['assigned'] ?? 0) + ($statusBreakdown['in_progress'] ?? 0) + ($statusBreakdown['referred'] ?? 0))],
-                            'escalated' => ['label' => 'Escalated', 'color' => '#dc2626', 'count' => (int) ($statusBreakdown['escalated'] ?? 0)],
-                            'resolved' => ['label' => 'Resolved', 'color' => '#16a34a', 'count' => (int) ($statusBreakdown['resolved'] ?? 0)],
-                            'closed' => ['label' => 'Closed', 'color' => '#9ca3af', 'count' => (int) ($statusBreakdown['closed'] ?? 0)],
-                        ];
-                        $statusSegments = collect($statusLegend)->values()->all();
                         $statusTotal = array_sum(array_column($statusSegments, 'count')) ?: 0;
                         $statusCircumference = 2 * pi() * 38;
                         $statusOffset = 0;
@@ -399,9 +404,11 @@
                                     </td>
                                     <td class="px-3 py-2 text-center">
                                         @php
-                                            $recentStatusLabel = $ticket->status_label;
+                                            $recentStatusLabel = $ticket->displayStatus();
                                         @endphp
-                                        <x-status-badge :status="$recentStatusLabel" :show-icon="false" class="px-2 py-0 text-[11px]" />
+                                        @if ($recentStatusLabel !== null)
+                                            <x-status-badge :status="$recentStatusLabel" :show-icon="false" class="px-2 py-0 text-[11px]" />
+                                        @endif
                                     </td>
                                 </tr>
                             @empty

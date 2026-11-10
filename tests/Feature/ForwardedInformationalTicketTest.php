@@ -114,7 +114,7 @@ class ForwardedInformationalTicketTest extends TestCase
         $this->actingAs($this->student)
             ->get(route('student.complaints.show', $unforwarded->complaint))
             ->assertOk()
-            ->assertSee('Submitted')
+            ->assertSee('Recorded for information')
             ->assertDontSee('Forwarded for information');
 
         $retained = $this->ticket(Ticket::STATUS_SUBMITTED);
@@ -129,7 +129,7 @@ class ForwardedInformationalTicketTest extends TestCase
         $this->actingAs($this->student)
             ->get(route('student.complaints.show', $retained->complaint))
             ->assertOk()
-            ->assertSee('Closed')
+            ->assertSee('Recorded for information')
             ->assertDontSee('Forwarded for information');
     }
 
@@ -169,12 +169,12 @@ class ForwardedInformationalTicketTest extends TestCase
         $cases = [
             [Ticket::STATUS_SUBMITTED, [], 'Waiting for SDS review'],
             [Ticket::STATUS_NEEDS_CLARIFICATION, [], 'Waiting for your reply'],
-            [Ticket::STATUS_ASSIGNED, ['assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id], 'Waiting for Registrar Office to acknowledge'],
-            [Ticket::STATUS_IN_PROGRESS, ['assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id], 'Being handled by Registrar Office'],
-            [Ticket::STATUS_ESCALATED, ['assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id], 'Escalated to Registrar Office'],
-            [Ticket::STATUS_REFERRED, ['referred_to' => 'Campus Disciplinary Committee'], 'Referred to a committee. SDS will record the outcome'],
-            [Ticket::STATUS_RESOLVED, ['resolved_at' => now()], 'Waiting for your response. You can accept or ask for further action until'],
-            [Ticket::STATUS_CLOSED, ['closure_type' => Ticket::CLOSURE_INFORMATIONAL], 'Closed: Recorded for information'],
+            [Ticket::STATUS_ASSIGNED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id], 'Waiting for Registrar Office to acknowledge'],
+            [Ticket::STATUS_IN_PROGRESS, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id], 'Being handled by Registrar Office'],
+            [Ticket::STATUS_ESCALATED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id], 'Escalated to Registrar Office'],
+            [Ticket::STATUS_REFERRED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'referred_to' => 'Campus Disciplinary Committee'], 'Referred to a committee. SDS will record the outcome'],
+            [Ticket::STATUS_RESOLVED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'resolved_at' => now()], 'Waiting for your response. You can accept or ask for further action until'],
+            [Ticket::STATUS_CLOSED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'closure_type' => Ticket::CLOSURE_RESOLVED], 'Closed: Resolved and confirmed by the SDS Office'],
         ];
 
         foreach ($cases as [$status, $attributes, $expected]) {

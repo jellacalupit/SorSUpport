@@ -47,6 +47,22 @@ class Ticket extends Model
         self::STATUS_CLOSED => 'Closed',
     ];
 
+    public const DISPLAY_STATUS_LABELS = [
+        self::STATUS_SUBMITTED => 'Submitted',
+        self::STATUS_NEEDS_CLARIFICATION => 'In review',
+        self::STATUS_ASSIGNED => 'Assigned',
+        self::STATUS_IN_PROGRESS => 'In progress',
+        self::STATUS_ESCALATED => 'Escalated',
+        self::STATUS_REFERRED => 'Referred',
+        self::STATUS_RESOLVED => 'Resolved',
+        self::STATUS_CLOSED => 'Closed',
+    ];
+
+    public const UNCLASSIFIED_DISPLAY_STATUSES = [
+        self::STATUS_SUBMITTED,
+        self::STATUS_NEEDS_CLARIFICATION,
+    ];
+
     /**
      * The only status changes a ticket may make. Who may make each one is decided by
      * App\Services\TicketWorkflow; this map is enforced whenever a ticket is saved.
@@ -228,6 +244,34 @@ class Ticket extends Model
     public function getStatusLabelAttribute(): string
     {
         return self::STATUS_LABELS[$this->status] ?? ucwords(str_replace('_', ' ', (string) $this->status));
+    }
+
+    public function displayStatus(): ?string
+    {
+        $label = self::DISPLAY_STATUS_LABELS[$this->status] ?? null;
+
+        if ($label === null) {
+            return null;
+        }
+
+        if ($this->classification === self::CLASSIFICATION_NEEDS_RESOLUTION) {
+            return $label;
+        }
+
+        return $this->classification === null && in_array($this->status, self::UNCLASSIFIED_DISPLAY_STATUSES, true)
+            ? $label
+            : null;
+    }
+
+    public function outcomeLabel(): ?string
+    {
+        return match ($this->classification) {
+            self::CLASSIFICATION_INFORMATIONAL => $this->isForwardedInformational()
+                ? 'Forwarded for information'
+                : 'Recorded for information',
+            self::CLASSIFICATION_INVALID => 'Not accepted',
+            default => null,
+        };
     }
 
     public function getClosureLabelAttribute(): ?string

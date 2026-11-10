@@ -37,8 +37,10 @@ class AdminDashboardController extends Controller
             ->limit(5)
             ->get();
 
-        $statusBreakdown = collect(array_keys(Ticket::STATUS_LABELS))
-            ->mapWithKeys(fn (string $status) => [$status => Ticket::query()->where('status', $status)->count()])
+        $statusBreakdown = collect(array_keys(Ticket::DISPLAY_STATUS_LABELS))
+            ->mapWithKeys(fn (string $status) => [$status => $tickets
+                ->filter(fn (Ticket $ticket) => $ticket->status === $status && $ticket->displayStatus() !== null)
+                ->count()])
             ->all();
 
         $classificationBreakdown = [

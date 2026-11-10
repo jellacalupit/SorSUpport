@@ -1,7 +1,7 @@
 <x-app-layout :role="'student'" title="My Tickets">
     <section>
         @php
-            $statusLabels = ['' => 'All statuses'] + \App\Models\Ticket::STATUS_LABELS;
+            $statusLabels = ['' => 'All statuses'] + \App\Models\Ticket::DISPLAY_STATUS_LABELS;
             $selectedStatus = $status ?: '';
         @endphp
 

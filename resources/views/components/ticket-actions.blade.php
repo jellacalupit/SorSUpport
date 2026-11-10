@@ -206,7 +206,7 @@
         <form x-show="action === 'clarify'" x-cloak method="POST" action="{{ route('admin.tickets.clarification', $ticket) }}" class="surface p-4">
             @csrf
             <p class="{{ $panelTitle }}">Ask the student for more details</p>
-            <p class="{{ $panelHint }}">The ticket waits as Needs Clarification until the student replies in the conversation.</p>
+            <p class="{{ $panelHint }}">The ticket remains In review until the student replies in the conversation.</p>
             <textarea name="clarification_message" rows="3" required maxlength="2000" class="{{ $input }}" placeholder="What does the student need to clarify?">{{ old('clarification_message') }}</textarea>
             <div class="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" x-on:click="action = null" class="{{ $smallCancel }}">Cancel</button>
