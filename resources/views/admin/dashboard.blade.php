@@ -1007,6 +1007,10 @@
                         responsive: true,
                         maintainAspectRatio: false,
                         devicePixelRatio: Math.max(2, window.devicePixelRatio || 1),
+                        animation: {
+                            duration: 500,
+                            easing: 'easeOutQuart',
+                        },
                         indexAxis: horizontal ? 'y' : 'x',
                         interaction: { mode: 'index', intersect: false, axis: horizontal ? 'y' : 'x' },
                         layout: {

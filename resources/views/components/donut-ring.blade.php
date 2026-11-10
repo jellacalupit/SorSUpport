@@ -7,6 +7,7 @@
     $radius = 38;
     $strokeWidth = (float) $strokeWidth;
     $total = array_sum(array_column($segments, 'count'));
+    $revealMaskId = uniqid('donut-reveal-');
 
     // The ring runs counter-clockwise from the top. Each colour ends in a rounded tip that laps
     // over the start of the next colour, so only the leading end of a colour is curved.
@@ -41,47 +42,64 @@
 <span
     {{ $attributes->class(['relative block h-full w-full']) }}
 >
-    <svg viewBox="0 0 100 100" class="dashboard-donut-enter h-full w-full" aria-hidden="true">
-        <circle cx="50" cy="50" r="{{ $radius }}" fill="none" stroke="#eef2f7" stroke-width="{{ $strokeWidth }}" />
-        @foreach ($arcs as $arc)
-            @if ($arc['full'])
+    <svg viewBox="0 0 100 100" class="h-full w-full" aria-hidden="true">
+        <defs>
+            <mask id="{{ $revealMaskId }}" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
                 <circle
-                    data-donut-segment
-                    data-label="{{ $arc['label'] }}"
-                    data-count="{{ $arc['count'] }}"
-                    data-percentage="{{ $arc['percentage'] }}"
-                    class="cursor-default transition-opacity hover:opacity-80"
+                    class="dashboard-donut-reveal"
                     cx="50"
                     cy="50"
                     r="{{ $radius }}"
+                    pathLength="100"
                     fill="none"
-                    stroke="{{ $arc['color'] }}"
-                    stroke-width="{{ $strokeWidth }}"
-                    x-on:mouseenter="$dispatch('donut-segment-enter', { label: $event.currentTarget.dataset.label, count: Number($event.currentTarget.dataset.count), percentage: Number($event.currentTarget.dataset.percentage) })"
-                    x-on:mouseleave="$dispatch('donut-segment-leave')"
+                    stroke="white"
+                    stroke-width="{{ $strokeWidth + 4 }}"
+                    transform="translate(100 0) scale(-1 1) rotate(-90 50 50)"
                 />
-            @else
-                <path
-                    data-donut-segment
-                    data-label="{{ $arc['label'] }}"
-                    data-count="{{ $arc['count'] }}"
-                    data-percentage="{{ $arc['percentage'] }}"
-                    class="cursor-default transition-opacity hover:opacity-80"
-                    d="M {{ $arc['from'][0] }} {{ $arc['from'][1] }} A {{ $radius }} {{ $radius }} 0 {{ $arc['large'] }} 0 {{ $arc['to'][0] }} {{ $arc['to'][1] }}"
-                    fill="none"
-                    stroke="{{ $arc['color'] }}"
-                    stroke-width="{{ $strokeWidth }}"
-                    x-on:mouseenter="$dispatch('donut-segment-enter', { label: $event.currentTarget.dataset.label, count: Number($event.currentTarget.dataset.count), percentage: Number($event.currentTarget.dataset.percentage) })"
-                    x-on:mouseleave="$dispatch('donut-segment-leave')"
-                />
-            @endif
-        @endforeach
-        {{-- Rounded tips go on top of every arc so they overlap the colour that follows. --}}
-        @foreach ($arcs as $arc)
-            @unless ($arc['full'])
-                <circle class="pointer-events-none" cx="{{ $arc['to'][0] }}" cy="{{ $arc['to'][1] }}" r="{{ $strokeWidth / 2 }}" fill="{{ $arc['color'] }}" />
-            @endunless
-        @endforeach
+            </mask>
+        </defs>
+        <circle cx="50" cy="50" r="{{ $radius }}" fill="none" stroke="#eef2f7" stroke-width="{{ $strokeWidth }}" />
+        <g mask="url(#{{ $revealMaskId }})">
+            @foreach ($arcs as $arc)
+                @if ($arc['full'])
+                    <circle
+                        data-donut-segment
+                        data-label="{{ $arc['label'] }}"
+                        data-count="{{ $arc['count'] }}"
+                        data-percentage="{{ $arc['percentage'] }}"
+                        class="cursor-default transition-opacity hover:opacity-80"
+                        cx="50"
+                        cy="50"
+                        r="{{ $radius }}"
+                        fill="none"
+                        stroke="{{ $arc['color'] }}"
+                        stroke-width="{{ $strokeWidth }}"
+                        x-on:mouseenter="$dispatch('donut-segment-enter', { label: $event.currentTarget.dataset.label, count: Number($event.currentTarget.dataset.count), percentage: Number($event.currentTarget.dataset.percentage) })"
+                        x-on:mouseleave="$dispatch('donut-segment-leave')"
+                    />
+                @else
+                    <path
+                        data-donut-segment
+                        data-label="{{ $arc['label'] }}"
+                        data-count="{{ $arc['count'] }}"
+                        data-percentage="{{ $arc['percentage'] }}"
+                        class="cursor-default transition-opacity hover:opacity-80"
+                        d="M {{ $arc['from'][0] }} {{ $arc['from'][1] }} A {{ $radius }} {{ $radius }} 0 {{ $arc['large'] }} 0 {{ $arc['to'][0] }} {{ $arc['to'][1] }}"
+                        fill="none"
+                        stroke="{{ $arc['color'] }}"
+                        stroke-width="{{ $strokeWidth }}"
+                        x-on:mouseenter="$dispatch('donut-segment-enter', { label: $event.currentTarget.dataset.label, count: Number($event.currentTarget.dataset.count), percentage: Number($event.currentTarget.dataset.percentage) })"
+                        x-on:mouseleave="$dispatch('donut-segment-leave')"
+                    />
+                @endif
+            @endforeach
+            {{-- Rounded tips go on top of every arc so they overlap the colour that follows. --}}
+            @foreach ($arcs as $arc)
+                @unless ($arc['full'])
+                    <circle class="pointer-events-none" cx="{{ $arc['to'][0] }}" cy="{{ $arc['to'][1] }}" r="{{ $strokeWidth / 2 }}" fill="{{ $arc['color'] }}" />
+                @endunless
+            @endforeach
+        </g>
     </svg>
 
 </span>
