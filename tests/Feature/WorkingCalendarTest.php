@@ -117,7 +117,7 @@ class WorkingCalendarTest extends TestCase
         ]);
     }
 
-    public function test_range_replaces_existing_overrides_audits_each_change_and_rejects_more_than_sixty_days(): void
+    public function test_range_replaces_existing_overrides_with_one_audit_entry_and_rejects_more_than_sixty_days(): void
     {
         CalendarOverride::create([
             'date' => '2026-10-12',
@@ -140,12 +140,13 @@ class WorkingCalendarTest extends TestCase
         $this->assertSame(['2026-10-11', '2026-10-12', '2026-10-13'], $overrides->map(fn ($row) => $row->date->toDateString())->all());
         $this->assertSame(3, $overrides->where('type', CalendarOverride::TYPE_NON_WORKING)->count());
         $this->assertSame(['Campus suspension'], $overrides->pluck('description')->unique()->values()->all());
-        $this->assertSame(2, AuditLog::query()->where('action', 'calendar_override_created')->count());
-        $this->assertSame(1, AuditLog::query()->where('action', 'calendar_override_updated')->count());
+        $this->assertSame(0, AuditLog::query()->where('action', 'calendar_override_created')->count());
+        $this->assertSame(0, AuditLog::query()->where('action', 'calendar_override_updated')->count());
+        $this->assertSame(1, AuditLog::query()->where('action', 'calendar_override_range_saved')->count());
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'calendar_override_updated',
+            'action' => 'calendar_override_range_saved',
             'performed_by' => $this->admin->id,
-            'details' => 'Set non_working override for 2026-10-12. Description: Campus suspension',
+            'details' => 'Set non_working overrides for 2026-10-11 through 2026-10-13 (3 dates changed). Description: Campus suspension',
         ]);
 
         $this->from(route('admin.working-calendar'))
@@ -158,9 +159,10 @@ class WorkingCalendarTest extends TestCase
             ])
             ->assertSessionHasErrors('end_date');
         $this->assertSame(3, CalendarOverride::count());
-        $this->assertSame(3, AuditLog::query()->whereIn('action', [
+        $this->assertSame(1, AuditLog::query()->whereIn('action', [
             'calendar_override_created',
             'calendar_override_updated',
+            'calendar_override_range_saved',
         ])->count());
     }
 
@@ -219,6 +221,26 @@ class WorkingCalendarTest extends TestCase
             ->assertSee('Working override')
             ->assertSee('Campus holiday')
             ->assertSee('Mark a range');
+    }
+
+    public function test_working_calendar_collapses_the_range_form_and_limits_the_initial_override_list(): void
+    {
+        foreach (range(12, 15) as $day) {
+            CalendarOverride::create([
+                'date' => "2026-10-{$day}",
+                'type' => CalendarOverride::TYPE_NON_WORKING,
+                'description' => "Calendar event {$day}",
+                'created_by' => $this->admin->id,
+            ]);
+        }
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.working-calendar', ['month' => '2026-10']))
+            ->assertOk()
+            ->assertSee('Collapse Mark a range')
+            ->assertSee('x-collapse', false)
+            ->assertSee('See all overrides (4)')
+            ->assertSee('Show less');
     }
 
     private function user(string $role): User

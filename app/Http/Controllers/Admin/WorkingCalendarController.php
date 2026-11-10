@@ -86,12 +86,33 @@ class WorkingCalendarController extends Controller
         }
 
         DB::transaction(function () use ($validated, $request, $start, $end): void {
+            $changedDates = 0;
+
             for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
-                $this->saveOverride([
+                $change = $this->saveOverride([
                     'date' => $date->toDateString(),
                     'type' => $validated['type'],
                     'description' => $validated['description'],
-                ], $request);
+                ], $request, audit: false);
+
+                if ($change !== null) {
+                    $changedDates++;
+                }
+            }
+
+            if ($changedDates > 0) {
+                AuditLog::activity(
+                    'calendar_override_range_saved',
+                    details: sprintf(
+                        'Set %s overrides for %s through %s (%d %s changed). Description: %s',
+                        $validated['type'],
+                        $validated['start_date'],
+                        $validated['end_date'],
+                        $changedDates,
+                        $changedDates === 1 ? 'date' : 'dates',
+                        $validated['description'],
+                    ),
+                );
             }
         });
 
@@ -115,28 +136,37 @@ class WorkingCalendarController extends Controller
         return $this->calendarRedirect($date)->with('success', 'Working Calendar override removed.');
     }
 
-    private function saveOverride(array $attributes, Request $request): void
+    /**
+     * @return 'created'|'updated'|null
+     */
+    private function saveOverride(array $attributes, Request $request, bool $audit = true): ?string
     {
         $override = CalendarOverride::query()->whereDate('date', $attributes['date'])->first();
         if (! $override) {
             $override = CalendarOverride::create($attributes + ['created_by' => $request->user()->id]);
-            AuditLog::activity(
-                'calendar_override_created',
-                details: $this->auditDetails($attributes),
-            );
+            if ($audit) {
+                AuditLog::activity(
+                    'calendar_override_created',
+                    details: $this->auditDetails($attributes),
+                );
+            }
 
-            return;
+            return 'created';
         }
 
         if ($override->type === $attributes['type'] && $override->description === $attributes['description']) {
-            return;
+            return null;
         }
 
         $override->update($attributes);
-        AuditLog::activity(
-            'calendar_override_updated',
-            details: $this->auditDetails($attributes),
-        );
+        if ($audit) {
+            AuditLog::activity(
+                'calendar_override_updated',
+                details: $this->auditDetails($attributes),
+            );
+        }
+
+        return 'updated';
     }
 
     private function auditDetails(array $attributes): string
