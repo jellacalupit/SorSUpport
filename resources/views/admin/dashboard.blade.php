@@ -426,7 +426,7 @@
             </section>
         </div>
 
-        <div class="grid w-[360px] flex-1 grid-rows-[auto_380px] gap-2 self-stretch overflow-visible pt-0">
+        <div class="grid w-[360px] flex-1 grid-rows-[auto_340px] gap-2 self-stretch overflow-visible pt-0">
             @php
                 $monthOptions = [
                     1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'May', 6 => 'Jun',
@@ -508,10 +508,10 @@
                         <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
-                    <div class="mt-2 grid min-h-0 flex-1 grid-rows-5 gap-1.5 overflow-hidden">
+                    <div class="mt-1.5 grid min-h-0 flex-1 grid-rows-5 gap-1 overflow-hidden">
                         @forelse ($topPerformingRecipients as $recipient)
-                            <div class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-muted/50 transition-colors">
-                                <div class="h-10 w-10 shrink-0 rounded-full border border-border bg-sidebar-primary overflow-hidden flex items-center justify-center text-[10px] font-bold text-sidebar-primary-foreground">
+                            <div class="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-muted/50">
+                                <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-sidebar-primary text-[9px] font-bold text-sidebar-primary-foreground">
                                     @if ($recipient->user?->avatar_path)
                                         <img src="{{ asset('storage/' . $recipient->user->avatar_path) }}" alt="{{ $recipient->display_name }}" class="h-full w-full object-cover">
                                     @else
@@ -543,11 +543,11 @@
                                         </span>
                                     </span>
                                     
-                                    <div class="mt-1 flex items-center gap-1">
-                                        <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div class="mt-0.5 flex items-center gap-1.5">
+                                        <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-200">
                                             <div class="h-full bg-green-500 rounded-full" style="width: {{ $recipient->performance_percentage ?? 0 }}%"></div>
                                         </div>
-                                        <span class="text-[8px] font-semibold text-green-700 shrink-0">{{ $recipient->performance_percentage ?? 0 }}%</span>
+                                        <span class="w-7 shrink-0 text-right text-[8px] font-semibold text-green-700">{{ $recipient->performance_percentage ?? 0 }}%</span>
                                     </div>
                                 </div>
                             </div>
@@ -558,14 +558,14 @@
                         @endforelse
                     </div>
                 </div>
-                <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-[20px] border border-border bg-white p-3 shadow-sm">
-                    <div class="flex items-center justify-between gap-2">
+                <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-[20px] border border-border bg-white p-2 shadow-sm">
+                    <div class="flex items-center justify-between gap-2 px-1">
                         <h3 class="font-display text-sm font-semibold leading-tight text-foreground">Recent audit activity</h3>
                         <a data-admin-page-nav href="{{ route('admin.audit') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
-                    <ol class="relative mt-2 grid min-h-0 flex-1 grid-rows-5 gap-2.5 overflow-hidden">
-                        <span class="absolute top-4 bottom-4 left-[calc(25%+1.5rem)] w-px bg-[#7a1d2a]/20" aria-hidden="true"></span>
+                    <ol class="relative mt-1.5 grid min-h-0 flex-1 grid-rows-5 gap-1 overflow-hidden">
+                        <span class="absolute top-3.5 bottom-3.5 left-[calc(25%+1.375rem)] w-px bg-[#7a1d2a]/20" aria-hidden="true"></span>
                         @forelse ($recentActivity as $log)
                             @php
                                 $activityLabel = match ($log->action) {
@@ -582,13 +582,13 @@
                                     default => 'activity',
                                 };
                             @endphp
-                            <li class="relative z-10 grid min-w-0 grid-cols-[25%_2rem_minmax(0,1fr)] items-start gap-2">
-                                <span class="flex h-8 items-center text-[11px] text-black">{{ $log->created_at?->diffForHumans() ?? 'Recently' }}</span>
-                                <span class="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-[#7a1d2a] text-white shadow-sm ring-2 ring-[#7a1d2a]/10">
+                            <li class="relative z-10 grid min-w-0 grid-cols-[25%_1.75rem_minmax(0,1fr)] items-center gap-2">
+                                <span class="flex h-7 items-center text-[10px] text-black">{{ $log->created_at?->diffForHumans() ?? 'Recently' }}</span>
+                                <span class="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-full bg-[#7a1d2a] text-white shadow-sm ring-2 ring-[#7a1d2a]/10">
                                     @if ($log->display_performer?->avatar_path)
                                         <img src="{{ asset('storage/' . $log->display_performer->avatar_path) }}" alt="{{ $log->display_performer->name }}" class="h-full w-full object-cover">
                                     @else
-                                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                             @if ($activityIcon === 'plus')
                                                 <path d="M12 5v14M5 12h14" />
                                             @elseif ($activityIcon === 'message')
@@ -603,16 +603,16 @@
                                         </svg>
                                     @endif
                                 </span>
-                                <div class="min-w-0 pt-0.5">
-                                    <p class="truncate text-[11px] font-semibold leading-tight text-foreground">{{ $activityLabel }}</p>
-                                    <p class="mt-0.5 truncate text-[10px] leading-snug text-muted-foreground">
+                                <div class="min-w-0 space-y-px">
+                                    <p class="truncate text-[11px] font-semibold leading-[1.1] text-foreground">{{ $activityLabel }}</p>
+                                    <p class="truncate text-[10px] leading-[1.1] text-muted-foreground">
                                         <span>{{ $log->display_performer?->given_name ?: 'System' }} updated activity</span>
                                         @if ($referenceNumber)
                                             <span class="text-border"> · </span>
                                             <span class="font-mono font-semibold text-[#7a1d2a]">{{ $referenceNumber }}</span>
                                         @endif
                                     </p>
-                                    <p class="mt-0.5 truncate text-[9px] leading-snug text-muted-foreground">
+                                    <p class="truncate text-[9px] leading-[1.1] text-muted-foreground">
                                         {{ $log->created_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y g:i A') }}
                                     </p>
                                 </div>
