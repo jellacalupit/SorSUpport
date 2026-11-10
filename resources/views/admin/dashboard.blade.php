@@ -310,7 +310,7 @@
                         $statusOffset = 0;
                     @endphp
 
-                    <div class="mt-0 h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:h-[134px]">
+                    <div class="mt-0 h-full min-h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:min-h-[134px]">
                         <div class="flex items-start gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
                             <div class="shrink-0">
                                 <div class="relative h-28 w-28 sm:h-30 sm:w-30">
@@ -324,11 +324,11 @@
 
                             <div class="min-w-0 flex-1 pt-0.5">
                                 <div class="text-left text-xs font-semibold text-black sm:text-sm">Status</div>
-                                <div class="mt-1.5 flex flex-col gap-0.5 text-[9px] text-foreground sm:text-[10px]">
+                                <div class="mt-1.5 flex flex-col gap-0.5 text-[9px] leading-tight text-foreground sm:text-[10px]">
                                     @foreach ($statusSegments as $segment)
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="h-2.5 w-2.5 rounded-sm" style="background-color: {{ $segment['color'] }};"></span>
-                                            <span>{{ $segment['label'] }}</span>
+                                        <div class="flex min-w-0 items-center gap-1.5">
+                                            <span class="h-2.5 w-2.5 shrink-0 rounded-sm" style="background-color: {{ $segment['color'] }};"></span>
+                                            <span class="min-w-0 break-words">{{ $segment['label'] }}</span>
                                         </div>
                                     @endforeach
                                 </div>
@@ -350,7 +350,7 @@
                         $classificationOffset = 0;
                     @endphp
 
-                    <div class="mt-0 h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:h-[134px]">
+                    <div class="mt-0 h-full min-h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:min-h-[134px]">
                         <div class="flex items-start gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
                             <div class="shrink-0">
                                 <div class="relative h-28 w-28 sm:h-30 sm:w-30">
