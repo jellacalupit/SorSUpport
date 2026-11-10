@@ -94,7 +94,7 @@
                                         <a href="{{ route('admin.complaints.show', $complaint) }}" data-follow-up-ticket-link="follow-up-ticket-{{ $ticket->id }}" class="block truncate font-medium text-foreground hover:text-primary hover:underline">{{ $complaint?->public_subject ?? 'Untitled' }}</a>
                                     </td>
                                     <td class="hidden px-2 py-2 text-muted-foreground sm:px-3 lg:table-cell">{{ $complaint?->category?->name ?? 'Uncategorized' }}</td>
-                                    <td class="px-2 py-2 sm:px-3">@if ($ticket->displayStatus())<x-status-badge :status="$ticket->displayStatus()" :show-icon="false" class="px-2 py-0.5 text-[11px]" />@else<span>-</span>@endif</td>
+                                    <td class="px-2 py-2 sm:px-3">@if ($ticket->displayStatus())<x-status-badge :status="$ticket->displayStatus()" :show-icon="false" class="px-2 py-0.5 text-[11px]" />@else<span class="text-muted-foreground">—</span>@endif</td>
                                     <td class="hidden px-2 py-2 text-muted-foreground sm:px-3 md:table-cell">{{ $complaint?->filerNameFor(Auth::user()) ?? 'Unknown' }}</td>
                                     <td class="hidden px-2 py-2 text-muted-foreground sm:px-3 xl:table-cell">{{ $handlerName }}</td>
                                     <td class="hidden whitespace-nowrap px-2 py-2 text-muted-foreground sm:px-3 xl:table-cell">{{ $row['age'] }} working {{ \Illuminate\Support\Str::plural('day', $row['age']) }}</td>

@@ -145,6 +145,8 @@
                                 @endphp
                                 @if ($recentStatusLabel !== null)
                                     <x-status-badge :status="$recentStatusLabel" :show-icon="false" class="px-2 py-0 text-[11px]" />
+                                @else
+                                    <span class="text-muted-foreground">—</span>
                                 @endif
                             </td>
                         </tr>
@@ -408,6 +410,8 @@
                                         @endphp
                                         @if ($recentStatusLabel !== null)
                                             <x-status-badge :status="$recentStatusLabel" :show-icon="false" class="px-2 py-0 text-[11px]" />
+                                        @else
+                                            <span class="text-muted-foreground">—</span>
                                         @endif
                                     </td>
                                 </tr>

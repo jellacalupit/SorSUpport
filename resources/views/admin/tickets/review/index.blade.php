@@ -107,7 +107,7 @@
                                     @if ($ticket->displayStatus())
                                         <x-status-badge :status="$ticket->displayStatus()" :show-icon="false" class="px-2 py-0.5 text-[10px]" />
                                     @else
-                                        -
+                                        <span class="text-muted-foreground">—</span>
                                     @endif
                                 </td>
                                 @php
