@@ -426,7 +426,7 @@
             </section>
         </div>
 
-        <div class="grid h-full w-[360px] flex-1 grid-rows-[minmax(0,1fr)_auto] gap-2 self-stretch overflow-visible pt-0">
+        <div class="grid w-[360px] flex-1 grid-rows-[minmax(0,1fr)_auto] gap-2 self-stretch overflow-visible pt-0">
             @php
                 $monthOptions = [
                     1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'May', 6 => 'Jun',
@@ -508,7 +508,7 @@
                         <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
-                    <div class="mt-1.5 grid content-start gap-1.5 overflow-hidden">
+                    <div class="mt-1.5 grid content-start gap-2.5 overflow-hidden">
                         @forelse ($topPerformingRecipients as $recipient)
                             <div class="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-muted/50">
                                 <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-sidebar-primary text-[9px] font-bold text-sidebar-primary-foreground">
@@ -564,7 +564,7 @@
                         <a data-admin-page-nav href="{{ route('admin.audit') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
-                    <ol class="relative mt-1.5 grid content-start gap-1.5 overflow-hidden">
+                    <ol class="relative mt-1.5 grid content-start gap-2.5 overflow-hidden">
                         <span class="absolute top-5 bottom-5 left-[calc(25%+1.75rem)] w-px bg-[#7a1d2a]/20" aria-hidden="true"></span>
                         @forelse ($recentActivity as $log)
                             @php
