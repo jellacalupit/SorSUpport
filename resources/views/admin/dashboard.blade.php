@@ -501,14 +501,14 @@
                 </div>
                 <ul data-volume-legend class="hidden" aria-label="Categories"></ul>
             </div>
-            <div class="grid min-h-95 grid-cols-2 gap-2">
+            <div class="grid grid-cols-2 gap-2">
                 <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-[20px] border border-border bg-white p-2 shadow-sm">
                     <div class="flex items-center justify-between gap-2 px-1">
                         <h3 class="font-display text-sm font-semibold leading-tight text-foreground">Recipient Performance</h3>
                         <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
-                    <div class="mt-1.5 grid content-start gap-1 overflow-hidden">
+                    <div class="mt-1.5 grid content-start gap-1.5 overflow-hidden">
                         @forelse ($topPerformingRecipients as $recipient)
                             <div class="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-muted/50">
                                 <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-sidebar-primary text-[9px] font-bold text-sidebar-primary-foreground">
@@ -564,7 +564,7 @@
                         <a data-admin-page-nav href="{{ route('admin.audit') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
-                    <ol class="relative mt-1.5 grid content-start gap-1 overflow-hidden">
+                    <ol class="relative mt-1.5 grid content-start gap-1.5 overflow-hidden">
                         <span class="absolute top-5 bottom-5 left-[calc(25%+1.75rem)] w-px bg-[#7a1d2a]/20" aria-hidden="true"></span>
                         @forelse ($recentActivity as $log)
                             @php
@@ -603,7 +603,7 @@
                                         </svg>
                                     @endif
                                 </span>
-                                <div class="min-w-0 space-y-0.5">
+                                <div class="min-w-0 space-y-px">
                                     <p class="truncate text-[11px] font-semibold leading-[1.1] text-foreground">{{ $activityLabel }}</p>
                                     <p class="truncate text-[10px] leading-[1.1] text-muted-foreground">
                                         <span>{{ $log->display_performer?->given_name ?: 'System' }} updated activity</span>
@@ -661,36 +661,6 @@
                 const magnitude = Math.pow(10, Math.floor(Math.log10(max)));
                 const padded = Math.ceil((max * 1.15) / magnitude) * magnitude;
                 return padded;
-            };
-
-            const wrapChartLabel = (label, maxLineLength) => {
-                const words = String(label || '').split(/\s+/).filter(Boolean);
-                const lines = [];
-                let line = '';
-
-                words.forEach((word) => {
-                    if (word.length > maxLineLength) {
-                        if (line) {
-                            lines.push(line);
-                            line = '';
-                        }
-                        for (let index = 0; index < word.length; index += maxLineLength) {
-                            lines.push(word.slice(index, index + maxLineLength));
-                        }
-                        return;
-                    }
-
-                    const candidate = line ? `${line} ${word}` : word;
-                    if (line && candidate.length > maxLineLength) {
-                        lines.push(line);
-                        line = word;
-                    } else {
-                        line = candidate;
-                    }
-                });
-
-                if (line) lines.push(line);
-                return lines.length ? lines : [''];
             };
 
             const filterPoints = () => {
@@ -904,16 +874,13 @@
                     offset: true,
                     ticks: {
                         color: muted,
-                        font: { family: fontSans, size: 10 },
+                        font: { family: fontSans, size: horizontal ? 12 : 10 },
                         maxRotation: 0,
                         minRotation: 0,
                         autoSkip: model.type !== 'bar',
                         callback: (value, index) => {
                             if (model.type !== 'bar') return model.labels[index];
-
-                            const maxLineLength = horizontal ? 28 : 14;
-
-                            return wrapChartLabel(model.labels[index], maxLineLength);
+                            return model.labels[index];
                         },
                     },
                     border: { display: false },
@@ -948,7 +915,7 @@
                         const total = model.values.reduce((sum, value) => sum + value, 0);
 
                         ctx.save();
-                        ctx.font = `600 10px ${fontSans}`;
+                        ctx.font = `600 11px ${fontSans}`;
                         ctx.textBaseline = 'middle';
 
                         meta.data.forEach((element, index) => {
