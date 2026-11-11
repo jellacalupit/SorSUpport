@@ -365,7 +365,7 @@ class VisibilityAndFeedbackTest extends TestCase
         $reportData = app(AnalyticsService::class)->getReportData();
         $rows = collect((new AnalyticsReportExport($reportData))->array())->map(fn ($row) => implode(' | ', $row));
 
-        foreach (['Tickets by College', 'CICT | 1', 'Tickets by Program', 'BSIT | 1', 'How Tickets Were Resolved', 'Settled between the parties | 1', 'Escalation Level', 'Student Satisfaction', 'Average rating | 4', '4 out of 5 | 1'] as $expected) {
+        foreach (['Tickets by College', 'CICT | 1', 'Tickets by Program', 'BSIT | 1', 'Resolution Outcomes', 'Settled between the parties | 1', 'Escalation Levels', 'Student Satisfaction', 'Average rating | 4', '4 out of 5 | 1'] as $expected) {
             $this->assertTrue($rows->contains($expected), "The Excel export is missing: {$expected}");
         }
 
@@ -432,16 +432,16 @@ class VisibilityAndFeedbackTest extends TestCase
         $this->assertStringContainsString('Tickets by College', $report);
         $this->assertStringContainsString('Prepared by:', $report);
 
-        // The summary explains the figures in plain words, and open plus finished add up to the total.
+        // The concise summary matches the dashboard figures.
         $this->ticket(Ticket::STATUS_IN_PROGRESS);
         $this->ticket(Ticket::STATUS_RESOLVED);
         $overview = app(AnalyticsService::class)->getReportOverview();
         $this->assertSame($overview['total'], $overview['open'] + $overview['finished']);
         $this->assertGreaterThanOrEqual(1, $overview['finished']);
-        $explained = view('admin.analytics.report', ['reportData' => app(AnalyticsService::class)->getReportData(), 'filters' => [], 'sections' => ['summary', 'escalation']])->render();
-        $this->assertStringContainsString('What the figures say', $explained);
-        $this->assertStringContainsString('still open', $explained);
-        $this->assertStringContainsString('No tickets were escalated in this period.', $explained);
+        $summary = view('admin.analytics.report', ['reportData' => app(AnalyticsService::class)->getReportData(), 'filters' => [], 'sections' => ['summary']])->render();
+        $this->assertStringContainsString('Escalation rate', $summary);
+        $this->assertStringContainsString('Active handling', $summary);
+        $this->assertStringNotContainsString('What the figures say', $summary);
         $this->assertStringNotContainsString('Tickets by Program', $report);
         $this->assertStringNotContainsString('Student Satisfaction', $report);
 
@@ -456,7 +456,8 @@ class VisibilityAndFeedbackTest extends TestCase
         // The Generate Report window lists every part.
         $this->actingAs($this->admin)->get(route('admin.analytics.index'))
             ->assertOk()
-            ->assertSee('name="sections[]" value="resolution_time"', false)
+            ->assertSee('name="sections[]" value="statuses"', false)
+            ->assertDontSee('name="sections[]" value="resolution_time"', false)
             ->assertSee('Download PDF');
     }
 
@@ -477,6 +478,6 @@ class VisibilityAndFeedbackTest extends TestCase
         $this->actingAs($this->admin)->get('/admin/analytics')
             ->assertOk()
             ->assertSee('No satisfaction ratings in this period.')
-            ->assertSee('No recipient performance data in this period.');
+            ->assertSee('data-staff-sort-table', false);
     }
 }

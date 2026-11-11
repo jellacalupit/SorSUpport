@@ -135,6 +135,17 @@ class AnalyticsDashboardTest extends TestCase
         $response->assertSee('50.0%')
             ->assertSee('2 of 4 needs-resolution')
             ->assertSee('2 of 4 (50.0%)');
+
+        $analytics = app(AnalyticsService::class);
+        $dashboard = $analytics->getDashboardData();
+        $report = $analytics->getReportData();
+        $this->assertSame(
+            $dashboard['openCount'],
+            $report['overview']['open']
+        );
+        $this->assertSame($dashboard['monthlyTicketVolumes'], $report['monthly_ticket_volumes']);
+        $this->assertSame($dashboard['categoryVolumes'], $report['category_volumes']);
+        $this->assertSame(2, $report['overview']['escalated_tickets']);
     }
 
     public function test_overview_series_cover_twelve_months_and_category_segments_are_exclusive(): void

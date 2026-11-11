@@ -98,7 +98,7 @@ class AnalyticsDefinitionsTest extends TestCase
         $excelRows = (new AnalyticsReportExport($report))->array();
         $statusSectionIndex = array_search(['Active Ticket Status Counts'], $excelRows, true);
         $this->assertNotFalse($statusSectionIndex);
-        $excelStatusRows = array_slice($excelRows, $statusSectionIndex + 1, count(Ticket::DISPLAY_STATUS_LABELS));
+        $excelStatusRows = array_slice($excelRows, $statusSectionIndex + 2, count(Ticket::DISPLAY_STATUS_LABELS));
         $this->assertSame('Submitted', $excelStatusRows[0][0]);
         $this->assertSame(1, $excelStatusRows[0][1]);
         $this->assertNotContains('Forwarded for information', array_column($excelStatusRows, 0));
@@ -292,18 +292,16 @@ class AnalyticsDefinitionsTest extends TestCase
             'filters' => [],
             'sections' => ['performance'],
         ])->render();
-        $this->assertStringContainsString('Recipient and Office Performance', $performanceReport);
+        $this->assertStringContainsString('Recipient Performance', $performanceReport);
         $this->assertStringNotContainsString('First staff reply', $performanceReport);
-        $this->assertStringContainsString('Not tracked per handler', $performanceReport);
-        $this->assertStringContainsString('Not enough data', $performanceReport);
+        $this->assertStringContainsString('Avg acknowledge', $performanceReport);
+        $this->assertStringContainsString('Avg handling', $performanceReport);
         $this->assertStringNotContainsString('Analytics test ticket', $performanceReport);
         $excelRows = collect((new AnalyticsReportExport($report))->array())
             ->map(fn ($row) => implode(' | ', $row));
-        $this->assertTrue($excelRows->contains('Performance by Handler'));
-        $this->assertTrue($excelRows->contains('Performance by Office'));
+        $this->assertTrue($excelRows->contains('Recipient Performance'));
         $this->assertFalse($excelRows->contains(fn ($row) => str_contains($row, 'First staff reply')));
-        $this->assertTrue($excelRows->contains(fn ($row) => str_contains($row, 'Not tracked per handler')));
-        $this->assertTrue($excelRows->contains(fn ($row) => str_contains($row, 'Not enough data')));
+        $this->assertTrue($excelRows->contains(fn ($row) => str_contains($row, 'Avg acknowledge')));
 
         $reviewOnly = $analytics->getReportData([
             'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
@@ -321,8 +319,10 @@ class AnalyticsDefinitionsTest extends TestCase
             ->assertDontSee('Escalations are counted by category and level, not per handler.')
             ->assertDontSee('Averages from very few tickets are not reliable; see the count in brackets.')
             ->assertDontSee('Committee outcomes: average')
-            ->assertSee('Avg time to acknowledge (tickets)')
-            ->assertSee('Avg handling time from assignment (tickets)')
+            ->assertSee('Avg time to')
+            ->assertSee('acknowledge (tickets)')
+            ->assertSee('Avg handling time')
+            ->assertSee('from assignment (tickets)')
             ->assertDontSee('n/a means fewer than 3 tickets');
         $this->assertArrayHasKey('office_rows', $report['performance_metrics']);
     }
@@ -440,7 +440,7 @@ class AnalyticsDefinitionsTest extends TestCase
         $sensitiveExcelRows = collect($excelRows)
             ->filter(fn ($row) => ($row[0] ?? null) === 'Sensitive categories (not broken down)')
             ->values();
-        $this->assertCount(4, $sensitiveExcelRows);
+        $this->assertCount(3, $sensitiveExcelRows);
         $this->assertSame(1, $sensitiveExcelRows->first()[1]);
 
         $pdfHtml = view('admin.analytics.report', [
@@ -455,7 +455,7 @@ class AnalyticsDefinitionsTest extends TestCase
             $this->assertStringContainsString($expectedText, $pdfHtml);
         }
         $this->assertStringNotContainsString('Tickets by Block', $pdfHtml);
-        $this->assertSame(4, substr_count($pdfHtml, 'Sensitive categories (not broken down)'));
+        $this->assertSame(3, substr_count($pdfHtml, 'Sensitive categories (not broken down)'));
 
         $admin = User::factory()->create(['role' => User::ROLE_SDS_ADMIN]);
         $this->actingAs($admin)

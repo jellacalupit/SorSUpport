@@ -19,19 +19,16 @@ class AnalyticsController extends Controller
      */
     public const REPORT_SECTIONS = [
         'summary' => 'Summary',
-        'performance' => 'Recipient and office performance',
+        'performance' => 'Recipient performance',
         'categories' => 'Tickets by category',
-        'resolution_rate' => 'Resolution rate',
-        'resolution_time' => 'How long tickets took to resolve',
-        'escalation' => 'Escalations by month',
-        'statuses' => 'Tickets by status',
+        'statuses' => 'Status and classification',
         'colleges' => 'Tickets by college',
         'programs' => 'Tickets by program',
         'year_levels' => 'Tickets by year level',
         'origin' => 'Identified and anonymous origin',
-        'resolution_types' => 'How tickets were resolved',
-        'closure_reasons' => 'Why tickets were closed',
-        'escalation_levels' => 'Escalation level',
+        'resolution_types' => 'Resolution outcomes',
+        'closure_reasons' => 'Closure reasons',
+        'escalation_levels' => 'Escalation levels',
         'satisfaction' => 'Student satisfaction',
     ];
 

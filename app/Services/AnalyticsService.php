@@ -1074,6 +1074,12 @@ class AnalyticsService
             ->with(['complaint.category', 'assignee.recipient', 'currentHandler.recipient', 'auditLogs.performer'])
             ->get();
         $resolutionTimes = $this->resolutionTimeStats($tickets);
+        $classificationDistribution = [
+            'Needs Resolution' => $tickets->where('classification', Ticket::CLASSIFICATION_NEEDS_RESOLUTION)->count(),
+            'Informational' => $tickets->where('classification', Ticket::CLASSIFICATION_INFORMATIONAL)->count(),
+            'Invalid' => $tickets->where('classification', Ticket::CLASSIFICATION_INVALID)->count(),
+            'Unclassified' => $tickets->filter(fn ($ticket) => blank($ticket->classification))->count(),
+        ];
 
         return [
             'summary' => [
@@ -1085,6 +1091,9 @@ class AnalyticsService
             'resolution_rate_details' => $resolutionRate,
             'performance_metrics' => $this->performanceMetricsForTickets($tickets, $resolutionTimes),
             'category_breakdown' => $this->getComplaintDistributionByCategory($filters),
+            'category_volumes' => $this->categoryVolumes($tickets, ComplaintCategory::query()->orderBy('name')->get()),
+            'monthly_ticket_volumes' => $this->monthlyTicketVolumes($tickets, $filters),
+            'classification_distribution' => $classificationDistribution,
             'resolution_chart' => $this->getResolutionRate($filters)['chart'],
             'average_resolution_time' => $this->getAverageResolutionTimePerCategory($filters),
             'escalation_frequency' => $this->getEscalationFrequency($filters),
@@ -1096,22 +1105,31 @@ class AnalyticsService
     }
 
     /**
-     * The figures the printed report explains in plain words: how many tickets came in, how many
-     * are open or finished, how many needed action and were resolved, and how long that took.
+     * The figures shared by the analytics dashboard and its exports.
      */
     public function getReportOverview(array $filters = []): array
     {
         $tickets = $this->filterTickets(Ticket::query(), $filters)->with(['complaint.category', 'auditLogs'])->get();
-        $finishedStatuses = [Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED];
+        $openStatuses = [
+            Ticket::STATUS_SUBMITTED,
+            Ticket::STATUS_NEEDS_CLARIFICATION,
+            Ticket::STATUS_ASSIGNED,
+            Ticket::STATUS_IN_PROGRESS,
+            Ticket::STATUS_ESCALATED,
+            Ticket::STATUS_REFERRED,
+        ];
         $needsAction = $tickets->where('classification', Ticket::CLASSIFICATION_NEEDS_RESOLUTION);
         $resolutionRate = $this->resolutionRateMetrics($tickets);
         $resolutionTimes = $this->resolutionTimeStats($tickets);
-        $escalated = $tickets->filter(fn ($ticket) => $ticket->auditLogs->where('action', 'ticket_escalated')->isNotEmpty());
+        $escalated = $needsAction->filter(fn ($ticket) => $ticket->auditLogs->where('action', 'ticket_escalated')->isNotEmpty());
+        $open = $tickets
+            ->whereIn('status', $openStatuses)
+            ->filter(fn ($ticket) => in_array($ticket->classification, [Ticket::CLASSIFICATION_NEEDS_RESOLUTION, null], true));
 
         return [
             'total' => $tickets->count(),
-            'open' => $tickets->whereNotIn('status', $finishedStatuses)->count(),
-            'finished' => $tickets->whereIn('status', $finishedStatuses)->count(),
+            'open' => $open->count(),
+            'finished' => $tickets->whereIn('status', [Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED])->count(),
             'needs_action' => $needsAction->count(),
             'needs_action_denominator' => $resolutionRate['total'],
             'needs_action_resolved' => $resolutionRate['resolved'],
