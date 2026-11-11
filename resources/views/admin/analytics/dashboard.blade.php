@@ -583,29 +583,23 @@
                 ctx.restore();
             },
         };
-        const analyticsCategoryTotalLabels = {
-            id: 'analyticsCategoryTotalLabels',
-            afterDatasetsDraw(chart) {
-                const { ctx, chartArea, scales } = chart;
-                ctx.save();
-                ctx.font = `600 11px ${analyticsVolumeFont}`;
-                ctx.textBaseline = 'middle';
+        const analyticsCategoryTooltipPosition = 'analyticsCategoryOffset';
+        Chart.Tooltip.positioners[analyticsCategoryTooltipPosition] = function (items, eventPosition) {
+            if (!items.length) return false;
 
-                analyticsCategoryRows.forEach((row, index) => {
-                    const total = Number(row.total || 0);
-                    const y = scales.y.getPixelForValue(index);
-                    const barEnd = scales.x.getPixelForValue(total);
-                    const label = String(total);
-                    const labelWidth = ctx.measureText(label).width;
-                    const fitsAfterBar = barEnd + 7 + labelWidth <= chartArea.right;
+            const element = items[0].element;
+            const { chartArea } = this.chart;
+            const gap = 12;
+            const tooltipHeight = this.height || 0;
+            const placeAbove = element.y - gap - tooltipHeight >= chartArea.top;
+            const anchorX = Math.min(Math.max(eventPosition.x, chartArea.left + 8), chartArea.right - 8);
 
-                    ctx.fillStyle = fitsAfterBar ? '#7a1d2a' : '#ffffff';
-                    ctx.textAlign = fitsAfterBar ? 'left' : 'right';
-                    ctx.fillText(label, fitsAfterBar ? barEnd + 7 : Math.max(chartArea.left + labelWidth, barEnd - 6), y);
-                });
-
-                ctx.restore();
-            },
+            return {
+                x: anchorX,
+                y: placeAbove ? element.y - gap : element.y + gap,
+                xAlign: anchorX > (chartArea.left + chartArea.right) / 2 ? 'right' : 'left',
+                yAlign: placeAbove ? 'bottom' : 'top',
+            };
         };
 
         window.renderAnalyticsVolumeCharts = () => {
@@ -727,7 +721,6 @@
                         labels: analyticsCategoryRows.map((row) => row.name),
                         datasets: categoryDatasets,
                     },
-                    plugins: [analyticsCategoryTotalLabels],
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
@@ -735,10 +728,11 @@
                         indexAxis: 'y',
                         animation: { duration: 500, easing: 'easeOutQuart' },
                         interaction: { mode: 'index', intersect: false, axis: 'y' },
-                        layout: { padding: { top: 4, right: 28, bottom: 4, left: 4 } },
+                        layout: { padding: { top: 4, right: 8, bottom: 4, left: 4 } },
                         plugins: {
                             legend: { display: false },
                             tooltip: {
+                                position: analyticsCategoryTooltipPosition,
                                 backgroundColor: '#ffffff',
                                 titleColor: '#111111',
                                 bodyColor: '#111827',
