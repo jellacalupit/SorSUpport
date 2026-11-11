@@ -346,8 +346,8 @@
 
                 <div class="grid min-w-0 items-stretch gap-4 lg:grid-cols-[minmax(20rem,0.8fr)_minmax(0,1.5fr)]" data-analytics-distribution-row>
                     <div class="grid min-w-0 gap-4 lg:grid-rows-2" data-analytics-distribution-stack>
-                        <x-donut-chart class="h-full" title="Status" empty-message="No tickets in this period." :segments="$statusSegments" total-label="Tickets" :legend-columns="1" />
-                        <x-donut-chart class="h-full" title="Classification" :segments="$classificationSegments" total-label="Tickets" :legend-columns="1" />
+                        <x-donut-chart class="h-full" title="Status" empty-message="No tickets in this period." :segments="$statusSegments" total-label="Tickets" :legend-columns="1" ring-class="h-32 w-32 sm:h-36 sm:w-36" :stroke-width="15" />
+                        <x-donut-chart class="h-full" title="Classification" :segments="$classificationSegments" total-label="Tickets" :legend-columns="1" ring-class="h-32 w-32 sm:h-36 sm:w-36" :stroke-width="15" />
                     </div>
 
                     <article class="{{ $cardClass }} flex min-w-0 flex-col">
@@ -413,23 +413,23 @@
                                     <th class="px-3 py-2.5 text-left font-medium">{{ $row['name'] }}<span class="block text-[10px] font-normal text-muted-foreground">{{ $row['unit'] }}</span></th>
                                     <td class="px-3 py-2.5 text-left tabular-nums">{{ number_format($row['assigned_tickets']) }}</td>
                                     <td class="px-3 py-2.5 text-left tabular-nums">{{ number_format($row['open_tickets']) }}</td>
-                                    <td class="px-3 py-2.5 text-left">{{ $row['oldest_open_ticket_age_days'] === null ? 'No data' : $days($row['oldest_open_ticket_age_days']) }}</td>
+                                    <td class="px-3 py-2.5 text-left">{{ $row['oldest_open_ticket_age_days'] === null ? '—' : $days($row['oldest_open_ticket_age_days']) }}</td>
                                     <td class="px-3 py-2.5 text-left">{{ number_format($row['resolved_tickets']) }} ({{ number_format($row['resolved_percentage'], 1) }}%)</td>
                                     <td class="px-3 py-2.5 text-left">
-                                        {{ $row['acknowledgment_average_days'] === null ? 'No data' : $days($row['acknowledgment_average_days']) . ' (' . number_format($row['acknowledgment_count']) . ')' }}
+                                        {{ $row['acknowledgment_average_days'] === null ? '—' : $days($row['acknowledgment_average_days']) . ' (' . number_format($row['acknowledgment_count']) . ')' }}
                                     </td>
                                     <td class="px-3 py-2.5 text-left">
                                         @if ($row['handling_average_days'] === null)
-                                            No data
+                                            —
                                         @else
                                             {{ $days($row['handling_average_days']) }} ({{ number_format($row['handling_count']) }})
+                                            <span class="block text-[10px] text-muted-foreground">{{ number_format($row['handling_fallback_count']) }} fallback(s)</span>
                                         @endif
-                                        <span class="block text-[10px] text-muted-foreground">{{ number_format($row['handling_fallback_count']) }} fallback(s)</span>
                                     </td>
-                                    <td class="px-3 py-2.5 text-left">{{ $row['rating_average'] === null ? 'No ratings' : number_format($row['rating_average'], 1) . ' (' . number_format($row['rating_count']) . ')' }}</td>
+                                    <td class="px-3 py-2.5 text-left">{{ $row['rating_average'] === null ? '—' : number_format($row['rating_average'], 1) . ' (' . number_format($row['rating_count']) . ')' }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="8" class="px-3 py-4 text-left text-muted-foreground">No recipient performance data in this period.</td></tr>
+                                <tr><td colspan="8" class="px-3 py-4 text-left text-muted-foreground">—</td></tr>
                             @endforelse
                         </tbody>
                     </table>

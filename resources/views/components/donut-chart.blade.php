@@ -9,10 +9,13 @@
     'legendColumns' => null,
     'emptyMessage' => null,
     'compact' => false,
+    'ringClass' => null,
+    'strokeWidth' => null,
 ])
 
 @php
     $total = array_sum(array_column($segments, 'count'));
+    $ringStrokeWidth = $strokeWidth ?? ($compact ? 15 : 12);
     $legendGridClass = match ((int) $legendColumns) {
         1 => 'grid-cols-1',
         2 => 'grid-cols-2',
@@ -30,8 +33,8 @@
         </div>
     @endif
     @if ($stack)<h3 class="text-sm font-semibold text-black sm:hidden">{{ $title }}</h3>@endif
-    <div class="relative shrink-0 {{ $large ? ($compact ? 'h-30 w-30' : 'h-56 w-56') : ($stack ? 'h-24 w-24' : 'h-28 w-28') }} {{ $large ? '' : 'sm:h-32 sm:w-32' }}">
-        <x-donut-ring :segments="$segments" :stroke-width="$compact ? 15 : 12" class="drop-shadow-sm" />
+    <div class="relative shrink-0 {{ $ringClass ?? ($large ? ($compact ? 'h-30 w-30' : 'h-56 w-56') : ($stack ? 'h-24 w-24' : 'h-28 w-28')) }} {{ $ringClass ? '' : ($large ? '' : 'sm:h-32 sm:w-32') }}">
+        <x-donut-ring :segments="$segments" :stroke-width="$ringStrokeWidth" class="drop-shadow-sm" />
         <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
             <span class="text-xl font-bold leading-none text-foreground">{{ $total }}</span>
             <span class="mt-0.5 text-[9px] text-muted-foreground">{{ $totalLabel }}</span>
