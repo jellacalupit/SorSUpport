@@ -83,7 +83,9 @@ class Module7EscalationTest extends TestCase
             ->get(route('admin.complaints.show', $ticket->complaint))
             ->assertOk()
             ->assertSee('Escalate ticket')
-            ->assertSee('name="recipient_id" value="' . $supervisor->id . '"', false);
+            ->assertSee('name="recipient_id" value="' . $supervisor->id . '"', false)
+            ->assertSee($supervisor->user->table_name)
+            ->assertDontSee('Level 2 · ' . $supervisor->user->table_name);
     }
 
     public function test_only_staff_above_the_current_recipient_can_be_selected(): void

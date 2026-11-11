@@ -1,7 +1,8 @@
 @props(['ticket', 'cancellable' => false])
 
-{{-- Shown when the admin taps Escalate. Only recipients configured in the category's escalation
-     hierarchy are offered, grouped by path and labelled with their level. With `cancellable`, a
+{{-- Shown when the admin taps Escalate. Only higher recipients configured in the category's
+     escalation hierarchy are offered and grouped by path. Hierarchy position numbers stay in
+     Settings and are not presented as ticket escalation levels. With `cancellable`, a
      parent Alpine `action` variable is expected so Cancel can fold the form away. --}}
 
 @php
@@ -33,14 +34,14 @@
         @endif
     @else
         @php
-            // One option per person on each path, labelled with their level; the suggested next
-            // person is chosen to start with.
+            // One option per eligible person on each path. The suggested next person starts
+            // selected, but hierarchy position numbers are intentionally not shown here.
             $escalationOptions = [];
             foreach ($escalationPaths as $pathName => $steps) {
                 foreach ($steps as $step) {
                     $escalationOptions[] = [
                         'value' => $step['recipient']->id,
-                        'label' => 'Level ' . $step['level'] . ' · ' . $step['recipient']->user->table_name,
+                        'label' => $step['recipient']->user->table_name,
                         'detail' => trim($step['recipient']->designation . ', ' . $step['recipient']->unit, ', ') . ($ticket->complaint?->names($step['recipient']->user) ? ' · named in this complaint' : ''),
                         'group' => $pathName,
                     ];
