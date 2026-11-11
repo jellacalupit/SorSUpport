@@ -815,7 +815,9 @@ class AnalyticsService
                 $acknowledgmentsByHandler,
                 $resolvedByHandler,
                 $handlingByHandlerAndCategory,
-            ), $this->handlerPerformanceDetails(
+            ), [
+                'designation' => $handler->recipient?->designation ?: '—',
+            ], $this->handlerPerformanceDetails(
                 $handlerId,
                 $assignedTicketsByHandler,
                 $acknowledgmentsByHandler,

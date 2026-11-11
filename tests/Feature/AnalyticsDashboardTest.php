@@ -67,7 +67,8 @@ class AnalyticsDashboardTest extends TestCase
             ->assertSee('data-analytics-distribution-row', false)
             ->assertSee('data-analytics-distribution-stack', false)
             ->assertSee('lg:grid-cols-[minmax(20rem,0.8fr)_minmax(0,1.5fr)]', false)
-            ->assertSee('data-staff-sort-table class="w-full min-w-[1080px] text-left text-xs"', false)
+            ->assertSee('data-staff-sort-table class="w-full min-w-[1200px] text-left text-xs"', false)
+            ->assertSee('data-staff-sort="designation"', false)
             ->assertSee('thead class="border-b bg-primary text-white"', false)
             ->assertSee('window.renderAnalyticsVolumeCharts();', false)
             ->assertDontSee('Common subjects')
@@ -106,7 +107,7 @@ class AnalyticsDashboardTest extends TestCase
             'No category totals in this period.',
             'No outcome data in this period.',
             'No tickets in this period.',
-            'No recipient performance data in this period.',
+            '—',
             'No college breakdown data in this period.',
             'No ticket origin data in this period.',
             'No satisfaction ratings in this period.',
@@ -254,6 +255,7 @@ class AnalyticsDashboardTest extends TestCase
 
         $this->assertSame(2, $lastRow['assigned_tickets']);
         $this->assertSame(2, $lastRow['resolved_tickets']);
+        $this->assertSame('Officer', $lastRow['designation']);
         $this->assertSame(100.0, $lastRow['resolved_percentage']);
         $this->assertSame(0, $firstRow['resolved_tickets']);
         $this->assertSame(0.3, $lastRow['acknowledgment_average_days']);
@@ -264,6 +266,16 @@ class AnalyticsDashboardTest extends TestCase
         $this->assertSame(4.5, $lastRow['rating_average']);
         $this->assertSame(2, $lastRow['rating_count']);
 
+        $this->actingAs($admin)
+            ->get(route('admin.analytics.index'))
+            ->assertOk()
+            ->assertSee('Designation')
+            ->assertSee('Avg time to')
+            ->assertSee('acknowledge (tickets)')
+            ->assertSee('Avg handling time')
+            ->assertSee('from assignment (tickets)')
+            ->assertSee('Officer');
+
         $response = $this->actingAs($admin)->get(route('admin.analytics.index'))->assertOk();
         foreach ([
             'Name',
@@ -271,8 +283,11 @@ class AnalyticsDashboardTest extends TestCase
             'Open',
             'Oldest open',
             'Resolved',
-            'Avg time to acknowledge (tickets)',
-            'Avg handling time from assignment (tickets)',
+            'Designation',
+            'Avg time to',
+            'acknowledge (tickets)',
+            'Avg handling time',
+            'from assignment (tickets)',
             'Avg rating',
             '0.3 days (1)',
             '5.5 days (2)',

@@ -379,21 +379,26 @@
                     <p class="mt-0.5 {{ $mutedClass }}">Assigned counts use the current assignee, or current handler when no assignee is set.</p>
                 </div>
                 <article class="min-w-0 overflow-x-auto rounded-xl border border-border bg-white shadow-sm">
-                    <table data-staff-sort-table class="w-full min-w-[1080px] text-left text-xs">
+                    <table data-staff-sort-table class="w-full min-w-[1200px] text-left text-xs">
                         <thead class="border-b bg-primary text-white">
                             <tr class="text-left">
                                 @foreach ([
-                                    'name' => 'Name',
-                                    'assigned_tickets' => 'Tickets',
-                                    'open_tickets' => 'Open',
-                                    'oldest_open_ticket_age_days' => 'Oldest open',
-                                    'resolved_tickets' => 'Resolved',
-                                    'acknowledgment_average_days' => 'Avg time to acknowledge (tickets)',
-                                    'handling_average_days' => 'Avg handling time from assignment (tickets)',
-                                    'rating_average' => 'Avg rating',
+                                    'name' => ['Name'],
+                                    'designation' => ['Designation'],
+                                    'assigned_tickets' => ['Tickets'],
+                                    'open_tickets' => ['Open'],
+                                    'oldest_open_ticket_age_days' => ['Oldest open'],
+                                    'resolved_tickets' => ['Resolved'],
+                                    'acknowledgment_average_days' => ['Avg time to', 'acknowledge (tickets)'],
+                                    'handling_average_days' => ['Avg handling time', 'from assignment (tickets)'],
+                                    'rating_average' => ['Avg rating'],
                                 ] as $sortKey => $label)
                                     <th class="px-3 py-2.5 text-left font-semibold first:rounded-tl-xl last:rounded-tr-xl">
-                                        <button type="button" data-staff-sort="{{ $sortKey }}" class="w-full text-left font-semibold text-white hover:text-white/80">{{ $label }}</button>
+                                        <button type="button" data-staff-sort="{{ $sortKey }}" class="w-full text-left font-semibold leading-tight text-white hover:text-white/80">
+                                            @foreach ($label as $labelLine)
+                                                <span class="block">{{ $labelLine }}</span>
+                                            @endforeach
+                                        </button>
                                     </th>
                                 @endforeach
                             </tr>
@@ -402,6 +407,7 @@
                             @forelse ($staffRows as $row)
                                 <tr data-staff-row
                                     data-sort-name="{{ $row['name'] }}"
+                                    data-sort-designation="{{ $row['designation'] }}"
                                     data-sort-assigned_tickets="{{ $row['assigned_tickets'] }}"
                                     data-sort-open_tickets="{{ $row['open_tickets'] }}"
                                     data-sort-oldest_open_ticket_age_days="{{ $row['oldest_open_ticket_age_days'] ?? -1 }}"
@@ -411,6 +417,7 @@
                                     data-sort-rating_average="{{ $row['rating_average'] ?? -1 }}"
                                     class="border-b border-border last:border-0">
                                     <th class="px-3 py-2.5 text-left font-medium">{{ $row['name'] }}<span class="block text-[10px] font-normal text-muted-foreground">{{ $row['unit'] }}</span></th>
+                                    <td class="px-3 py-2.5 text-left">{{ $row['designation'] }}</td>
                                     <td class="px-3 py-2.5 text-left tabular-nums">{{ number_format($row['assigned_tickets']) }}</td>
                                     <td class="px-3 py-2.5 text-left tabular-nums">{{ number_format($row['open_tickets']) }}</td>
                                     <td class="px-3 py-2.5 text-left">{{ $row['oldest_open_ticket_age_days'] === null ? '—' : $days($row['oldest_open_ticket_age_days']) }}</td>
@@ -429,7 +436,7 @@
                                     <td class="px-3 py-2.5 text-left">{{ $row['rating_average'] === null ? '—' : number_format($row['rating_average'], 1) . ' (' . number_format($row['rating_count']) . ')' }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="8" class="px-3 py-4 text-left text-muted-foreground">—</td></tr>
+                                <tr><td colspan="9" class="px-3 py-4 text-left text-muted-foreground">—</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -806,7 +813,7 @@
                 rows.sort((left, right) => {
                     const leftValue = left.getAttribute(`data-sort-${key}`) ?? '';
                     const rightValue = right.getAttribute(`data-sort-${key}`) ?? '';
-                    const comparison = key === 'name'
+                    const comparison = ['name', 'designation'].includes(key)
                         ? leftValue.localeCompare(rightValue)
                         : Number(leftValue) - Number(rightValue);
 
