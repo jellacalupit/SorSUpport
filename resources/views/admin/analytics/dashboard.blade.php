@@ -265,7 +265,7 @@
             <article class="{{ $cardClass }} p-3">
                 <h2 class="text-[11px] font-semibold text-black">Total tickets</h2>
                 <p class="mt-1 font-display text-2xl font-bold leading-none text-primary">{{ number_format($total) }}</p>
-                <p class="mt-1 text-xs text-muted-foreground">{{ number_format($data['openCount']) }} open now</p>
+                <p class="mt-1 text-xs text-green-700">{{ number_format($data['openCount']) }} active tickets</p>
             </article>
             <article class="{{ $cardClass }} p-3">
                 <h2 class="text-[11px] font-semibold text-black">Resolution rate</h2>
