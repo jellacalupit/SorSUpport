@@ -423,17 +423,17 @@
                                     <td class="px-3 py-2.5 text-left">{{ $row['oldest_open_ticket_age_days'] === null ? '—' : $days($row['oldest_open_ticket_age_days']) }}</td>
                                     <td class="px-3 py-2.5 text-left">{{ number_format($row['resolved_tickets']) }} ({{ number_format($row['resolved_percentage'], 1) }}%)</td>
                                     <td class="px-3 py-2.5 text-left">
-                                        {{ $row['acknowledgment_average_days'] === null ? '—' : $days($row['acknowledgment_average_days']) . ' (' . number_format($row['acknowledgment_count']) . ')' }}
+                                        {{ $row['acknowledgment_average_days'] === null ? '—' : $days($row['acknowledgment_average_days']) }}
                                     </td>
                                     <td class="px-3 py-2.5 text-left">
                                         @if ($row['handling_average_days'] === null)
                                             —
                                         @else
-                                            {{ $days($row['handling_average_days']) }} ({{ number_format($row['handling_count']) }})
+                                            {{ $days($row['handling_average_days']) }}
                                             <span class="block text-[10px] text-muted-foreground">{{ number_format($row['handling_fallback_count']) }} fallback(s)</span>
                                         @endif
                                     </td>
-                                    <td class="px-3 py-2.5 text-left">{{ $row['rating_average'] === null ? '—' : number_format($row['rating_average'], 1) . ' (' . number_format($row['rating_count']) . ')' }}</td>
+                                    <td class="px-3 py-2.5 text-left">{{ $row['rating_average'] === null ? '—' : number_format($row['rating_average'], 1) }}</td>
                                 </tr>
                             @empty
                                 <tr><td colspan="9" class="px-3 py-4 text-left text-muted-foreground">—</td></tr>

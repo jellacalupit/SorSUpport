@@ -289,10 +289,10 @@ class AnalyticsDashboardTest extends TestCase
             'Avg handling time',
             'from assignment (tickets)',
             'Avg rating',
-            '0.3 days (1)',
-            '5.5 days (2)',
+            '0.3 days',
+            '5.5 days',
             '1 fallback(s)',
-            '4.5 (2)',
+            '4.5',
         ] as $expected) {
             $response->assertSee($expected);
         }
