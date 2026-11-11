@@ -285,7 +285,8 @@ class ConfidentialityTest extends TestCase
     public function test_the_previous_handler_loses_access_when_a_sensitive_ticket_is_escalated(): void
     {
         $ticket = $this->assign($this->submit(['category_id' => $this->sensitive->id]));
-        $this->sensitive->escalationHierarchies()->create(['recipient_id' => $this->otherRecipient->recipient->id, 'level' => 1]);
+        $this->sensitive->escalationHierarchies()->create(['recipient_id' => $this->handler->recipient->id, 'level' => 1]);
+        $this->sensitive->escalationHierarchies()->create(['recipient_id' => $this->otherRecipient->recipient->id, 'level' => 2]);
 
         $this->actingAs($this->admin)
             ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $this->otherRecipient->recipient->id, 'escalation_note' => 'Not resolved at this level.'])

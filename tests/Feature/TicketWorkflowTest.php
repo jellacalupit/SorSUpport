@@ -750,11 +750,13 @@ class TicketWorkflowTest extends TestCase
         $this->assertStringNotContainsString($this->student->name, $emailText);
         $this->assertStringNotContainsString($this->student->email, $emailText);
 
-        $ticket->complaint->category->escalationHierarchies()->create([
-            'path_number' => 1,
-            'level' => 1,
-            'recipient_id' => $this->otherRecipient->recipient->id,
-        ]);
+        foreach ([[1, $this->handler], [2, $this->otherRecipient]] as [$level, $user]) {
+            $ticket->complaint->category->escalationHierarchies()->create([
+                'path_number' => 1,
+                'level' => $level,
+                'recipient_id' => $user->recipient->id,
+            ]);
+        }
         $this->actingAs($this->admin)
             ->post(route('admin.tickets.escalate', $ticket), [
                 'recipient_id' => $this->otherRecipient->recipient->id,
@@ -1108,7 +1110,9 @@ class TicketWorkflowTest extends TestCase
     public function test_escalating_and_referring_need_an_explanation(): void
     {
         $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
-        $ticket->complaint->category->escalationHierarchies()->create(['path_number' => 1, 'level' => 1, 'recipient_id' => $this->otherRecipient->recipient->id]);
+        foreach ([[1, $this->handler], [2, $this->otherRecipient]] as [$level, $user]) {
+            $ticket->complaint->category->escalationHierarchies()->create(['path_number' => 1, 'level' => $level, 'recipient_id' => $user->recipient->id]);
+        }
 
         $this->actingAs($this->admin)
             ->post(route('admin.tickets.escalate', $ticket), ['recipient_id' => $this->otherRecipient->recipient->id])
@@ -1288,7 +1292,7 @@ class TicketWorkflowTest extends TestCase
         $third = $this->user(User::ROLE_RECIPIENT, 'Cora Chair');
         Recipient::create(['user_id' => $third->id, 'staff_id' => 'STAFF-9', 'unit' => 'CICT', 'designation' => 'Chair']);
 
-        foreach ([[1, $this->otherRecipient], [2, $third]] as [$level, $user]) {
+        foreach ([[1, $this->handler], [2, $this->otherRecipient], [3, $third]] as [$level, $user]) {
             $this->category->escalationHierarchies()->create(['recipient_id' => $user->recipient->id, 'level' => $level]);
         }
 
@@ -1342,7 +1346,7 @@ class TicketWorkflowTest extends TestCase
     public function test_ticket_details_show_review_metadata_before_the_complaint_narrative(): void
     {
         $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
-        $staffDetailsOrder = [
+        $recipientDetailsOrder = [
             'Category',
             'Assigned Recipient',
             'Classification',
@@ -1371,17 +1375,22 @@ class TicketWorkflowTest extends TestCase
                 'My transcript has not been released.',
             ]);
 
-        foreach ([
-            [$this->handler, route('recipient.complaints.show', $ticket->complaint)],
-            [$this->admin, route('admin.complaints.show', $ticket->complaint)],
-        ] as [$user, $url]) {
-            $this->actingAs($user)->get($url)->assertOk()->assertSeeInOrder($staffDetailsOrder);
-        }
+        $this->actingAs($this->handler)
+            ->get(route('recipient.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertSeeInOrder($recipientDetailsOrder);
+
+        $adminDetailsOrder = $recipientDetailsOrder;
+        array_splice($adminDetailsOrder, 3, 0, ['Escalation Level']);
+        $this->actingAs($this->admin)
+            ->get(route('admin.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertSeeInOrder($adminDetailsOrder);
 
         $this->actingAs($this->admin)
             ->get(route('admin.complaints.index'))
             ->assertOk()
-            ->assertSeeInOrder($staffDetailsOrder);
+            ->assertSeeInOrder($adminDetailsOrder);
 
         $this->ticket(Ticket::STATUS_IN_PROGRESS, [
             'assigned_to' => null,
@@ -1416,6 +1425,24 @@ class TicketWorkflowTest extends TestCase
                 'Days Open',
                 'Description',
                 'My transcript has not been released.',
+            ]);
+    }
+
+    public function test_admin_ticket_details_count_actual_escalations_and_order_escalation_metadata(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_ESCALATED, ['escalated_at' => now()]);
+        AuditLog::log($ticket->id, 'ticket_escalated', $this->admin->id, 'First escalation.');
+        AuditLog::log($ticket->id, 'ticket_escalated', $this->admin->id, 'Second escalation.');
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.complaints.index'))
+            ->assertOk()
+            ->assertSeeInOrder([
+                'Classification',
+                'Escalation Level',
+                'Level 2',
+                'Escalated At',
+                'Last Updated At',
             ]);
     }
 

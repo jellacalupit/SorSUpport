@@ -377,6 +377,17 @@ class Ticket extends Model
     }
 
     /**
+     * The ticket's escalation level is the number of times it has actually been escalated. It is
+     * intentionally independent of the numbered staff positions in a category hierarchy.
+     */
+    public function escalationLevel(): int
+    {
+        return $this->relationLoaded('auditLogs')
+            ? $this->auditLogs->where('action', 'ticket_escalated')->count()
+            : $this->auditLogs()->where('action', 'ticket_escalated')->count();
+    }
+
+    /**
      * A closed ticket that was actually resolved can be rated once by the student.
      */
     public function canBeRated(): bool

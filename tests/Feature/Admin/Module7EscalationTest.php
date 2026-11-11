@@ -86,6 +86,38 @@ class Module7EscalationTest extends TestCase
             ->assertSee('name="recipient_id" value="' . $supervisor->id . '"', false);
     }
 
+    public function test_only_staff_above_the_current_recipient_can_be_selected(): void
+    {
+        [$admin, , $ticket, $recipients] = $this->createEscalationScenario();
+        [$officer, $supervisor, $director] = $recipients;
+        $ticket->update(['assigned_to' => $supervisor->user_id, 'current_handler_id' => $supervisor->user_id]);
+
+        $targets = app(\App\Services\TicketEscalationService::class)->escalationTargets($ticket);
+
+        $this->assertSame([$director->id], $targets->pluck('id')->all());
+
+        $this->actingAs($admin)
+            ->post(route('admin.tickets.escalate', $ticket), [
+                'recipient_id' => $officer->id,
+                'escalation_note' => 'This lower position must not be selectable.',
+            ])
+            ->assertSessionHasErrors('recipient_id');
+    }
+
+    public function test_a_recipient_outside_the_path_cannot_be_escalated_to_an_unrelated_position(): void
+    {
+        [, , $ticket] = $this->createEscalationScenario();
+        $outsideRecipient = Recipient::create([
+            'user_id' => User::factory()->create(['role' => User::ROLE_RECIPIENT])->id,
+            'staff_id' => 'R7999',
+            'unit' => 'Student Affairs',
+            'designation' => 'Outside recipient',
+        ]);
+        $ticket->update(['assigned_to' => $outsideRecipient->user_id, 'current_handler_id' => $outsideRecipient->user_id]);
+
+        $this->assertTrue(app(\App\Services\TicketEscalationService::class)->escalationTargets($ticket)->isEmpty());
+    }
+
     public function test_automatic_escalation_and_deadline_reminder_commands_are_gone(): void
     {
         $commands = array_keys(Artisan::all());

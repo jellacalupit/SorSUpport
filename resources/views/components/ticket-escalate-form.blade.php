@@ -25,7 +25,7 @@
 
     @if ($escalationPaths->isEmpty())
         <p class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            No one else is set in the escalation hierarchy of “{{ $ticket->complaint?->category?->name ?? 'this category' }}”.
+            No higher staff member is available in the escalation hierarchy of “{{ $ticket->complaint?->category?->name ?? 'this category' }}”.
             <a href="{{ route('admin.settings', ['settings_tab' => 'escalation', 'category' => $ticket->complaint?->category_id]) }}" class="font-semibold underline">Set it up in System Settings</a>.
         </p>
         @if ($cancellable)

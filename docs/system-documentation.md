@@ -244,7 +244,8 @@ Additional constraints:
 ### Escalation
 
 - Escalations are configured per category as one or more named paths, each with ordered levels; multiple recipients can share a level.
-- Only active recipients in the category's escalation hierarchy can be selected. The current handler is omitted from available targets.
+- Only active recipients above the current assigned recipient on the same category path can be selected. The current recipient, staff at the same or lower hierarchy position, and staff on unrelated paths are omitted. A recipient who is not configured in a path has no escalation target; an SDS-admin handler may move a ticket into any configured path position.
+- The numbered positions in a configured path describe staff hierarchy only. A ticket's displayed Escalation Level instead counts completed transfers: the first escalation is Level 1, the second is Level 2, and so on.
 - The suggested next target is the next higher level along the current handler's path, otherwise the first available option from the first path.
 - The administrator must select the target and enter a reason (maximum 1,000 characters). The system does not trigger escalation based on time or reminders.
 - Every escalation changes assigned/current handler, preserves the `escalated` status on repeat escalation, updates `escalated_at`, logs the reason, may flag a conflict of interest, and queues emails for the acting admin, target recipient, and student.

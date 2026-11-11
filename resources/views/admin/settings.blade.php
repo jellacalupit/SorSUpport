@@ -165,8 +165,9 @@
             },
         }" x-bind:class="settingsTab === 'escalation' ? 'opacity-100' : 'pointer-events-none opacity-0'" class="col-start-1 row-start-1 transition-opacity duration-150 ease-out">
             <div class="mb-3 rounded-xl border border-primary/15 bg-primary-soft/40 px-4 py-3 text-xs leading-relaxed text-foreground">
-                <p class="font-semibold text-primary">How escalation works</p>
-                <p class="mt-0.5 text-muted-foreground">When you tap <span class="font-semibold text-foreground">Escalate</span> on a ticket, only the people listed here for that ticket's category can be chosen. A <span class="font-semibold text-foreground">path</span> is one route a ticket can go up through, from Level 1 to the last level, and a level can hold several people, such as every Program Chair of a college. Only the category's suggested recipients can be added. Add another path when the same category can be escalated through a different office.</p>
+                <p class="font-semibold text-primary">What escalation means and how it works</p>
+                <p class="mt-0.5 text-muted-foreground"><span class="font-semibold text-foreground">Escalation</span> is the manual transfer of an active ticket to a staff member with a higher position in the category's handling hierarchy. A <span class="font-semibold text-foreground">path</span> defines that hierarchy from its lowest position to its highest. Each staff member can appear only once in a path, although one hierarchy position may contain several staff members. When escalating a ticket, the administrator can select only active staff above the current assigned recipient on the same path.</p>
+                <p class="mt-1 text-muted-foreground">The numbers shown here describe staff positions within a path; they are not the ticket's Escalation Level. In ticket details, Escalation Level counts completed transfers: the first escalation is Level 1, the second is Level 2, and so on.</p>
             </div>
 
             <template x-if="categories.length === 0">
@@ -252,9 +253,10 @@
                                                         </span>
                                                     </template>
                                                 </div>
+                                                <template x-if="available(path).length > 0">
                                                 <details class="group relative" :class="level.length ? 'mt-1.5' : ''" x-on:click.outside="$el.removeAttribute('open')">
                                                     <summary :aria-label="`Add a person to level ${levelIndex + 1}`" class="flex h-9 w-full cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-input bg-muted px-3 text-xs outline-none transition-colors hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
-                                                        <span class="min-w-0 truncate text-muted-foreground" x-text="available(path).length ? (level.length ? 'Add another person to this level' : 'Add a person to this level') : 'Everyone in this category is already in this path'"></span>
+                                                        <span class="min-w-0 truncate text-muted-foreground" x-text="level.length ? 'Add another person to this level' : 'Add a person to this level'"></span>
                                                         <svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                                                     </summary>
                                                     <div class="absolute top-full z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg">
@@ -266,9 +268,15 @@
                                                                 </span>
                                                             </button>
                                                         </template>
-                                                        <p x-show="available(path).length === 0" class="px-3 py-2 text-xs text-muted-foreground">Everyone in this category is already in this path.</p>
                                                     </div>
                                                 </details>
+                                                </template>
+                                                <template x-if="available(path).length === 0">
+                                                    <button type="button" disabled :class="level.length ? 'mt-1.5' : ''" class="flex h-9 w-full cursor-not-allowed items-center justify-between gap-2 rounded-lg border border-input bg-muted px-3 text-left text-xs text-muted-foreground opacity-70" aria-label="No more staff available for this path">
+                                                        <span class="min-w-0 truncate">Everyone in this category is already in this path.</span>
+                                                        <svg class="h-4 w-4 shrink-0 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                                                    </button>
+                                                </template>
                                             </div>
                                             <span class="flex shrink-0 items-center">
                                                 <button type="button" x-on:click="moveLevel(path, levelIndex, -1)" :disabled="levelIndex === 0" class="grid h-8 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-primary disabled:opacity-30" aria-label="Move level up" title="Move up"><x-icons.arrow-down class="h-4 w-4" /></button>

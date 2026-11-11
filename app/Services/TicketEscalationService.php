@@ -15,7 +15,9 @@ class TicketEscalationService
     /**
      * The category's escalation paths that the ticket can be escalated along. Each option is one
      * configured step: ['path' => name, 'level' => n, 'recipient' => Recipient]. Only recipients
-     * configured in the hierarchy are offered, minus the current handler and inactive accounts.
+     * configured above the current handler on the same path are offered. Inactive accounts are
+     * never offered. A ticket handled directly by SDS may enter at any configured step, but a
+     * recipient who is not in a path has no comparable higher position and therefore no targets.
      */
     public function escalationOptions(Ticket $ticket): Collection
     {
@@ -26,12 +28,31 @@ class TicketEscalationService
         }
 
         $currentHandlerUserId = $ticket->assigned_to ?: $ticket->current_handler_id;
-
-        return $category->escalationHierarchies()
+        $hierarchy = $category->escalationHierarchies()
             ->with('recipient.user')
-            ->get()
-            ->filter(fn ($entry) => $entry->recipient?->user?->is_active
-                && (int) $entry->recipient->user_id !== (int) $currentHandlerUserId)
+            ->get();
+        $currentLevelsByPath = $hierarchy
+            ->filter(fn ($entry): bool => (int) $entry->recipient?->user_id === (int) $currentHandlerUserId)
+            ->groupBy(fn ($entry): int => (int) $entry->path_number)
+            ->map(fn (Collection $entries): int => (int) $entries->max('level'));
+        $currentHandlerIsRecipient = filled($currentHandlerUserId)
+            && Recipient::query()->where('user_id', $currentHandlerUserId)->exists();
+
+        return $hierarchy
+            ->filter(function ($entry) use ($currentLevelsByPath, $currentHandlerUserId, $currentHandlerIsRecipient): bool {
+                if (! $entry->recipient?->user?->is_active
+                    || (int) $entry->recipient->user_id === (int) $currentHandlerUserId) {
+                    return false;
+                }
+
+                if ($currentLevelsByPath->isEmpty()) {
+                    return ! $currentHandlerIsRecipient;
+                }
+
+                $currentLevel = $currentLevelsByPath->get((int) $entry->path_number);
+
+                return $currentLevel !== null && (int) $entry->level > $currentLevel;
+            })
             ->map(fn ($entry) => [
                 'path_number' => (int) $entry->path_number,
                 'path' => $entry->path_name ?: 'Path ' . $entry->path_number,
@@ -61,24 +82,10 @@ class TicketEscalationService
             return null;
         }
 
-        $hierarchy = $category->escalationHierarchies()->with('recipient.user')->get();
         $options = $this->escalationOptions($ticket);
 
         if ($options->isEmpty()) {
             return null;
-        }
-
-        $currentHandlerUserId = $ticket->assigned_to ?: $ticket->current_handler_id;
-        $current = $hierarchy->first(fn ($entry): bool => (int) $entry->recipient?->user_id === (int) $currentHandlerUserId);
-
-        if ($current) {
-            $next = $options
-                ->where('path_number', (int) $current->path_number)
-                ->first(fn (array $option): bool => $option['level'] > (int) $current->level);
-
-            if ($next) {
-                return $next['recipient'];
-            }
         }
 
         return $options->first()['recipient'];

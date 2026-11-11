@@ -154,7 +154,7 @@ class HandbookCategoryAlignmentTest extends TestCase
         $this->assertSame(Ticket::STATUS_ESCALATED, $ticket->status);
         $this->assertSame($director->user_id, (int) $ticket->current_handler_id);
         $this->assertSame($director->user_id, (int) $ticket->assigned_to);
-        $this->assertNotEmpty(app(TicketEscalationService::class)->escalationTargets($ticket));
+        $this->assertEmpty(app(TicketEscalationService::class)->escalationTargets($ticket));
     }
 
     public function test_the_overlapping_categories_are_deleted_unless_a_ticket_uses_them(): void

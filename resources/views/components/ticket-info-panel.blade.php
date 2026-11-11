@@ -50,6 +50,7 @@
             ?? $complaint?->category?->recipient?->user));
     $holderDisplayName = $holder?->table_name ?? '—';
     $viewer = \Illuminate\Support\Facades\Auth::user();
+    $adminEscalationLevel = $viewer?->isSdsAdmin() ? $ticket->escalationLevel() : 0;
     $showForwardedInformational = $ticket->isForwardedInformational()
         && ($viewer?->isStudent() || $viewer?->isRecipient());
     $statusDisplay = $ticket->displayStatus()
@@ -284,6 +285,18 @@
                 {{ $ticket->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : 'Not yet classified' }}
             </p>
         </div>
+        @if ($viewer?->isSdsAdmin())
+            <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Escalation Level</p>
+                <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $adminEscalationLevel > 0 ? 'Level ' . $adminEscalationLevel : 'Not escalated' }}</p>
+            </div>
+            @if ($ticket->escalated_at)
+                <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
+                    <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Escalated At</p>
+                    <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $ticket->escalated_at->copy()->setTimezone($displayTimezone)->format('M d, Y · g:i A') }}</p>
+                </div>
+            @endif
+        @endif
         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
             <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">{{ $studentView ? 'Last updated' : 'Last Updated At' }}</p>
             <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ ($studentView ? $studentLastUpdatedAt : ($ticket->updated_at ?? $complaint?->updated_at))?->copy()->setTimezone($displayTimezone)->format($studentView ? 'M d, Y' : 'M d, Y · g:i A') ?? 'Unknown' }}</p>
@@ -304,7 +317,7 @@
             <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Created At</p>
             <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $submittedAt?->format('M d, Y · g:i A') ?? 'Unknown' }}</p>
         </div>
-        @if ($ticket->escalated_at)
+        @if (! ($viewer?->isSdsAdmin() ?? false) && $ticket->escalated_at)
             <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
                 <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Escalated At</p>
                 <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $ticket->escalated_at->copy()->setTimezone($displayTimezone)->format('M d, Y · g:i A') }}</p>
