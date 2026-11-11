@@ -591,6 +591,21 @@
             const { chartArea } = this.chart;
             const gap = 12;
             const tooltipHeight = this.height || 0;
+            const tooltipWidth = this.width || 140;
+            const dataIndex = items[0].index ?? items[0].dataIndex;
+            const total = Number(analyticsCategoryRows[dataIndex]?.total || 0);
+            const barEnd = this.chart.scales.x.getPixelForValue(total);
+            const fitsToRight = barEnd + gap + tooltipWidth <= chartArea.right;
+
+            if (fitsToRight) {
+                return {
+                    x: barEnd + gap,
+                    y: element.y,
+                    xAlign: 'left',
+                    yAlign: 'center',
+                };
+            }
+
             const placeAbove = element.y - gap - tooltipHeight >= chartArea.top;
             const anchorX = Math.min(Math.max(eventPosition.x, chartArea.left + 8), chartArea.right - 8);
 
@@ -727,12 +742,15 @@
                         devicePixelRatio: Math.max(2, window.devicePixelRatio || 1),
                         indexAxis: 'y',
                         animation: { duration: 500, easing: 'easeOutQuart' },
-                        interaction: { mode: 'index', intersect: false, axis: 'y' },
+                        interaction: { mode: 'index', intersect: true, axis: 'xy' },
                         layout: { padding: { top: 4, right: 8, bottom: 4, left: 4 } },
                         plugins: {
                             legend: { display: false },
                             tooltip: {
                                 position: analyticsCategoryTooltipPosition,
+                                mode: 'index',
+                                intersect: true,
+                                axis: 'xy',
                                 backgroundColor: '#ffffff',
                                 titleColor: '#111111',
                                 bodyColor: '#111827',

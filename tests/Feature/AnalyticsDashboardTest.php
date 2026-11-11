@@ -65,6 +65,8 @@ class AnalyticsDashboardTest extends TestCase
             ->assertSee('renderAnalyticsChartsWhenVisible', false)
             ->assertSee('window.destroyAnalyticsVolumeCharts?.();', false)
             ->assertSee("position: analyticsCategoryTooltipPosition", false)
+            ->assertSee('const fitsToRight = barEnd + gap + tooltipWidth <= chartArea.right;', false)
+            ->assertSee("interaction: { mode: 'index', intersect: true, axis: 'xy' }", false)
             ->assertSee("yAlign: placeAbove ? 'bottom' : 'top'", false)
             ->assertDontSee('analyticsCategoryTotalLabels', false)
             ->assertSee('data-analytics-distribution-row', false)
