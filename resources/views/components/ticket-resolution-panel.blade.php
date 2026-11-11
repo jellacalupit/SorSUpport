@@ -18,10 +18,14 @@
     <div class="mt-4 border-t border-border pt-4">
         @if ($ticket->referred_to)
             <div>
-                <p class="text-sm font-semibold text-foreground">Referral</p>
+                <p class="text-sm font-semibold text-foreground">External Referral</p>
                 <p class="mt-1 text-sm text-muted-foreground">
                     {{ $ticket->referred_to }}@if ($ticket->referred_at) · {{ $ticket->referred_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}@endif
                 </p>
+                <p class="mt-1 text-xs text-muted-foreground">Sent outside Bulan Campus for further investigation or decision. SorSUpport records the referral and the outcome reported back to SDS.</p>
+                @if ($ticket->status === 'closed')
+                    <p class="mt-1 text-xs font-medium text-amber-700">Closing this SorSUpport ticket does not necessarily stop or close the external proceeding.</p>
+                @endif
             </div>
         @endif
 

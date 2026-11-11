@@ -32,7 +32,7 @@ class RecipientAuditVisibilityTest extends TestCase
         $this->actingAs($recipient)
             ->get(route('recipient.notifications'))
             ->assertOk()
-            ->assertSee('Ticket referred to Campus Disciplinary Committee.')
+            ->assertSee('Ticket sent outside Bulan Campus to Campus Disciplinary Committee; SDS is awaiting the reported outcome.')
             ->assertDontSee($referralNote)
             ->assertDontSee('The College Dean assessed this matter');
 

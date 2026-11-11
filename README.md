@@ -18,12 +18,12 @@ When SDS closes a ticket as invalid, duplicate, out of scope, or no response, it
 
 ## Features
 
-- **Ticket lifecycle**: stored statuses and their transition/action rules remain Submitted → Needs Clarification → Assigned → In Progress → Escalated / Referred → Resolved → Closed. Displayed statuses are classification-aware: `needs_clarification` appears as “In review”; informational and invalid tickets have no displayed status.
+- **Ticket lifecycle**: stored statuses and their transition/action rules remain Submitted → Needs Clarification → Assigned → In Progress → Escalated / Referred → Resolved → Closed. `Referred` means SDS sent the matter to an external committee outside Bulan Campus and is awaiting its reported outcome. Closing or withdrawing the local SorSUpport ticket does not necessarily stop that external proceeding. Displayed statuses are classification-aware: `needs_clarification` appears as “In review”; informational and invalid tickets have no displayed status.
 - **Student status updates**: the ticket page shows the current office, plain-language guidance for what is happening next, a dated timeline of student-visible events excluding the student's own messages, and the date of the latest such event. Timeline dates use the application timezone. Staff action dates are not promised; the only displayed response date is the existing student response window after resolution.
 - **Routing**: categories set by the admin, each with suggested recipients and escalation paths. For “Complaint Against a Student,” the CBME and CICT paths are Program Chair → College Dean; SDS must confirm the College Dean's assessment and endorsement before referring any ticket to the Campus Disciplinary Committee.
 - **Informational and invalid tickets**: students and recipients see “Forwarded for information” or “Recorded for information” for informational tickets, and “Not accepted” for invalid tickets, instead of a status. Forwarded items keep their receiving office and forwarding date and remain stored as Submitted; SDS review, reminders, closing, and forwarding behavior are unchanged.
 - CODI referrals use the canonical Committee on Decorum and Investigation name. “Other” entries matching that name or the acronym CODI are recognized after normalization.
-- **Confidentiality**: a student can hide their identity where the category allows it. In the interface, only the filer sees their identity; everyone else, including SDS, sees “Anonymous.” The identity remains stored in the database. Analytics exports show aggregate identified/anonymous counts, not a student's name or ID, and contain no ticket subjects, descriptions or personnel-involved text. Sensitive tickets are visible only to the SDS Office and assigned handler; emails use “Confidential concern.” Unmasking for a CODI sworn complaint is a decision for SDS and the data privacy officer.
+- **Confidentiality**: a student can choose “hide my identity from ticket handlers” where the category allows it. In the interface, only the filer sees their identity; handlers, including SDS, see “Anonymous.” The authenticated student's identity remains securely linked in the database, so this is identity hiding rather than complete anonymity. Personnel detected by name in the complaint are excluded from assignment, informational forwarding, and escalation, and crafted direct requests are rejected. Analytics exports show aggregate identified/anonymous counts, not a student's name or ID, and contain no ticket subjects, descriptions or personnel-involved text. Sensitive tickets are visible only to the SDS Office and assigned handler; emails use “Confidential concern.” Unmasking for a CODI sworn complaint is a decision for SDS and the data privacy officer.
 - Referral notes are visible to SDS only. Notes are free text, so SDS should not copy identifying details from a complaint into them.
 - **Conversation**: each ticket has a message thread with file attachments, kept in private storage.
 - **Notifications**: in-app notifications and unread badges, plus email requests to SDS when students ask for an update or for SDS to consider escalation. These requests do not notify the assigned handler.
@@ -46,19 +46,19 @@ No holiday dates are shipped because holidays are set by proclamation. SDS must 
 | Ticket is… | Who is reminded | After | Basis |
 |---|---|---|---|
 | Submitted, not yet classified or assigned | SDS Office | 2 working days | System default |
-| The same, in a sensitive category | SDS Office | 1 working day | Adjustable system default informed by the CODI 24-hour notice rule (Handbook p. 58); not a deadline for SDS. |
+| The same, in a sensitive category | SDS Office | 1 working day | Internal SDS follow-up reminder informed by the CODI 24-hour notice rule (Handbook p. 58); not an official committee deadline or compliance measure. |
 | Needs Clarification, student has not replied | Student; SDS Office once at twice the interval | 5 working days | System default, not a handbook deadline; adjustable from 1 to 30 working days |
 | Assigned, not yet acknowledged | Assigned handler | 2 working days | System default |
 | In progress or escalated, no action recorded | Assigned handler | 5 working days | System default |
-| Referred to CODI, no outcome recorded | SDS Office | 10 working days | Adjustable reminder default informed by CODI's decision period (Handbook pp. 57–58); not a deadline for SDS. |
-| Referred to another committee, no outcome recorded | SDS Office | Off by default | System default, not a handbook deadline; the SDS admin can enable and adjust it |
+| Referred to CODI, no outcome recorded | SDS Office | 10 working days | Internal SDS follow-up reminder informed by CODI's decision period (Handbook pp. 57–58); not an official committee deadline or compliance measure. |
+| Referred to another committee, no outcome recorded | SDS Office | Off by default | Internal SDS follow-up reminder, not an official committee deadline or compliance measure; the SDS admin can enable and adjust it. |
 | Resolved, student did not respond | SDS Office, once | 15 calendar days | System default |
 
 A reminder repeats every that many working days until someone acts, and any action on the ticket restarts the count. Reminders never change a ticket; escalating, reassigning and closing stay the SDS admin's decision. The SDS admin can change the waiting days, or turn reminders off, under **System Settings → Reminders**. The starting values are in [config/tickets.php](config/tickets.php).
 
 For Needs Clarification, the student reminder repeats at the configured interval after the latest non-email ticket action. At twice that interval, SDS admins receive a one-time notice for that wait period that they may follow up or close the ticket as no response. This system default is not a handbook deadline. Neither email changes the ticket, and the reminder is sent only while reminders are enabled.
 
-Reminders are operational nudges to the person who must act next. The handbook sets no deadline for acknowledging or resolving ordinary complaints. Every reminder is an SDS-adjustable system default, not a handbook deadline, and reminders never change a ticket. The handbook's 15-day appeal periods apply to the respondent student; the CODI timelines apply to CODI matters.
+Reminders are internal SDS follow-up nudges to the person who must act next. They are not official committee deadlines and do not measure committee compliance. The handbook sets no deadline for acknowledging or resolving ordinary complaints. Every reminder is an SDS-adjustable system default, and reminders never change a ticket. The handbook's 15-day appeal periods apply to the respondent student; the CODI timelines apply to CODI matters.
 
 ### Email delivery
 

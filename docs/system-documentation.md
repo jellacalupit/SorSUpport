@@ -118,16 +118,16 @@ Validation and system rules:
 - When a category is configured for recipient jurisdiction but has no recipient, submission is refused with a category error.
 - Reference numbers are generated as `SU-<year>-<five-digit-sequence>`, such as `SU-2026-00001`.
 - Every accepted complaint gets a ticket in `submitted` status and is queued for SDS review, even if a suggested recipient was selected. Submission does not directly assign the ticket.
-- Anonymous submission creates an audit event without identifying the performer and does not send the ordinary submission-acknowledgment email to the student. The SDS review notification is still created.
+- A submission whose identity is hidden from handlers creates an audit event without identifying the performer and does not send the ordinary submission-acknowledgment email to the student. The SDS review notification is still created.
 
 ### Identity and sensitive-content rules
 
-- For a hidden-identity complaint, the filer can see their identity in the interface; everyone else, including SDS administrators and recipients, sees `Anonymous`. The identity and its database relationship are still stored; hiding identity is not deletion or encryption of the record.
+- The privacy option is “hide my identity from ticket handlers,” not complete anonymity. For a hidden-identity complaint, the filer can see their identity in the interface; handlers, including SDS administrators and recipients, see `Anonymous`. The authenticated student's identity and database relationship remain securely stored; hiding identity is not deletion or encryption of the record.
 - Analytics and its PDF/Excel exports show aggregate identified-versus-anonymous counts, not a hidden student's name or ID. Sensitive-category tickets remain in totals and category distribution but are excluded from student-attribute breakdowns. Analytics exports contain no ticket subjects, descriptions, or personnel-involved text.
 - Unmasking identity for a CODI sworn complaint is not automatic; it is a decision for SDS and the university's data privacy officer.
 - For a sensitive category, a dashboard/report/email-safe subject is `Confidential concern`, not the original subject.
 - Sensitive categories are always configured to allow hidden identity. The category editor forces `allows_hidden_identity` on whenever `is_sensitive` is on.
-- A handler-selection action checks whether the proposed recipient appears by full name, first-and-last name, or (in the personnel-involved field) surname. It records a `conflict_of_interest_flagged` audit event when it detects a match. This is a flag, not an automatic block.
+- Assignment, informational forwarding, and escalation check whether a proposed recipient appears by full name, first-and-last name, or (in the personnel-involved field) surname. A matched recipient is omitted from the available choices, and server-side validation rejects a crafted direct request. This is an automatic block; another eligible staff member must be selected.
 - Student-facing notification details omit staff-only escalation reasons and disclose the referred destination without exposing the admin's referral note. Recipient referral notifications also show only the destination; escalation reasons remain visible to the escalation target.
 - Referral notes are visible to SDS only. Notes are free text, so SDS should not copy identifying details from a complaint into them.
 - The audit search avoids matching performer names on anonymous complaints. Email audit messages refer to an anonymous submitter as “the student,” not by address.
@@ -176,7 +176,7 @@ Stored status values, the transition map, and workflow actions are unchanged. Di
 | `assigned` | Assigned | A handler has been chosen but has not acknowledged the assignment. |
 | `in_progress` | In progress | The SDS handler or recipient has acknowledged the ticket and is working on it. |
 | `escalated` | Escalated | SDS moved the ticket to another configured handler level. |
-| `referred` | Referred | SDS sent the case to an external committee/board and is waiting to record the outcome. |
+| `referred` | Referred | SDS sent the case to an external committee/board outside Bulan Campus and is waiting to record the reported outcome. |
 | `resolved` | Resolved | A resolution or committee outcome was recorded; the student may accept it or ask for further action. |
 | `closed` | Closed | Ticket is finished, withdrawn, informationally retained/forwarded, invalid, or closed for another recorded reason. |
 
@@ -231,7 +231,7 @@ Additional constraints:
 - A student may request one update during each Submitted or Needs Clarification status period. The request does not open or post to the conversation, change status/handler, or reset reminders. A status change ends that period.
 - An escalation request remains pending until SDS escalates or reassigns the ticket, the ticket is resolved or closed, or an SDS admin replies in the conversation. While pending, the student sees confirmation and cannot submit another request. The request itself does not change status/handler or reset reminders.
 - Referral to the Campus Disciplinary Committee is blocked unless SDS confirms that the College Dean assessed and endorsed the matter. This confirmation is required for every category and is not required for CODI, the University Investigation and Disciplinary Committee, or an "Other" destination.
-- For gender-based sexual harassment, withdrawing at any stage does not stop CODI from continuing its investigation (Handbook p. 58). For student discipline, the University may initiate proceedings even if the aggrieved student does not want to file (Handbook p. 46). SDS may record the referral outcome or close the ticket as withdrawn using its existing actions; no automatic closure occurs.
+- Withdrawing or closing a SorSUpport ticket ends the local ticket only and does not necessarily stop an external committee proceeding. In particular, for gender-based sexual harassment, withdrawal does not stop CODI from continuing its investigation (Handbook p. 58). For student discipline, the University may initiate proceedings even if the aggrieved student does not want to file (Handbook p. 46). SDS may record the referral outcome or close the local ticket as withdrawn using its existing actions; no automatic external closure occurs.
 - Withdrawal-request notifications to SDS do not identify the student or include the reason in the notification. The reason is posted in the ticket conversation and uses the existing hidden-identity display rules.
 - Update and escalation requests notify active SDS admins by in-app ticket activity and email only. Emails do not include the request note/reason or student identity; sensitive-category email subjects/details use “Confidential concern.” Request details are kept in SDS-only audit activity and the pending-request panel, not the shared conversation, so the assigned handler cannot see them.
 - In the admin review queue, `reject` only applies to awaiting-review tickets and classifies them invalid. It accepts invalid, duplicate, out-of-scope, and no-response closure types, each requiring a 10–1,000 character student-facing explanation. Generic `close` is blocked for awaiting-review tickets; they use review actions instead.
@@ -320,11 +320,11 @@ Delivery rules:
 | Other referral, no outcome | Active SDS admin(s) | Off by default; adjustable system default | Working days |
 | Resolved, no student response | Active SDS admin(s) | 15 | Calendar days |
 
-Reminders are operational nudges to the person who must act next. The handbook sets no deadline for acknowledging or resolving ordinary complaints. Every reminder is a system default, adjustable by SDS, not a handbook deadline, and reminders never change a ticket. The handbook's 15-day appeal periods apply to the respondent student; CODI timelines apply to CODI matters.
+Reminders are internal SDS follow-up nudges to the person who must act next. They are not official committee deadlines and do not measure committee compliance. The handbook sets no deadline for acknowledging or resolving ordinary complaints. Every reminder is a system default adjustable by SDS, and reminders never change a ticket. The handbook's 15-day appeal periods apply to the respondent student; CODI timelines apply to CODI matters.
 
-- The 1-working-day sensitive-category reminder is a system default, derived from the CODI 24-hour notice timeline (Handbook p. 58). It is adjustable and is not a handbook deadline for SDS.
-- The adjustable CODI referral reminder is set to 10 working days, informed by the decision period stated for CODI (Handbook pp. 57 to 58); it is only sent for referrals flagged CODI and is not a deadline for SDS.
-- The generic reminder for other referrals is a system default, not a handbook deadline. It is off by default; SDS can enable it and adjust its 1–30 working-day threshold.
+- The 1-working-day sensitive-category reminder is an internal SDS follow-up informed by the CODI 24-hour notice timeline (Handbook p. 58). It is adjustable and is not an official committee deadline or compliance measure.
+- The adjustable CODI referral reminder is an internal SDS follow-up set to 10 working days and informed by the decision period stated for CODI (Handbook pp. 57 to 58). It is sent only for referrals flagged CODI and is not an official committee deadline or compliance measure.
+- The generic reminder for other referrals is an internal SDS follow-up, not an official committee deadline or compliance measure. It is off by default; SDS can enable it and adjust its 1–30 working-day threshold.
 - The 15-day resolved-student-response reminder is a system default, adjustable by SDS.
 - Needs Clarification reminders are a system default, not a handbook deadline. SDS can adjust the student reminder interval from 1–30 working days. The reminder repeats at that interval; active SDS admins receive one notice at twice the interval for each wait period, suggesting they may follow up or close the ticket as no response. No ticket is closed automatically.
 - All other reminder thresholds are system defaults.
@@ -364,7 +364,7 @@ System Settings manages units of type college or office.
 
 The admin audit page lists newest events with 15 per page. It supports free-text search across action/details, performer name (excluding anonymous complaint performers), ticket ID, and complaint reference; account-type/system filtering; date-from/date-to filtering; and action list selection.
 
-Audited activity includes ticket lifecycle events, assignments, messages, classification, escalation, conflict flags, closure, student rating, account changes, category/unit/settings changes, profile/password actions, imports, and email delivery/failure. Ticket actions have a ticket ID; standalone account/configuration events may have no ticket. Email delivery audit rows identify the subject and intended recipient, with anonymous student email addresses masked.
+Audited activity includes ticket lifecycle events, assignments, messages, classification, escalation, closure, student rating, account changes, category/unit/settings changes, profile/password actions, imports, and email delivery/failure. Named-person assignment conflicts are rejected before a lifecycle action occurs. Ticket actions have a ticket ID; standalone account/configuration events may have no ticket. Email delivery audit rows identify the subject and intended recipient, with hidden-identity student email addresses masked.
 
 ## 9. Analytics and exports
 

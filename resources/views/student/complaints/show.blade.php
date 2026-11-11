@@ -38,7 +38,7 @@
         <!-- Anonymous Complaint Notice -->
         <x-page-section title="Anonymous Complaint">
             <p class="text-sm text-muted-foreground">
-                This is an anonymous complaint. It was not converted to a ticket and does not have a communication thread or deadline.
+                Your identity is hidden from ticket handlers. This record was not converted to a ticket and does not have a communication thread or deadline.
             </p>
         </x-page-section>
 

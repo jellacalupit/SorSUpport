@@ -118,7 +118,7 @@ class TicketEmailContentTest extends TestCase
             [EmailNotification::TYPE_RECIPIENT_RESOLVED, $this->admin, "Ticket {$reference} was marked resolved", 'has 15 days'],
             [EmailNotification::TYPE_FURTHER_ACTION_REQUESTED, $this->handler, "Further action requested on {$reference}", 'in progress again'],
             [EmailNotification::TYPE_RESOLUTION_ACCEPTED, $this->handler, "Resolution accepted for {$reference}", 'accepted the resolution'],
-            [EmailNotification::TYPE_WITHDRAWN, $this->admin, "Ticket {$reference} was withdrawn", 'withdrew this ticket'],
+            [EmailNotification::TYPE_WITHDRAWN, $this->admin, "Ticket {$reference} was withdrawn", 'withdrew this SorSUpport ticket'],
             [EmailNotification::TYPE_WITHDRAWAL_REQUESTED, $this->admin, "Withdrawal requested for {$reference}", 'please review the request'],
             [EmailNotification::TYPE_INVALID_CLOSURE, $this->student, "Your ticket {$reference} was closed", 'could not be acted on'],
             [EmailNotification::TYPE_COMPLAINT_CLOSED, $this->student, "Your ticket {$reference} is closed", 'has been closed'],
@@ -145,7 +145,7 @@ class TicketEmailContentTest extends TestCase
         $sensitive = $this->ticket(Ticket::STATUS_SUBMITTED, [], ['category_id' => $sensitiveCategory->id]);
         $sensitiveEmail = $this->email($sensitive, EmailNotification::TYPE_WAITING_REMINDER, $this->admin);
 
-        $this->assertStringContainsString('System default, derived from the CODI 24-hour notice timeline (Handbook p. 58). Adjustable. Not a handbook deadline for SDS.', $sensitiveEmail['text']);
+        $this->assertStringContainsString('Internal SDS follow-up reminder informed by the CODI 24-hour notice timeline (Handbook p. 58). It is adjustable and is not an official committee deadline or a measure of committee compliance.', $sensitiveEmail['text']);
         $this->assertStringNotContainsString('requires action within 24 hours', $sensitiveEmail['text']);
 
         $referred = $this->ticket(Ticket::STATUS_REFERRED, [
@@ -154,12 +154,12 @@ class TicketEmailContentTest extends TestCase
         ]);
         $referredEmail = $this->email($referred, EmailNotification::TYPE_WAITING_REMINDER, $this->admin);
 
-        $this->assertStringContainsString('System default, based on the CODI 10-working-day period (pp. 57 to 58). Applies to CODI referrals only.', $referredEmail['text']);
+        $this->assertStringContainsString('Internal SDS follow-up reminder informed by the CODI 10-working-day period (pp. 57 to 58). It applies only to CODI referrals and is not an official committee deadline or a measure of committee compliance.', $referredEmail['text']);
         $this->assertStringNotContainsString('The Student Handbook gives the Committee', $referredEmail['text']);
 
         $otherReferral = $this->ticket(Ticket::STATUS_REFERRED, ['referred_to' => 'Campus Disciplinary Committee']);
         $otherReferralEmail = $this->email($otherReferral, EmailNotification::TYPE_WAITING_REMINDER, $this->admin);
-        $this->assertStringContainsString('System default, not a handbook deadline.', $otherReferralEmail['text']);
+        $this->assertStringContainsString('Internal SDS follow-up reminder. It is not an official committee deadline or a measure of committee compliance.', $otherReferralEmail['text']);
         $this->assertStringNotContainsString('CODI 10-working-day period', $otherReferralEmail['text']);
     }
 
@@ -268,8 +268,22 @@ class TicketEmailContentTest extends TestCase
 
         $email = $this->email($ticket, EmailNotification::TYPE_REFERRED, $this->student);
 
-        $this->assertStringContainsString('referred to Student Disciplinary Board', $email['text']);
+        $this->assertStringContainsString('sent outside Bulan Campus to Student Disciplinary Board', $email['text']);
         $this->assertStringContainsString('you will be notified', $email['text']);
+    }
+
+    public function test_closing_a_referred_ticket_says_the_external_process_may_continue(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_CLOSED, [
+            'referred_to' => 'Student Disciplinary Board',
+            'referred_at' => now()->subDay(),
+            'closed_at' => now(),
+            'closure_type' => Ticket::CLOSURE_WITHDRAWN,
+        ]);
+
+        $email = $this->email($ticket, EmailNotification::TYPE_COMPLAINT_CLOSED, $this->student);
+
+        $this->assertStringContainsString('does not necessarily stop or close the external investigation or proceeding', $email['text']);
     }
 
     // ------------------------------------------------------------------ confidentiality

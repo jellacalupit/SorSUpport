@@ -146,7 +146,7 @@ class TicketEmailComposer
                 $isStudent ? "Your ticket {$reference} was referred" : "Ticket {$reference} was referred",
                 $isStudent ? 'Your ticket was referred to a committee' : 'The ticket was referred to a committee',
                 [
-                    'The ticket was referred to ' . ($ticket?->referred_to ?: 'a committee') . ', which decides cases of this kind outside SorSUpport.',
+                    'The ticket was sent outside Bulan Campus to ' . ($ticket?->referred_to ?: 'an external committee') . ' for further investigation or decision. SorSUpport records the referral but does not conduct that external process.',
                     $isStudent
                         ? 'This can take time. The SDS Office will record the outcome on your ticket and you will be notified when it does.'
                         : 'The SDS Office will record the outcome on the ticket once it is decided.',
@@ -174,7 +174,7 @@ class TicketEmailComposer
             EmailNotification::TYPE_WITHDRAWN => [
                 "Ticket {$reference} was withdrawn",
                 'The student withdrew the ticket',
-                ['The student withdrew this ticket, so it is now closed. No further action is needed.'],
+                ['The student withdrew this SorSUpport ticket, so the local ticket is now closed. Any investigation or proceeding already reported or referred outside Bulan Campus may continue independently.'],
             ],
 
             EmailNotification::TYPE_WITHDRAWAL_REQUESTED => [
@@ -219,6 +219,7 @@ class TicketEmailComposer
                 'Your ticket is closed',
                 array_values(array_filter([
                     'Your ticket has been closed by the SDS Office.',
+                    ($ticket?->referred_at || filled($ticket?->referred_to)) ? 'Closing this SorSUpport ticket does not necessarily stop or close the external investigation or proceeding.' : null,
                     $ticket?->canBeRated() ? 'Please take a moment to rate how your concern was handled. Your feedback helps the university improve.' : null,
                 ])),
             ],
@@ -270,7 +271,7 @@ class TicketEmailComposer
                 array_values(array_filter([
                     "This ticket has not been classified or assigned for {$days}. The student is waiting to hear that their concern is being looked at.",
                     $ticket?->complaint?->isSensitive()
-                    ? 'System default, derived from the CODI 24-hour notice timeline (Handbook p. 58). Adjustable. Not a handbook deadline for SDS.'
+                    ? 'Internal SDS follow-up reminder informed by the CODI 24-hour notice timeline (Handbook p. 58). It is adjustable and is not an official committee deadline or a measure of committee compliance.'
                         : null,
                     'Please review it: assign it to the office that should handle it, handle it directly, refer it to the proper committee, or ask the student for more details.',
                 ])),
@@ -280,8 +281,8 @@ class TicketEmailComposer
                 "A referred ticket has waited {$days} for its outcome",
                 [
                     'This ticket was referred to ' . ($ticket?->referred_to ?: 'a committee') . " and no outcome has been recorded for {$days}. " . ($ticket?->is_codi_referral
-                        ? 'System default, based on the CODI 10-working-day period (pp. 57 to 58). Applies to CODI referrals only.'
-                        : 'System default, not a handbook deadline.'),
+                        ? 'Internal SDS follow-up reminder informed by the CODI 10-working-day period (pp. 57 to 58). It applies only to CODI referrals and is not an official committee deadline or a measure of committee compliance.'
+                        : 'Internal SDS follow-up reminder. It is not an official committee deadline or a measure of committee compliance.'),
                     'Please follow up with the committee, and record the outcome on the ticket once it is decided so the student is informed.',
                 ],
             ],

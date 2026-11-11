@@ -133,6 +133,24 @@ class ForwardedInformationalTicketTest extends TestCase
             ->assertDontSee('Forwarded for information');
     }
 
+    public function test_personnel_named_in_the_complaint_cannot_receive_an_informational_forward(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_SUBMITTED, [
+            'classification' => Ticket::CLASSIFICATION_INFORMATIONAL,
+            'jurisdiction' => Ticket::JURISDICTION_RECIPIENT,
+        ], [
+            'personnel_involved' => $this->recipient->display_name,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.forward', $ticket), ['recipient_id' => $this->recipient->recipient->id])
+            ->assertSessionHasErrors('recipient_id');
+
+        $ticket->refresh();
+        $this->assertNull($ticket->forwarded_to);
+        $this->assertNull($ticket->forwarded_at);
+    }
+
     public function test_forwarded_informational_ticket_is_not_in_review_queue_or_submitted_reminders(): void
     {
         $ticket = $this->ticket(Ticket::STATUS_SUBMITTED, [
@@ -172,7 +190,7 @@ class ForwardedInformationalTicketTest extends TestCase
             [Ticket::STATUS_ASSIGNED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id], 'Waiting for Registrar Office to acknowledge'],
             [Ticket::STATUS_IN_PROGRESS, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id], 'Being handled by Registrar Office'],
             [Ticket::STATUS_ESCALATED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id], 'Escalated to Registrar Office'],
-            [Ticket::STATUS_REFERRED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'referred_to' => 'Campus Disciplinary Committee'], 'Referred to a committee. SDS will record the outcome'],
+            [Ticket::STATUS_REFERRED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'referred_to' => 'Campus Disciplinary Committee'], 'Sent to an external committee outside Bulan Campus. SDS is awaiting and will record the outcome'],
             [Ticket::STATUS_RESOLVED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'resolved_at' => now()], 'Waiting for your response. You can accept or ask for further action until'],
             [Ticket::STATUS_CLOSED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'closure_type' => Ticket::CLOSURE_RESOLVED], 'Closed: Resolved and confirmed by the SDS Office'],
         ];

@@ -127,8 +127,8 @@
                     </div>
                     <div x-show="privacyPinned || privacyHover" x-cloak x-on:mouseenter="privacyHover = true" x-on:mouseleave="privacyHover = false" class="absolute left-0 top-full z-50 mt-2 w-full max-w-sm rounded-xl border border-primary/40 bg-popover p-3 text-xs text-popover-foreground shadow-lg">
                         <div>
-                            <p class="font-bold text-foreground">If you submit anonymously</p>
-                            <p class="mt-1.5 text-muted-foreground">Your name and student ID are hidden from everyone who handles the ticket, including the SDS Office. It is still reviewed, assigned and resolved like any other ticket, and you can follow it and reply in the conversation. Give enough detail for the office to act without knowing who you are.</p>
+                            <p class="font-bold text-foreground">If you hide your identity from handlers</p>
+                            <p class="mt-1.5 text-muted-foreground">Your authenticated account remains securely linked to the ticket so you can track it, but your name and student ID are hidden from everyone handling it, including the SDS Office. Give enough detail for the office to act without seeing your identity.</p>
                         </div>
                         <div class="mt-3 border-t border-border pt-3">
                             <p class="font-bold text-foreground">If you submit with your name</p>
@@ -144,7 +144,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6" />
                         </svg>
                     </span>
-                    <span>Submit anonymously</span>
+                    <span>Hide my identity from ticket handlers</span>
                 </label>
                 <x-input-error :messages="$errors->get('is_anonymous')" />
             </div>

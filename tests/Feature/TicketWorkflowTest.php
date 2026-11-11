@@ -840,7 +840,7 @@ class TicketWorkflowTest extends TestCase
         $this->actingAs($this->student)
             ->post(route('student.complaints.request-withdrawal', $ticket->complaint), ['withdrawal_request_reason' => $reason])
             ->assertSessionHasNoErrors()
-            ->assertSessionHas('success', 'Your request was sent to SDS. Because your concern was referred to a committee, it may continue even if you withdraw.');
+            ->assertSessionHas('success', 'Your request was sent to SDS. The external committee may continue its process even if the SorSUpport ticket is withdrawn or closed.');
 
         $ticket->refresh();
         $this->assertSame(Ticket::STATUS_REFERRED, $ticket->status);
@@ -1452,16 +1452,16 @@ class TicketWorkflowTest extends TestCase
 
         $this->actingAs($this->admin)->get(route('admin.tickets.my'))->assertOk()
             ->assertSee('Mark as Resolved')
-            ->assertSee('Refer to Committee')
+            ->assertSee('Refer Ticket')
             ->assertSee('Close Ticket');
 
         $this->actingAs($this->admin)->get(route('admin.complaints.index'))->assertOk()
             ->assertSee('Mark as Resolved')
-            ->assertSee('Refer to Committee');
+            ->assertSee('Refer Ticket');
 
         $this->actingAs($this->admin)->get(route('admin.complaints.show', $mine->complaint))->assertOk()
             ->assertSee('Mark as Resolved')
-            ->assertSee('Refer to Committee');
+            ->assertSee('Refer Ticket');
 
         $referred = $this->ticket(Ticket::STATUS_REFERRED);
         $this->actingAs($this->admin)->get(route('admin.complaints.show', $referred->complaint))->assertOk()

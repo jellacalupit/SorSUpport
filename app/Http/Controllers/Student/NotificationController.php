@@ -143,7 +143,7 @@ class NotificationController extends Controller
                     if ($log->action === 'ticket_escalated') {
                         $body = \Illuminate\Support\Str::before($body, ' Reason: ');
                     } elseif ($log->action === 'ticket_referred' && $ticket?->referred_to) {
-                        $body = "Ticket referred to {$ticket->referred_to}.";
+                        $body = "Ticket sent outside Bulan Campus to {$ticket->referred_to}; SDS is awaiting the reported outcome.";
                     }
 
                     if ($log->action === 'ticket_assigned' && $ticket?->assignee?->isRecipient()) {

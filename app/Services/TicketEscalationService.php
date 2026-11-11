@@ -9,6 +9,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class TicketEscalationService
 {
@@ -39,9 +40,10 @@ class TicketEscalationService
             && Recipient::query()->where('user_id', $currentHandlerUserId)->exists();
 
         return $hierarchy
-            ->filter(function ($entry) use ($currentLevelsByPath, $currentHandlerUserId, $currentHandlerIsRecipient): bool {
+            ->filter(function ($entry) use ($currentLevelsByPath, $currentHandlerUserId, $currentHandlerIsRecipient, $ticket): bool {
                 if (! $entry->recipient?->user?->is_active
-                    || (int) $entry->recipient->user_id === (int) $currentHandlerUserId) {
+                    || (int) $entry->recipient->user_id === (int) $currentHandlerUserId
+                    || $ticket->complaint?->names($entry->recipient->user)) {
                     return false;
                 }
 
@@ -96,6 +98,12 @@ class TicketEscalationService
      */
     public function escalate(Ticket $ticket, Recipient $targetRecipient, ?User $performedBy = null, ?string $note = null): void
     {
+        if ($targetRecipient->user && $ticket->complaint?->names($targetRecipient->user)) {
+            throw ValidationException::withMessages([
+                'recipient_id' => 'This ticket cannot be escalated to a person named in the complaint.',
+            ]);
+        }
+
         DB::transaction(function () use ($ticket, $targetRecipient, $performedBy, $note): void {
             // Escalating again keeps the Escalated status and only changes who holds the ticket.
             $ticket->update([
@@ -113,10 +121,6 @@ class TicketEscalationService
                 // The admin's explanation is kept with the entry so the next handler can read it.
                 trim(sprintf('Ticket escalated to %s.', $targetRecipient->user?->display_name ?? 'the selected recipient') . (filled($note) ? ' Reason: ' . $note : ''))
             );
-
-            if ($ticket->complaint?->names($targetRecipient->user)) {
-                AuditLog::log($ticket->id, 'conflict_of_interest_flagged', $performedBy?->id, 'The ticket was escalated to a person who appears to be named in the complaint.');
-            }
 
             foreach ($this->getUsersToNotify($ticket, $targetRecipient, $performedBy) as $user) {
                 EmailNotification::create([

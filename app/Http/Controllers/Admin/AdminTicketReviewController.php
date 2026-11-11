@@ -328,6 +328,10 @@ class AdminTicketReviewController extends Controller
 
         $recipient = Recipient::findOrFail($validated['recipient_id']);
 
+        if ($recipient->user && $ticket->complaint?->names($recipient->user)) {
+            return back()->withErrors(['recipient_id' => 'This ticket cannot be forwarded to a person named in the complaint.']);
+        }
+
         $ticket->update([
             'forwarded_to' => $validated['recipient_id'],
             'forwarded_at' => now(),
@@ -398,6 +402,10 @@ class AdminTicketReviewController extends Controller
         $validated = $request->validate(['recipient_id' => 'required|exists:recipients,id']);
         $recipient = Recipient::with('user')->findOrFail($validated['recipient_id']);
         abort_unless($this->recipientIsConfiguredForTicketCategory($ticket, $recipient), 422, 'This recipient is not configured for the ticket category.');
+
+        if ($recipient->user && $ticket->complaint?->names($recipient->user)) {
+            return back()->withErrors(['recipient_id' => 'This ticket cannot be forwarded to a person named in the complaint.']);
+        }
 
         $ticket->update([
             'classification' => Ticket::CLASSIFICATION_INFORMATIONAL,
@@ -561,7 +569,7 @@ class AdminTicketReviewController extends Controller
             $requiresDeanEndorsement && (bool) ($validated['dean_endorsed'] ?? false)
         );
 
-        return back()->with('success', sprintf('Ticket referred to %s.', $referredTo));
+        return back()->with('success', sprintf('Ticket marked as referred outside Bulan Campus to %s. SorSUpport will await the reported outcome.', $referredTo));
     }
 
     /**
@@ -603,6 +611,12 @@ class AdminTicketReviewController extends Controller
             'recipient_id.required' => 'Select who the ticket should be escalated to.',
             'escalation_note.required' => 'Explain why the ticket is being escalated.',
         ]);
+
+        $requestedRecipient = Recipient::with('user')->findOrFail($validated['recipient_id']);
+
+        if ($requestedRecipient->user && $ticket->complaint?->names($requestedRecipient->user)) {
+            return back()->withErrors(['recipient_id' => 'This ticket cannot be escalated to a person named in the complaint.']);
+        }
 
         $recipient = $this->escalationService
             ->escalationTargets($ticket)
@@ -712,6 +726,6 @@ class AdminTicketReviewController extends Controller
         }
 
         return redirect()->route('admin.tickets.review.index')
-            ->with('success', 'Ticket closed successfully.');
+            ->with('success', 'SorSUpport ticket closed. Any external investigation or proceeding may continue independently.');
     }
 }

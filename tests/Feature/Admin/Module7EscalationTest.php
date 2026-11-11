@@ -106,6 +106,29 @@ class Module7EscalationTest extends TestCase
             ->assertSessionHasErrors('recipient_id');
     }
 
+    public function test_named_personnel_are_excluded_and_cannot_receive_an_escalation(): void
+    {
+        [$admin, , $ticket, $recipients] = $this->createEscalationScenario();
+        [$officer, $supervisor, $director] = $recipients;
+        $ticket->complaint->update(['personnel_involved' => $supervisor->user->display_name]);
+
+        $targets = app(\App\Services\TicketEscalationService::class)->escalationTargets($ticket->fresh());
+
+        $this->assertSame([$director->id], $targets->pluck('id')->all());
+
+        $this->actingAs($admin)
+            ->post(route('admin.tickets.escalate', $ticket), [
+                'recipient_id' => $supervisor->id,
+                'escalation_note' => 'This person is named in the complaint.',
+            ])
+            ->assertSessionHasErrors('recipient_id');
+
+        $ticket->refresh();
+        $this->assertSame(Ticket::STATUS_IN_PROGRESS, $ticket->status);
+        $this->assertSame($officer->user_id, $ticket->assigned_to);
+        $this->assertNull($ticket->escalated_at);
+    }
+
     public function test_a_recipient_outside_the_path_cannot_be_escalated_to_an_unrelated_position(): void
     {
         [, , $ticket] = $this->createEscalationScenario();

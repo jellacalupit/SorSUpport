@@ -47,6 +47,10 @@
         'request_update' => $role === 'student' && $can(TicketWorkflow::REQUEST_UPDATE),
         'request_escalation' => $role === 'student' && $can(TicketWorkflow::REQUEST_ESCALATION),
     ])->filter();
+    $showThreeAdminActions = $buttons->count() === 3
+        && $buttons->has('escalate')
+        && $buttons->has('refer')
+        && $buttons->has('close');
 
     $fields = ['clarification_message', 'resolution_type', 'resolution_message', 'return_reason', 'referred_to', 'referred_to_other', 'referral_note', 'dean_endorsed', 'outcome', 'closure_type', 'closure_reason', 'further_action_reason', 'withdraw_reason', 'withdrawal_request_reason', 'update_request_note', 'escalation_request_reason', 'status'];
     $openPanel = match (true) {
@@ -161,13 +165,10 @@
             <button type="button" x-on:click="action = 'return_to_sds'" class="{{ $outlineButton }}">Return to SDS</button>
         @endif
         @if ($buttons->has('escalate'))
-            <button type="button" x-on:click="action = 'escalate'" class="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full border border-red-800 bg-white px-3 text-sm font-semibold text-red-800 transition-colors hover:bg-red-50">
-                <x-icons.alert-triangle class="h-4 w-4" />
-                Escalate
-            </button>
+            <button type="button" x-on:click="action = 'escalate'" class="h-10 w-full rounded-full border border-red-800 bg-white px-3 text-center text-sm font-semibold text-red-800 transition-colors hover:bg-red-50">Escalate Ticket</button>
         @endif
         @if ($buttons->has('refer'))
-            <button type="button" x-on:click="action = 'refer'" class="{{ $outlineButton }}">Refer to Committee</button>
+            <button type="button" x-on:click="action = 'refer'" class="{{ $outlineButton }}">Refer Ticket</button>
         @endif
         @if ($buttons->has('outcome'))
             <button type="button" x-on:click="action = 'outcome'" class="{{ $primaryButton }}">Record Outcome</button>
@@ -179,7 +180,7 @@
             </form>
         @endif
         @if ($buttons->has('close'))
-            <button type="button" x-on:click="action = 'close'" class="{{ $primaryButton }}">Close Ticket</button>
+            <button type="button" x-on:click="action = 'close'" class="{{ $primaryButton }} {{ $showThreeAdminActions ? 'col-span-2' : '' }}">Close Ticket</button>
         @endif
         @if ($buttons->has('accept'))
             <button type="button" x-on:click="action = 'accept'" class="{{ $primaryButton }}">Accept Resolution</button>
@@ -257,7 +258,7 @@
         <form x-show="action === 'refer'" x-cloak method="POST" action="{{ route('admin.tickets.refer', $ticket) }}" class="surface p-4">
             @csrf
             <p class="{{ $panelTitle }}">Refer to a committee or board</p>
-            <p class="{{ $panelHint }}">For cases decided outside the system, such as discipline or harassment cases. Record the outcome here once it is decided.</p>
+            <p class="{{ $panelHint }}">Mark the ticket as sent to an external committee outside Bulan Campus for further investigation or decision. SorSUpport will wait for SDS to record the reported outcome.</p>
             {{-- The committees the Student Handbook names; any other is typed in. --}}
             <div x-data="{ committee: @js(old('referred_to', '')) }" x-on:picked="committee = $event.detail">
                 <x-picker name="referred_to" required id="referred-to-{{ $ticket->id }}" label="Referred to" class="mt-2" placeholder="Select the committee or board" :selected="old('referred_to', '')" :options="[
@@ -302,7 +303,7 @@
                 <p class="{{ $panelHint }}">This confirms the resolution on the student's behalf. The conversation is locked and this cannot be undone.</p>
             @else
                 <p class="{{ $panelTitle }}">Close without a resolution</p>
-                <p class="{{ $panelHint }}">Use this only when the ticket cannot continue. The student is notified with the reason. This cannot be undone.</p>
+                <p class="{{ $panelHint }}">Use this only when the SorSUpport ticket cannot continue. The student is notified with the reason. Closing it does not necessarily stop a proceeding already reported or referred outside Bulan Campus.</p>
                 <x-picker name="closure_type" required id="closure-type-{{ $ticket->id }}" label="Reason for closing" class="mt-2" placeholder="Why is it being closed?" :selected="old('closure_type', '')" :options="collect(Ticket::ADMIN_CLOSURE_TYPES)->map(fn ($value) => ['value' => $value, 'label' => Ticket::CLOSURE_LABELS[$value]])->all()" />
                 <label for="closure-reason-{{ $ticket->id }}" class="mt-2 text-xs font-semibold text-foreground">Explanation for the student <span x-text="['invalid', 'duplicate', 'out_of_scope', 'no_response'].includes(closureType) ? '(required)' : '(optional)'"></span></label>
                 <textarea id="closure-reason-{{ $ticket->id }}" name="closure_reason" rows="2" x-bind:required="['invalid', 'duplicate', 'out_of_scope', 'no_response'].includes(closureType)" x-bind:minlength="['invalid', 'duplicate', 'out_of_scope', 'no_response'].includes(closureType) ? 10 : null" maxlength="1000" class="{{ $input }}" placeholder="Required for invalid, duplicate, out-of-scope, or no-response closure (10–1,000 characters); optional for withdrawal">{{ old('closure_reason') }}</textarea>
@@ -344,7 +345,7 @@
         <form x-show="action === 'withdraw'" x-cloak method="POST" action="{{ route('student.complaints.withdraw', $complaint) }}" class="surface p-4">
             @csrf
             <p class="{{ $panelTitle }}">Withdraw this ticket?</p>
-            <p class="{{ $panelHint }}">The ticket is closed and no further action is taken. This cannot be undone.</p>
+            <p class="{{ $panelHint }}">This closes the SorSUpport ticket. It does not necessarily stop an investigation or proceeding already reported or referred outside Bulan Campus. This cannot be undone.</p>
             <textarea name="withdraw_reason" rows="2" maxlength="1000" class="{{ $input }}" placeholder="Reason (optional)">{{ old('withdraw_reason') }}</textarea>
             <div class="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" x-on:click="action = null" class="{{ $smallCancel }}">Cancel</button>
@@ -357,7 +358,7 @@
         <form x-show="action === 'request_withdrawal'" x-cloak method="POST" action="{{ route('student.complaints.request-withdrawal', $complaint) }}" class="surface p-4">
             @csrf
             <p class="{{ $panelTitle }}">Request withdrawal</p>
-            <p class="{{ $panelHint }}">Your concern was referred to a committee. Request withdrawal from SDS; the committee may continue its process.</p>
+            <p class="{{ $panelHint }}">Your concern was sent to an external committee outside Bulan Campus. Request withdrawal from SDS; closing the SorSUpport ticket does not require that committee to stop its process.</p>
             <textarea name="withdrawal_request_reason" rows="3" required maxlength="1000" class="{{ $input }}" placeholder="Why are you requesting withdrawal?">{{ old('withdrawal_request_reason') }}</textarea>
             @error('withdrawal_request_reason')<p class="mt-1 text-xs text-destructive">{{ $message }}</p>@enderror
             <div class="mt-3 grid grid-cols-2 gap-2">

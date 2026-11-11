@@ -19,11 +19,11 @@ return [
         // Submitted and not yet classified or assigned: the SDS Office is reminded.
         'unreviewed_days' => 2,
 
-        // System default derived from the CODI 24-hour notice timeline (Handbook p. 58).
-        // Adjustable; not a handbook deadline for SDS.
+        // Internal SDS follow-up informed by the CODI 24-hour notice timeline (Handbook p. 58).
+        // Adjustable; not an official committee deadline or compliance measure.
         'sensitive_unreviewed_days' => 1,
 
-        // Needs clarification: student reply reminder. System default, not a handbook deadline.
+        // Internal SDS follow-up while awaiting the student's clarification; not a committee deadline.
         'clarification_days' => 5,
 
         // Assigned and not yet acknowledged: the assigned handler is reminded.
@@ -35,7 +35,7 @@ return [
         // The handbook's 10-working-day period applies only to CODI referrals (pp. 57 to 58).
         'referral_days' => 10,
 
-        // Generic referral reminders are a system default, not a handbook deadline.
+        // Internal SDS follow-up for another referral; not a committee deadline or compliance measure.
         'generic_referral_enabled' => false,
         'generic_referral_days' => 10,
 

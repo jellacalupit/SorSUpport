@@ -537,7 +537,7 @@ class ComplaintController extends Controller
         $workflow->withdraw($ticket, Auth::user(), $validated['withdraw_reason'] ?? null);
 
         return redirect()->route('student.complaints.show', $complaint)
-            ->with('success', 'Your ticket was withdrawn and closed.');
+            ->with('success', 'Your SorSUpport ticket was withdrawn and closed. Any investigation or proceeding already reported or referred outside Bulan Campus may continue.');
     }
 
     /**
@@ -564,7 +564,7 @@ class ComplaintController extends Controller
         $workflow->requestWithdrawal($ticket, Auth::user(), $validated['withdrawal_request_reason']);
 
         return redirect()->route('student.complaints.show', $complaint)
-            ->with('success', 'Your request was sent to SDS. Because your concern was referred to a committee, it may continue even if you withdraw.');
+            ->with('success', 'Your request was sent to SDS. The external committee may continue its process even if the SorSUpport ticket is withdrawn or closed.');
     }
 
     /**

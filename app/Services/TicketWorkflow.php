@@ -344,6 +344,12 @@ class TicketWorkflow
     {
         $this->authorize($admin, $ticket, self::ASSIGN);
 
+        if ($recipient?->user && $ticket->complaint?->names($recipient->user)) {
+            throw ValidationException::withMessages([
+                'recipient_id' => 'This ticket cannot be assigned to a person named in the complaint.',
+            ]);
+        }
+
         DB::transaction(function () use ($ticket, $admin, $recipient): void {
             $this->applyAssignment($ticket, $admin, $recipient);
 
@@ -355,10 +361,6 @@ class TicketWorkflow
                     ? "SDS Admin assigned the ticket {$ticket->complaint->reference_number} to {$recipient->user->display_name} for handling."
                     : 'Ticket assigned to SDS admin for direct handling.'
             );
-
-            if ($recipient && $ticket->complaint->names($recipient->user)) {
-                AuditLog::log($ticket->id, 'conflict_of_interest_flagged', $admin->id, 'The ticket was assigned to a person who appears to be named in the complaint.');
-            }
 
             if ($recipient?->user) {
                 $this->notify($ticket, [$recipient->user], EmailNotification::TYPE_RECIPIENT_ASSIGNMENT);

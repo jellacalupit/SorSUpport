@@ -431,7 +431,7 @@ class ConfidentialityTest extends TestCase
 
     // ------------------------------------------------------------------ conflict of interest
 
-    public function test_the_admin_is_warned_when_the_handler_is_the_person_named_in_the_complaint(): void
+    public function test_personnel_named_in_the_complaint_cannot_be_assigned_the_ticket(): void
     {
         $ticket = $this->submit([
             'subject_title' => 'Unfair treatment',
@@ -442,22 +442,29 @@ class ConfidentialityTest extends TestCase
         $this->assertTrue($ticket->complaint->names($this->handler));
         $this->assertFalse($ticket->complaint->names($this->otherRecipient));
 
-        // The person named is marked when choosing who to assign the ticket to.
+        // Named personnel are excluded from the assignment choices.
         $this->actingAs($this->admin)->get(route('admin.complaints.show', $ticket->complaint))
             ->assertOk()
-            ->assertSee('Named in this complaint')
+            ->assertDontSee('name="recipient_id" value="' . $this->handler->recipient->id . '"', false)
             ->assertDontSee('Person Involved');
 
-        $ticket = $this->assign($ticket, $this->handler);
+        // A crafted request is rejected too, so this is a real restriction rather than a UI warning.
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.assign', $ticket), [
+                'assignment_mode' => 'recipient',
+                'recipient_id' => $this->handler->recipient->id,
+            ])
+            ->assertSessionHasErrors('recipient_id');
 
-        $this->assertDatabaseHas('audit_logs', ['ticket_id' => $ticket->id, 'action' => 'conflict_of_interest_flagged']);
+        $ticket->refresh();
+        $this->assertNull($ticket->assigned_to);
+        $this->assertDatabaseMissing('audit_logs', ['ticket_id' => $ticket->id, 'action' => 'ticket_assigned']);
 
-        $this->actingAs($this->admin)->get(route('admin.complaints.show', $ticket->complaint))
-            ->assertOk()
-            ->assertSee('Possible conflict of interest');
+        $ticket = $this->assign($ticket, $this->otherRecipient);
+        $this->assertSame($this->otherRecipient->id, $ticket->assigned_to);
     }
 
-    public function test_no_conflict_warning_when_the_handler_is_not_named(): void
+    public function test_personnel_not_named_in_the_complaint_can_be_assigned(): void
     {
         $ticket = $this->assign($this->submit(['personnel_involved' => 'Mr. Rey Registrar']), $this->otherRecipient);
 

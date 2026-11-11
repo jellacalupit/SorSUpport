@@ -100,7 +100,7 @@
         \App\Models\Ticket::STATUS_ASSIGNED => "Waiting for {$currentOffice} to acknowledge",
         \App\Models\Ticket::STATUS_IN_PROGRESS => "Being handled by {$currentOffice}",
         \App\Models\Ticket::STATUS_ESCALATED => "Escalated to {$currentOffice}",
-        \App\Models\Ticket::STATUS_REFERRED => 'Referred to a committee. SDS will record the outcome',
+        \App\Models\Ticket::STATUS_REFERRED => 'Sent to an external committee outside Bulan Campus. SDS is awaiting and will record the outcome',
         \App\Models\Ticket::STATUS_RESOLVED => 'Waiting for your response. You can accept or ask for further action until ' . ($ticket->furtherActionDeadline()?->copy()->setTimezone($displayTimezone)->format('M d, Y') ?? 'the response window ends'),
         \App\Models\Ticket::STATUS_CLOSED => 'Closed: ' . ($ticket->closure_label ?? 'Closed'),
         default => $ticket->status_label,

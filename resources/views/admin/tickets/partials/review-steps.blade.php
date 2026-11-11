@@ -6,7 +6,7 @@
             ->merge($category->suggestedRecipients)
             ->merge($category->escalationHierarchies->pluck('recipient'))
             ->push($ticket->complaint->suggestedRecipient)
-            ->filter(fn ($recipient) => $recipient && $recipient->user && $recipient->user->is_active)
+            ->filter(fn ($recipient) => $recipient && $recipient->user && $recipient->user->is_active && ! $ticket->complaint->names($recipient->user))
             ->unique('id')
             ->values()
         : collect();
@@ -54,7 +54,6 @@
                         <button type="button" x-on:click="selectedRecipientId = {{ $recipient->id }}; selectedRecipient = @js($recipientName); $el.closest('details').removeAttribute('open')" class="flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-primary-soft" x-bind:class="selectedRecipientId === {{ $recipient->id }} ? 'bg-primary-soft text-primary' : ''">
                             <span class="min-w-0">
                                 <span class="block truncate font-semibold">{{ $recipientName }}</span>
-                                @if ($ticket->complaint->names($recipient->user))<span class="block text-[10px] font-semibold text-red-700">Named in this complaint</span>@endif
                                 <span class="block truncate text-muted-foreground">{{ $recipient->staff_id }} · {{ $recipient->unit }} · {{ $recipient->designation }}</span>
                             </span>
                         </button>
@@ -81,7 +80,6 @@
                         <button type="button" x-on:click="selectedRecipientId = {{ $recipient->id }}; selectedRecipient = @js($recipientName); $el.closest('details').removeAttribute('open')" class="flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-primary-soft">
                             <span class="min-w-0">
                                 <span class="block truncate font-semibold">{{ $recipientName }}</span>
-                                @if ($ticket->complaint->names($recipient->user))<span class="block text-[10px] font-semibold text-red-700">Named in this complaint</span>@endif
                                 <span class="block truncate text-muted-foreground">{{ $recipient->staff_id }} · {{ $recipient->unit }} · {{ $recipient->designation }}</span>
                             </span>
                         </button>
