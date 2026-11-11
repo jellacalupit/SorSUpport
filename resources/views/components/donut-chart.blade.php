@@ -40,6 +40,7 @@
 
     <div class="min-w-0 {{ $large ? 'w-full' : ($stack ? 'w-full sm:flex-1' : 'flex-1') }}">
         @unless ($large)<h3 class="{{ $stack ? 'hidden sm:block' : '' }} text-sm font-semibold text-black">{{ $title }}</h3>@endunless
+        @if (! $large && $total === 0 && $emptyMessage)<p class="mt-1 text-[11px] text-muted-foreground">{{ $emptyMessage }}</p>@endif
         <ul class="grid gap-x-3 gap-y-1 text-[11px] text-foreground {{ $legendGridClass }} {{ $large ? '' : ($stack ? 'sm:mt-1.5' : 'mt-1.5') }}">
             @foreach ($segments as $segment)
                 <li class="flex items-center gap-1.5">

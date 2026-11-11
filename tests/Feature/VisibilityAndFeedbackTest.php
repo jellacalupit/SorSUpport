@@ -401,6 +401,7 @@ class VisibilityAndFeedbackTest extends TestCase
     public function test_dashboard_category_chart_uses_the_actual_ticket_counts(): void
     {
         $other = ComplaintCategory::create(['name' => 'Library Services', 'is_active' => true]);
+        $empty = ComplaintCategory::create(['name' => 'Guidance Services', 'is_active' => true]);
         foreach (range(1, 3) as $ignored) {
             $this->ticket(Ticket::STATUS_IN_PROGRESS);
         }
@@ -412,8 +413,11 @@ class VisibilityAndFeedbackTest extends TestCase
 
         $this->assertSame(3, $rows->firstWhere('name', $this->category->name)['segments']['submitted']);
         $this->assertSame(1, $rows->firstWhere('name', 'Library Services')['segments']['submitted']);
+        $this->assertSame(0, $rows->firstWhere('name', $empty->name)['total']);
         $this->assertStringContainsString('data-analytics-category-volume-chart', $page);
         $this->assertStringContainsString('const analyticsCategoryRows =', $page);
+        $this->assertStringContainsString('Guidance Services', $page);
+        $this->assertStringNotContainsString('categories have no tickets', $page);
         $this->assertStringNotContainsString('Common subjects', $page);
     }
 

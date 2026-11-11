@@ -45,6 +45,9 @@ class AnalyticsDashboardTest extends TestCase
             $response->assertSee('font-semibold text-black">' . $cardLabel, false);
         }
         $response->assertSee('Sensitive categories (not broken down): 1')
+            ->assertSee('#2563eb')
+            ->assertSee('#0e7490')
+            ->assertDontSee('categories have no tickets')
             ->assertDontSee('All time')
             ->assertSee('data-student-attribute-dropdown', false)
             ->assertSee('aria-label="Student attribute"', false)
@@ -62,7 +65,10 @@ class AnalyticsDashboardTest extends TestCase
             ->assertSee('renderAnalyticsChartsWhenVisible', false)
             ->assertSee('window.destroyAnalyticsVolumeCharts?.();', false)
             ->assertSee('data-analytics-distribution-row', false)
-            ->assertSee('sm:grid-cols-2 xl:grid-cols-[16rem_16rem_minmax(0,1fr)]', false)
+            ->assertSee('data-analytics-distribution-stack', false)
+            ->assertSee('lg:grid-cols-[minmax(20rem,0.8fr)_minmax(0,1.5fr)]', false)
+            ->assertSee('data-staff-sort-table class="w-full min-w-[1080px] text-left text-xs"', false)
+            ->assertSee('thead class="border-b bg-primary text-white"', false)
             ->assertSee('window.renderAnalyticsVolumeCharts();', false)
             ->assertDontSee('Common subjects')
             ->assertDontSee('Top 5 categories')

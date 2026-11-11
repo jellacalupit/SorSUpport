@@ -4,7 +4,7 @@
             'submitted' => '#facc15',
             'needs_clarification' => '#f59e0b',
             'assigned' => '#2563eb',
-            'in_progress' => '#1d4ed8',
+            'in_progress' => '#0e7490',
             'escalated' => '#dc2626',
             'referred' => '#7c3aed',
             'resolved' => '#16a34a',

@@ -46,7 +46,7 @@
             'submitted' => '#facc15',
             'needs_clarification' => '#f59e0b',
             'assigned' => '#2563eb',
-            'in_progress' => '#1d4ed8',
+            'in_progress' => '#0e7490',
             'escalated' => '#dc2626',
             'referred' => '#7c3aed',
             'resolved' => '#16a34a',
@@ -76,7 +76,6 @@
             'invalid' => array_sum(array_column($monthlyTicketVolumes['values'], 'invalid')),
         ];
         $categoryRows = $data['categoryVolumes']['rows'];
-        $categoryEmptyCount = $data['categoryVolumes']['empty_category_count'];
         $categoryChartSegments = [
             ['key' => 'submitted', 'label' => 'Submitted (not resolved)', 'color' => $classificationColors['needs_resolution']],
             ['key' => 'resolved', 'label' => 'Resolved', 'color' => $classificationColors['resolved']],
@@ -345,11 +344,13 @@
                     @endforeach
                 </div>
 
-                <div class="grid min-w-0 grid-cols-1 items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-[16rem_16rem_minmax(0,1fr)]" data-analytics-distribution-row>
-                    <x-donut-chart class="h-full" title="Status" empty-message="No tickets in this period." :segments="$statusSegments" total-label="Tickets" :legend-columns="1" large compact />
-                    <x-donut-chart class="h-full" title="Classification" :segments="$classificationSegments" total-label="Tickets" :legend-columns="1" large compact />
+                <div class="grid min-w-0 items-stretch gap-4 lg:grid-cols-[minmax(20rem,0.8fr)_minmax(0,1.5fr)]" data-analytics-distribution-row>
+                    <div class="grid min-w-0 gap-4 lg:grid-rows-2" data-analytics-distribution-stack>
+                        <x-donut-chart class="h-full" title="Status" empty-message="No tickets in this period." :segments="$statusSegments" total-label="Tickets" :legend-columns="1" />
+                        <x-donut-chart class="h-full" title="Classification" :segments="$classificationSegments" total-label="Tickets" :legend-columns="1" />
+                    </div>
 
-                    <article class="{{ $cardClass }} col-span-1 flex min-w-0 flex-col sm:col-span-2 xl:col-span-1">
+                    <article class="{{ $cardClass }} flex min-w-0 flex-col">
                         <h3 class="{{ $titleClass }}">Volume by category</h3>
                         @if (count($categoryRows))
                             <div class="relative mt-3 min-h-80 w-full flex-1" style="height: {{ max(320, min(460, count($categoryRows) * 30 + 70)) }}px">
@@ -368,19 +369,19 @@
                                 </li>
                             @endforeach
                         </ul>
-                        <p class="mt-2 text-[10px] text-muted-foreground">{{ number_format($categoryEmptyCount) }} categories have no tickets.</p>
                     </article>
                 </div>
             </section>
 
             <section id="staff" x-show="tab === 'staff'" x-cloak data-tab-panel="staff" class="grid min-w-0 gap-3">
-                <h2 class="sr-only">Recipient performance</h2>
-                <article class="{{ $cardClass }} min-w-0 overflow-x-auto">
-                    <h3 class="{{ $titleClass }}">Recipient performance</h3>
+                <div>
+                    <h2 class="{{ $titleClass }}">Recipient performance</h2>
                     <p class="mt-0.5 {{ $mutedClass }}">Assigned counts use the current assignee, or current handler when no assignee is set.</p>
-                    <table data-staff-sort-table class="mt-2 w-full min-w-[1080px] text-left text-xs">
-                        <thead class="border-b border-border text-muted-foreground">
-                            <tr>
+                </div>
+                <article class="min-w-0 overflow-x-auto rounded-xl border border-border bg-white shadow-sm">
+                    <table data-staff-sort-table class="w-full min-w-[1080px] text-left text-xs">
+                        <thead class="border-b bg-primary text-white">
+                            <tr class="text-left">
                                 @foreach ([
                                     'name' => 'Name',
                                     'assigned_tickets' => 'Tickets',
@@ -391,8 +392,8 @@
                                     'handling_average_days' => 'Avg handling time from assignment (tickets)',
                                     'rating_average' => 'Avg rating',
                                 ] as $sortKey => $label)
-                                    <th class="px-2 py-2 first:pl-0">
-                                        <button type="button" data-staff-sort="{{ $sortKey }}" class="font-semibold hover:text-foreground">{{ $label }}</button>
+                                    <th class="px-3 py-2.5 text-left font-semibold first:rounded-tl-xl last:rounded-tr-xl">
+                                        <button type="button" data-staff-sort="{{ $sortKey }}" class="w-full text-left font-semibold text-white hover:text-white/80">{{ $label }}</button>
                                     </th>
                                 @endforeach
                             </tr>
@@ -409,15 +410,15 @@
                                     data-sort-handling_average_days="{{ $row['handling_average_days'] ?? -1 }}"
                                     data-sort-rating_average="{{ $row['rating_average'] ?? -1 }}"
                                     class="border-b border-border last:border-0">
-                                    <th class="py-2 pr-3 font-medium">{{ $row['name'] }}<span class="block text-[10px] font-normal text-muted-foreground">{{ $row['unit'] }}</span></th>
-                                    <td class="px-2 py-2 text-right tabular-nums">{{ number_format($row['assigned_tickets']) }}</td>
-                                    <td class="px-2 py-2 text-right tabular-nums">{{ number_format($row['open_tickets']) }}</td>
-                                    <td class="px-2 py-2">{{ $row['oldest_open_ticket_age_days'] === null ? 'No data' : $days($row['oldest_open_ticket_age_days']) }}</td>
-                                    <td class="px-2 py-2">{{ number_format($row['resolved_tickets']) }} ({{ number_format($row['resolved_percentage'], 1) }}%)</td>
-                                    <td class="px-2 py-2">
+                                    <th class="px-3 py-2.5 text-left font-medium">{{ $row['name'] }}<span class="block text-[10px] font-normal text-muted-foreground">{{ $row['unit'] }}</span></th>
+                                    <td class="px-3 py-2.5 text-left tabular-nums">{{ number_format($row['assigned_tickets']) }}</td>
+                                    <td class="px-3 py-2.5 text-left tabular-nums">{{ number_format($row['open_tickets']) }}</td>
+                                    <td class="px-3 py-2.5 text-left">{{ $row['oldest_open_ticket_age_days'] === null ? 'No data' : $days($row['oldest_open_ticket_age_days']) }}</td>
+                                    <td class="px-3 py-2.5 text-left">{{ number_format($row['resolved_tickets']) }} ({{ number_format($row['resolved_percentage'], 1) }}%)</td>
+                                    <td class="px-3 py-2.5 text-left">
                                         {{ $row['acknowledgment_average_days'] === null ? 'No data' : $days($row['acknowledgment_average_days']) . ' (' . number_format($row['acknowledgment_count']) . ')' }}
                                     </td>
-                                    <td class="px-2 py-2">
+                                    <td class="px-3 py-2.5 text-left">
                                         @if ($row['handling_average_days'] === null)
                                             No data
                                         @else
@@ -425,10 +426,10 @@
                                         @endif
                                         <span class="block text-[10px] text-muted-foreground">{{ number_format($row['handling_fallback_count']) }} fallback(s)</span>
                                     </td>
-                                    <td class="px-2 py-2">{{ $row['rating_average'] === null ? 'No ratings' : number_format($row['rating_average'], 1) . ' (' . number_format($row['rating_count']) . ')' }}</td>
+                                    <td class="px-3 py-2.5 text-left">{{ $row['rating_average'] === null ? 'No ratings' : number_format($row['rating_average'], 1) . ' (' . number_format($row['rating_count']) . ')' }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="8" class="py-4 text-center text-muted-foreground">No recipient performance data in this period.</td></tr>
+                                <tr><td colspan="8" class="px-3 py-4 text-left text-muted-foreground">No recipient performance data in this period.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

@@ -461,9 +461,29 @@ class AnalyticsService
             ->sort(fn (array $left, array $right) => $right['total'] <=> $left['total'] ?: strcmp($left['name'], $right['name']))
             ->values();
 
+        $representedCategoryIds = $rows->pluck('id')->filter()->all();
+        $zeroCounts = [
+            'submitted' => 0,
+            'resolved' => 0,
+            'informational' => 0,
+            'invalid' => 0,
+            'unclassified' => 0,
+        ];
+        $rows = $rows
+            ->concat($categories
+                ->whereNotIn('id', $representedCategoryIds)
+                ->map(fn (ComplaintCategory $category) => [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'segments' => $zeroCounts,
+                    'total' => 0,
+                ]))
+            ->sort(fn (array $left, array $right) => $right['total'] <=> $left['total'] ?: strcmp($left['name'], $right['name']))
+            ->values();
+
         return [
             'rows' => $rows->all(),
-            'empty_category_count' => max(0, $categories->count() - $rows->whereNotNull('id')->count()),
+            'empty_category_count' => $rows->where('total', 0)->count(),
         ];
     }
 
