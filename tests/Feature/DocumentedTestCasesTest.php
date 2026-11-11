@@ -243,7 +243,8 @@ class DocumentedTestCasesTest extends TestCase
             ->assertSee('Reminders for waiting tickets')
             ->assertSee('Student did not respond')
             ->assertSee('Student has not replied to clarification')
-            ->assertSee('System default, not a handbook deadline. Adjustable.');
+            ->assertSee('Student reminder repeats at this interval.')
+            ->assertDontSee('System default, not a handbook deadline. Adjustable.');
     }
 
     public function test_set_15_waiting_days_cannot_be_more_than_thirty(): void

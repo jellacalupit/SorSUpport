@@ -514,11 +514,11 @@
         @php
             $reminderRows = [
                 ['name' => 'unreviewed_days', 'label' => 'Not yet reviewed', 'who' => 'SDS Office', 'hint' => 'Submitted, but not yet classified or assigned.'],
-                ['name' => 'sensitive_unreviewed_days', 'label' => 'Sensitive, not yet reviewed', 'who' => 'SDS Office', 'hint' => 'System default, derived from the CODI 24-hour notice timeline (Handbook p. 58). Adjustable. Not a handbook deadline for SDS.'],
-                ['name' => 'clarification_days', 'label' => 'Student has not replied to clarification', 'who' => 'Student; SDS Office once at twice this interval', 'hint' => 'Needs Clarification, with no student reply. System default, not a handbook deadline. Adjustable. Student reminder repeats at this interval.'],
+                ['name' => 'sensitive_unreviewed_days', 'label' => 'Sensitive, not yet reviewed', 'who' => 'SDS Office', 'hint' => 'System default, derived from the CODI 24-hour notice timeline.'],
+                ['name' => 'clarification_days', 'label' => 'Student has not replied to clarification', 'who' => 'Student; SDS Office once at twice this interval', 'hint' => 'Needs Clarification, with no student reply. Student reminder repeats at this interval.'],
                 ['name' => 'unacknowledged_days', 'label' => 'Not yet acknowledged', 'who' => 'Assigned handler', 'hint' => 'Assigned, but the handler has not acknowledged it.'],
                 ['name' => 'idle_days', 'label' => 'No action recorded', 'who' => 'Assigned handler', 'hint' => 'In progress or escalated, with no reply or update.'],
-                ['name' => 'referral_days', 'label' => 'CODI referral, no outcome', 'who' => 'SDS Office', 'hint' => '10-working-day period stated for CODI referrals only (Handbook pp. 57 to 58).'],
+                ['name' => 'referral_days', 'label' => 'CODI referral, no outcome', 'who' => 'SDS Office', 'hint' => '10-working-day period stated for CODI referrals only.'],
             ];
         @endphp
         <div x-cloak x-data="{ remindersOn: @js((bool) old('enabled', $reminderSettings['enabled'])) }" x-bind:class="settingsTab === 'reminders' ? 'opacity-100' : 'pointer-events-none opacity-0'" class="col-start-1 row-start-1 transition-opacity duration-150 ease-out">
@@ -560,7 +560,7 @@
                 <div class="grid gap-2 rounded-lg border border-border px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">
                     <div class="min-w-0">
                         <label for="reminder-generic_referral_days" class="text-sm font-semibold text-foreground">Generic referral reminder</label>
-                        <p class="text-xs text-muted-foreground">System default, not a handbook deadline. Off by default; applies to referrals other than CODI. <span class="font-medium text-foreground">Reminds: SDS Office.</span></p>
+                        <p class="text-xs text-muted-foreground">Off by default; applies to referrals other than CODI. <span class="font-medium text-foreground">Reminds: SDS Office.</span></p>
                         @error('generic_referral_enabled')<p class="mt-1 text-xs text-destructive">{{ $message }}</p>@enderror
                         @error('generic_referral_days')<p class="mt-1 text-xs text-destructive">{{ $message }}</p>@enderror
                         <label class="mt-2 inline-flex items-center gap-2 text-xs text-muted-foreground">
@@ -578,7 +578,7 @@
                 <div class="grid gap-2 rounded-lg border border-border px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">
                     <div class="min-w-0">
                         <label for="reminder-student_response_days" class="text-sm font-semibold text-foreground">Student did not respond</label>
-                        <p class="text-xs text-muted-foreground">Days a student has to accept a resolution or ask for further action. Afterwards they can only accept, and the SDS Office is told once so it can close the ticket. This response period is a system default, not a handbook deadline, and can be adjusted by the SDS admin. <span class="font-medium text-foreground">Reminds: SDS Office.</span></p>
+                        <p class="text-xs text-muted-foreground">Days a student has to accept a resolution or ask for further action. Afterwards they can only accept, and the SDS Office is told once so it can close the ticket. <span class="font-medium text-foreground">Reminds: SDS Office.</span></p>
                         @error('student_response_days')<p class="mt-1 text-xs text-destructive">{{ $message }}</p>@enderror
                     </div>
                     <div class="flex items-center gap-2">
