@@ -8,6 +8,9 @@ vendor
 .git
 .gitignore
 
+# Thesis drafts and screenshot instructions are local working documents.
+docs/
+
 storage/logs/*
 storage/framework/cache/*
 storage/framework/sessions/*

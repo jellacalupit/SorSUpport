@@ -16,6 +16,10 @@ return [
 
     'default' => env('MAIL_MAILER', 'log'),
 
+    // Gmail fetches this image from the internet, even when a message is sent locally.
+    // Keep it independent of APP_URL and the current browser request's host.
+    'logo_url' => env('MAIL_LOGO_URL', 'https://sorsupport.up.railway.app/branding/sorsu%20logo.png'),
+
     /*
     |--------------------------------------------------------------------------
     | Mailer Configurations

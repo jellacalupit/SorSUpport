@@ -116,9 +116,12 @@ Besides the usual Laravel settings, `.env` takes:
 |---|---|
 | `MAIL_MAILER=brevo`, `BREVO_API_KEY` | Sends email through Brevo. Use `MAIL_MAILER=log` to write emails to the log instead. |
 | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | Sender shown on every email. |
+| `MAIL_LOGO_URL` | Public HTTPS image used inside all emails, independent of local `APP_URL`. Defaults to the logo on the SorSUpport Railway site. |
 | `TICKET_SUBMISSIONS_PER_HOUR` | Tickets one student may submit in an hour (default 5). |
 
 Reminder timing is set by the SDS admin in System Settings, not in `.env`.
+
+Email logos must be publicly accessible without signing in. After changing mail settings, clear or rebuild Laravel's configuration cache and restart long-running queue workers. New messages use the updated logo URL; previously delivered messages retain their original HTML. Gmail's sender avatar is separate from this image: set the profile photo on the Google account matching `MAIL_FROM_ADDRESS`. The email template cannot set that avatar.
 
 Accounts are deactivated and reactivated, never deleted or anonymized. Deactivation preserves identity, credentials, profiles, attachments, and ticket/audit history. Self-service account deletion is unavailable. SDS cannot deactivate a recipient while that account is assigned to an open ticket; the tickets must first be reassigned with the existing Assign action.
 
