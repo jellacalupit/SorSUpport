@@ -32,6 +32,12 @@ class TicketUnreadBadgeTest extends TestCase
             ->assertSee('>4<', false)
             ->assertSee('>9<', false);
 
+        $homepage = $this->actingAs($recipientUser)
+            ->get(route('recipient.dashboard'))
+            ->assertOk();
+
+        $this->assertOnlyTicketAndNotificationTabsHaveBadges($homepage->getContent(), 'recipient', 9);
+
         $this->actingAs($recipientUser)
             ->get(route('recipient.notifications'))
             ->assertOk()
@@ -117,11 +123,13 @@ class TicketUnreadBadgeTest extends TestCase
             ->get(route('student.complaints.show', $firstComplaint))
             ->assertOk();
 
-        $this->actingAs($studentUser)
+        $homepage = $this->actingAs($studentUser)
             ->get(route('student.dashboard'))
             ->assertOk()
             ->assertDontSee('>5<', false)
             ->assertSee('>4<', false);
+
+        $this->assertOnlyTicketAndNotificationTabsHaveBadges($homepage->getContent(), 'student', 4);
 
         $this->actingAs($studentUser)
             ->get(route('student.notifications'))
@@ -170,6 +178,33 @@ class TicketUnreadBadgeTest extends TestCase
             ->assertOk()
             ->assertDontSee('New message')
             ->assertDontSee('Posted a reply message.');
+    }
+
+    private function assertOnlyTicketAndNotificationTabsHaveBadges(string $html, string $role, int $unread): void
+    {
+        $document = new \DOMDocument;
+        $previous = libxml_use_internal_errors(true);
+
+        try {
+            $document->loadHTML($html);
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+
+        $xpath = new \DOMXPath($document);
+        $ticketRoute = $role === 'student' ? 'student.complaints.index' : 'recipient.tickets.index';
+
+        foreach ([$role.'.dashboard' => null, $ticketRoute => $unread, $role.'.notifications' => $unread] as $route => $count) {
+            $link = '//nav[@data-mobile-tab-bar]//a[@href="'.route($route).'"]';
+            $this->assertSame(1, $xpath->query($link)->length, $route.' navigation link is present');
+            $badges = $xpath->query($link.'//span[contains(@class, "-top-1.5")]');
+
+            $this->assertSame($count === null ? 0 : 1, $badges->length, $route.' badge visibility');
+            if ($count !== null) {
+                $this->assertSame((string) $count, trim($badges->item(0)->textContent));
+            }
+        }
     }
 
     /**

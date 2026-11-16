@@ -48,10 +48,8 @@
                 $isActive = Route::currentRouteName() === $tab['route'];
                 $iconComponent = 'icons.' . $tab['icon'];
                 $badgedRoutes = [
-                    'student.dashboard',
                     'student.complaints.index',
                     'student.notifications',
-                    'recipient.dashboard',
                     'recipient.tickets.index',
                     'recipient.notifications',
                 ];
