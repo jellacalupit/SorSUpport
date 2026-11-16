@@ -45,6 +45,16 @@
         padding-right: 1rem;
     }
 
+    @media (min-width: 1024px) {
+        .communication-card .message-scrollbar {
+            scrollbar-width: none;
+        }
+
+        .communication-card .message-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    }
+
     .communication-card .message-scrollbar:not(.overflow-visible) > [data-message-row] {
         flex-shrink: 0;
     }
