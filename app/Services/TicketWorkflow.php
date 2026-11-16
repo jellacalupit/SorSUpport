@@ -344,10 +344,8 @@ class TicketWorkflow
     {
         $this->authorize($admin, $ticket, self::ASSIGN);
 
-        if ($recipient?->user && $ticket->complaint?->names($recipient->user)) {
-            throw ValidationException::withMessages([
-                'recipient_id' => 'This ticket cannot be assigned to a person named in the complaint.',
-            ]);
+        if ($recipient) {
+            app(TicketRoutingService::class)->validateRecipient($ticket, $recipient);
         }
 
         DB::transaction(function () use ($ticket, $admin, $recipient): void {

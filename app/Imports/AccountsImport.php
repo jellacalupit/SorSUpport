@@ -23,6 +23,8 @@ class AccountsImport implements ToCollection, WithHeadingRow
     protected int $duplicates = 0;
     protected int $created = 0;
     protected int $updated = 0;
+    protected int $deactivated = 0;
+    protected int $reactivated = 0;
     protected array $errors = [];
     protected array $seenIdentifiers = [];
     protected array $seenEmails = [];
@@ -68,13 +70,13 @@ class AccountsImport implements ToCollection, WithHeadingRow
             $this->seenEmails[$email] = true;
 
             try {
-                DB::transaction(function () use ($row, $identifierField): void {
+                $result = DB::transaction(function () use ($row, $identifierField): array {
                     $profile = $this->accountType === User::ROLE_STUDENT
                         ? Student::where('student_id', $row[$identifierField])->first()
                         : Recipient::where('staff_id', $row[$identifierField])->first();
                     $user = $profile?->user;
 
-                    if (! $user) {
+                    if (! $user && $this->accountType === User::ROLE_RECIPIENT) {
                         $user = User::where('email', $row['email'])->first();
                     }
 
@@ -96,6 +98,10 @@ class AccountsImport implements ToCollection, WithHeadingRow
                         }
                     }
 
+                    $created = ! $user;
+                    $reactivated = $user && $this->accountType === User::ROLE_STUDENT
+                        && ! $user->is_active && $user->hasVerifiedEmail();
+
                     if (! $user) {
                         $user = User::create([
                             'name' => $row['name'],
@@ -110,7 +116,6 @@ class AccountsImport implements ToCollection, WithHeadingRow
                             'is_active' => false,
                             'email_verified_at' => null,
                         ]);
-                        $this->created++;
                     } else {
                         $user->update([
                             'name' => $row['name'],
@@ -119,9 +124,10 @@ class AccountsImport implements ToCollection, WithHeadingRow
                             'last_name' => $row['last_name'],
                             'username' => $row[$identifierField],
                             'email' => $row['email'],
-                            'is_active' => $user->hasVerifiedEmail() ? $row['is_active'] : false,
+                            // Presence in the enrollment roster activates previously verified students.
+                            'is_active' => $user->hasVerifiedEmail()
+                                && ($this->accountType === User::ROLE_STUDENT || $row['is_active']),
                         ]);
-                        $this->updated++;
                     }
 
                     if ($this->accountType === User::ROLE_STUDENT) {
@@ -139,20 +145,41 @@ class AccountsImport implements ToCollection, WithHeadingRow
                             'designation' => $row['designation'] ?? '',
                         ]);
                     }
+
+                    return ['created' => $created, 'reactivated' => $reactivated];
                 });
 
+                $result['created'] ? $this->created++ : $this->updated++;
+                $this->reactivated += (int) $result['reactivated'];
                 $this->imported++;
             } catch (\Throwable $exception) {
                 $message = $exception instanceof \RuntimeException
                     ? $exception->getMessage()
                     : (str_contains(strtolower($exception->getMessage()), 'unique')
-                        ? 'Staff ID or email already exists.'
+                        ? 'Account ID or email already exists.'
                         : 'This account could not be imported.');
                 $this->recordFailure($rowNumber, [
                     $identifierField => [$message],
                 ]);
             }
         }
+    }
+
+    /**
+     * Reconcile only after every worksheet has been read successfully. A partial or empty
+     * import must never deactivate students absent from the successfully imported rows.
+     */
+    public function synchronizeStudentEnrollment(): void
+    {
+        if ($this->accountType !== User::ROLE_STUDENT || $this->imported === 0 || $this->failed > 0) {
+            return;
+        }
+
+        $this->deactivated = User::query()
+            ->where('role', User::ROLE_STUDENT)
+            ->where('is_active', true)
+            ->whereHas('student', fn ($query) => $query->whereNotIn('student_id', array_keys($this->seenIdentifiers)))
+            ->update(['is_active' => false]);
     }
 
     protected function normalizeRow(array $row): array
@@ -291,7 +318,8 @@ class AccountsImport implements ToCollection, WithHeadingRow
             'duplicates' => $this->duplicates,
             'created' => $this->created,
             'updated' => $this->updated,
-            'deactivated' => 0,
+            'deactivated' => $this->deactivated,
+            'reactivated' => $this->reactivated,
             'errors' => $this->errors,
         ];
     }

@@ -1,19 +1,13 @@
 {{-- Step 1 (validity) and step 2 (classification and routing) for a ticket awaiting review. --}}
 @php
-    $category = $ticket->complaint->category;
-    $availableRecipients = $category
-        ? collect([$category->recipient])
-            ->merge($category->suggestedRecipients)
-            ->merge($category->escalationHierarchies->pluck('recipient'))
-            ->push($ticket->complaint->suggestedRecipient)
-            ->filter(fn ($recipient) => $recipient && $recipient->user && $recipient->user->is_active && ! $ticket->complaint->names($recipient->user))
-            ->unique('id')
-            ->values()
-        : collect();
+    $availableRecipients = app(\App\Services\TicketRoutingService::class)->availableRecipients($ticket);
     $isAnonymousTicket = (bool) $ticket->complaint->is_anonymous;
 @endphp
 
 <x-ticket-actions :ticket="$ticket" role="admin" class="mb-3" />
+@error('recipient_id')
+    <p role="alert" class="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ $message }}</p>
+@enderror
 <div x-data="{ validity: null, classification: null, jurisdiction: null, informationalDisposition: null, selectedRecipientId: null, selectedRecipient: '' }">
     <div class="rounded-lg border border-border bg-white p-4 text-foreground shadow-sm">
     <h3 class="flex items-center gap-2 font-display text-base font-bold text-black">

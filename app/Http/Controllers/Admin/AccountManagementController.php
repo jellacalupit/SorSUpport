@@ -12,6 +12,7 @@ use App\Models\User as AppUser;
 use App\Notifications\AccountUpdateNotification;
 use App\Services\TicketAssignmentService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -423,7 +424,10 @@ class AccountManagementController extends Controller
         $import = new AccountsImport($validated['account_type']);
 
         try {
-            Excel::import($import, $request->file('file'));
+            DB::transaction(function () use ($import, $request): void {
+                Excel::import($import, $request->file('file'));
+                $import->synchronizeStudentEnrollment();
+            });
             $summary = $import->summary();
         } catch (\Throwable $exception) {
             return back()->withErrors(['file' => 'The uploaded file could not be read. Use the provided template and try again.']);
@@ -436,14 +440,26 @@ class AccountManagementController extends Controller
         AuditLog::activity(
             'accounts_imported',
             details: sprintf(
-                'Imported %d %s account(s).',
+                'Imported %d %s account(s); created %d, updated %d, reactivated %d, deactivated %d, rejected %d row(s).',
                 $summary['imported'],
-                $validated['account_type']
+                $validated['account_type'],
+                $summary['created'],
+                $summary['updated'],
+                $summary['reactivated'],
+                $summary['deactivated'],
+                $summary['failed']
             )
         );
 
         return redirect()
             ->route('admin.accounts.index', $redirectParameters)
+            ->with('success', sprintf(
+                'Upload complete: %d created, %d updated, %d reactivated, %d deactivated, %d rejected row(s).%s',
+                $summary['created'], $summary['updated'], $summary['reactivated'], $summary['deactivated'], $summary['failed'],
+                $validated['account_type'] === AppUser::ROLE_STUDENT && ($summary['failed'] > 0 || $summary['imported'] === 0)
+                    ? ' Missing students were not deactivated because the roster was empty or contained errors.'
+                    : ''
+            ))
             ->with('upload_summary', $summary)
             ->with('upload_account_type', $validated['account_type']);
     }

@@ -23,6 +23,13 @@ class User extends Authenticatable implements MustVerifyEmailContract
     public const ROLE_RECIPIENT = 'recipient';
     public const ROLE_SDS_ADMIN = 'sds_admin';
 
+    protected static function booted(): void
+    {
+        static::deleting(function (User $user): void {
+            throw new \LogicException('Accounts cannot be deleted. Deactivate the account instead.');
+        });
+    }
+
     /**
      * The attributes that are mass assignable.
      *

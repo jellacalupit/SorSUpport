@@ -201,7 +201,7 @@ class TicketDisplayStatusTest extends TestCase
             ->assertDontSee('Recorded for information')
             ->assertDontSee('Not accepted');
 
-        $this->assertSame(2, substr_count($response->getContent(), 'data-ticket-status-empty>-'));
+        $this->assertSame(2, substr_count($response->getContent(), 'data-ticket-status-empty>—'));
     }
 
     public function test_in_review_filter_returns_the_stored_needs_clarification_status(): void

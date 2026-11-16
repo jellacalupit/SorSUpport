@@ -533,8 +533,6 @@ Route::middleware(['auth', 'active.user', 'force.password'])->group(function () 
     Route::post('/profile/photo', [ProfileController::class, 'updatePhoto'])
         ->name('profile.photo');
 
-    Route::delete('/profile', [ProfileController::class, 'destroy'])
-        ->name('profile.destroy');
 });
 
 require __DIR__.'/auth.php';

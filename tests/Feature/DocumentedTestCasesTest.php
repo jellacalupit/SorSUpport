@@ -62,6 +62,7 @@ class DocumentedTestCasesTest extends TestCase
         }
 
         $this->category = ComplaintCategory::create(['name' => 'Student Services', 'is_active' => true]);
+        $this->category->suggestedRecipients()->attach([$this->handler->recipient->id, $this->otherRecipient->recipient->id]);
     }
 
     // ------------------------------------------------------------ authentication

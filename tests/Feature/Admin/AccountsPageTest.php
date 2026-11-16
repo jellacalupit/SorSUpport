@@ -166,6 +166,7 @@ class AccountsPageTest extends TestCase
             'block' => '1',
         ]);
         $category = ComplaintCategory::create(['name' => 'General', 'is_active' => true]);
+        $category->suggestedRecipients()->attach([$recipient->id, $replacement->id]);
         $tickets = collect([Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED])
             ->map(function (string $status) use ($student, $category, $recipientUser): Ticket {
                 $complaint = Complaint::create([

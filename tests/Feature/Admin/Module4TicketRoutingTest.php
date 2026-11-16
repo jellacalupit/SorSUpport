@@ -68,6 +68,7 @@ class Module4TicketRoutingTest extends TestCase
             'name' => 'Academic Concern',
             'is_active' => true,
         ]);
+        $category->suggestedRecipients()->attach([$recipient->id, $otherRecipient->id]);
 
         $complaint = Complaint::create([
             'reference_number' => Complaint::generateReferenceNumber(),

@@ -273,6 +273,7 @@ class ForwardedInformationalTicketTest extends TestCase
             'is_sensitive' => true,
             'allows_hidden_identity' => true,
         ]);
+        $sensitiveCategory->suggestedRecipients()->attach($this->recipient->recipient->id);
         $ticket = $this->ticket(Ticket::STATUS_SUBMITTED, [
             'classification' => Ticket::CLASSIFICATION_INFORMATIONAL,
             'jurisdiction' => Ticket::JURISDICTION_RECIPIENT,

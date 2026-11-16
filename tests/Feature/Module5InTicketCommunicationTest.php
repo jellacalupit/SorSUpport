@@ -109,6 +109,7 @@ class Module5InTicketCommunicationTest extends TestCase
             'name' => 'Academic Concern',
             'is_active' => true,
         ]);
+        $category->suggestedRecipients()->attach($recipient->id);
 
         $complaint = Complaint::create([
             'reference_number' => Complaint::generateReferenceNumber(),
@@ -521,6 +522,7 @@ class Module5InTicketCommunicationTest extends TestCase
             'name' => 'Academic Concern',
             'is_active' => true,
         ]);
+        $category->suggestedRecipients()->attach($recipient->id);
 
         $complaint = Complaint::create([
             'reference_number' => Complaint::generateReferenceNumber(),

@@ -181,31 +181,24 @@ class ProfileTest extends TestCase
         $this->assertNotNull($user->refresh()->email_verified_at);
     }
 
-    public function test_user_can_delete_their_account(): void
+    public function test_no_role_can_delete_their_account_through_the_profile_endpoint(): void
     {
-        $user = User::factory()->create();
-        $deletedUserName = $user->name;
+        foreach ([User::ROLE_STUDENT, User::ROLE_RECIPIENT, User::ROLE_SDS_ADMIN] as $role) {
+            $user = User::factory()->create(['role' => $role]);
+            $attributes = $user->fresh()->getAttributes();
 
-        $response = $this
-            ->actingAs($user)
-            ->delete('/profile', [
-                'password' => 'password',
-            ]);
+            $this->actingAs($user)
+                ->delete('/profile', ['password' => 'password'])
+                ->assertStatus(405);
 
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/');
+            $this->assertSame($attributes, $user->fresh()->getAttributes());
+        }
 
-        $this->assertGuest();
-        $this->assertNull($user->fresh());
-        $this->assertDatabaseHas('audit_logs', [
-            'action' => 'account_deleted',
-            'performed_by' => null,
-            'details' => 'Deleted account ID ' . $user->id . ' with no related ticket records.',
-        ]);
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'account_deleted']);
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'account_anonymized']);
     }
 
-    public function test_deleting_an_account_with_ticket_records_anonymizes_it_and_preserves_history(): void
+    public function test_attempted_account_deletion_preserves_identity_avatar_and_ticket_history(): void
     {
         Storage::fake('public');
         $user = User::factory()->create([
@@ -253,18 +246,17 @@ class ProfileTest extends TestCase
 
         $this->actingAs($user)
             ->delete('/profile', ['password' => 'password'])
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/');
+            ->assertStatus(405);
 
-        $anonymized = User::findOrFail($id);
-        $this->assertGuest();
-        $this->assertSame('Deleted user', $anonymized->name);
-        $this->assertSame('Deleted user', $anonymized->display_name);
-        $this->assertSame("deleted-{$id}", $anonymized->username);
-        $this->assertSame("deleted-{$id}@deleted.invalid", $anonymized->email);
-        $this->assertFalse($anonymized->is_active);
-        $this->assertNull($anonymized->avatar_path);
-        Storage::disk('public')->assertMissing('avatars/mary.png');
+        $retained = User::findOrFail($id);
+        $this->assertAuthenticatedAs($retained);
+        $this->assertSame('Mary Privacy', $retained->name);
+        $this->assertSame('Mary Privacy', $retained->display_name);
+        $this->assertSame('mary.privacy', $retained->username);
+        $this->assertSame('mary.privacy@example.test', $retained->email);
+        $this->assertTrue($retained->is_active);
+        $this->assertSame('avatars/mary.png', $retained->avatar_path);
+        Storage::disk('public')->assertExists('avatars/mary.png');
         $this->assertDatabaseHas('complaints', ['id' => $complaint->id]);
         $this->assertDatabaseHas('tickets', ['id' => $ticket->id]);
         $this->assertDatabaseHas('thread_messages', [
@@ -275,35 +267,21 @@ class ProfileTest extends TestCase
         $this->assertDatabaseHas('audit_logs', [
             'id' => $priorAudit->id,
             'performed_by' => $id,
-            'details' => 'Deleted user posted a reply message.',
+            'details' => 'Mary Privacy posted a reply message.',
         ]);
-        $this->assertDatabaseHas('audit_logs', [
-            'action' => 'account_anonymized',
-            'performed_by' => $id,
-        ]);
-        $this->assertDatabaseMissing('users', ['username' => 'mary.privacy']);
-        $this->assertDatabaseMissing('users', ['email' => 'mary.privacy@example.test']);
-        $replacement = User::factory()->create([
-            'username' => 'mary.privacy',
-            'email' => 'mary.privacy@example.test',
-        ]);
-        $this->assertNotNull($replacement->id);
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'account_anonymized']);
     }
 
-    public function test_correct_password_must_be_provided_to_delete_account(): void
+    public function test_user_model_rejects_account_deletion(): void
     {
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->from('/profile')
-            ->delete('/profile', [
-                'password' => 'wrong-password',
-            ]);
-
-        $response
-            ->assertSessionHasErrorsIn('userDeletion', 'password')
-            ->assertRedirect('/profile');
+        try {
+            $user->delete();
+            $this->fail('Account deletion should be rejected.');
+        } catch (\LogicException $exception) {
+            $this->assertSame('Accounts cannot be deleted. Deactivate the account instead.', $exception->getMessage());
+        }
 
         $this->assertNotNull($user->fresh());
     }

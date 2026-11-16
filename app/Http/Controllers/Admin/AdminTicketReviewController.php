@@ -12,6 +12,7 @@ use App\Models\Ticket;
 use App\Models\TicketThread;
 use App\Services\TicketEscalationService;
 use App\Services\TicketAttentionService;
+use App\Services\TicketRoutingService;
 use App\Services\TicketUnreadService;
 use App\Services\TicketWorkflow;
 use Illuminate\Http\RedirectResponse;
@@ -27,6 +28,7 @@ class AdminTicketReviewController extends Controller
     public function __construct(
         protected TicketEscalationService $escalationService,
         protected TicketWorkflow $workflow,
+        protected TicketRoutingService $routing,
     ) {
     }
 
@@ -328,9 +330,7 @@ class AdminTicketReviewController extends Controller
 
         $recipient = Recipient::findOrFail($validated['recipient_id']);
 
-        if ($recipient->user && $ticket->complaint?->names($recipient->user)) {
-            return back()->withErrors(['recipient_id' => 'This ticket cannot be forwarded to a person named in the complaint.']);
-        }
+        $this->routing->validateRecipient($ticket, $recipient, 'forwarded');
 
         $ticket->update([
             'forwarded_to' => $validated['recipient_id'],
@@ -401,11 +401,7 @@ class AdminTicketReviewController extends Controller
 
         $validated = $request->validate(['recipient_id' => 'required|exists:recipients,id']);
         $recipient = Recipient::with('user')->findOrFail($validated['recipient_id']);
-        abort_unless($this->recipientIsConfiguredForTicketCategory($ticket, $recipient), 422, 'This recipient is not configured for the ticket category.');
-
-        if ($recipient->user && $ticket->complaint?->names($recipient->user)) {
-            return back()->withErrors(['recipient_id' => 'This ticket cannot be forwarded to a person named in the complaint.']);
-        }
+        $this->routing->validateRecipient($ticket, $recipient, 'forwarded');
 
         $ticket->update([
             'classification' => Ticket::CLASSIFICATION_INFORMATIONAL,
@@ -451,10 +447,6 @@ class AdminTicketReviewController extends Controller
 
         if ($validated['assignment_mode'] === 'recipient') {
             $recipient = Recipient::with('user')->findOrFail($validated['recipient_id']);
-
-            if ($ticket->classification === null) {
-                abort_unless($this->recipientIsConfiguredForTicketCategory($ticket, $recipient), 422, 'This recipient is not configured for the ticket category.');
-            }
         }
 
         $this->workflow->assign($ticket, Auth::user(), $recipient);
@@ -462,24 +454,6 @@ class AdminTicketReviewController extends Controller
         return redirect()
             ->route('admin.tickets.review.index')
             ->with('success', $recipient ? 'Ticket assigned to recipient.' : 'Ticket assigned for direct handling.');
-    }
-
-    protected function recipientIsConfiguredForTicketCategory(Ticket $ticket, Recipient $recipient): bool
-    {
-        $category = $ticket->complaint?->category;
-
-        if (! $category) {
-            return false;
-        }
-
-        $configuredRecipientIds = collect([$category->recipient_id, $ticket->complaint->suggested_recipient_id])
-            ->merge($category->suggestedRecipients()->pluck('recipients.id'))
-            ->merge($category->escalationHierarchies()->pluck('recipient_id'))
-            ->filter()
-            ->unique()
-            ->values();
-
-        return $configuredRecipientIds->contains((int) $recipient->id);
     }
 
     /**

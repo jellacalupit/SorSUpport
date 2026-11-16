@@ -47,6 +47,7 @@ class Module6TicketLifecycleTest extends TestCase
             'name' => 'General',
             'is_active' => true,
         ]);
+        $category->suggestedRecipients()->attach($recipient->id);
 
         $complaint = Complaint::create([
             'reference_number' => Complaint::generateReferenceNumber(),
