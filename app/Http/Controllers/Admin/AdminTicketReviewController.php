@@ -21,7 +21,6 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use Illuminate\View\View;
 
 class AdminTicketReviewController extends Controller
 {
@@ -42,7 +41,7 @@ class AdminTicketReviewController extends Controller
     /**
      * Display tickets that may need SDS attention without changing them.
      */
-    public function needsAttention(Request $request, TicketAttentionService $attentionService): View
+    public function needsAttention(Request $request, TicketAttentionService $attentionService): Response
     {
         $rows = $attentionService->tickets();
         $search = trim((string) $request->input('search'));
@@ -83,11 +82,15 @@ class AdminTicketReviewController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        return view('admin.tickets.needs-attention', [
-            'tickets' => $tickets,
-            'categories' => \App\Models\ComplaintCategory::query()->orderBy('name')->get(),
-            'statuses' => collect(Ticket::DISPLAY_STATUS_LABELS)->except([Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED]),
-        ]);
+        return response()
+            ->view('admin.tickets.needs-attention', [
+                'tickets' => $tickets,
+                'categories' => \App\Models\ComplaintCategory::query()->orderBy('name')->get(),
+                'statuses' => collect(Ticket::DISPLAY_STATUS_LABELS)->except([Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED]),
+            ])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     /**

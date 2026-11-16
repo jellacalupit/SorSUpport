@@ -132,6 +132,8 @@ class NeedsAttentionTest extends TestCase
         $this->recordActionAt($closed, 'update_requested', now());
 
         $response = $this->actingAs($this->admin)->get(route('admin.tickets.needs-attention'))->assertOk();
+        $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        $this->assertStringContainsString('no-cache', $response->headers->get('Cache-Control'));
         $response->assertSee('Days Open')
             ->assertDontSee('>Age<', false)
             ->assertSee('Student requested an update')
