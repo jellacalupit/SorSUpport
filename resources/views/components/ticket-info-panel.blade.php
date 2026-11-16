@@ -137,10 +137,10 @@
     x-init="$nextTick(() => checkDescription())"
     x-on:resize.window.debounce.150ms="checkDescription()"
 >
-    <div class="flex items-center justify-between gap-3">
-        <p class="inline-flex min-w-0 items-center gap-1.5 font-mono text-xs font-semibold leading-tight text-primary">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="inline-flex shrink-0 items-center gap-1.5 font-mono text-xs font-semibold leading-tight text-primary">
             <x-icons.ticket class="h-4 w-4 shrink-0 text-primary" />
-            <span class="truncate">
+            <span class="whitespace-nowrap">
                 {{ $complaint?->reference_number ?? $ticket->id }}
             </span>
         </p>

@@ -126,7 +126,7 @@
             <table class="w-full table-fixed border-collapse text-left text-sm">
                 <thead class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
-                        <th class="w-[6.5rem] px-3 py-2 font-semibold">Ticket ID</th>
+                        <th class="w-32 px-3 py-2 font-semibold">Ticket ID</th>
                         <th class="px-3 py-2 font-semibold">Subject Title</th>
                         <th class="w-[6.5rem] px-3 py-2 text-center font-semibold">Status</th>
                     </tr>
@@ -134,7 +134,7 @@
                 <tbody>
                     @forelse ($recentTickets as $ticket)
                         <tr class="border-t border-border transition-colors hover:bg-muted/30">
-                            <td class="truncate px-3 py-2 font-mono text-[11px] font-semibold text-primary">
+                            <td class="whitespace-nowrap px-3 py-2 font-mono text-[11px] font-semibold text-primary">
                                 {{ $ticket->complaint?->reference_number ?? $ticket->id }}
                             </td>
                             <td class="truncate px-3 py-2 text-xs text-foreground">
