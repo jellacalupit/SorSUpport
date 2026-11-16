@@ -119,17 +119,21 @@ class RecipientReturnToSdsTest extends TestCase
                 ->assertOk()
                 ->assertSee('Returned by office')
                 ->assertSee('Edit category and recipient')
+                ->assertSee('Validity')
                 ->assertSee($reason);
             $this->actingAs($this->admin)
                 ->get(route('admin.tickets.review.index'))
                 ->assertOk()
                 ->assertSee($ticket->complaint->reference_number)
+                ->assertSee('data-ticket-status="submitted"', false)
+                ->assertSee('Edit category and recipient')
+                ->assertSee('Validity')
                 ->assertSee('Returned by office')
                 ->assertSee($reason);
             $this->actingAs($this->admin)
                 ->get(route('admin.tickets.needs-attention'))
                 ->assertOk()
-                ->assertSee('Returned by office');
+                ->assertDontSee($ticket->complaint->reference_number);
 
             $this->actingAs($this->student)
                 ->get(route('student.complaints.show', $ticket->complaint))
@@ -152,7 +156,7 @@ class RecipientReturnToSdsTest extends TestCase
         }
     }
 
-    public function test_a_returned_ticket_stays_in_needs_attention_until_sds_acts(): void
+    public function test_a_returned_ticket_waits_in_review_instead_of_needs_attention_until_sds_acts(): void
     {
         $ticket = $this->ticket(Ticket::STATUS_ASSIGNED);
 
@@ -163,6 +167,16 @@ class RecipientReturnToSdsTest extends TestCase
             ->assertRedirect();
 
         $this->assertNotNull(app(TicketWorkflow::class)->pendingReturnToSds($ticket->fresh()));
+
+        // Even after its review reminder becomes due, this returned ticket stays in the review queue.
+        $this->travel(14)->days();
+        $this->actingAs($this->admin)
+            ->get(route('admin.tickets.review.index'))
+            ->assertOk()->assertSee($ticket->complaint->reference_number)
+            ->assertSee('Edit category and recipient')->assertSee('Validity');
+        $this->actingAs($this->admin)
+            ->get(route('admin.tickets.needs-attention'))
+            ->assertOk()->assertDontSee($ticket->complaint->reference_number);
 
         $this->actingAs($this->admin)
             ->post(route('admin.tickets.assign', $ticket), ['assignment_mode' => 'direct'])

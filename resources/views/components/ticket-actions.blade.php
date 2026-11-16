@@ -165,7 +165,7 @@
             <button type="button" x-on:click="action = 'return_to_sds'" class="{{ $outlineButton }}">Return to SDS</button>
         @endif
         @if ($buttons->has('escalate'))
-            <button type="button" x-on:click="action = 'escalate'" class="h-10 w-full rounded-full border border-red-800 bg-white px-3 text-center text-sm font-semibold text-red-800 transition-colors hover:bg-red-50">Escalate Ticket</button>
+            <button type="button" x-on:click="action = 'escalate'" class="h-10 w-full rounded-full border border-transparent bg-white px-3 text-center text-sm font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Escalate Ticket</button>
         @endif
         @if ($buttons->has('refer'))
             <button type="button" x-on:click="action = 'refer'" class="{{ $outlineButton }}">Refer Ticket</button>

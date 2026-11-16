@@ -10,8 +10,7 @@ class TicketAttentionService
     public function __construct(
         protected TicketReminderService $reminders,
         protected TicketWorkflow $workflow,
-    ) {
-    }
+    ) {}
 
     /**
      * Tickets that may need SDS attention, with the reasons and display age for each row.
@@ -45,12 +44,13 @@ class TicketAttentionService
                 $pendingUpdate = $this->workflow->pendingUpdateRequest($ticket);
                 $pendingReturn = $this->workflow->pendingReturnToSds($ticket);
 
-                if ($pendingEscalation) {
-                    $reasons[] = 'Student requested escalation';
+                // Returned submissions belong in Ticket Review, where SDS can correct their routing.
+                if ($pendingReturn !== null && $ticket->isAwaitingReview()) {
+                    return null;
                 }
 
-                if ($pendingReturn) {
-                    $reasons[] = 'Returned by office';
+                if ($pendingEscalation) {
+                    $reasons[] = 'Student requested escalation';
                 }
 
                 if ($pendingUpdate) {
@@ -86,7 +86,7 @@ class TicketAttentionService
                 return [
                     'ticket' => $ticket,
                     'reasons' => $reasons,
-                    'pending' => $pendingEscalation !== null || $pendingUpdate !== null || $pendingReturn !== null,
+                    'pending' => $pendingEscalation !== null || $pendingUpdate !== null,
                     'days_open' => $ticket->daysOpen(),
                 ];
             })
