@@ -73,9 +73,9 @@
     $furtherActionDeadline = $ticket->furtherActionDeadline()?->copy()->setTimezone('Asia/Manila');
     $furtherActionExpired = $ticket->status === Ticket::STATUS_RESOLVED && ! $workflow->withinFurtherActionWindow($ticket);
 
-    $primaryButton = 'h-10 w-full rounded-full border border-primary bg-primary px-3 text-center text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90';
-    $outlineButton = 'h-10 w-full rounded-full border border-primary bg-white px-3 text-center text-sm font-semibold text-primary transition-colors hover:bg-primary-soft';
-    $smallPrimary = 'h-9 w-full rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90';
+    $primaryButton = 'h-10 w-full rounded-full border border-border bg-white px-3 text-center text-sm font-semibold text-foreground transition-colors enabled:hover:border-primary enabled:hover:bg-primary enabled:hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+    $outlineButton = $primaryButton;
+    $smallPrimary = 'h-9 w-full rounded-full border border-border bg-white px-3 text-xs font-semibold text-foreground transition-colors enabled:hover:border-primary enabled:hover:bg-primary enabled:hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
     $smallCancel = 'h-9 w-full rounded-full border border-border bg-white px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted';
     $input = 'mt-2 w-full rounded-md border border-input bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring';
     $panelTitle = 'text-sm font-semibold text-foreground';

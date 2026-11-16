@@ -281,8 +281,8 @@
                         <span>Validity</span>
                     </h3>
                     <div class="mt-4 grid grid-cols-2 gap-2">
-                        <button type="button" x-on:click="validity = 'valid'" class="w-full rounded-full border border-primary px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="validity === 'valid' ? 'bg-primary text-primary-foreground' : 'bg-white text-primary hover:bg-primary-soft'">Valid</button>
-                        <button type="button" x-on:click="validity = 'invalid'" class="w-full rounded-full border border-primary px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="validity === 'invalid' ? 'bg-primary text-primary-foreground' : 'bg-white text-primary hover:bg-primary-soft'">Invalid</button>
+                        <button type="button" x-on:click="validity = 'valid'" class="w-full rounded-full border px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="validity === 'valid' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-white text-foreground hover:border-primary hover:bg-primary hover:text-primary-foreground'">Valid</button>
+                        <button type="button" x-on:click="validity = 'invalid'" class="w-full rounded-full border px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="validity === 'invalid' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-white text-foreground hover:border-primary hover:bg-primary hover:text-primary-foreground'">Invalid</button>
                     </div>
 
                     <div x-show="validity === 'valid'" x-cloak class="mt-5 border-t border-border pt-4">
@@ -294,14 +294,14 @@
             <p class="mt-2 text-xs text-muted-foreground">The student chose to hide their identity. Review and route the ticket as usual; their name is not shown to anyone handling it.</p>
         @endif
                         <div class="mt-4 grid gap-2">
-                                <button type="button" x-on:click="classification = 'needs_resolution'" class="w-full rounded-full border border-primary px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="classification === 'needs_resolution' ? 'bg-primary text-primary-foreground' : 'bg-white text-primary hover:bg-primary-soft'">Needs Resolution</button>
-                            <button type="button" x-on:click="classification = 'informational'" class="w-full rounded-full border border-primary px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="classification === 'informational' ? 'bg-primary text-primary-foreground' : 'bg-white text-primary hover:bg-primary-soft'">Informational</button>
+                                <button type="button" x-on:click="classification = 'needs_resolution'" class="w-full rounded-full border px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="classification === 'needs_resolution' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-white text-foreground hover:border-primary hover:bg-primary hover:text-primary-foreground'">Needs Resolution</button>
+                            <button type="button" x-on:click="classification = 'informational'" class="w-full rounded-full border px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="classification === 'informational' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-white text-foreground hover:border-primary hover:bg-primary hover:text-primary-foreground'">Informational</button>
                         </div>
                         <div x-show="classification === 'needs_resolution'" x-cloak class="mt-5 border-t border-border pt-4">
                             <p class="text-sm font-semibold text-black">Does this fall under SDS jurisdiction or under a different office?</p>
                             <div class="mt-4 grid gap-2">
-                                <button type="button" x-on:click="jurisdiction = 'sds'" class="w-full rounded-full border border-primary px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="jurisdiction === 'sds' ? 'bg-primary text-primary-foreground' : 'bg-white text-primary hover:bg-primary-soft'">SDS Jurisdiction</button>
-                                <button type="button" x-on:click="jurisdiction = 'different_office'" class="w-full rounded-full border border-primary px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="jurisdiction === 'different_office' ? 'bg-primary text-primary-foreground' : 'bg-white text-primary hover:bg-primary-soft'">Different Office</button>
+                                <button type="button" x-on:click="jurisdiction = 'sds'" class="w-full rounded-full border px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="jurisdiction === 'sds' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-white text-foreground hover:border-primary hover:bg-primary hover:text-primary-foreground'">SDS Jurisdiction</button>
+                                <button type="button" x-on:click="jurisdiction = 'different_office'" class="w-full rounded-full border px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="jurisdiction === 'different_office' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-white text-foreground hover:border-primary hover:bg-primary hover:text-primary-foreground'">Different Office</button>
                             </div>
                             <details x-show="jurisdiction === 'different_office'" x-cloak x-data="{}" class="group relative mt-4" x-on:click.outside="$el.removeAttribute('open')">
                                 <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between rounded-full border border-primary bg-white px-3 py-2 text-xs font-semibold text-primary [&::-webkit-details-marker]:hidden">
@@ -326,8 +326,8 @@
                         <div x-show="classification === 'informational'" x-cloak class="mt-5 border-t border-border pt-4">
                             <p class="text-sm font-semibold text-black">Should the ticket retain in SDS records or should it be forwarded to a recipient?</p>
                             <div class="mt-4 grid gap-2">
-                                <button type="button" x-on:click="informationalDisposition = 'retain'; selectedRecipientId = null; selectedRecipient = ''" class="w-full rounded-full border border-primary px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="informationalDisposition === 'retain' ? 'bg-primary text-primary-foreground' : 'bg-white text-primary hover:bg-primary-soft'">Retain in SDS Records</button>
-                                <button type="button" x-on:click="informationalDisposition = 'forward'" class="w-full rounded-full border border-primary px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="informationalDisposition === 'forward' ? 'bg-primary text-primary-foreground' : 'bg-white text-primary hover:bg-primary-soft'">Forward to Recipient</button>
+                                <button type="button" x-on:click="informationalDisposition = 'retain'; selectedRecipientId = null; selectedRecipient = ''" class="w-full rounded-full border px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="informationalDisposition === 'retain' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-white text-foreground hover:border-primary hover:bg-primary hover:text-primary-foreground'">Retain in SDS Records</button>
+                                <button type="button" x-on:click="informationalDisposition = 'forward'" class="w-full rounded-full border px-2.5 py-1.5 text-center text-xs font-semibold transition-colors" x-bind:class="informationalDisposition === 'forward' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-white text-foreground hover:border-primary hover:bg-primary hover:text-primary-foreground'">Forward to Recipient</button>
                             </div>
                             <details x-show="informationalDisposition === 'forward'" x-cloak x-data="{}" class="group relative mt-4" x-on:click.outside="$el.removeAttribute('open')">
                                 <summary class="flex h-9 w-full cursor-pointer list-none items-center justify-between rounded-full border border-primary bg-white px-3 py-2 text-xs font-semibold text-primary [&::-webkit-details-marker]:hidden">
@@ -337,7 +337,7 @@
                                 <div class="absolute top-full z-40 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-border bg-white p-1 text-foreground shadow-lg">
                                     @forelse ($availableRecipients as $recipient)
                                         @php $recipientName = $recipient->user?->display_name ?? $recipient->user?->name ?? $recipient->unit; @endphp
-                                        <button type="button" x-on:click="selectedRecipientId = {{ $recipient->id }}; selectedRecipient = @js($recipientName); $el.closest('details').removeAttribute('open')" class="flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-primary-soft">
+                                        <button type="button" x-on:click="selectedRecipientId = {{ $recipient->id }}; selectedRecipient = @js($recipientName); $el.closest('details').removeAttribute('open')" class="flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs transition-colors enabled:hover:border-primary enabled:hover:bg-primary enabled:hover:text-primary-foreground">
                                             <span class="min-w-0">
                                                 <span class="block truncate font-semibold">{{ $recipientName }}</span>
                                                 <span class="block truncate text-muted-foreground">{{ $recipient->staff_id }} · {{ $recipient->unit }} · {{ $recipient->designation }}</span>
@@ -358,31 +358,38 @@
                         <label for="closure-reason-{{ $ticket->id }}" class="text-sm font-semibold text-black">Explanation for the student (required)</label>
                         <textarea id="closure-reason-{{ $ticket->id }}" name="closure_reason" rows="4" x-bind:required="['invalid', 'duplicate', 'out_of_scope', 'no_response'].includes(closureType)" x-bind:minlength="['invalid', 'duplicate', 'out_of_scope', 'no_response'].includes(closureType) ? 10 : null" maxlength="1000" class="mt-2 w-full rounded-lg border border-input bg-muted px-3 py-2.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" placeholder="Explain why this ticket cannot be acted on (10–1,000 characters)">{{ old('closure_reason') }}</textarea>
                         @error('closure_reason')<p class="mt-1 text-xs text-destructive">{{ $message }}</p>@enderror
-                        <button type="submit" class="mt-3 w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Close Ticket</button>
+                        <button type="submit" class="mt-3 w-full rounded-full border border-border bg-white px-2.5 py-1.5 text-center text-xs font-semibold text-foreground transition-colors enabled:hover:border-primary enabled:hover:bg-primary enabled:hover:text-primary-foreground">Close Ticket</button>
                     </form>
                     </div>
                     <form x-show="validity === 'valid' && classification === 'needs_resolution' && jurisdiction === 'sds'" x-cloak method="POST" action="{{ route('admin.tickets.acknowledge', $ticket) }}" class="mt-3">
                         @csrf
                         <input type="hidden" name="return_to_pending" value="1">
-                        <button type="submit" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Acknowledge Ticket</button>
+                        <button type="submit" class="w-full rounded-full border border-border bg-white px-2.5 py-1.5 text-center text-xs font-semibold text-foreground transition-colors enabled:hover:border-primary enabled:hover:bg-primary enabled:hover:text-primary-foreground">Acknowledge Ticket</button>
                     </form>
                     <form x-show="validity === 'valid' && classification === 'needs_resolution' && jurisdiction === 'different_office' && selectedRecipientId" x-cloak method="POST" action="{{ route('admin.tickets.assign', $ticket) }}" class="mt-3">
                         @csrf
                         <input type="hidden" name="return_to_pending" value="1">
                         <input type="hidden" name="assignment_mode" value="recipient">
                         <input type="hidden" name="recipient_id" x-bind:value="selectedRecipientId">
-                        <button type="submit" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Assign Ticket to Recipient</button>
+                        <button type="submit" class="w-full rounded-full border border-border bg-white px-2.5 py-1.5 text-center text-xs font-semibold text-foreground transition-colors enabled:hover:border-primary enabled:hover:bg-primary enabled:hover:text-primary-foreground">Assign Ticket to Recipient</button>
                     </form>
                     <form x-show="validity === 'valid' && classification === 'informational' && informationalDisposition === 'retain'" x-cloak method="POST" action="{{ route('admin.tickets.retain-informational', $ticket) }}" class="mt-3">
                         @csrf
-                        <button type="submit" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Save &amp; Close Ticket</button>
+                        <button type="submit" class="w-full rounded-full border border-border bg-white px-2.5 py-1.5 text-center text-xs font-semibold text-foreground transition-colors enabled:hover:border-primary enabled:hover:bg-primary enabled:hover:text-primary-foreground">Save &amp; Close Ticket</button>
                     </form>
                     <form x-show="validity === 'valid' && classification === 'informational' && informationalDisposition === 'forward' && selectedRecipientId" x-cloak method="POST" action="{{ route('admin.tickets.forward-informational-close', $ticket) }}" class="mt-3">
                         @csrf
                         <input type="hidden" name="recipient_id" x-bind:value="selectedRecipientId">
-                        <button type="submit" class="w-full rounded-full border border-primary bg-primary px-2.5 py-1.5 text-center text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Forward &amp; Close Ticket</button>
+                        <button type="submit" class="w-full rounded-full border border-border bg-white px-2.5 py-1.5 text-center text-xs font-semibold text-foreground transition-colors enabled:hover:border-primary enabled:hover:bg-primary enabled:hover:text-primary-foreground">Forward &amp; Close Ticket</button>
                     </form>
                 </div>
+                @if (app(\App\Services\TicketWorkflow::class)->pendingReturnToSds($ticket))
+                    @include('admin.tickets.partials.audit-activity', [
+                        'auditLogs' => $ticket->auditLogs()->with('performer')->orderByDesc('id')->limit(5)->get(),
+                        'auditLabels' => ['returned_to_sds' => 'Returned by office'],
+                        'class' => 'mt-3',
+                    ])
+                @endif
                 @if ($ticket->hasConversation())
                     <div class="admin-ticket-thread mt-3"><x-ticket-thread :ticket="$ticket" viewerRole="admin" /></div>
                 @endif

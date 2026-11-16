@@ -142,6 +142,8 @@ class NotificationController extends Controller
                     // handling the ticket; the student is told only where the ticket went.
                     if ($log->action === 'ticket_escalated') {
                         $body = \Illuminate\Support\Str::before($body, ' Reason: ');
+                    } elseif ($log->action === 'returned_to_sds') {
+                        $body = "Your ticket {$complaint->reference_number} was returned to SDS. Waiting for SDS Reassignment.";
                     } elseif ($log->action === 'ticket_referred' && $ticket?->referred_to) {
                         $body = "Ticket sent outside Bulan Campus to {$ticket->referred_to}; SDS is awaiting the reported outcome.";
                     }
@@ -192,6 +194,7 @@ class NotificationController extends Controller
     private function titleFor(string $action): string
     {
         return match ($action) {
+            'returned_to_sds' => 'Ticket returned to SDS',
             'complaint_submitted' => 'Complaint received',
             'ticket_classified' => 'Ticket classification updated',
             'ticket_assigned' => 'Ticket assigned',

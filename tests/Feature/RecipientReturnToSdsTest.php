@@ -53,7 +53,7 @@ class RecipientReturnToSdsTest extends TestCase
         foreach ([$this->handler, $this->otherRecipient] as $index => $user) {
             Recipient::create([
                 'user_id' => $user->id,
-                'staff_id' => 'STAFF-' . $index,
+                'staff_id' => 'STAFF-'.$index,
                 'unit' => 'Registrar',
                 'designation' => 'Staff',
             ]);
@@ -73,10 +73,20 @@ class RecipientReturnToSdsTest extends TestCase
                 ->assertRedirect(route('recipient.tickets.index'));
 
             $ticket->refresh();
-            $this->assertSame(Ticket::STATUS_ASSIGNED, $ticket->status);
+            $this->assertSame(Ticket::STATUS_SUBMITTED, $ticket->status);
+            $this->assertSame(Ticket::STATUS_SUBMITTED, $ticket->complaint->status);
+            $this->assertNull($ticket->classification);
+            $this->assertNull($ticket->jurisdiction);
+            $this->assertTrue($ticket->isAwaitingReview());
             $this->assertSame($this->admin->id, $ticket->current_handler_id);
             $this->assertNull($ticket->assigned_to);
             $this->assertNull($ticket->acknowledged_at);
+            $this->assertFalse($ticket->thread->is_active);
+            $this->assertTrue($ticket->hasConversation());
+            $this->assertDatabaseMissing('audit_logs', [
+                'ticket_id' => $ticket->id,
+                'action' => 'ticket_assigned',
+            ]);
             $this->assertDatabaseHas('audit_logs', [
                 'ticket_id' => $ticket->id,
                 'performed_by' => $this->handler->id,
@@ -102,10 +112,18 @@ class RecipientReturnToSdsTest extends TestCase
             ]);
 
             $this->assertSame(1, app(TicketUnreadService::class)->unreadCountForTicket($this->admin, $ticket));
+            $this->assertSame(1, app(TicketUnreadService::class)->unreadCountForTicket($this->student, $ticket));
 
             $this->actingAs($this->admin)
                 ->get(route('admin.complaints.show', $ticket->complaint))
                 ->assertOk()
+                ->assertSee('Returned by office')
+                ->assertSee('Edit category and recipient')
+                ->assertSee($reason);
+            $this->actingAs($this->admin)
+                ->get(route('admin.tickets.review.index'))
+                ->assertOk()
+                ->assertSee($ticket->complaint->reference_number)
                 ->assertSee('Returned by office')
                 ->assertSee($reason);
             $this->actingAs($this->admin)
@@ -116,6 +134,16 @@ class RecipientReturnToSdsTest extends TestCase
             $this->actingAs($this->student)
                 ->get(route('student.complaints.show', $ticket->complaint))
                 ->assertOk()
+                ->assertSee('Waiting for SDS Reassignment')
+                ->assertSee('Returned to SDS for reassignment')
+                ->assertDontSee('Assigned Recipient')
+                ->assertDontSee($reason);
+
+            $this->actingAs($this->student)
+                ->get(route('student.notifications'))
+                ->assertOk()
+                ->assertSee('Ticket returned to SDS')
+                ->assertSee('Waiting for SDS Reassignment')
                 ->assertDontSee($reason);
 
             $this->actingAs($this->handler)
@@ -145,6 +173,58 @@ class RecipientReturnToSdsTest extends TestCase
             ->get(route('admin.tickets.needs-attention'))
             ->assertOk()
             ->assertDontSee('Returned by office');
+    }
+
+    public function test_sds_can_correct_and_reassign_a_returned_ticket_without_losing_its_history(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS, ['acknowledged_at' => now()]);
+        $threadId = $ticket->thread->id;
+        $ticket->thread->messages()->create([
+            'sender_id' => $this->student->id,
+            'content' => 'Please keep this earlier conversation.',
+        ]);
+
+        $this->actingAs($this->handler)
+            ->post(route('recipient.complaints.return-to-sds', $ticket->complaint), [
+                'return_reason' => 'This belongs to a different office.',
+            ])->assertRedirect();
+
+        $category = ComplaintCategory::create(['name' => 'Corrected category', 'is_active' => true]);
+        $category->suggestedRecipients()->attach($this->otherRecipient->recipient->id);
+
+        $this->actingAs($this->admin)
+            ->patch(route('admin.tickets.update-details', $ticket), [
+                'category_id' => $category->id,
+                'suggested_recipient_id' => $this->otherRecipient->recipient->id,
+            ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $ticket->refresh();
+        $this->assertSame($category->id, $ticket->complaint->category_id);
+        $this->assertSame($this->otherRecipient->recipient->id, $ticket->complaint->suggested_recipient_id);
+        $this->assertNull($ticket->assigned_to);
+        $this->assertNotNull(app(TicketWorkflow::class)->pendingReturnToSds($ticket));
+        $this->actingAs($this->student)
+            ->get(route('student.complaints.show', $ticket->complaint))
+            ->assertOk()->assertSee('Waiting for SDS Reassignment')
+            ->assertSee('Please keep this earlier conversation.');
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.tickets.assign', $ticket), [
+                'assignment_mode' => 'recipient',
+                'recipient_id' => $this->otherRecipient->recipient->id,
+            ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $ticket->refresh();
+        $this->assertSame(Ticket::STATUS_ASSIGNED, $ticket->status);
+        $this->assertSame($this->otherRecipient->id, $ticket->assigned_to);
+        $this->assertSame($threadId, $ticket->thread->id);
+        $this->assertTrue($ticket->thread->is_active);
+        $this->assertSame(1, $ticket->auditLogs()->where('action', 'ticket_assigned')->count());
+        $this->assertNull(app(TicketWorkflow::class)->pendingReturnToSds($ticket));
+        $this->actingAs($this->student)
+            ->get(route('student.complaints.show', $ticket->complaint))
+            ->assertOk()->assertDontSee('Waiting for SDS Reassignment')
+            ->assertSee('Returned to SDS for reassignment');
     }
 
     public function test_return_reason_is_required_and_limited_to_10_through_500_characters(): void

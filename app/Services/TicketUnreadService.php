@@ -10,6 +10,7 @@ use Illuminate\Support\Collection;
 class TicketUnreadService
 {
     public const STUDENT_CHANGE_ACTIONS = [
+        'returned_to_sds',
         'complaint_submitted',
         'ticket_assigned',
         'ticket_acknowledged',

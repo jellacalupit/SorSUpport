@@ -70,9 +70,9 @@ class Ticket extends Model
     public const TRANSITIONS = [
         self::STATUS_SUBMITTED => [self::STATUS_NEEDS_CLARIFICATION, self::STATUS_ASSIGNED, self::STATUS_IN_PROGRESS, self::STATUS_CLOSED],
         self::STATUS_NEEDS_CLARIFICATION => [self::STATUS_SUBMITTED, self::STATUS_ASSIGNED, self::STATUS_IN_PROGRESS, self::STATUS_CLOSED],
-        self::STATUS_ASSIGNED => [self::STATUS_IN_PROGRESS, self::STATUS_ESCALATED, self::STATUS_REFERRED, self::STATUS_CLOSED],
-        self::STATUS_IN_PROGRESS => [self::STATUS_ASSIGNED, self::STATUS_ESCALATED, self::STATUS_REFERRED, self::STATUS_RESOLVED, self::STATUS_CLOSED],
-        self::STATUS_ESCALATED => [self::STATUS_ASSIGNED, self::STATUS_REFERRED, self::STATUS_RESOLVED, self::STATUS_CLOSED],
+        self::STATUS_ASSIGNED => [self::STATUS_SUBMITTED, self::STATUS_IN_PROGRESS, self::STATUS_ESCALATED, self::STATUS_REFERRED, self::STATUS_CLOSED],
+        self::STATUS_IN_PROGRESS => [self::STATUS_SUBMITTED, self::STATUS_ASSIGNED, self::STATUS_ESCALATED, self::STATUS_REFERRED, self::STATUS_RESOLVED, self::STATUS_CLOSED],
+        self::STATUS_ESCALATED => [self::STATUS_SUBMITTED, self::STATUS_ASSIGNED, self::STATUS_REFERRED, self::STATUS_RESOLVED, self::STATUS_CLOSED],
         self::STATUS_REFERRED => [self::STATUS_RESOLVED, self::STATUS_CLOSED],
         self::STATUS_RESOLVED => [self::STATUS_IN_PROGRESS, self::STATUS_CLOSED],
         self::STATUS_CLOSED => [],
@@ -324,7 +324,8 @@ class Ticket extends Model
     {
         return $this->classification === self::CLASSIFICATION_NEEDS_RESOLUTION
             || $this->status === self::STATUS_NEEDS_CLARIFICATION
-            || $this->clarification_requested_at !== null;
+            || $this->clarification_requested_at !== null
+            || ($this->isAwaitingReview() && $this->thread()->exists());
     }
 
     /**

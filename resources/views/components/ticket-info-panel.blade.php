@@ -60,6 +60,7 @@
         ? $ticket->forwarded_at?->copy()->setTimezone($displayTimezone)->format('M d, Y')
         : null;
     $studentActionLabels = [
+        'returned_to_sds' => 'Returned to SDS for reassignment',
         'complaint_submitted' => 'Ticket submitted',
         'ticket_assigned' => 'Ticket assigned',
         'ticket_acknowledged' => 'Office started handling the ticket',
@@ -95,7 +96,9 @@
     $waitingFor = match ($ticket->status) {
         \App\Models\Ticket::STATUS_SUBMITTED => $showForwardedInformational
             ? 'Forwarded for information'
-            : 'Waiting for SDS review',
+            : (app(\App\Services\TicketWorkflow::class)->pendingReturnToSds($ticket)
+                ? 'Waiting for SDS Reassignment'
+                : 'Waiting for SDS review'),
         \App\Models\Ticket::STATUS_NEEDS_CLARIFICATION => 'Waiting for your reply',
         \App\Models\Ticket::STATUS_ASSIGNED => "Waiting for {$currentOffice} to acknowledge",
         \App\Models\Ticket::STATUS_IN_PROGRESS => "Being handled by {$currentOffice}",
@@ -169,7 +172,7 @@
                 <span x-show="!editingDetails" class="inline-flex max-w-full items-center gap-1 text-sm font-medium leading-tight wrap-break-word">
                     <span>{{ $complaint?->category?->name ?? 'Uncategorized' }}</span>
                     @if ($canEditDetails)
-                        <button type="button" x-on:click="editingDetails = true" aria-label="Edit category and recipient" title="Edit category and recipient" class="inline-grid h-6 w-6 shrink-0 place-items-center rounded-full text-primary transition-colors hover:bg-primary-soft">
+                        <button type="button" x-on:click="editingDetails = true" aria-label="Edit category and recipient" title="Edit category and recipient" class="inline-grid h-6 w-6 shrink-0 place-items-center rounded-full text-foreground transition-colors enabled:hover:border-primary enabled:hover:bg-primary enabled:hover:text-primary-foreground">
                             <x-icons.pencil class="h-3.5 w-3.5" />
                         </button>
                     @endif
@@ -181,7 +184,7 @@
             <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">
                 @if ($assignedUser && $assignedRecipient)
                     <span class="relative" x-data="{ holderProfileOpen: false }" x-on:click.outside="holderProfileOpen = false">
-                        <button type="button" class="text-left text-primary hover:underline" x-on:click="holderProfileOpen = !holderProfileOpen" aria-label="View {{ $assignedUser->table_name }} profile">
+                        <button type="button" class="text-left text-foreground hover:underline" x-on:click="holderProfileOpen = !holderProfileOpen" aria-label="View {{ $assignedUser->table_name }} profile">
                             {{ $assignedUser->table_name }}
                         </button>
                         <span x-show="holderProfileOpen" x-cloak data-keep-in-view class="brand-gradient absolute top-7 left-0 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-primary-foreground shadow-lg">
@@ -274,8 +277,8 @@
                     <input type="hidden" name="suggested_recipient_id" x-bind:value="recipientId">
                 </div>
                 <div class="grid grid-cols-2 gap-2">
-                    <button type="button" x-on:click="editingDetails = false" class="w-full rounded-full border border-primary bg-white px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary-soft">Cancel</button>
-                    <button type="submit" class="w-full rounded-full border border-primary bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Save changes</button>
+                    <button type="button" x-on:click="editingDetails = false" class="w-full rounded-full border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground transition-colors enabled:hover:border-primary enabled:hover:bg-primary enabled:hover:text-primary-foreground">Cancel</button>
+                    <button type="submit" class="w-full rounded-full border border-border bg-white px-3 py-2 text-xs font-semibold text-foreground transition-colors enabled:hover:border-primary enabled:hover:bg-primary enabled:hover:text-primary-foreground">Save changes</button>
                 </div>
             </form>
         @endif
@@ -328,7 +331,7 @@
             <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">
                 @if ($creator)
                     <span class="relative inline-block" x-data="{ creatorProfileOpen: false }" x-on:click.outside="creatorProfileOpen = false">
-                        <button type="button" class="text-left text-primary hover:underline" x-on:click="creatorProfileOpen = !creatorProfileOpen" aria-label="View {{ $createdBy }} profile">
+                        <button type="button" class="text-left text-foreground hover:underline" x-on:click="creatorProfileOpen = !creatorProfileOpen" aria-label="View {{ $createdBy }} profile">
                             {{ $createdBy }}
                         </button>
                         <span x-show="creatorProfileOpen" x-cloak data-keep-in-view class="brand-gradient absolute top-7 left-0 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-xl p-4 text-primary-foreground shadow-lg">

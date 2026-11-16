@@ -252,9 +252,10 @@
                         const messageField = replyForm?.elements.content;
                         const hasMessage = Boolean(messageField?.value.trim());
                         const hasAttachment = Boolean(fileField?.files?.length);
-                        sendButton?.classList.toggle('bg-primary', hasMessage || hasAttachment);
-                        sendButton?.classList.toggle('text-primary-foreground', hasMessage || hasAttachment);
-                        sendButton?.classList.toggle('hover:bg-primary/90', hasMessage || hasAttachment);
+                        sendButton?.classList.toggle('bg-white', hasMessage || hasAttachment);
+                        sendButton?.classList.toggle('text-foreground', hasMessage || hasAttachment);
+                        sendButton?.classList.toggle('enabled:hover:bg-primary', hasMessage || hasAttachment);
+                        sendButton?.classList.toggle('enabled:hover:text-primary-foreground', hasMessage || hasAttachment);
                         sendButton?.classList.toggle('bg-muted', !hasMessage && !hasAttachment);
                         sendButton?.classList.toggle('text-muted-foreground', !hasMessage && !hasAttachment);
                         sendButton?.classList.toggle('hover:bg-muted', !hasMessage && !hasAttachment);

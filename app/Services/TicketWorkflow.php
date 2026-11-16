@@ -94,7 +94,7 @@ class TicketWorkflow
         self::RETURN_TO_SDS => [
             'by' => self::BY_HANDLER,
             'from' => [Ticket::STATUS_ASSIGNED, Ticket::STATUS_IN_PROGRESS, Ticket::STATUS_ESCALATED],
-            'to' => Ticket::STATUS_ASSIGNED,
+            'to' => Ticket::STATUS_SUBMITTED,
         ],
         self::ESCALATE => [
             'by' => self::BY_ADMIN,
@@ -157,6 +157,7 @@ class TicketWorkflow
     ];
 
     private const STATUS_PERIOD_ACTIONS = [
+        'returned_to_sds',
         'clarification_requested',
         'clarification_provided',
         'ticket_acknowledged',
@@ -177,6 +178,7 @@ class TicketWorkflow
     ];
 
     private const ESCALATION_REQUEST_CLEARED_BY_ACTIONS = [
+        'returned_to_sds',
         'ticket_escalated',
         'ticket_assigned',
         'complaint_resolved',
@@ -385,14 +387,23 @@ class TicketWorkflow
         }
 
         DB::transaction(function () use ($ticket, $handler, $reason, $admin, $admins): void {
-            $this->applyAssignment($ticket, $admin);
+            $ticket->update([
+                'status' => Ticket::STATUS_SUBMITTED,
+                'classification' => null,
+                'jurisdiction' => null,
+                'assigned_to' => null,
+                'current_handler_id' => $admin->id,
+                'acknowledged_at' => null,
+                'escalated_at' => null,
+            ]);
             AuditLog::log($ticket->id, 'returned_to_sds', $handler->id, $reason);
+            $ticket->unsetRelation('auditLogs');
             $this->notify($ticket, $admins, EmailNotification::TYPE_RETURNED_TO_SDS);
         });
     }
 
     /**
-     * The assignment-state update shared by SDS reassignment and recipient returns.
+     * Apply an explicit SDS assignment or reassignment.
      */
     protected function applyAssignment(Ticket $ticket, User $admin, ?Recipient $recipient = null): void
     {
@@ -778,7 +789,12 @@ class TicketWorkflow
         }
 
         $wasActedOn = $auditLogs->contains(
-            fn (AuditLog $log): bool => $log->id > $latestReturn->id && $log->performer?->isSdsAdmin()
+            fn (AuditLog $log): bool => $log->id > $latestReturn->id
+                && in_array($log->action, [
+                    'ticket_assigned', 'ticket_acknowledged', 'ticket_closed', 'ticket_closed_invalid',
+                    'complaint_closed', 'ticket_withdrawn', 'ticket_retained_in_sds_records',
+                    'ticket_forwarded_to_recipient', 'ticket_forwarded_and_closed',
+                ], true)
         );
 
         return $wasActedOn ? null : $latestReturn;

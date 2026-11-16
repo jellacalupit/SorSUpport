@@ -12,8 +12,7 @@
     description, then the last five audit entries and the actions for the ticket's current state
     (on desktop the audit entries sit under the conversation, in the second column).
     Tickets with a conversation get a Details / Thread switch below desktop width.
-    A ticket still waiting for review has no conversation or audit yet, so the review steps
-    simply continue below the details.
+    Returned tickets show the review steps again, retaining their conversation and return audit.
 --}}
 
 @php
@@ -22,9 +21,7 @@
     // Under review the second column holds the review steps, so there is no Details / Thread switch.
     $hasThread = $hasConversation && ! $isPendingReview;
     $hasSideColumn = $hasThread || $isPendingReview;
-    $auditLogs = $isPendingReview
-        ? collect()
-        : $ticket->auditLogs()->with('performer')->orderByDesc('created_at')->orderByDesc('id')->limit(5)->get();
+    $auditLogs = $ticket->auditLogs()->with('performer')->orderByDesc('created_at')->orderByDesc('id')->limit(5)->get();
     $auditLabels = [
         'ticket_assigned' => 'Ticket assigned',
         'returned_to_sds' => 'Returned by office',
@@ -107,6 +104,9 @@
             <div class="min-w-0">
                 <h2 class="mb-0.5 hidden font-display text-base font-bold lg:block">Review</h2>
                 @include('admin.tickets.partials.review-steps', ['ticket' => $ticket])
+                @if ($workflow->pendingReturnToSds($ticket))
+                    @include('admin.tickets.partials.audit-activity', ['class' => 'mt-3'])
+                @endif
                 @if ($hasConversation)
                     <div class="ticket-thread-pane admin-page-thread mt-3">
                         <x-ticket-thread :ticket="$ticket" viewerRole="admin" />
