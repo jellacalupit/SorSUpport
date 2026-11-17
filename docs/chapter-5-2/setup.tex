@@ -1,0 +1,11 @@
+% Your existing preamble already loads graphicx, caption, and placeins.
+% Keep those packages. Paste this helper only if it is not already defined.
+\newcommand{\ssshot}[3]{%
+  \IfFileExists{fig/#1.png}{%
+    \includegraphics[width=\linewidth,height=#2,keepaspectratio]{fig/#1.png}%
+  }{%
+    \fbox{\parbox[c][#2][c]{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{%
+      \centering\small Screenshot placeholder\par\medskip
+      \texttt{fig/#1.png}\par\medskip #3}}%
+  }%
+}
