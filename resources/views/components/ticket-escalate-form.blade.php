@@ -61,7 +61,7 @@
             @if ($cancellable)
                 <button type="button" x-on:click="action = null" class="h-9 w-full rounded-full border border-border bg-white px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted">Cancel</button>
             @endif
-            <button type="submit" class="h-9 w-full rounded-full border-0 bg-white px-3 text-xs font-semibold text-foreground transition-colors enabled:hover:border enabled:hover:border-primary enabled:hover:bg-primary enabled:hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Escalate Ticket</button>
+            <button type="submit" class="h-9 w-full rounded-full border-0 bg-white px-3 text-xs font-semibold text-red-700 transition-colors enabled:hover:bg-red-50 enabled:hover:text-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Escalate Ticket</button>
         </div>
     @endif
 </form>

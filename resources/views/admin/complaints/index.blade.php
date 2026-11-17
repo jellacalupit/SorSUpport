@@ -5,7 +5,7 @@
                 $selectedCategory = $categories->firstWhere('id', request('category_filter'));
                 $query = fn (array $values) => route('admin.complaints.index', array_filter($values, fn ($value) => $value !== null && $value !== ''));
             @endphp
-            <div class="mb-4 space-y-1">
+            <div class="mb-2 space-y-2">
                 @php
                     $classificationLabels = [
                         '' => 'All classifications',
@@ -74,10 +74,10 @@
                                 </details>
                             @else
                                 <div class="min-w-0">
-                                    <div id="f-status" data-status-filter-disabled="true" aria-disabled="true" class="flex h-9 w-full cursor-not-allowed items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-xs text-muted-foreground opacity-70 sm:w-40" title="Select Needs Resolution to filter by status">
+                                    <div id="f-status" data-status-filter-disabled="true" aria-disabled="true" aria-describedby="status-filter-help" tabindex="0" class="flex h-9 w-full cursor-not-allowed items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-xs text-muted-foreground opacity-70 sm:w-40" title="Select Needs Resolution to filter by status">
                                         <span class="truncate">All statuses</span><svg class="h-4 w-4 shrink-0 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                                     </div>
-                                    <p class="mt-1 text-[10px] text-muted-foreground">Select Needs Resolution to filter by status</p>
+                                    <p id="status-filter-help" class="sr-only">Select Needs Resolution to filter by status</p>
                                 </div>
                             @endif
                         </div>
@@ -87,7 +87,7 @@
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
                     <div class="order-1 flex min-w-0 basis-[calc(100%-2.75rem)] items-center gap-2 sm:order-none sm:basis-auto">
                         <label for="f-sort" class="hidden text-sm font-medium sm:inline">Sort by</label>
-                        <details x-data="{}" class="group relative w-full min-w-0 sm:w-44" x-on:click.outside="$el.removeAttribute('open')">
+                        <details x-data="{}" class="group relative w-full min-w-0 sm:w-36" x-on:click.outside="$el.removeAttribute('open')">
                             <summary id="f-sort" class="flex h-9 cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden">
                                 <span class="truncate">{{ request('sort', 'latest_update') === 'latest_update' ? 'Latest Update' : (request('sort') === 'oldest_update' ? 'Oldest Update' : (request('sort') === 'latest_submitted' ? 'Latest Submitted' : 'Oldest Submitted')) }}</span><svg class="h-4 w-4 shrink-0 opacity-50 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                             </summary>
@@ -123,7 +123,7 @@
 
         @php $pendingAdmin = \App\Models\User::query()->where('role', \App\Models\User::ROLE_SDS_ADMIN)->orderBy('id')->first(); @endphp
         <div data-ticket-results>
-        <p class="mb-2 mt-3 text-xs text-muted-foreground">{{ $complaints->total() }} ticket(s) shown</p>
+        <p class="mb-2 text-xs text-muted-foreground">{{ $complaints->total() }} ticket(s) shown</p>
         {{-- Phones and tablets: the same tappable cards students and recipients get. --}}
         <ul class="grid grid-cols-1 gap-0.5 lg:hidden">
             @forelse ($complaints as $complaint)
@@ -143,16 +143,16 @@
         <div class="hidden overflow-x-auto rounded-lg border lg:block">
             <table class="w-full min-w-[1200px] table-fixed text-[11px]">
                 <colgroup>
-                    <col style="width: 5.5rem;">
-                    <col style="width: calc((100% - 42rem) * 0.32);">
-                    <col style="width: calc((100% - 42rem) * 0.20);">
-                    <col style="width: 6.5rem;">
-                    <col style="width: 6rem;">
-                    <col style="width: calc((100% - 42rem) * 0.24);">
-                    <col style="width: calc((100% - 42rem) * 0.24);">
-                    <col style="width: 8rem;">
-                    <col style="width: 8rem;">
-                    <col style="width: 8rem;">
+                    <col style="width: 7%;">
+                    <col style="width: 20%;">
+                    <col style="width: 12%;">
+                    <col style="width: 8%;">
+                    <col style="width: 6%;">
+                    <col style="width: 10%;">
+                    <col style="width: 10%;">
+                    <col style="width: 9%;">
+                    <col style="width: 9%;">
+                    <col style="width: 9%;">
                 </colgroup>
                 <thead class="border-b bg-primary text-white">
                     <tr class="text-left">

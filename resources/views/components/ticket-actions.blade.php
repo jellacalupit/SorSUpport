@@ -165,10 +165,10 @@
             <button type="button" x-on:click="action = 'return_to_sds'" class="{{ $outlineButton }}">Return to SDS</button>
         @endif
         @if ($buttons->has('escalate'))
-            <button type="button" x-on:click="action = 'escalate'" class="h-10 w-full rounded-full border-0 bg-white px-3 text-center text-sm font-semibold text-foreground transition-colors hover:border hover:border-primary hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Escalate Ticket</button>
+            <button type="button" x-on:click="action = 'escalate'" class="h-10 w-full rounded-full border-0 bg-white px-3 text-center text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 hover:text-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Escalate Ticket</button>
         @endif
         @if ($buttons->has('refer'))
-            <button type="button" x-on:click="action = 'refer'" class="{{ $outlineButton }}">Refer Ticket</button>
+            <button type="button" x-on:click="action = 'refer'" class="{{ str_replace('text-foreground', 'text-blue-700', $outlineButton) }}">Refer Ticket</button>
         @endif
         @if ($buttons->has('outcome'))
             <button type="button" x-on:click="action = 'outcome'" class="{{ $primaryButton }}">Record Outcome</button>
@@ -180,7 +180,7 @@
             </form>
         @endif
         @if ($buttons->has('close'))
-            <button type="button" x-on:click="action = 'close'" class="{{ $primaryButton }} {{ $showThreeAdminActions ? 'col-span-2' : '' }}">Close Ticket</button>
+            <button type="button" x-on:click="action = 'close'" class="{{ str_replace('text-foreground', 'text-slate-700', $primaryButton) }} {{ $showThreeAdminActions ? 'col-span-2' : '' }}">Close Ticket</button>
         @endif
         @if ($buttons->has('accept'))
             <button type="button" x-on:click="action = 'accept'" class="{{ $primaryButton }}">Accept Resolution</button>
