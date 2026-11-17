@@ -1,5 +1,5 @@
 <x-app-layout :role="'admin'" title="Working Calendar">
-    <div x-data="{ selectedDate: null, selectedType: 'non_working', selectedDescription: '', selectedDeleteUrl: '', rangeExpanded: true, showAllOverrides: false }" class="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+    <div x-data="{ selectedDate: null, selectedType: 'non_working', selectedDescription: '', selectedDeleteUrl: '', rangeExpanded: true, showAllOverrides: false }" class="grid gap-4 lg:gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(22rem,1fr)]">
         <section class="rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-6">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <h1 class="font-display text-xl font-bold text-foreground">{{ $month->format('F Y') }}</h1>
@@ -81,12 +81,14 @@
                     <p class="mt-1 text-xs text-muted-foreground">Use for multi-day suspensions, breaks, or make-up working days. Maximum 60 calendar days, inclusive.</p>
                     <form method="POST" action="{{ route('admin.working-calendar.ranges.store') }}" class="mt-4 grid gap-3">
                         @csrf
-                        <label class="grid gap-1 text-xs font-medium text-foreground">Start date
-                            <input type="date" name="start_date" required value="{{ old('start_date') }}" class="rounded-md border border-input bg-white px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary">
+                        <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="grid min-w-0 gap-1 text-xs font-medium text-foreground">Start date
+                            <input type="date" name="start_date" required value="{{ old('start_date') }}" class="h-9 w-full min-w-0 rounded-md border border-input bg-white px-2 text-xs outline-none transition focus:border-primary focus:ring-1 focus:ring-primary">
                         </label>
-                        <label class="grid gap-1 text-xs font-medium text-foreground">End date
-                            <input type="date" name="end_date" required value="{{ old('end_date') }}" class="rounded-md border border-input bg-white px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary">
+                        <label class="grid min-w-0 gap-1 text-xs font-medium text-foreground">End date
+                            <input type="date" name="end_date" required value="{{ old('end_date') }}" class="h-9 w-full min-w-0 rounded-md border border-input bg-white px-2 text-xs outline-none transition focus:border-primary focus:ring-1 focus:ring-primary">
                         </label>
+                        </div>
                         <div class="grid gap-1">
                             <p class="text-xs font-medium text-foreground">Type</p>
                             <x-picker

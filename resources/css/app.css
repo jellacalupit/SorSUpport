@@ -28,7 +28,7 @@
 }
 
 .admin-content input[type="date"] {
-    min-width: 10.5rem;
+    min-width: 9rem;
     color-scheme: light;
 }
 
@@ -38,6 +38,7 @@
 
 .admin-content td,
 .admin-content th {
+    padding-inline: 0.5rem;
     overflow-wrap: anywhere;
 }
 

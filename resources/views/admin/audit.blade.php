@@ -3,7 +3,7 @@
         @php
             $query = fn (array $values) => route('admin.audit', array_filter($values, fn ($value) => $value !== null && $value !== ''));
         @endphp
-        <form method="GET" action="{{ route('admin.audit') }}" class="relative z-20 mb-2 lg:mb-3" data-ticket-filter-form>
+        <form method="GET" action="{{ route('admin.audit') }}" class="relative z-20 mb-3 sm:mb-4 lg:mb-5" data-ticket-filter-form>
             <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <div class="w-full sm:min-w-[280px] sm:flex-1">
             <div class="relative min-w-0">
@@ -24,9 +24,9 @@
                     </div>
                 </details>
                 <label for="audit-from" class="text-xs font-medium">From</label>
-                <input id="audit-from" type="date" name="from" value="{{ request('from') }}" aria-label="From date" class="h-9 min-w-[10.5rem] rounded-md border border-input bg-transparent px-3 text-xs focus:ring-1 focus:ring-ring" />
+                <input id="audit-from" type="date" name="from" value="{{ request('from') }}" aria-label="From date" class="h-9 w-36 min-w-36 rounded-md border border-input bg-transparent px-2 text-xs focus:ring-1 focus:ring-ring" />
                 <label for="audit-to" class="text-xs font-medium">To</label>
-                <input id="audit-to" type="date" name="to" value="{{ request('to') }}" aria-label="To date" class="h-9 min-w-[10.5rem] rounded-md border border-input bg-transparent px-3 text-xs focus:ring-1 focus:ring-ring" />
+                <input id="audit-to" type="date" name="to" value="{{ request('to') }}" aria-label="To date" class="h-9 w-36 min-w-36 rounded-md border border-input bg-transparent px-2 text-xs focus:ring-1 focus:ring-ring" />
                 <a data-reset-filters href="{{ route('admin.audit') }}" class="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90" aria-label="Refresh audit trail" title="Refresh audit trail">
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M21 12a9 9 0 1 1-2.64-6.36L21 8" />

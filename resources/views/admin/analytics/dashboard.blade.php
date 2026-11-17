@@ -114,7 +114,7 @@
         $mutedClass = 'text-xs text-muted-foreground';
     @endphp
 
-    <div class="mx-auto grid min-w-0 max-w-7xl gap-4 pb-6">
+    <div class="grid w-full min-w-0 gap-4 lg:gap-5">
         <header class="flex flex-wrap items-center justify-between gap-2">
             <div class="min-w-0">
                 <h1 class="font-display text-xl font-bold text-foreground">Analytics</h1>
@@ -183,13 +183,13 @@
                 </span>
                 <x-icons.arrow-down class="h-4 w-4 text-muted-foreground transition-transform md:hidden" ::class="open ? '' : 'rotate-180'" />
             </button>
-            <div x-show="open" x-cloak class="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4 xl:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_auto]">
+            <div x-show="open" x-cloak class="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4 xl:grid-cols-[auto_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_auto]">
                 <div class="col-span-2 lg:col-span-4 xl:col-span-1">
                     <label class="mb-1 block text-[11px] font-semibold text-muted-foreground">Date range</label>
-                    <div class="flex items-center gap-1.5">
-                        <input type="date" name="start_date" value="{{ $filters['start_date'] ?? '' }}" aria-label="Start date" class="h-9 min-w-0 flex-1 rounded-md border border-input bg-white px-2 text-xs">
+                    <div class="flex flex-wrap items-center gap-1.5 sm:flex-nowrap">
+                        <input type="date" name="start_date" value="{{ $filters['start_date'] ?? '' }}" aria-label="Start date" class="h-9 w-36 min-w-36 shrink-0 rounded-md border border-input bg-white px-2 text-xs">
                         <span class="shrink-0 text-xs text-muted-foreground">to</span>
-                        <input type="date" name="end_date" value="{{ $filters['end_date'] ?? '' }}" aria-label="End date" class="h-9 min-w-0 flex-1 rounded-md border border-input bg-white px-2 text-xs">
+                        <input type="date" name="end_date" value="{{ $filters['end_date'] ?? '' }}" aria-label="End date" class="h-9 w-36 min-w-36 shrink-0 rounded-md border border-input bg-white px-2 text-xs">
                     </div>
                 </div>
                 @foreach ($filterDropdowns as $dropdown)

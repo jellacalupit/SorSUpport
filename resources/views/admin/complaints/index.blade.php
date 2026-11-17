@@ -101,12 +101,12 @@
 
                     <div class="order-3 flex min-w-0 flex-[1.08] items-center gap-1.5 overflow-hidden sm:order-none sm:flex-none sm:gap-2 sm:overflow-visible">
                         <label for="f-from" class="shrink-0 text-xs font-medium sm:text-sm"><span class="sm:hidden">From</span><span class="hidden sm:inline">Filed from</span></label>
-                        <input id="f-from" type="date" name="filed_from" value="{{ request('filed_from') }}" lang="en-US" class="h-9 w-0 min-w-0 flex-1 rounded-md border border-input bg-transparent px-1 text-xs focus:ring-1 focus:ring-ring sm:w-auto sm:min-w-[10.5rem] sm:flex-none sm:px-3" />
+                        <input id="f-from" type="date" name="filed_from" value="{{ request('filed_from') }}" lang="en-US" class="h-9 w-0 min-w-0 flex-1 rounded-md border border-input bg-transparent px-1 text-xs focus:ring-1 focus:ring-ring sm:w-36 sm:min-w-36 sm:flex-none sm:px-2" />
                     </div>
 
                     <div class="order-4 flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden sm:order-none sm:flex-none sm:gap-2 sm:overflow-visible">
                         <label for="f-to" class="shrink-0 text-xs font-medium sm:text-sm"><span class="sm:hidden">to</span><span class="hidden sm:inline">Filed to</span></label>
-                        <input id="f-to" type="date" name="filed_to" value="{{ request('filed_to') }}" lang="en-US" class="h-9 w-0 min-w-0 flex-1 rounded-md border border-input bg-transparent px-1 text-xs focus:ring-1 focus:ring-ring sm:w-auto sm:min-w-[10.5rem] sm:flex-none sm:px-3" />
+                        <input id="f-to" type="date" name="filed_to" value="{{ request('filed_to') }}" lang="en-US" class="h-9 w-0 min-w-0 flex-1 rounded-md border border-input bg-transparent px-1 text-xs focus:ring-1 focus:ring-ring sm:w-36 sm:min-w-36 sm:flex-none sm:px-2" />
                     </div>
 
                     <div class="order-2 flex flex-wrap gap-2 sm:order-none">
