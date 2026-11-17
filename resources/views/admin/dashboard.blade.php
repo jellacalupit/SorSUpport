@@ -287,21 +287,21 @@
     </div>
 
     {{-- Desktop: the original dashboard --}}
-    <div class="hidden lg:block">
-    <div class="flex flex-wrap items-stretch gap-5 pt-0">
-        <div class="flex min-w-0 flex-[1_1_526px] flex-col gap-3">
+    <div class="admin-desktop-dashboard hidden lg:block">
+    <div class="grid h-full min-h-0 grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-3">
+        <div class="grid min-h-0 min-w-0 grid-rows-[80px_176px_minmax(0,1fr)] gap-3">
             <div class="grid w-full grid-cols-4 items-stretch gap-3">
                 <div>
-                    <x-stat-card compact label="Tickets" :value="$totalTickets" tone="primary" class="flex min-h-24 flex-col justify-center !py-4" />
+                    <x-stat-card compact label="Tickets" :value="$totalTickets" tone="primary" class="flex h-full min-h-0 flex-col justify-center !py-2.5" />
                 </div>
                 <div>
-                    <x-stat-card compact label="Students" :value="$totalStudents" class="flex min-h-24 flex-col justify-center !py-4" />
+                    <x-stat-card compact label="Students" :value="$totalStudents" class="flex h-full min-h-0 flex-col justify-center !py-2.5" />
                 </div>
                 <div>
-                    <x-stat-card compact label="Recipients" :value="$totalRecipients" tone="danger" class="flex min-h-24 flex-col justify-center !py-4" />
+                    <x-stat-card compact label="Recipients" :value="$totalRecipients" tone="danger" class="flex h-full min-h-0 flex-col justify-center !py-2.5" />
                 </div>
                 <div>
-                    <x-stat-card compact label="Categories" :value="$totalCategories" class="flex min-h-24 flex-col justify-center !py-4" />
+                    <x-stat-card compact label="Categories" :value="$totalCategories" class="flex h-full min-h-0 flex-col justify-center !py-2.5" />
                 </div>
             </div>
 
@@ -317,11 +317,11 @@
                         x-data="{ activeSegment: null }"
                         x-on:donut-segment-enter="activeSegment = $event.detail"
                         x-on:donut-segment-leave="activeSegment = null"
-                        class="flex min-h-48 items-center rounded-[20px] border border-border bg-white p-3 shadow-sm"
+                        class="flex min-h-0 items-center rounded-[20px] border border-border bg-white p-3 shadow-sm"
                     >
                         <div class="flex items-center gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
                             <div class="shrink-0">
-                                <div class="relative h-28 w-28 sm:h-30 sm:w-30">
+                                <div class="relative h-24 w-24 xl:h-28 xl:w-28">
                                     <x-donut-ring :segments="$statusSegments" :stroke-width="15" class="h-full w-full drop-shadow-sm" />
                                     <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                                             <span class="text-lg font-bold text-foreground sm:text-xl" x-text="activeSegment?.count ?? {{ $statusTotal }}">{{ $statusTotal }}</span>
@@ -371,11 +371,11 @@
                         x-data="{ activeSegment: null }"
                         x-on:donut-segment-enter="activeSegment = $event.detail"
                         x-on:donut-segment-leave="activeSegment = null"
-                        class="flex min-h-48 items-center rounded-[20px] border border-border bg-white p-3 shadow-sm"
+                        class="flex min-h-0 items-center rounded-[20px] border border-border bg-white p-3 shadow-sm"
                     >
                         <div class="flex items-center gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
                             <div class="shrink-0">
-                                <div class="relative h-28 w-28 sm:h-30 sm:w-30">
+                                <div class="relative h-24 w-24 xl:h-28 xl:w-28">
                                     <x-donut-ring :segments="$classificationSegments" :stroke-width="15" class="h-full w-full drop-shadow-sm" />
                                     <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                                             <span class="text-lg font-bold text-foreground sm:text-xl" x-text="activeSegment?.count ?? {{ $classificationTotal }}">{{ $classificationTotal }}</span>
@@ -408,13 +408,13 @@
                 </div>
             </div>
 
-            <section class="w-full overflow-hidden rounded-xl border border-border bg-white shadow-sm">
+            <section class="flex min-h-0 w-full flex-col overflow-hidden rounded-xl border border-border bg-white shadow-sm">
                 <div class="flex items-center justify-between gap-3 border-b border-border bg-muted/50 px-4 py-2.5">
                     <h3 class="text-sm font-semibold text-foreground">Recent Tickets</h3>
                     <a data-admin-page-nav href="{{ route('admin.complaints.index') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                 </div>
 
-                <div class="overflow-hidden">
+                <div class="min-h-0 flex-1 overflow-auto">
                     <table class="min-w-full border-collapse text-left text-sm">
                         <thead class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                             <tr>
@@ -454,7 +454,7 @@
             </section>
         </div>
 
-        <div class="grid min-w-0 flex-[1_1_360px] grid-rows-[minmax(0,1fr)_auto] gap-3 self-stretch overflow-visible pt-0">
+        <div class="grid min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
             @php
                 $monthOptions = [
                     1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'May', 6 => 'Jun',
@@ -463,7 +463,7 @@
             @endphp
             <div
                 data-volume-chart
-                class="flex min-h-80 flex-col overflow-visible rounded-[20px] border border-border bg-white p-4 shadow-sm"
+                class="flex min-h-0 flex-col overflow-visible rounded-[20px] border border-border bg-white p-4 shadow-sm"
             >
                 <div class="relative z-40 flex flex-wrap items-center justify-between gap-3">
                     <h3 data-volume-title class="shrink-0 whitespace-nowrap font-display text-sm font-semibold leading-tight text-foreground">Volume by category</h3>
@@ -524,12 +524,12 @@
                         <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="shrink-0 whitespace-nowrap text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
                 </div>
-                <div class="relative z-0 mt-1.5 min-h-64 w-full flex-1">
+                <div class="relative z-0 mt-1.5 min-h-0 w-full flex-1">
                     <canvas class="absolute inset-0" data-volume-canvas aria-label="Complaint volume chart"></canvas>
                 </div>
                 <ul data-volume-legend class="hidden" aria-label="Categories"></ul>
             </div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid min-h-0 grid-cols-2 gap-3">
                 <div class="flex h-full min-h-0 flex-col overflow-visible rounded-[20px] border border-border bg-white p-2 shadow-sm">
                     <div class="flex items-start justify-between gap-2 px-1">
                         <div class="min-w-0">
@@ -539,7 +539,7 @@
                         <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
-                    <div class="mt-1.5 grid content-start gap-4 overflow-visible">
+                    <div class="mt-1.5 grid min-h-0 content-start gap-2 overflow-y-auto">
                         @forelse ($topPerformingRecipients as $recipient)
                             <div class="flex min-h-12 items-center gap-2 rounded-lg p-1 transition-colors hover:bg-muted/50">
                                 <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-sidebar-primary text-[9px] font-bold text-sidebar-primary-foreground">
@@ -598,7 +598,7 @@
                         <a data-admin-page-nav href="{{ route('admin.audit') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
-                    <ol class="relative mt-1.5 grid content-start gap-4 overflow-hidden">
+                    <ol class="relative mt-1.5 grid min-h-0 content-start gap-2 overflow-y-auto">
                         <span class="absolute top-5 bottom-5 left-[calc(clamp(4rem,20%,6rem)+1.875rem)] w-px bg-[#7a1d2a]/20" aria-hidden="true"></span>
                         @forelse ($recentActivity as $log)
                             @php
