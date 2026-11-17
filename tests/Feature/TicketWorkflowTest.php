@@ -1429,6 +1429,21 @@ class TicketWorkflowTest extends TestCase
             ]);
     }
 
+    public function test_student_create_ticket_fab_is_hidden_on_ticket_details(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
+
+        $this->actingAs($this->student)
+            ->get(route('student.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertDontSee('aria-label="Submit Complaint"', false);
+
+        $this->actingAs($this->student)
+            ->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertSee('aria-label="Submit Complaint"', false);
+    }
+
     public function test_student_ticket_description_has_a_read_more_toggle_after_five_lines(): void
     {
         $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);

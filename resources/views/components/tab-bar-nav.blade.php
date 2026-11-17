@@ -17,7 +17,10 @@
 
     $tabs = $role === 'recipient' ? $recipientTabs : $studentTabs;
     $fabRoute = $role === 'student' ? 'student.complaints.create' : null;
-    $showFab = $fabRoute && Route::currentRouteName() !== $fabRoute;
+    $currentRouteName = Route::currentRouteName();
+    $showFab = $fabRoute
+        && $currentRouteName !== $fabRoute
+        && $currentRouteName !== 'student.complaints.show';
 
     $unreadChangeCount = 0;
     $currentUser = Auth::user();
