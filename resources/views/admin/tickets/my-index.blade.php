@@ -172,7 +172,7 @@
             <p class="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">No tickets are currently assigned to you.</p>
         @endif
         @if ($tickets->hasPages())
-            <div class="mt-6">{{ $tickets->links() }}</div>
+            <div class="mt-2">{{ $tickets->links() }}</div>
         @endif
         </div>
 

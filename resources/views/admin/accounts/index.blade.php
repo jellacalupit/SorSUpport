@@ -430,7 +430,7 @@
                 </tbody>
             </table>
             </div>
-            <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
                 <p class="text-xs text-muted-foreground" data-account-count>
                     @if ($studentUsers->total() > 0)
                         Showing {{ $studentUsers->firstItem() }}–{{ $studentUsers->lastItem() }} of {{ $studentUsers->total() }} student {{ \Illuminate\Support\Str::plural('account', $studentUsers->total()) }}
@@ -439,42 +439,7 @@
                     @endif
                 </p>
             @if ($studentUsers->hasPages())
-                <nav class="flex justify-end" aria-label="Student accounts pagination">
-                    <div class="flex max-w-full flex-wrap items-center justify-end gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
-                        @if ($studentUsers->onFirstPage())
-                            <span class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground/50" aria-disabled="true">Previous</span>
-                        @else
-                            <a href="{{ $studentUsers->previousPageUrl() }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Previous</a>
-                        @endif
-
-                        {{-- Page numbers are shown in sets of ten so the row stays short however many pages there are. --}}
-                        <?php
-                            $setStart = (int) (floor(($studentUsers->currentPage() - 1) / 10) * 10) + 1;
-                            $setEnd = min($setStart + 9, $studentUsers->lastPage());
-                        ?>
-                        @if ($setStart > 1)
-                            <a href="{{ $studentUsers->url($setStart - 1) }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Previous 10 pages" title="Previous 10 pages">&laquo;</a>
-                        @endif
-
-                        @foreach ($studentUsers->getUrlRange($setStart, $setEnd) as $page => $url)
-                            @if ($page === $studentUsers->currentPage())
-                                <span class="inline-flex h-8 min-w-8 items-center justify-center rounded bg-primary px-2 text-xs font-semibold text-primary-foreground" aria-current="page">{{ $page }}</span>
-                            @else
-                                <a href="{{ $url }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded border border-transparent px-2 text-xs text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground">{{ $page }}</a>
-                            @endif
-                        @endforeach
-
-                        @if ($setEnd < $studentUsers->lastPage())
-                            <a href="{{ $studentUsers->url($setEnd + 1) }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Next 10 pages" title="Next 10 pages">&raquo;</a>
-                        @endif
-
-                        @if ($studentUsers->hasMorePages())
-                            <a href="{{ $studentUsers->nextPageUrl() }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Next</a>
-                        @else
-                            <span class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground/50" aria-disabled="true">Next</span>
-                        @endif
-                    </div>
-                </nav>
+                {{ $studentUsers->links('vendor.pagination.tailwind', ['showSummary' => false, 'ariaLabel' => 'Student accounts pagination']) }}
             @endif
             </div>
         </div>
@@ -977,7 +942,7 @@
                 </tbody>
             </table>
             </div>
-            <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
                 <p class="text-xs text-muted-foreground" data-account-count>
                     @if ($recipientUsers->total() > 0)
                         Showing {{ $recipientUsers->firstItem() }}–{{ $recipientUsers->lastItem() }} of {{ $recipientUsers->total() }} recipient {{ \Illuminate\Support\Str::plural('account', $recipientUsers->total()) }}
@@ -986,42 +951,7 @@
                     @endif
                 </p>
             @if ($recipientUsers->hasPages())
-                <nav class="flex justify-end" aria-label="Recipient accounts pagination">
-                    <div class="flex max-w-full flex-wrap items-center justify-end gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
-                        @if ($recipientUsers->onFirstPage())
-                            <span class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground/50" aria-disabled="true">Previous</span>
-                        @else
-                            <a href="{{ $recipientUsers->previousPageUrl() }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Previous</a>
-                        @endif
-
-                        {{-- Page numbers are shown in sets of ten so the row stays short however many pages there are. --}}
-                        <?php
-                            $setStart = (int) (floor(($recipientUsers->currentPage() - 1) / 10) * 10) + 1;
-                            $setEnd = min($setStart + 9, $recipientUsers->lastPage());
-                        ?>
-                        @if ($setStart > 1)
-                            <a href="{{ $recipientUsers->url($setStart - 1) }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Previous 10 pages" title="Previous 10 pages">&laquo;</a>
-                        @endif
-
-                        @foreach ($recipientUsers->getUrlRange($setStart, $setEnd) as $page => $url)
-                            @if ($page === $recipientUsers->currentPage())
-                                <span class="inline-flex h-8 min-w-8 items-center justify-center rounded bg-primary px-2 text-xs font-semibold text-primary-foreground" aria-current="page">{{ $page }}</span>
-                            @else
-                                <a href="{{ $url }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded border border-transparent px-2 text-xs text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground">{{ $page }}</a>
-                            @endif
-                        @endforeach
-
-                        @if ($setEnd < $recipientUsers->lastPage())
-                            <a href="{{ $recipientUsers->url($setEnd + 1) }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Next 10 pages" title="Next 10 pages">&raquo;</a>
-                        @endif
-
-                        @if ($recipientUsers->hasMorePages())
-                            <a href="{{ $recipientUsers->nextPageUrl() }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Next</a>
-                        @else
-                            <span class="inline-flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs text-muted-foreground/50" aria-disabled="true">Next</span>
-                        @endif
-                    </div>
-                </nav>
+                {{ $recipientUsers->links('vendor.pagination.tailwind', ['showSummary' => false, 'ariaLabel' => 'Recipient accounts pagination']) }}
             @endif
             </div>
         </div>

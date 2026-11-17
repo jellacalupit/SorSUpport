@@ -51,7 +51,7 @@ class TicketListPagingTest extends TestCase
 
         $this->assertSame(15, substr_count($page, 'Ticket number '));
         $this->assertStringContainsString('data-ticket-more data-next-url="' . e(route('student.complaints.index', ['page' => 2])) . '"', $page);
-        $this->assertStringContainsString('mt-6 hidden md:block', $page);
+        $this->assertStringContainsString('mt-2 hidden md:block', $page);
 
         $last = $this->actingAs($this->student)->get(route('student.complaints.index', ['page' => 2]))->assertOk()->getContent();
         $this->assertSame(2, substr_count($last, 'Ticket number '));

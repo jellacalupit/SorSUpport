@@ -141,18 +141,18 @@
         </ul>
 
         <div class="hidden overflow-x-auto rounded-lg border lg:block">
-            <table class="w-full min-w-[1280px] table-fixed text-[11px]">
+            <table class="w-full min-w-[1160px] table-fixed text-[11px]">
                 <colgroup>
                     <col style="width: 7%;">
-                    <col style="width: 20%;">
+                    <col>
                     <col style="width: 12%;">
                     <col style="width: 8%;">
                     <col style="width: 6%;">
                     <col style="width: 10%;">
                     <col style="width: 10%;">
-                    <col style="width: 9%;">
-                    <col style="width: 9%;">
-                    <col style="width: 9%;">
+                    <col style="width: 7rem;">
+                    <col style="width: 7rem;">
+                    <col style="width: 7rem;">
                 </colgroup>
                 <thead class="border-b bg-primary text-white">
                     <tr class="text-left">
@@ -198,7 +198,7 @@
                 </tbody>
             </table>
         </div>
-        @if ($complaints->hasPages())<div class="mt-5">{{ $complaints->links() }}</div>@endif
+        @if ($complaints->hasPages())<div class="mt-2">{{ $complaints->links() }}</div>@endif
         </div>
 
         <div id="admin-ticket-drawer" class="pointer-events-none invisible fixed inset-0 z-50" aria-hidden="true">

@@ -24,7 +24,7 @@
             </table>
         </div>
         @if ($categories->hasPages())
-            <div class="mt-5">{{ $categories->links() }}</div>
+            <div class="mt-2">{{ $categories->links() }}</div>
         @endif
     </x-page-section>
 </x-app-layout>

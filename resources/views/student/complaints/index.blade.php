@@ -67,7 +67,7 @@
 
         <!-- Pagination -->
         @if ($complaints->hasPages())
-            <div class="mt-6 hidden md:block">
+            <div class="mt-2 hidden md:block">
                 {{ $complaints->links() }}
             </div>
         @endif

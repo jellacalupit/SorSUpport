@@ -174,7 +174,7 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-5">{{ $tickets->links() }}</div>
+            <div class="mt-2">{{ $tickets->links() }}</div>
         @endif
         </div>
     </div>

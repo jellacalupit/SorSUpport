@@ -8,10 +8,12 @@
         $arrowClass = 'grid h-8 w-8 place-items-center rounded-md border border-border bg-card text-sm text-foreground transition-colors hover:bg-primary-soft hover:text-primary';
         $disabledArrowClass = 'grid h-8 w-8 cursor-not-allowed place-items-center rounded-md border border-border bg-muted text-sm text-muted-foreground opacity-60';
     @endphp
-    <nav role="navigation" aria-label="Pagination" class="flex flex-wrap items-center justify-between gap-2">
+    <nav role="navigation" aria-label="{{ $ariaLabel ?? 'Pagination' }}" class="flex flex-wrap items-center justify-between gap-2">
+        @if ($showSummary ?? true)
         <p class="text-xs text-muted-foreground">
             Showing {{ $paginator->firstItem() ?? 0 }}–{{ $paginator->lastItem() ?? 0 }} of {{ $paginator->total() }}
         </p>
+        @endif
 
         <div class="flex items-center gap-1">
             {{-- Previous group of ten --}}

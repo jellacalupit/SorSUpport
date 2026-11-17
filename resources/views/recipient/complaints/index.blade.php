@@ -63,7 +63,7 @@
             @endif
 
             @if ($complaints->hasPages())
-                <div class="mt-6 hidden md:block">{{ $complaints->links() }}</div>
+                <div class="mt-2 hidden md:block">{{ $complaints->links() }}</div>
             @endif
         @else
             <p class="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">No tickets are currently routed to your office.</p>

@@ -113,7 +113,7 @@
             @endif
 
             @if ($tickets->hasPages())
-                <div class="mt-5">{{ $tickets->links() }}</div>
+                <div class="mt-2">{{ $tickets->links() }}</div>
             @endif
         <div id="follow-up-ticket-drawer" data-follow-up-ticket-drawer class="pointer-events-none invisible fixed inset-0 z-50" aria-hidden="true">
             <div data-follow-up-backdrop class="absolute inset-0 bg-black/35 opacity-0 transition-opacity"></div>

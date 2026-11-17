@@ -89,7 +89,7 @@
         </div>
 
         @if ($auditLogs->hasPages())
-            <div class="mt-5">{{ $auditLogs->links() }}</div>
+            <div class="mt-2">{{ $auditLogs->links() }}</div>
         @endif
     </div>
 </x-app-layout>
