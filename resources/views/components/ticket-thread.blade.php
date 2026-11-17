@@ -118,7 +118,7 @@
                         @endunless
                         <div data-message-item class="flex w-full min-w-0 flex-col {{ $isOwnMessage ? 'ml-auto max-w-[85%] items-end sm:max-w-2/3' : 'max-w-[85%] items-start sm:max-w-2/3' }}">
                             <p data-message-sender hidden class="mb-0 px-1 text-[10px] font-semibold text-muted-foreground {{ $isOwnMessage ? 'text-right' : 'text-left' }}">{{ $senderFirstName }}</p>
-                            <div data-message-bubble class="{{ $isOwnMessage ? 'ml-auto' : '' }} mb-0.5">
+                            <div data-message-bubble class="{{ $isOwnMessage ? 'ml-auto' : '' }} mb-0.5 min-w-0 max-w-full">
                                 @if (filled($message->content))
                                     <div class="relative {{ $isOwnMessage ? 'rounded-[18px] rounded-br-[5px] bg-primary text-primary-foreground after:absolute after:right-[-4px] after:bottom-0 after:h-2.5 after:w-2.5 after:bg-primary after:[clip-path:polygon(0_0,100%_100%,0_100%)]' : 'rounded-[18px] rounded-bl-[5px] bg-muted text-foreground after:absolute after:bottom-0 after:left-[-4px] after:h-2.5 after:w-2.5 after:bg-muted after:[clip-path:polygon(0_100%,100%_0,100%_100%)]' }} w-fit max-w-full px-3.5 py-2 {{ $viewerRole === 'admin' ? 'text-xs' : 'text-sm' }} leading-normal">
                                         <p class="wrap-break-word whitespace-pre-line">{{ trim($message->content) }}</p>
@@ -143,7 +143,7 @@
                                         data-download-url="{{ route('attachments.message', $message) }}"
                                         data-file-name="{{ $attachmentName }}"
                                         data-file-type="{{ $attachmentExtension }}"
-                                        class="group mt-2 inline-flex w-fit max-w-full items-center rounded-xl border p-2 text-left transition-colors {{ $isOwnMessage ? 'border-primary/20 bg-primary/5 text-primary hover:border-primary/40 hover:bg-primary/10' : 'border-border bg-muted text-foreground hover:border-primary hover:bg-primary-soft' }}"
+                                        class="group mt-2 inline-flex w-fit min-w-0 max-w-full overflow-hidden items-center rounded-xl border p-2 text-left transition-colors {{ $isOwnMessage ? 'border-primary/20 bg-primary/5 text-primary hover:border-primary/40 hover:bg-primary/10' : 'border-border bg-muted text-foreground hover:border-primary hover:bg-primary-soft' }}"
                                     >
                                         <span class="mr-2.5 grid h-8 w-8 shrink-0 place-items-center rounded-full {{ $isOwnMessage ? 'bg-primary/10 text-primary' : 'bg-background text-muted-foreground' }}">
                                             @if ($isImageAttachment)
@@ -152,8 +152,8 @@
                                                 <x-icons.file-text class="h-4 w-4" />
                                             @endif
                                         </span>
-                                        <span class="flex min-w-0 flex-col">
-                                            <span class="max-w-56 truncate text-xs font-semibold">{{ $attachmentName }}</span>
+                                        <span class="flex min-w-0 max-w-full flex-col">
+                                            <span class="min-w-0 max-w-56 truncate text-xs font-semibold">{{ $attachmentName }}</span>
                                             @if ($attachmentSizeLabel !== null)
                                                 <span class="mt-0.5 text-[10px] leading-tight {{ $isOwnMessage ? 'text-primary/75' : 'text-muted-foreground' }}">{{ $attachmentSizeLabel }}</span>
                                             @endif
@@ -509,7 +509,7 @@
                                 : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>';
                             const previewUrl = attachment?.url ? `${attachment.url}?preview=1` : '';
                             const attachmentMarkup = attachment
-                                ? `<button type="button" data-thread-attachment-preview data-preview-url="${escapeHtml(previewUrl)}" data-download-url="${escapeHtml(attachment.url)}" data-file-name="${escapeHtml(attachmentName)}" data-file-type="${escapeHtml(attachmentExtension)}" class="group mt-2 inline-flex w-fit max-w-full items-center rounded-xl border border-primary/20 bg-primary/5 p-2 text-left text-primary transition-colors hover:border-primary/40 hover:bg-primary/10"><span class="mr-2.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">${attachmentIcon}</span><span class="flex min-w-0 flex-col"><span class="max-w-56 truncate text-xs font-semibold">${escapeHtml(attachmentName)}</span>${attachmentSize ? `<span class="mt-0.5 text-[10px] leading-tight text-primary/75">${attachmentSize}</span>` : ''}</span></button>`
+                                ? `<button type="button" data-thread-attachment-preview data-preview-url="${escapeHtml(previewUrl)}" data-download-url="${escapeHtml(attachment.url)}" data-file-name="${escapeHtml(attachmentName)}" data-file-type="${escapeHtml(attachmentExtension)}" class="group mt-2 inline-flex w-fit min-w-0 max-w-full overflow-hidden items-center rounded-xl border border-primary/20 bg-primary/5 p-2 text-left text-primary transition-colors hover:border-primary/40 hover:bg-primary/10"><span class="mr-2.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">${attachmentIcon}</span><span class="flex min-w-0 max-w-full flex-col"><span class="min-w-0 max-w-56 truncate text-xs font-semibold">${escapeHtml(attachmentName)}</span>${attachmentSize ? `<span class="mt-0.5 text-[10px] leading-tight text-primary/75">${attachmentSize}</span>` : ''}</span></button>`
                                 : '';
 
                             const avatarMarkup = avatarUrl
@@ -518,7 +518,7 @@
 
                             row.innerHTML = `<div data-message-item class="flex w-full min-w-0 flex-col ml-auto max-w-[85%] items-end sm:max-w-2/3">
                                 <p data-message-sender hidden class="mb-0 px-1 text-[10px] font-semibold text-muted-foreground text-right"></p>
-                                <div data-message-bubble class="ml-auto mb-0.5">
+                                <div data-message-bubble class="ml-auto mb-0.5 min-w-0 max-w-full">
                                     ${contentMarkup}
                                     ${attachmentMarkup}
                                 </div>

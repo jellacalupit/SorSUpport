@@ -209,6 +209,61 @@ class Module5InTicketCommunicationTest extends TestCase
         ]);
     }
 
+    public function test_long_attachment_names_stay_within_the_communication_column(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_SDS_ADMIN,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+        $studentUser = User::factory()->create([
+            'role' => User::ROLE_STUDENT,
+            'email_verified_at' => now(),
+            'must_change_password' => false,
+        ]);
+        $student = Student::create([
+            'user_id' => $studentUser->id,
+            'student_id' => 'S2015',
+            'college' => 'IT',
+            'program' => 'BSIT',
+            'year_level' => '2nd Year',
+            'block' => 'A',
+        ]);
+        $category = ComplaintCategory::create(['name' => 'Academic Concern', 'is_active' => true]);
+        $complaint = Complaint::create([
+            'reference_number' => Complaint::generateReferenceNumber(),
+            'student_id' => $student->id,
+            'category_id' => $category->id,
+            'subject_title' => 'Long attachment name',
+            'description' => 'The attachment filename should not overflow the conversation.',
+            'is_anonymous' => false,
+            'status' => Ticket::STATUS_IN_PROGRESS,
+        ]);
+        $ticket = Ticket::create([
+            'complaint_id' => $complaint->id,
+            'status' => Ticket::STATUS_IN_PROGRESS,
+            'classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION,
+            'jurisdiction' => Ticket::JURISDICTION_SDS,
+            'current_handler_id' => $admin->id,
+        ]);
+        $attachmentName = 'Messenger_creation_' . str_repeat('4C5EA817-', 8) . '.png';
+
+        ThreadMessage::create([
+            'thread_id' => $ticket->thread->id,
+            'sender_id' => $studentUser->id,
+            'content' => '',
+            'file_attachment' => 'complaints/replies/attachment.png',
+            'file_attachment_name' => $attachmentName,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.complaints.show', $complaint))
+            ->assertOk()
+            ->assertSee($attachmentName)
+            ->assertSee('min-w-0 max-w-full', false)
+            ->assertSee('w-fit min-w-0 max-w-full overflow-hidden', false);
+    }
+
     public function test_ticket_card_badge_counts_other_user_messages(): void
     {
         $studentUser = User::factory()->create([
