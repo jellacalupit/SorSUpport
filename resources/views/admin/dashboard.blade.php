@@ -288,25 +288,25 @@
 
     {{-- Desktop: the original dashboard --}}
     <div class="hidden lg:block">
-    <div class="flex items-stretch gap-2 pt-0">
-        <div class="self-start flex flex-col gap-2">
-            <div class="grid w-[526px] grid-cols-4 items-stretch gap-2">
+    <div class="flex flex-wrap items-stretch gap-5 pt-0">
+        <div class="flex min-w-0 flex-[1_1_526px] flex-col gap-3">
+            <div class="grid w-full grid-cols-4 items-stretch gap-3">
                 <div>
-                    <x-stat-card compact label="Tickets" :value="$totalTickets" tone="primary" class="!py-2.5" />
+                    <x-stat-card compact label="Tickets" :value="$totalTickets" tone="primary" class="flex min-h-24 flex-col justify-center !py-4" />
                 </div>
                 <div>
-                    <x-stat-card compact label="Students" :value="$totalStudents" class="!py-2.5" />
+                    <x-stat-card compact label="Students" :value="$totalStudents" class="flex min-h-24 flex-col justify-center !py-4" />
                 </div>
                 <div>
-                    <x-stat-card compact label="Recipients" :value="$totalRecipients" tone="danger" class="!py-2.5" />
+                    <x-stat-card compact label="Recipients" :value="$totalRecipients" tone="danger" class="flex min-h-24 flex-col justify-center !py-4" />
                 </div>
                 <div>
-                    <x-stat-card compact label="Categories" :value="$totalCategories" class="!py-2.5" />
+                    <x-stat-card compact label="Categories" :value="$totalCategories" class="flex min-h-24 flex-col justify-center !py-4" />
                 </div>
             </div>
 
-            <div class="flex w-[526px] items-stretch gap-2">
-                <div class="w-[257px] shrink-0">
+            <div class="grid w-full grid-cols-2 items-stretch gap-3">
+                <div class="min-w-0">
                     @php
                         $statusTotal = array_sum(array_column($statusSegments, 'count')) ?: 0;
                         $statusCircumference = 2 * pi() * 38;
@@ -317,7 +317,7 @@
                         x-data="{ activeSegment: null }"
                         x-on:donut-segment-enter="activeSegment = $event.detail"
                         x-on:donut-segment-leave="activeSegment = null"
-                        class="mt-0 h-full min-h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:min-h-[134px] lg:h-[166px] lg:min-h-[166px]"
+                        class="flex min-h-48 items-center rounded-[20px] border border-border bg-white p-3 shadow-sm"
                     >
                         <div class="flex items-center gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
                             <div class="shrink-0">
@@ -353,7 +353,7 @@
                     </div>
                 </div>
 
-                <div class="w-[257px] shrink-0">
+                <div class="min-w-0">
                     @php
                         $classificationLegend = [
                             'needs_resolution' => ['label' => 'Needs Resolution', 'color' => '#7a1d2a', 'count' => (int) ($classificationBreakdown['needs_resolution'] ?? 0)],
@@ -371,7 +371,7 @@
                         x-data="{ activeSegment: null }"
                         x-on:donut-segment-enter="activeSegment = $event.detail"
                         x-on:donut-segment-leave="activeSegment = null"
-                        class="mt-0 h-full min-h-[128px] rounded-[20px] border border-border bg-white p-1.5 shadow-sm sm:min-h-[134px] lg:min-h-[152px]"
+                        class="flex min-h-48 items-center rounded-[20px] border border-border bg-white p-3 shadow-sm"
                     >
                         <div class="flex items-center gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
                             <div class="shrink-0">
@@ -408,7 +408,7 @@
                 </div>
             </div>
 
-            <section class="w-[526px] overflow-hidden rounded-xl border border-border bg-white shadow-sm">
+            <section class="w-full overflow-hidden rounded-xl border border-border bg-white shadow-sm">
                 <div class="flex items-center justify-between gap-3 border-b border-border bg-muted/50 px-4 py-2.5">
                     <h3 class="text-sm font-semibold text-foreground">Recent Tickets</h3>
                     <a data-admin-page-nav href="{{ route('admin.complaints.index') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
@@ -426,13 +426,13 @@
                         <tbody>
                             @forelse ($recentTickets as $ticket)
                                 <tr class="border-t border-border transition-colors hover:bg-muted/30">
-                                    <td class="whitespace-nowrap px-3 py-[7px] font-mono text-[11px] font-semibold text-primary">
+                                    <td class="whitespace-nowrap px-3 py-2.5 font-mono text-[11px] font-semibold text-primary">
                                         {{ $ticket->complaint?->reference_number ?? $ticket->id }}
                                     </td>
-                                    <td class="max-w-[220px] truncate px-3 py-[7px] text-xs text-foreground">
+                                    <td class="max-w-[220px] truncate px-3 py-2.5 text-xs text-foreground">
                                         {{ $ticket->complaint?->subject_title ?? 'No subject' }}
                                     </td>
-                                    <td class="px-3 py-[7px] text-center">
+                                    <td class="px-3 py-2.5 text-center">
                                         @php
                                             $recentStatusLabel = $ticket->displayStatus();
                                         @endphp
@@ -454,7 +454,7 @@
             </section>
         </div>
 
-        <div class="grid w-[360px] flex-1 grid-rows-[minmax(0,1fr)_auto] gap-2 self-stretch overflow-visible pt-0">
+        <div class="grid min-w-0 flex-[1_1_360px] grid-rows-[minmax(0,1fr)_auto] gap-3 self-stretch overflow-visible pt-0">
             @php
                 $monthOptions = [
                     1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'May', 6 => 'Jun',
@@ -463,11 +463,11 @@
             @endphp
             <div
                 data-volume-chart
-                class="flex min-h-0 flex-col overflow-visible rounded-[20px] border border-border bg-white p-2.5 shadow-sm"
+                class="flex min-h-80 flex-col overflow-visible rounded-[20px] border border-border bg-white p-4 shadow-sm"
             >
-                <div class="relative z-40 flex items-center justify-between gap-2">
+                <div class="relative z-40 flex flex-wrap items-center justify-between gap-3">
                     <h3 data-volume-title class="shrink-0 whitespace-nowrap font-display text-sm font-semibold leading-tight text-foreground">Volume by category</h3>
-                    <div class="flex min-w-0 flex-1 items-center justify-end gap-1.5">
+                    <div class="flex min-w-0 basis-full flex-wrap items-center justify-end gap-2">
                         <details x-data="{}" class="group relative min-w-0 max-w-80 flex-1" x-on:click.outside="$el.removeAttribute('open')" data-volume-category-wrapper>
                             <summary class="flex h-8 w-full cursor-pointer list-none items-center justify-between rounded-md border border-input bg-transparent px-3 py-1.5 text-xs shadow-sm outline-none transition-colors hover:bg-muted [&::-webkit-details-marker]:hidden" data-volume-category-summary>
                                 <span class="truncate" data-volume-category-label>All categories</span>
@@ -529,7 +529,7 @@
                 </div>
                 <ul data-volume-legend class="hidden" aria-label="Categories"></ul>
             </div>
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-2 gap-3">
                 <div class="flex h-full min-h-0 flex-col overflow-visible rounded-[20px] border border-border bg-white p-2 shadow-sm">
                     <div class="flex items-start justify-between gap-2 px-1">
                         <div class="min-w-0">

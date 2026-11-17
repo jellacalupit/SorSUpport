@@ -21,9 +21,9 @@
 
             {{-- Previous page --}}
             @if ($paginator->onFirstPage())
-                <span class="{{ $disabledArrowClass }}" aria-disabled="true" aria-label="Previous page">&lsaquo;</span>
+                <span class="{{ $disabledArrowClass }}" aria-disabled="true" aria-label="Previous page" title="Previous page">&lsaquo;</span>
             @else
-                <a href="{{ $paginator->previousPageUrl() }}" rel="prev" class="{{ $arrowClass }}" aria-label="Previous page">&lsaquo;</a>
+                <a href="{{ $paginator->previousPageUrl() }}" rel="prev" class="{{ $arrowClass }}" aria-label="Previous page" title="Previous page">&lsaquo;</a>
             @endif
 
             {{-- Phones: just the position --}}
@@ -40,9 +40,9 @@
 
             {{-- Next page --}}
             @if ($paginator->hasMorePages())
-                <a href="{{ $paginator->nextPageUrl() }}" rel="next" class="{{ $arrowClass }}" aria-label="Next page">&rsaquo;</a>
+                <a href="{{ $paginator->nextPageUrl() }}" rel="next" class="{{ $arrowClass }}" aria-label="Next page" title="Next page">&rsaquo;</a>
             @else
-                <span class="{{ $disabledArrowClass }}" aria-disabled="true" aria-label="Next page">&rsaquo;</span>
+                <span class="{{ $disabledArrowClass }}" aria-disabled="true" aria-label="Next page" title="Next page">&rsaquo;</span>
             @endif
 
             {{-- Next group of ten --}}

@@ -141,7 +141,7 @@
         </ul>
 
         <div class="hidden overflow-x-auto rounded-lg border lg:block">
-            <table class="w-full min-w-[1200px] table-fixed text-[11px]">
+            <table class="w-full min-w-[1280px] table-fixed text-[11px]">
                 <colgroup>
                     <col style="width: 7%;">
                     <col style="width: 20%;">

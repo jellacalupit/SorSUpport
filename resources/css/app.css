@@ -38,7 +38,7 @@
 
 .admin-content td,
 .admin-content th {
-    padding-inline: 0.5rem;
+    padding-inline: 0.75rem;
     overflow-wrap: anywhere;
 }
 
