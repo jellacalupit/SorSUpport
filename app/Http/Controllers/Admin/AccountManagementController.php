@@ -452,6 +452,14 @@ class AccountManagementController extends Controller
             )
         );
 
+        // The summary is flashed for the toast and expires after the redirect.
+        // Keep the latest report separately so the subsequent download still works.
+        if (! empty($summary['errors'])) {
+            $request->session()->put('account_upload_errors', $summary['errors']);
+        } else {
+            $request->session()->forget('account_upload_errors');
+        }
+
         return redirect()
             ->route('admin.accounts.index', $redirectParameters)
             ->with('success', sprintf(
@@ -467,13 +475,13 @@ class AccountManagementController extends Controller
 
     public function downloadUploadErrors(Request $request)
     {
-        $summary = $request->session()->get('upload_summary');
-        abort_unless(is_array($summary) && ! empty($summary['errors']), 404);
+        $errors = $request->session()->get('account_upload_errors');
+        abort_unless(is_array($errors) && ! empty($errors), 404);
 
-        return response()->streamDownload(function () use ($summary): void {
+        return response()->streamDownload(function () use ($errors): void {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['Row', 'Error']);
-            foreach ($summary['errors'] as $error) {
+            foreach ($errors as $error) {
                 fputcsv($handle, [$error['row'], implode(' ', $error['messages'])]);
             }
             fclose($handle);

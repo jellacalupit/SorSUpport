@@ -144,11 +144,25 @@ class DocumentedTestCasesTest extends TestCase
         $this->assertDatabaseHas('students', ['student_id' => '20243001']);
         $this->assertSame(1, session('upload_summary')['failed']);
 
-        $this->actingAs($this->admin)
-            ->withSession(['upload_summary' => session('upload_summary')])
-            ->get(route('admin.accounts.upload.errors'))
+        // Render the redirected page and make another request, as a browser does.
+        // The toast's flash data must not be the download's only copy of the errors.
+        $this->get(route('admin.accounts.index'))->assertOk();
+        $this->get(route('admin.accounts.index'))->assertOk();
+
+        $report = $this->get(route('admin.accounts.upload.errors'))
+            ->assertOk()
+            ->assertDownload('bulk-upload-errors.csv');
+        $this->assertStringContainsString('email', $report->streamedContent());
+
+        $this->get(route('admin.accounts.upload.errors'))
             ->assertOk()
             ->assertDownload();
+
+        // A later clean upload must replace the previous rejected-row report.
+        $cleanFile = UploadedFile::fake()->createWithContent('students.csv', "Student ID,Last Name,First Name,Middle Name,Email,Department,Course,Year,Block,Status\n20243001,Valid,Vera,,vera@student.test,CICT,BSIT,1,,Active\n");
+        $this->post(route('admin.accounts.upload.store'), ['account_type' => User::ROLE_STUDENT, 'file' => $cleanFile]);
+        $this->assertSame(0, session('upload_summary')['failed']);
+        $this->get(route('admin.accounts.upload.errors'))->assertNotFound();
     }
 
     public function test_acc_08_only_spreadsheet_files_can_be_imported(): void
