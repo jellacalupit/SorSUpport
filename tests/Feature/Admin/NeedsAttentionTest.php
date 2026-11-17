@@ -134,7 +134,7 @@ class NeedsAttentionTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('admin.tickets.needs-attention'))->assertOk();
         $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
         $this->assertStringContainsString('no-cache', $response->headers->get('Cache-Control'));
-        $response->assertSee('>Current Holder</th>', false)
+        $response->assertSeeInOrder(['>Current Holder</th>', '>Filed by</th>'], false)
             ->assertDontSee('>Handler</th>', false)
             ->assertSee('Days Open')
             ->assertDontSee('>Age<', false)
