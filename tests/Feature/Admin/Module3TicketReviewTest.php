@@ -248,6 +248,12 @@ class Module3TicketReviewTest extends TestCase
         $response->assertOk();
         $response->assertSee('Priority Academic Request');
         $response->assertDontSee('Other Facilities Request');
+        $response->assertSeeInOrder([
+            '>Filed by</th>',
+            '>Escalated</th>',
+            '>Date Submitted</th>',
+            '>Last Updated</th>',
+        ], false);
 
         $this->assertDatabaseHas('tickets', [
             'id' => $matchingTicket->id,
