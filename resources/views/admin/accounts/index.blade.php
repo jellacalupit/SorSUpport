@@ -2,7 +2,7 @@
     @php
         $selectedAccountCategory = request('category_filter', 'students');
     @endphp
-    <div class="-mt-1 sm:-mt-2" x-data="{
+    <div x-data="{
             tab: '{{ $selectedAccountCategory }}',
             accountModalOpen: false,
             recipientModalOpen: false,

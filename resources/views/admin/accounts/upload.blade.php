@@ -1,5 +1,5 @@
 <x-app-layout :role="'admin'" title="Bulk Upload">
-    <div class="max-w-4xl mx-auto py-8">
+    <div class="max-w-4xl mx-auto pb-8">
 
         <h1 class="text-2xl font-bold mb-6 text-black">
             Bulk Upload Accounts

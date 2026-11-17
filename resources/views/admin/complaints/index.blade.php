@@ -1,5 +1,5 @@
 <x-app-layout :role="'admin'" title="All Tickets">
-    <div class="-mt-1 sm:-mt-2">
+    <div>
         <form method="GET" action="{{ route('admin.complaints.index') }}" data-ticket-filter-form class="relative z-20">
             @php
                 $selectedCategory = $categories->firstWhere('id', request('category_filter'));

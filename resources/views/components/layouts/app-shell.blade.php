@@ -466,7 +466,7 @@
                             class="min-w-0 flex-1 overflow-y-auto overflow-x-visible"
                         >
 
-                            <div class="admin-content w-full min-w-0 max-w-full break-words px-3 pb-2 pt-3 sm:px-4 sm:pb-2 sm:pt-4 lg:px-5 lg:pb-2 lg:pt-5">
+                            <div class="admin-content w-full min-w-0 max-w-full break-words px-3 pb-2 pt-2 sm:px-4 sm:pb-2 sm:pt-2 lg:px-5 lg:pb-2 lg:pt-3">
                                 {{ $slot }}
                             </div>
 

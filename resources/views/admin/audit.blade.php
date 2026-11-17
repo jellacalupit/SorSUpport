@@ -1,9 +1,9 @@
 <x-app-layout :role="'admin'" title="Audit Trail">
-    <div class="-mt-1 sm:-mt-2">
+    <div>
         @php
             $query = fn (array $values) => route('admin.audit', array_filter($values, fn ($value) => $value !== null && $value !== ''));
         @endphp
-        <form method="GET" action="{{ route('admin.audit') }}" class="relative z-20 mb-2" data-ticket-filter-form>
+        <form method="GET" action="{{ route('admin.audit') }}" class="relative z-20 mb-2 lg:mb-3" data-ticket-filter-form>
             <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <div class="w-full sm:min-w-[280px] sm:flex-1">
             <div class="relative min-w-0">
@@ -39,14 +39,14 @@
 
         <div data-ticket-results>
         <div class="overflow-x-auto rounded-lg border">
-            <table class="w-full min-w-[760px] table-fixed text-xs">
+            <table class="w-full min-w-[960px] table-fixed text-xs">
                 <colgroup>
-                    <col style="width: 16%;">
-                    <col style="width: 10%;">
-                    <col style="width: 34%;">
-                    <col style="width: 16%;">
-                    <col style="width: 12%;">
-                    <col style="width: 12%;">
+                    <col style="width: 9rem;">
+                    <col style="width: 7rem;">
+                    <col>
+                    <col style="width: 10rem;">
+                    <col style="width: 7rem;">
+                    <col style="width: 9rem;">
                 </colgroup>
                 <thead class="border-b bg-primary text-white">
                     <tr class="text-left">

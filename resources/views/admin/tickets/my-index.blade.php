@@ -1,5 +1,5 @@
 <x-app-layout :role="'admin'" title="My Tickets">
-    <section class="-mt-1 sm:-mt-2">
+    <section>
         <form method="GET" action="{{ route('admin.tickets.my') }}" data-ticket-filter-form class="relative z-20">
             <div class="mb-2 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <div class="w-full sm:w-auto sm:min-w-[280px] sm:flex-1">

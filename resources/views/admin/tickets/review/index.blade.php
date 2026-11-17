@@ -1,5 +1,5 @@
 <x-app-layout :role="'admin'" title="Ticket Review">
-    <div class="-mt-1 sm:-mt-2">
+    <div>
         <p class="mb-3 text-xs text-muted-foreground">Review tickets awaiting SDS action, verify their details and classification, and decide the next step.</p>
         @error('recipient_id')
             <p role="alert" class="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ $message }}</p>
