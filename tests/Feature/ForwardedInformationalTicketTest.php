@@ -66,12 +66,12 @@ class ForwardedInformationalTicketTest extends TestCase
             ->assertRedirect(route('admin.tickets.review.index'));
 
         $ticket->refresh();
-        $forwardedDate = $ticket->forwarded_at->copy()->setTimezone('Asia/Manila')->format('M d, Y');
         $this->assertSame(Ticket::STATUS_SUBMITTED, $ticket->status);
         $this->assertSame(Ticket::CLASSIFICATION_INFORMATIONAL, $ticket->classification);
         $this->assertSame(Ticket::JURISDICTION_RECIPIENT, $ticket->jurisdiction);
         $this->assertSame($this->recipient->recipient->id, (int) $ticket->forwarded_to);
         $this->assertNotNull($ticket->forwarded_at);
+        $forwardedDate = $ticket->forwarded_at->copy()->setTimezone('Asia/Manila')->format('M d, Y');
         $this->assertNull($ticket->closed_at);
         $this->assertTrue(app(TicketWorkflow::class)->can($this->admin, $ticket, TicketWorkflow::CLOSE));
         $this->assertFalse(app(TicketWorkflow::class)->can($this->recipient, $ticket, TicketWorkflow::CLOSE));
@@ -82,14 +82,14 @@ class ForwardedInformationalTicketTest extends TestCase
             ->assertSee('Forwarded for information')
             ->assertSee($this->recipient->table_name)
             ->assertDontSee('Registrar Office')
-            ->assertSee($forwardedDate);
+            ->assertDontSee('Forwarded ' . $forwardedDate);
 
         $this->actingAs($this->recipient)
             ->get(route('recipient.complaints.show', $ticket->complaint))
             ->assertOk()
             ->assertSee('Forwarded for information')
             ->assertDontSee('Registrar Office')
-            ->assertSee($forwardedDate)
+            ->assertDontSee('Forwarded ' . $forwardedDate)
             ->assertSee('For your information. No reply or action is needed.');
 
         $this->actingAs($this->recipient)
@@ -97,7 +97,7 @@ class ForwardedInformationalTicketTest extends TestCase
             ->assertOk()
             ->assertSee('Forwarded for information')
             ->assertDontSee('Registrar Office ·', false)
-            ->assertSee($forwardedDate);
+            ->assertDontSee('Forwarded ' . $forwardedDate);
 
         $this->actingAs($this->student)
             ->get(route('student.complaints.index', ['status' => Ticket::STATUS_SUBMITTED]))

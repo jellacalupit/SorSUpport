@@ -56,9 +56,6 @@
         && ($viewer?->isStudent() || $viewer?->isRecipient());
     $statusDisplay = $ticket->displayStatus()
         ?? (($viewer?->isStudent() || $viewer?->isRecipient()) ? $ticket->outcomeLabel() : null);
-    $forwardedDate = $showForwardedInformational
-        ? $ticket->forwarded_at?->copy()->setTimezone($displayTimezone)->format('M d, Y')
-        : null;
     $studentActionLabels = [
         'returned_to_sds' => 'Returned to SDS for reassignment',
         'complaint_submitted' => 'Ticket submitted',
@@ -150,11 +147,6 @@
         <div class="flex shrink-0 flex-col items-end gap-1">
             @if ($statusDisplay !== null)
                 <x-status-badge :status="$statusDisplay" :classification="$ticket->classification" :show-icon="false" class="px-3 py-1 text-xs" />
-            @endif
-            @if ($showForwardedInformational)
-                <p class="text-right text-[10px] text-muted-foreground">
-                    Forwarded {{ $forwardedDate }}
-                </p>
             @endif
         </div>
     </div>

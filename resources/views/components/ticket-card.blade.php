@@ -103,11 +103,6 @@
                 <x-status-badge :status="$statusDisplay" :classification="$classification" :show-icon="false" class="{{ $showForwardedInformational || $showOutcome ? 'max-w-40' : 'max-w-28' }} truncate px-2 py-0 text-[10px]" />
             @endif
         </div>
-        @if ($showForwardedInformational)
-            <p class="text-[10px] text-muted-foreground">
-                Forwarded {{ $ticket->forwarded_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y') }}
-            </p>
-        @endif
         <div class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
             <p class="line-clamp-2 min-w-0 break-words text-sm font-bold">
                 {{ $subjectDisplay }}

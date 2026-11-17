@@ -128,11 +128,16 @@ class VisibilityAndFeedbackTest extends TestCase
             ->assertSee('Recent Tickets')
             ->assertSee($complaint->reference_number)
             ->assertSee('Forwarded for information')
-            ->assertSee('Forwarded ' . $forwardedDate);
+            ->assertDontSee('Forwarded ' . $forwardedDate);
 
         $this->actingAs($this->handler)->get(route('recipient.complaints.show', $complaint))
             ->assertOk()
             ->assertSee('Forwarded for your information')
+            ->assertSee('Closure')
+            ->assertSee('Recorded for information')
+            ->assertSee('Closed At')
+            ->assertSee($ticket->closed_at->copy()->setTimezone('Asia/Manila')->format('M d, Y'))
+            ->assertDontSee('Forwarded ' . $forwardedDate)
             ->assertSee('My transcript has not been released.')
             ->assertDontSee('Mark as Resolved')
             ->assertDontSee('Acknowledge Ticket');

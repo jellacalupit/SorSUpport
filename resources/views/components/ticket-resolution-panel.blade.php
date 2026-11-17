@@ -12,6 +12,7 @@
             ->orderByDesc('id')
             ->first()
         : null;
+    $hasInformationalClosure = $ticket->closure_type === \App\Models\Ticket::CLOSURE_INFORMATIONAL;
 @endphp
 
 @if ($showResolutionDetails || $ticket->referred_to)
@@ -63,10 +64,10 @@
                             <p class="text-sm font-medium text-foreground">{{ $ticket->resolved_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}</p>
                         </div>
                     @endif
-                    @if ($showClosedAt && $ticket->status === 'closed' && $ticket->closed_at)
+                    @if (($showClosedAt || $hasInformationalClosure) && $ticket->status === 'closed' && $ticket->closed_at)
                         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
                             <p class="text-xs font-semibold text-muted-foreground">Closed At</p>
-                            <p class="text-sm font-medium text-foreground">{{ $ticket->closed_at->copy()->setTimezone('Asia/Manila')->format('M d, Y · g:i A') }}</p>
+                            <p class="text-sm font-medium text-foreground">{{ $ticket->closed_at->copy()->setTimezone('Asia/Manila')->format($hasInformationalClosure ? 'M d, Y' : 'M d, Y · g:i A') }}</p>
                         </div>
                     @endif
                     @if ($ticket->satisfaction_rating !== null)
