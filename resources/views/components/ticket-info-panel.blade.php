@@ -43,6 +43,7 @@
     ]);
     $createdBy = $complaint?->filerNameFor(\Illuminate\Support\Facades\Auth::user()) ?? 'Unknown';
     $attachments = $complaint?->attachment_files ?? [];
+    $isForwardedInformational = $ticket->isForwardedInformational();
     $holder = $ticket->isAwaitingReview()
         ? \App\Models\User::query()->where('role', \App\Models\User::ROLE_SDS_ADMIN)->orderBy('id')->first()
         : ($isInvalid ? null : ($ticket->currentHandler
@@ -51,7 +52,7 @@
     $holderDisplayName = $holder?->table_name ?? '—';
     $viewer = \Illuminate\Support\Facades\Auth::user();
     $adminEscalationLevel = $viewer?->isSdsAdmin() ? $ticket->escalationLevel() : 0;
-    $showForwardedInformational = $ticket->isForwardedInformational()
+    $showForwardedInformational = $isForwardedInformational
         && ($viewer?->isStudent() || $viewer?->isRecipient());
     $statusDisplay = $ticket->displayStatus()
         ?? (($viewer?->isStudent() || $viewer?->isRecipient()) ? $ticket->outcomeLabel() : null);
@@ -180,9 +181,11 @@
             </div>
         </div>
         <div x-show="!editingDetails" class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">{{ $assignedRecipient ? 'Assigned Recipient' : ($assignedUser ? 'Assigned To' : 'Suggested Recipient') }}</p>
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">{{ $isForwardedInformational ? 'Forwarded To' : ($assignedRecipient ? 'Assigned Recipient' : ($assignedUser ? 'Assigned To' : 'Suggested Recipient')) }}</p>
             <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">
-                @if ($assignedUser && $assignedRecipient)
+                @if ($isForwardedInformational)
+                    {{ $ticket->forwardedRecipient?->user?->table_name ?? 'Receiving office' }}
+                @elseif ($assignedUser && $assignedRecipient)
                     <span class="relative" x-data="{ holderProfileOpen: false }" x-on:click.outside="holderProfileOpen = false">
                         <button type="button" class="text-left text-foreground hover:underline" x-on:click="holderProfileOpen = !holderProfileOpen" aria-label="View {{ $assignedUser->table_name }} profile">
                             {{ $assignedUser->table_name }}

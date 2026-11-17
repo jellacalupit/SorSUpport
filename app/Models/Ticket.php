@@ -300,10 +300,14 @@ class Ticket extends Model
 
     public function isForwardedInformational(): bool
     {
-        return $this->status === self::STATUS_SUBMITTED
-            && $this->classification === self::CLASSIFICATION_INFORMATIONAL
+        $wasForwarded = $this->classification === self::CLASSIFICATION_INFORMATIONAL
             && $this->forwarded_to !== null
             && $this->forwarded_at !== null;
+
+        return $wasForwarded && (
+            $this->status === self::STATUS_SUBMITTED
+            || ($this->status === self::STATUS_CLOSED && $this->closure_type === self::CLOSURE_INFORMATIONAL)
+        );
     }
 
     public function isActive(): bool

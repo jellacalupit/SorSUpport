@@ -109,6 +109,13 @@ class VisibilityAndFeedbackTest extends TestCase
         $this->assertSame(Ticket::STATUS_CLOSED, $ticket->status);
         $this->assertSame($this->handler->recipient->id, (int) $ticket->forwarded_to);
         $this->assertNull($ticket->assigned_to);
+        $this->assertTrue($ticket->isForwardedInformational());
+
+        $this->actingAs($this->admin)->get(route('admin.complaints.show', $complaint))
+            ->assertOk()
+            ->assertSee('Forwarded To')
+            ->assertSee($this->handler->table_name)
+            ->assertDontSee('Assigned Recipient');
 
         // The recipient it was forwarded to finds it in their list and can open it.
         $this->actingAs($this->handler)->get(route('recipient.tickets.index'))
