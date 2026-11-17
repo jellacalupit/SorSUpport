@@ -183,26 +183,30 @@ class ForwardedInformationalTicketTest extends TestCase
         ]);
     }
 
-    public function test_student_ticket_page_shows_status_specific_waiting_guidance(): void
+    public function test_student_ticket_details_use_admin_metadata_without_office_or_waiting_guidance(): void
     {
         $cases = [
-            [Ticket::STATUS_SUBMITTED, [], 'Waiting for SDS review'],
-            [Ticket::STATUS_NEEDS_CLARIFICATION, [], 'Waiting for your reply'],
-            [Ticket::STATUS_ASSIGNED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id], 'Waiting for Registrar Office to acknowledge'],
-            [Ticket::STATUS_IN_PROGRESS, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id], 'Being handled by Registrar Office'],
-            [Ticket::STATUS_ESCALATED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id], 'Escalated to Registrar Office'],
-            [Ticket::STATUS_REFERRED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'referred_to' => 'Campus Disciplinary Committee'], 'Sent to an external committee outside Bulan Campus. SDS is awaiting and will record the outcome'],
-            [Ticket::STATUS_RESOLVED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'resolved_at' => now()], 'Waiting for your response. You can accept or ask for further action until'],
-            [Ticket::STATUS_CLOSED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'closure_type' => Ticket::CLOSURE_RESOLVED], 'Closed: Resolved and confirmed by the SDS Office'],
+            [Ticket::STATUS_SUBMITTED, []],
+            [Ticket::STATUS_NEEDS_CLARIFICATION, []],
+            [Ticket::STATUS_ASSIGNED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id]],
+            [Ticket::STATUS_IN_PROGRESS, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id]],
+            [Ticket::STATUS_ESCALATED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'assigned_to' => $this->recipient->id, 'current_handler_id' => $this->recipient->id]],
+            [Ticket::STATUS_REFERRED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'referred_to' => 'Campus Disciplinary Committee']],
+            [Ticket::STATUS_RESOLVED, ['classification' => Ticket::CLASSIFICATION_NEEDS_RESOLUTION, 'resolved_at' => now()]],
+            [Ticket::STATUS_CLOSED, ['classification' => Ticket::CLASSIFICATION_INFORMATIONAL, 'closure_type' => Ticket::CLOSURE_INFORMATIONAL, 'closed_at' => now()]],
         ];
 
-        foreach ($cases as [$status, $attributes, $expected]) {
+        foreach ($cases as [$status, $attributes]) {
             $ticket = $this->ticket($status, $attributes);
 
             $this->actingAs($this->student)
                 ->get(route('student.complaints.show', $ticket->complaint))
                 ->assertOk()
-                ->assertSee($expected);
+                ->assertSee('Current Holder')
+                ->assertSee('Escalation Level')
+                ->assertDontSee('Current office')
+                ->assertDontSee('Waiting for')
+                ->assertDontSee('Created By');
         }
     }
 
@@ -233,12 +237,20 @@ class ForwardedInformationalTicketTest extends TestCase
             $event->forceFill(['created_at' => $createdAt, 'updated_at' => $createdAt])->save();
         }
 
-        $expectedLastUpdated = $latestStudentEvent->copy()->setTimezone(config('app.timezone'))->format('M d, Y');
+        $expectedLastUpdated = $latestStudentEvent->copy()->setTimezone(config('app.timezone'))->format('M d, Y · g:i A');
 
         $this->actingAs($this->student)
             ->get(route('student.complaints.show', $ticket->complaint))
             ->assertOk()
-            ->assertSeeInOrder(['Ticket submitted', 'Ticket assigned', 'Ticket escalated'])
+            ->assertSeeInOrder([
+                'Returned to SDS for reassignment',
+                'Ticket escalated',
+                'Ticket assigned',
+                'Ticket submitted',
+                'See all',
+            ])
+            ->assertSee('data-student-timeline-toggle', false)
+            ->assertSee('x-show="showAllTimeline || false"', false)
             ->assertSee($expectedLastUpdated)
             ->assertDontSee('PRIVATE-SUBMISSION-DETAIL')
             ->assertDontSee('PRIVATE-ASSIGNMENT-NOTE')

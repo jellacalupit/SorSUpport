@@ -51,7 +51,7 @@
             ?? $complaint?->category?->recipient?->user));
     $holderDisplayName = $holder?->table_name ?? '—';
     $viewer = \Illuminate\Support\Facades\Auth::user();
-    $adminEscalationLevel = $viewer?->isSdsAdmin() ? $ticket->escalationLevel() : 0;
+    $escalationLevel = ($viewer?->isSdsAdmin() || $studentView) ? $ticket->escalationLevel() : 0;
     $showForwardedInformational = $isForwardedInformational
         && ($viewer?->isStudent() || $viewer?->isRecipient());
     $statusDisplay = $ticket->displayStatus()
@@ -79,38 +79,18 @@
             ->whereIn('action', \App\Services\TicketUnreadService::STUDENT_CHANGE_ACTIONS)
             ->filter(fn ($log) => isset($studentActionLabels[$log->action])
                 && ($log->action !== 'message_posted' || $log->performed_by !== \Illuminate\Support\Facades\Auth::id()))
-            ->sortBy(fn ($log) => [$log->created_at?->timestamp ?? 0, $log->id])
+            ->sortByDesc(fn ($log) => [$log->created_at?->timestamp ?? 0, $log->id])
             ->values()
         : collect();
-    $lastStudentEvent = $studentTimeline->last();
+    $lastStudentEvent = $studentTimeline->first();
     $studentLastUpdatedAt = $lastStudentEvent?->created_at;
-    $currentOffice = match (true) {
-        $showForwardedInformational => $ticket->forwardedRecipient?->user?->table_name ?: 'Recipient',
-        $ticket->status === \App\Models\Ticket::STATUS_REFERRED => $ticket->referred_to ?: 'Committee',
-        ($ticket->currentHandler ?? $ticket->assignee)?->isRecipient() => ($ticket->currentHandler ?? $ticket->assignee)?->recipient?->unit ?: 'Receiving office',
-        default => 'SDS Office',
-    };
-    $waitingFor = match ($ticket->status) {
-        \App\Models\Ticket::STATUS_SUBMITTED => $showForwardedInformational
-            ? 'Forwarded for information'
-            : (app(\App\Services\TicketWorkflow::class)->pendingReturnToSds($ticket)
-                ? 'Waiting for SDS Reassignment'
-                : 'Waiting for SDS review'),
-        \App\Models\Ticket::STATUS_NEEDS_CLARIFICATION => 'Waiting for your reply',
-        \App\Models\Ticket::STATUS_ASSIGNED => "Waiting for {$currentOffice} to acknowledge",
-        \App\Models\Ticket::STATUS_IN_PROGRESS => "Being handled by {$currentOffice}",
-        \App\Models\Ticket::STATUS_ESCALATED => "Escalated to {$currentOffice}",
-        \App\Models\Ticket::STATUS_REFERRED => 'Sent to an external committee outside Bulan Campus. SDS is awaiting and will record the outcome',
-        \App\Models\Ticket::STATUS_RESOLVED => 'Waiting for your response. You can accept or ask for further action until ' . ($ticket->furtherActionDeadline()?->copy()->setTimezone($displayTimezone)->format('M d, Y') ?? 'the response window ends'),
-        \App\Models\Ticket::STATUS_CLOSED => 'Closed: ' . ($ticket->closure_label ?? 'Closed'),
-        default => $ticket->status_label,
-    };
 @endphp
 
 <div
     class="surface p-4 sm:p-6"
     x-data="{
         showAllAttachments: false,
+        showAllTimeline: false,
         editingDetails: false,
         attachmentPreview: null,
         descriptionExpanded: false,
@@ -126,7 +106,7 @@
                 visibility: 'hidden',
                 pointerEvents: 'none',
                 width: `${description.clientWidth}px`,
-                maxHeight: '10rem',
+                maxHeight: '8.125rem',
                 overflow: 'hidden',
             });
             description.parentElement.appendChild(measurement);
@@ -172,7 +152,7 @@
             </div>
         </div>
         <div x-show="!editingDetails" class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">{{ $isForwardedInformational ? 'Forwarded To' : ($assignedRecipient ? 'Assigned Recipient' : ($assignedUser ? 'Assigned To' : 'Suggested Recipient')) }}</p>
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">{{ $studentView ? 'Current Holder' : ($isForwardedInformational ? 'Forwarded To' : ($assignedRecipient ? 'Assigned Recipient' : ($assignedUser ? 'Assigned To' : 'Suggested Recipient'))) }}</p>
             <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">
                 @if ($isForwardedInformational)
                     {{ $ticket->forwardedRecipient?->user?->table_name ?? 'Receiving office' }}
@@ -282,10 +262,10 @@
                 {{ $ticket->classification ? ucwords(str_replace('_', ' ', $ticket->classification)) : 'Not yet classified' }}
             </p>
         </div>
-        @if ($viewer?->isSdsAdmin())
+        @if ($viewer?->isSdsAdmin() || $studentView)
             <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
                 <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Escalation Level</p>
-                <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $adminEscalationLevel > 0 ? 'Level ' . $adminEscalationLevel : 'Not escalated' }}</p>
+                <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $escalationLevel > 0 ? 'Level ' . $escalationLevel : 'Not escalated' }}</p>
             </div>
             @if ($ticket->escalated_at)
                 <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
@@ -295,31 +275,20 @@
             @endif
         @endif
         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">{{ $studentView ? 'Last updated' : 'Last Updated At' }}</p>
-            <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ ($studentView ? $studentLastUpdatedAt : ($ticket->updated_at ?? $complaint?->updated_at))?->copy()->setTimezone($displayTimezone)->format($studentView ? 'M d, Y' : 'M d, Y · g:i A') ?? 'Unknown' }}</p>
+            <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Last Updated At</p>
+            <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ ($studentView ? $studentLastUpdatedAt : ($ticket->updated_at ?? $complaint?->updated_at))?->copy()->setTimezone($displayTimezone)->format('M d, Y · g:i A') ?? 'Unknown' }}</p>
         </div>
-        @if ($studentView)
-            <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">{{ $showForwardedInformational ? 'Forwarded to' : 'Current office' }}</p>
-                <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $currentOffice }}</p>
-            </div>
-            @if ($ticket->displayStatus() !== null)
-                <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-                    <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Waiting for</p>
-                    <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $waitingFor }}</p>
-                </div>
-            @endif
-        @endif
         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
             <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Created At</p>
             <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $submittedAt?->format('M d, Y · g:i A') ?? 'Unknown' }}</p>
         </div>
-        @if (! ($viewer?->isSdsAdmin() ?? false) && $ticket->escalated_at)
+        @if ($viewer?->isRecipient() && $ticket->escalated_at)
             <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
                 <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Escalated At</p>
                 <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $ticket->escalated_at->copy()->setTimezone($displayTimezone)->format('M d, Y · g:i A') }}</p>
             </div>
         @endif
+        @unless ($studentView)
         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
             <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Created By</p>
             <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">
@@ -350,6 +319,7 @@
                 @endif
             </p>
         </div>
+        @endunless
         <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
             <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Days Open</p>
             <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word" data-ticket-days-open>{{ $ticket->daysOpen() }} {{ \Illuminate\Support\Str::plural('working day', $ticket->daysOpen()) }}</p>
@@ -361,7 +331,7 @@
         <div class="relative mt-2">
             <p
                 x-ref="descriptionText"
-                x-bind:class="{ 'max-h-40 overflow-hidden': !descriptionExpanded }"
+                x-bind:class="{ 'max-h-[8.125rem] overflow-hidden': !descriptionExpanded }"
                 id="ticket-description-{{ $ticket->id }}"
                 class="whitespace-pre-line text-sm leading-relaxed text-foreground"
                 data-ticket-description
@@ -429,9 +399,9 @@
     @if ($studentView && $studentTimeline->isNotEmpty())
         <section class="mt-4 border-t border-border pt-4" aria-label="Ticket timeline">
             <h3 class="text-sm font-semibold text-foreground">Timeline</h3>
-            <ol class="mt-2 grid gap-2" data-student-ticket-timeline>
+            <ol id="student-ticket-timeline-{{ $ticket->id }}" class="mt-2 grid gap-2" data-student-ticket-timeline>
                 @foreach ($studentTimeline as $event)
-                    <li class="flex min-w-0 gap-2">
+                    <li x-show="showAllTimeline || @js($loop->index < 3)" x-cloak class="flex min-w-0 gap-2">
                         <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary"></span>
                         <div class="min-w-0">
                             <p class="text-sm font-medium text-foreground">{{ $studentActionLabels[$event->action] }}</p>
@@ -440,6 +410,17 @@
                     </li>
                 @endforeach
             </ol>
+            @if ($studentTimeline->count() > 3)
+                <button
+                    type="button"
+                    x-on:click="showAllTimeline = !showAllTimeline"
+                    x-bind:aria-expanded="showAllTimeline"
+                    aria-controls="student-ticket-timeline-{{ $ticket->id }}"
+                    x-text="showAllTimeline ? 'Show less' : 'See all'"
+                    class="mt-2 text-xs font-semibold text-primary underline-offset-2 hover:underline"
+                    data-student-timeline-toggle
+                >See all</button>
+            @endif
         </section>
     @endif
 

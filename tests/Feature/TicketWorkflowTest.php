@@ -1363,17 +1363,18 @@ class TicketWorkflowTest extends TestCase
             ->assertOk()
             ->assertSeeInOrder([
                 'Category',
-                'Assigned Recipient',
+                'Current Holder',
                 'Classification',
-                'Last updated',
-                'Current office',
-                'Waiting for',
+                'Escalation Level',
+                'Last Updated At',
                 'Created At',
-                'Created By',
                 'Days Open',
                 'Description',
                 'My transcript has not been released.',
-            ]);
+            ])
+            ->assertDontSee('Created By')
+            ->assertDontSee('Current office')
+            ->assertDontSee('Waiting for');
 
         $this->actingAs($this->handler)
             ->get(route('recipient.complaints.show', $ticket->complaint))
@@ -1426,6 +1427,27 @@ class TicketWorkflowTest extends TestCase
                 'Description',
                 'My transcript has not been released.',
             ]);
+    }
+
+    public function test_student_ticket_description_has_a_read_more_toggle_after_five_lines(): void
+    {
+        $ticket = $this->ticket(Ticket::STATUS_IN_PROGRESS);
+        $ticket->complaint->update([
+            'description' => implode("\n", [
+                'First description line.',
+                'Second description line.',
+                'Third description line.',
+                'Fourth description line.',
+                'Fifth description line.',
+                'Sixth description line.',
+            ]),
+        ]);
+
+        $this->actingAs($this->student)
+            ->get(route('student.complaints.show', $ticket->complaint))
+            ->assertOk()
+            ->assertSee('data-ticket-description-toggle', false)
+            ->assertSee("max-h-[8.125rem] overflow-hidden", false);
     }
 
     public function test_admin_ticket_details_count_actual_escalations_and_order_escalation_metadata(): void

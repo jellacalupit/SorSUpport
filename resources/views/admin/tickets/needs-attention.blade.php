@@ -73,7 +73,7 @@
                                 <th class="hidden px-2 py-2 font-semibold sm:px-3 lg:table-cell">Category</th>
                                 <th class="px-2 py-2 font-semibold sm:px-3">Status</th>
                                 <th class="hidden px-2 py-2 font-semibold sm:px-3 md:table-cell">Filed by</th>
-                                <th class="hidden px-2 py-2 font-semibold sm:px-3 xl:table-cell">Handler</th>
+                                <th class="hidden px-2 py-2 font-semibold sm:px-3 xl:table-cell">Current Holder</th>
                                 <th class="hidden whitespace-nowrap px-2 py-2 font-semibold sm:px-3 xl:table-cell">Days Open</th>
                                 <th class="hidden whitespace-nowrap rounded-tr-lg px-2 py-2 font-semibold sm:px-3 lg:table-cell">Reason</th>
                             </tr>
