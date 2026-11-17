@@ -68,6 +68,30 @@ class AccountsPageTest extends TestCase
         $this->assertMatchesRegularExpression('/href="[^"]*category_filter=recipients[^"]*recipients_page=2/', $block);
     }
 
+    public function test_recipient_pagination_keeps_its_tab_on_the_initial_students_page(): void
+    {
+        $this->recipients(17);
+
+        $html = $this->actingAs($this->admin)->get(route('admin.accounts.index'))->assertOk()->getContent();
+        $document = new \DOMDocument();
+        @$document->loadHTML($html);
+        $xpath = new \DOMXPath($document);
+        $links = $xpath->query('//*[@data-account-table="recipients"]//a[@rel="next"]');
+        $this->assertSame(1, $links->length);
+        $nextUrl = $links->item(0)->getAttribute('href');
+        parse_str(parse_url($nextUrl, PHP_URL_QUERY), $query);
+        $this->assertSame('recipients', $query['category_filter']);
+        $this->assertSame('2', $query['recipients_page']);
+        $this->get($nextUrl)->assertOk()->assertSee("tab: 'recipients'", false);
+
+        $scripts = $xpath->query('//*[@data-admin-main]//script');
+        $hasAccountScript = false;
+        foreach ($scripts as $script) {
+            $hasAccountScript = $hasAccountScript || str_contains($script->textContent, 'const loadAccountResults');
+        }
+        $this->assertTrue($hasAccountScript, 'Sidebar navigation must load the account pagination script.');
+    }
+
     public function test_a_rejected_edit_answers_with_the_errors_for_the_form(): void
     {
         $this->recipients(2);

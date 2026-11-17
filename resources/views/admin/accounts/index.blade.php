@@ -2,7 +2,7 @@
     @php
         $selectedAccountCategory = request('category_filter', 'students');
     @endphp
-    <div x-data="{
+    <div data-account-management x-data="{
             tab: '{{ $selectedAccountCategory }}',
             accountModalOpen: false,
             recipientModalOpen: false,
@@ -956,9 +956,9 @@
             </div>
         </div>
     </div>
-</x-app-layout>
 
 <script>
+(() => {
     const bulkUploadInput = document.getElementById('bulk-upload-input');
     const bulkUploadForm = document.getElementById('bulk-upload-form');
     const bulkUploadTrigger = document.getElementById('bulk-upload-trigger');
@@ -1066,6 +1066,8 @@
     });
 
     (() => {
+        if (window.accountFiltersBound) return;
+        window.accountFiltersBound = true;
         const filterFormSelector = '[data-account-filter-form]';
         const tableSelector = '[data-account-table]';
         let searchTimer;
@@ -1111,6 +1113,8 @@
         };
 
         const loadAccountResults = async (url, pushState = true) => {
+            if (!document.querySelector(filterFormSelector)) return;
+            clearTimeout(searchTimer);
             const requestId = ++searchRequest;
             abortController?.abort();
             abortController = new AbortController();
@@ -1124,6 +1128,11 @@
                 if (!response.ok) throw new Error(`Account filter request failed: ${response.status}`);
                 const html = await response.text();
                 if (requestId !== searchRequest) return;
+                const root = document.querySelector('[data-account-management]');
+                if (!root) return;
+                const category = new URL(url, window.location.href).searchParams.get('category_filter');
+                const state = window.Alpine?.$data(root);
+                if (state) state.tab = category === 'recipients' ? 'recipients' : 'students';
                 replaceAccountFragments(html);
                 if (pushState) window.history.pushState({}, '', url);
             } catch (error) {
@@ -1186,6 +1195,8 @@
 
             const url = new URL(link.href, window.location.href);
             if (url.origin !== window.location.origin) return;
+            const table = link.closest(tableSelector);
+            if (table) url.searchParams.set('category_filter', table.dataset.accountTable);
 
             event.preventDefault();
             loadAccountResults(url.toString());
@@ -1256,7 +1267,7 @@
                 if (!response.ok) throw new Error(`Account action failed: ${response.status}`);
 
                 const html = await response.text();
-                const root = document.querySelector('[x-data][class*="-mt-1"]');
+                const root = document.querySelector('[data-account-management]');
                 const state = root ? window.Alpine?.$data(root) : null;
 
                 if (state) {
@@ -1277,4 +1288,6 @@
             }
         });
     })();
+})();
 </script>
+</x-app-layout>

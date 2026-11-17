@@ -10,6 +10,7 @@ use App\Exports\AnalyticsReportExport;
 use App\Services\AnalyticsService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Maatwebsite\Excel\Facades\Excel;
 
 class AnalyticsController extends Controller
@@ -92,7 +93,36 @@ class AnalyticsController extends Controller
 
         $dashboard = $analytics->getDashboardData($filters);
 
+        $staffOptions = $request->validate([
+            'staff_page' => ['nullable', 'integer', 'min:1'],
+            'staff_sort' => ['nullable', 'in:name,designation,assigned_tickets,open_tickets,oldest_open_ticket_age_days,resolved_tickets,acknowledgment_average_days,handling_average_days,rating_average'],
+            'staff_direction' => ['nullable', 'in:asc,desc'],
+        ]);
+        $staffSort = $staffOptions['staff_sort'] ?? 'assigned_tickets';
+        $staffDirection = $staffOptions['staff_direction'] ?? 'desc';
+        $allStaffRows = collect($dashboard['performanceMetrics']['handler_rows'])
+            ->sort(function ($left, $right) use ($staffSort, $staffDirection) {
+                $comparison = in_array($staffSort, ['name', 'designation'], true)
+                    ? strnatcasecmp($left[$staffSort], $right[$staffSort])
+                    : ($left[$staffSort] ?? -1) <=> ($right[$staffSort] ?? -1);
+
+                return ($staffDirection === 'asc' ? $comparison : -$comparison)
+                    ?: $right['open_tickets'] <=> $left['open_tickets']
+                    ?: strcmp($left['name'], $right['name'])
+                    ?: $left['user_id'] <=> $right['user_id'];
+            })->values();
+        $staffPage = min((int) ($staffOptions['staff_page'] ?? 1), max(1, (int) ceil($allStaffRows->count() / 10)));
+        $staffRows = new LengthAwarePaginator($allStaffRows->forPage($staffPage, 10)->values(), $allStaffRows->count(), 10, $staffPage, [
+            'path' => $request->url(),
+            'pageName' => 'staff_page',
+            'query' => $request->except('staff_page'),
+            'fragment' => 'staff',
+        ]);
+
         return view('admin.analytics.dashboard', [
+            'staffRows' => $staffRows,
+            'staffSort' => $staffSort,
+            'staffDirection' => $staffDirection,
             'filters' => $filters,
             'categoryOptions' => $categoryOptions,
             'dashboard' => $dashboard,

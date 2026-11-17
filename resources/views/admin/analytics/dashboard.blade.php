@@ -96,12 +96,6 @@
         $originRows = $breakdowns['origin'];
         $ratingDistribution = $satisfaction['distribution'];
 
-        $staffRows = collect($performance['handler_rows'])
-            ->sort(fn ($left, $right) => $right['assigned_tickets'] <=> $left['assigned_tickets']
-                ?: $right['open_tickets'] <=> $left['open_tickets']
-                ?: strcmp($left['name'], $right['name']))
-            ->values();
-
         $filterDropdowns = [
             ['name' => 'category_id', 'label' => 'Category', 'all' => 'All categories', 'options' => $categoryOptions->mapWithKeys(fn ($category) => [(string) $category->id => $category->name])->all()],
             ['name' => 'classification', 'label' => 'Classification', 'all' => 'All classifications', 'options' => ['needs_resolution' => 'Needs Resolution', 'informational' => 'Informational', 'invalid' => 'Invalid', 'unclassified' => 'Unclassified']],
@@ -117,16 +111,15 @@
     <div class="grid w-full min-w-0 gap-4 lg:gap-5">
         <header class="flex flex-wrap items-center justify-between gap-2">
             <div class="min-w-0">
-                <h1 class="font-display text-xl font-bold text-foreground">Analytics</h1>
-                @if ($periodLabel)
-                    <p class="text-sm font-semibold text-foreground">{{ $periodLabel }}</p>
-                @endif
                 <p class="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
                     <span>{{ number_format($total) }} ticket(s)</span>
+                    @if ($periodLabel)
+                        <span>· {{ $periodLabel }}</span>
+                    @endif
                     @forelse ($activeFilters as $label)
                         <span>· {{ $label }}</span>
                     @empty
-                        <span>· No filters applied</span>
+                        @unless ($periodLabel)<span>· No filters applied</span>@endunless
                     @endforelse
                 </p>
             </div>
@@ -173,7 +166,7 @@
         </header>
 
         <form method="GET" data-analytics-filter-form x-data="{ open: window.innerWidth >= 768 }" class="{{ $cardClass }} relative z-20 p-3">
-            <button type="button" x-on:click="open = !open" class="flex w-full items-center justify-between gap-2 text-left md:pointer-events-none">
+            <button type="button" x-on:click="open = !open" x-bind:aria-expanded="open" aria-controls="analytics-filter-fields" class="flex w-full items-center justify-between gap-2 text-left">
                 <span class="flex items-center gap-2 text-sm font-bold text-primary">
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5h16l-6 7v5l-4 2v-7z" /></svg>
                     Filters
@@ -181,9 +174,9 @@
                         <span class="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">{{ $activeFilters->count() }}</span>
                     @endif
                 </span>
-                <x-icons.arrow-down class="h-4 w-4 text-muted-foreground transition-transform md:hidden" ::class="open ? '' : 'rotate-180'" />
+                <x-icons.arrow-down class="h-4 w-4 text-muted-foreground transition-transform" ::class="open ? '' : 'rotate-180'" />
             </button>
-            <div x-show="open" x-cloak class="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4 xl:grid-cols-[auto_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_auto]">
+            <div id="analytics-filter-fields" x-show="open" x-cloak class="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4 xl:grid-cols-[auto_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_auto]">
                 <div class="col-span-2 lg:col-span-4 xl:col-span-1">
                     <label class="mb-1 block text-[11px] font-semibold text-muted-foreground">Date range</label>
                     <div class="flex flex-wrap items-center gap-1.5 sm:flex-nowrap">
@@ -394,11 +387,11 @@
                                     'rating_average' => ['Avg rating'],
                                 ] as $sortKey => $label)
                                     <th class="px-3 py-2.5 text-left font-semibold first:rounded-tl-xl last:rounded-tr-xl">
-                                        <button type="button" data-staff-sort="{{ $sortKey }}" class="w-full text-left font-semibold leading-tight text-white hover:text-white/80">
+                                        <a href="{{ route('admin.analytics.index', array_merge(request()->except('staff_page'), ['staff_sort' => $sortKey, 'staff_direction' => $staffSort === $sortKey ? ($staffDirection === 'asc' ? 'desc' : 'asc') : (in_array($sortKey, ['name', 'designation']) ? 'asc' : 'desc')])) }}#staff" data-staff-sort="{{ $sortKey }}" class="w-full text-left font-semibold leading-tight text-white hover:text-white/80">
                                             @foreach ($label as $labelLine)
                                                 <span class="block">{{ $labelLine }}</span>
                                             @endforeach
-                                        </button>
+                                        </a>
                                     </th>
                                 @endforeach
                             </tr>
@@ -441,6 +434,9 @@
                         </tbody>
                     </table>
                 </article>
+                @if ($staffRows->hasPages())
+                    <div class="-mt-1">{{ $staffRows->links() }}</div>
+                @endif
 
                 <div class="grid min-w-0 gap-3 lg:grid-cols-3">
                     @foreach ([['title' => 'How tickets were resolved', 'rows' => $breakdowns['resolution_types']], ['title' => 'Why tickets were closed', 'rows' => $breakdowns['closure_reasons']]] as $outcome)
@@ -807,33 +803,6 @@
             volumeChartInstances.clear();
         };
 
-        document.querySelectorAll('[data-staff-sort]').forEach((button) => {
-            button.addEventListener('click', () => {
-                const table = button.closest('[data-staff-sort-table]');
-                const body = table?.querySelector('tbody');
-                if (!table || !body) return;
-
-                const key = button.dataset.staffSort;
-                const previousKey = table.dataset.sortKey;
-                const direction = previousKey === key && table.dataset.sortDirection === 'asc'
-                    ? 'desc'
-                    : key === 'name' ? 'asc' : 'desc';
-                table.dataset.sortKey = key;
-                table.dataset.sortDirection = direction;
-
-                const rows = [...body.querySelectorAll('[data-staff-row]')];
-                rows.sort((left, right) => {
-                    const leftValue = left.getAttribute(`data-sort-${key}`) ?? '';
-                    const rightValue = right.getAttribute(`data-sort-${key}`) ?? '';
-                    const comparison = ['name', 'designation'].includes(key)
-                        ? leftValue.localeCompare(rightValue)
-                        : Number(leftValue) - Number(rightValue);
-
-                    return direction === 'asc' ? comparison : -comparison;
-                });
-                rows.forEach((row) => body.append(row));
-            });
-        });
         })();
     </script>
     <script>

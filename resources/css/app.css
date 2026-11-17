@@ -5,6 +5,27 @@
 @source '../**/*.blade.php';
 @source '../**/*.js';
 
+/* Native popovers escape table/drawer clipping; JS chooses the available side. */
+[data-keep-in-view] {
+    display: none !important;
+}
+
+[data-keep-in-view]:popover-open {
+    display: block !important;
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    border: 0;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    overflow-y: auto;
+}
+
+[data-keep-in-view]::backdrop {
+    background: transparent;
+    pointer-events: none;
+}
+
 .admin-content {
     overflow-wrap: anywhere;
 }

@@ -18,6 +18,37 @@ class AnalyticsDashboardTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_recipient_performance_paginates_ten_rows_and_preserves_filters_and_sorting(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_SDS_ADMIN]);
+        $student = $this->student('PAGED-PERFORMANCE');
+        $category = ComplaintCategory::create(['name' => 'Paged performance', 'is_active' => true]);
+        foreach (range(1, 11) as $number) {
+            $recipient = $this->recipientUser(sprintf('Recipient %02d', $number));
+            $this->ticket($student, $category, Ticket::STATUS_ASSIGNED, Ticket::CLASSIFICATION_NEEDS_RESOLUTION, [
+                'assigned_to' => $recipient->id,
+                'current_handler_id' => $recipient->id,
+            ]);
+        }
+        $query = ['category_id' => $category->id, 'staff_sort' => 'name', 'staff_direction' => 'asc'];
+        $first = $this->actingAs($admin)->get(route('admin.analytics.index', $query))->assertOk();
+        $rows = $first->viewData('staffRows');
+        $this->assertCount(10, $rows);
+        $this->assertSame(11, $rows->total());
+        $this->assertSame(10, substr_count($first->getContent(), '<tr data-staff-row'));
+        $next = $rows->nextPageUrl();
+        $this->assertStringContainsString('category_id=' . $category->id, $next);
+        $this->assertStringContainsString('staff_sort=name', $next);
+        $this->assertStringEndsWith('#staff', $next);
+        $second = $this->get($next)->assertOk();
+        $this->assertCount(1, $second->viewData('staffRows'));
+        $this->assertSame('Recipient 11', $second->viewData('staffRows')->first()['name']);
+        $descending = $this->get(route('admin.analytics.index', array_merge($query, ['staff_direction' => 'desc'])))->assertOk();
+        $this->assertSame('Recipient 11', $descending->viewData('staffRows')->first()['name']);
+        $first->assertDontSee('>Analytics</h1>', false)
+            ->assertSee('aria-controls="analytics-filter-fields"', false);
+    }
+
     public function test_dashboard_tabs_render_without_ticket_text_and_show_sensitive_count(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_SDS_ADMIN]);

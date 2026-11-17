@@ -112,7 +112,8 @@ class AccountManagementController extends Controller
             ->orderBy('users.id', $direction)
             ->select('users.*');
 
-        $studentUsers = $studentUsers->paginate(15, ['*'], 'students_page')->appends($request->query());
+        $studentUsers = $studentUsers->paginate(15, ['*'], 'students_page')
+            ->appends(array_merge($request->query(), ['category_filter' => 'students']));
 
         $recipientUsers = $applyFilters(AppUser::with(['student', 'recipient'])
             ->whereIn('role', [AppUser::ROLE_RECIPIENT, AppUser::ROLE_SDS_ADMIN]));
@@ -125,7 +126,7 @@ class AccountManagementController extends Controller
 
         $recipientUsers = $recipientUsers
             ->paginate(15, ['*'], 'recipients_page')
-            ->appends($request->query());
+            ->appends(array_merge($request->query(), ['category_filter' => 'recipients']));
 
         // Students pick from the colleges; recipients may belong to a college or an office.
         $units = Unit::query()
