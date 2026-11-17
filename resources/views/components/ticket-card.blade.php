@@ -105,7 +105,7 @@
         </div>
         @if ($showForwardedInformational)
             <p class="text-[10px] text-muted-foreground">
-                {{ $ticket->forwardedRecipient?->unit ?: 'Receiving office' }} · {{ $ticket->forwarded_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y') }}
+                Forwarded {{ $ticket->forwarded_at?->copy()->setTimezone('Asia/Manila')->format('M d, Y') }}
             </p>
         @endif
         <div class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">

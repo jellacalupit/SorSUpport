@@ -122,6 +122,14 @@ class VisibilityAndFeedbackTest extends TestCase
             ->assertOk()
             ->assertSee($complaint->reference_number);
 
+        $forwardedDate = $ticket->forwarded_at->copy()->setTimezone('Asia/Manila')->format('M d, Y');
+        $this->actingAs($this->handler)->get(route('recipient.dashboard'))
+            ->assertOk()
+            ->assertSee('Recent Tickets')
+            ->assertSee($complaint->reference_number)
+            ->assertSee('Forwarded for information')
+            ->assertSee('Forwarded ' . $forwardedDate);
+
         $this->actingAs($this->handler)->get(route('recipient.complaints.show', $complaint))
             ->assertOk()
             ->assertSee('Forwarded for your information')

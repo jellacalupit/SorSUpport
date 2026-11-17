@@ -80,14 +80,15 @@ class ForwardedInformationalTicketTest extends TestCase
             ->get(route('student.complaints.show', $ticket->complaint))
             ->assertOk()
             ->assertSee('Forwarded for information')
-            ->assertSee('Registrar Office')
+            ->assertSee($this->recipient->table_name)
+            ->assertDontSee('Registrar Office')
             ->assertSee($forwardedDate);
 
         $this->actingAs($this->recipient)
             ->get(route('recipient.complaints.show', $ticket->complaint))
             ->assertOk()
             ->assertSee('Forwarded for information')
-            ->assertSee('Registrar Office')
+            ->assertDontSee('Registrar Office')
             ->assertSee($forwardedDate)
             ->assertSee('For your information. No reply or action is needed.');
 
@@ -95,7 +96,7 @@ class ForwardedInformationalTicketTest extends TestCase
             ->get(route('recipient.tickets.index'))
             ->assertOk()
             ->assertSee('Forwarded for information')
-            ->assertSee('Registrar Office')
+            ->assertDontSee('Registrar Office ·', false)
             ->assertSee($forwardedDate);
 
         $this->actingAs($this->student)

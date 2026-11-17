@@ -38,13 +38,16 @@ class RecipientDashboardController extends Controller
             ->where('status', 'closed')
             ->count();
 
-        // Only the five most recently updated tickets appear on the home page.
+        // Show the five most recently updated tickets assigned to or forwarded to this recipient.
         $latestComplaints = Ticket::query()
-            ->where('assigned_to', Auth::id())
+            ->where(fn ($query) => $query
+                ->where('assigned_to', $user->id)
+                ->orWhere('forwarded_to', $recipient->id))
             ->with([
                 'complaint.student.user',
                 'complaint.category',
                 'auditLogs',
+                'forwardedRecipient',
             ])
             ->orderByDesc('updated_at')
             ->limit(5)

@@ -56,7 +56,6 @@
         && ($viewer?->isStudent() || $viewer?->isRecipient());
     $statusDisplay = $ticket->displayStatus()
         ?? (($viewer?->isStudent() || $viewer?->isRecipient()) ? $ticket->outcomeLabel() : null);
-    $forwardedOffice = $showForwardedInformational ? $ticket->forwardedRecipient?->unit : null;
     $forwardedDate = $showForwardedInformational
         ? $ticket->forwarded_at?->copy()->setTimezone($displayTimezone)->format('M d, Y')
         : null;
@@ -89,7 +88,7 @@
     $lastStudentEvent = $studentTimeline->last();
     $studentLastUpdatedAt = $lastStudentEvent?->created_at;
     $currentOffice = match (true) {
-        $showForwardedInformational => $ticket->forwardedRecipient?->unit ?: 'Receiving office',
+        $showForwardedInformational => $ticket->forwardedRecipient?->user?->table_name ?: 'Recipient',
         $ticket->status === \App\Models\Ticket::STATUS_REFERRED => $ticket->referred_to ?: 'Committee',
         ($ticket->currentHandler ?? $ticket->assignee)?->isRecipient() => ($ticket->currentHandler ?? $ticket->assignee)?->recipient?->unit ?: 'Receiving office',
         default => 'SDS Office',
@@ -154,7 +153,7 @@
             @endif
             @if ($showForwardedInformational)
                 <p class="text-right text-[10px] text-muted-foreground">
-                    {{ $forwardedOffice ?: 'Receiving office' }} · {{ $forwardedDate }}
+                    Forwarded {{ $forwardedDate }}
                 </p>
             @endif
         </div>
@@ -309,7 +308,7 @@
         </div>
         @if ($studentView)
             <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-2">
-                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">Current office</p>
+                <p class="text-xs font-semibold leading-tight tracking-wide text-muted-foreground">{{ $showForwardedInformational ? 'Forwarded to' : 'Current office' }}</p>
                 <p class="min-w-0 text-sm font-medium leading-tight wrap-break-word">{{ $currentOffice }}</p>
             </div>
             @if ($ticket->displayStatus() !== null)
