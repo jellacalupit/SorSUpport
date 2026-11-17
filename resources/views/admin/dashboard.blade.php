@@ -317,7 +317,7 @@
                         x-data="{ activeSegment: null }"
                         x-on:donut-segment-enter="activeSegment = $event.detail"
                         x-on:donut-segment-leave="activeSegment = null"
-                        class="flex min-h-0 items-center rounded-[20px] border border-border bg-white p-3 shadow-sm"
+                        class="flex h-full min-h-0 items-center rounded-[20px] border border-border bg-white p-3 shadow-sm"
                     >
                         <div class="flex items-center gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
                             <div class="shrink-0">
@@ -371,7 +371,7 @@
                         x-data="{ activeSegment: null }"
                         x-on:donut-segment-enter="activeSegment = $event.detail"
                         x-on:donut-segment-leave="activeSegment = null"
-                        class="flex min-h-0 items-center rounded-[20px] border border-border bg-white p-3 shadow-sm"
+                        class="flex h-full min-h-0 items-center rounded-[20px] border border-border bg-white p-3 shadow-sm"
                     >
                         <div class="flex items-center gap-1.5 pl-0.5 sm:gap-2 sm:pl-1">
                             <div class="shrink-0">
@@ -409,30 +409,30 @@
             </div>
 
             <section class="flex min-h-0 w-full flex-col overflow-hidden rounded-xl border border-border bg-white shadow-sm">
-                <div class="flex items-center justify-between gap-3 border-b border-border bg-muted/50 px-4 py-2.5">
+                <div class="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-muted/50 px-4 py-2.5">
                     <h3 class="text-sm font-semibold text-foreground">Recent Tickets</h3>
                     <a data-admin-page-nav href="{{ route('admin.complaints.index') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                 </div>
 
-                <div class="min-h-0 flex-1 overflow-auto">
-                    <table class="min-w-full border-collapse text-left text-sm">
+                <div class="min-h-0 flex-1 overflow-hidden">
+                    <table class="dashboard-recent-tickets h-full w-full table-fixed border-collapse text-left text-xs">
                         <thead class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                             <tr>
                                 <th class="w-[110px] px-3 py-2 font-semibold">Ticket ID</th>
-                                <th class="min-w-[220px] px-3 py-2 font-semibold">Subject Title</th>
+                                <th class="px-3 py-2 font-semibold">Subject Title</th>
                                 <th class="w-[110px] px-3 py-2 text-center font-semibold">Status</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse ($recentTickets as $ticket)
                                 <tr class="border-t border-border transition-colors hover:bg-muted/30">
-                                    <td class="whitespace-nowrap px-3 py-2.5 font-mono text-[11px] font-semibold text-primary">
+                                    <td class="whitespace-nowrap px-3 py-1 font-mono text-[11px] font-semibold text-primary">
                                         {{ $ticket->complaint?->reference_number ?? $ticket->id }}
                                     </td>
-                                    <td class="max-w-[220px] truncate px-3 py-2.5 text-xs text-foreground">
+                                    <td class="truncate px-3 py-1 text-xs text-foreground">
                                         {{ $ticket->complaint?->subject_title ?? 'No subject' }}
                                     </td>
-                                    <td class="px-3 py-2.5 text-center">
+                                    <td class="px-3 py-1 text-center">
                                         @php
                                             $recentStatusLabel = $ticket->displayStatus();
                                         @endphp
@@ -529,8 +529,8 @@
                 </div>
                 <ul data-volume-legend class="hidden" aria-label="Categories"></ul>
             </div>
-            <div class="grid min-h-0 grid-cols-2 gap-3">
-                <div class="flex h-full min-h-0 flex-col overflow-visible rounded-[20px] border border-border bg-white p-2 shadow-sm">
+            <div class="grid min-h-0 grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-3">
+                <div class="flex h-full min-h-0 flex-col overflow-visible rounded-[20px] border border-border bg-white p-3 shadow-sm">
                     <div class="flex items-start justify-between gap-2 px-1">
                         <div class="min-w-0">
                             <h3 class="font-display text-sm font-semibold leading-tight text-foreground">Recipient Performance</h3>
@@ -539,9 +539,9 @@
                         <a data-admin-page-nav href="{{ route('admin.analytics.index') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
-                    <div class="mt-1.5 grid min-h-0 content-start gap-2 overflow-y-auto">
+                    <div class="mt-3 grid min-h-0 flex-1 auto-rows-fr gap-2">
                         @forelse ($topPerformingRecipients as $recipient)
-                            <div class="flex min-h-12 items-center gap-2 rounded-lg p-1 transition-colors hover:bg-muted/50">
+                            <div class="flex min-h-0 items-center gap-3 rounded-lg p-1 transition-colors hover:bg-muted/50">
                                 <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-sidebar-primary text-[9px] font-bold text-sidebar-primary-foreground">
                                     @if ($recipient->user?->avatar_path)
                                         <img src="{{ asset('storage/' . $recipient->user->avatar_path) }}" alt="{{ $recipient->display_name }}" class="h-full w-full object-cover">
@@ -589,7 +589,7 @@
                         @endforelse
                     </div>
                 </div>
-                <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-[20px] border border-border bg-white p-2 shadow-sm">
+                <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-[20px] border border-border bg-white p-3 shadow-sm">
                     <div class="flex items-start justify-between gap-2 px-1">
                         <div class="min-w-0">
                             <h3 class="font-display text-sm font-semibold leading-tight text-foreground">Recent audit activity</h3>
@@ -598,8 +598,8 @@
                         <a data-admin-page-nav href="{{ route('admin.audit') }}" class="text-xs font-medium text-primary hover:underline">View All</a>
                     </div>
 
-                    <ol class="relative mt-1.5 grid min-h-0 content-start gap-2 overflow-y-auto">
-                        <span class="absolute top-5 bottom-5 left-[calc(clamp(4rem,20%,6rem)+1.875rem)] w-px bg-[#7a1d2a]/20" aria-hidden="true"></span>
+                    <ol class="relative mt-3 grid min-h-0 flex-1 auto-rows-fr gap-2">
+                        <span class="absolute top-5 bottom-5 left-[5.125rem] w-px bg-[#7a1d2a]/20" aria-hidden="true"></span>
                         @forelse ($recentActivity as $log)
                             @php
                                 $activityLabel = match ($log->action) {
@@ -619,7 +619,7 @@
                                 $relativeTimeHasAgo = str_ends_with($relativeTime, ' ago');
                                 $relativeTimeValue = $relativeTimeHasAgo ? substr($relativeTime, 0, -4) : $relativeTime;
                             @endphp
-                            <li class="relative z-10 grid min-h-12 min-w-0 grid-cols-[clamp(4rem,20%,6rem)_2.25rem_minmax(0,1fr)] items-center gap-2 p-1">
+                            <li class="relative z-10 grid min-h-0 min-w-0 grid-cols-[3.5rem_2.25rem_minmax(0,1fr)] items-center gap-2 p-1">
                                 <span class="flex min-h-9 flex-wrap content-center items-center gap-x-1 text-[11px] leading-tight text-black">
                                     <span class="whitespace-nowrap">{{ $relativeTimeValue }}</span>
                                     @if ($relativeTimeHasAgo)
